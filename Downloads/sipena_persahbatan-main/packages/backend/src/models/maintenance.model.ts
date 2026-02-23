@@ -1,0 +1,90 @@
+import { AssetType } from './asset.model';
+
+export interface Maintenance {
+  id: number;
+  maintenanceCode: string;
+  assetId: number;
+  assetType?: AssetType;
+  assetName?: string;
+  assetCode?: string;
+  assetDetailId?: string;
+  assetDetailName?: string;
+  assetDetailCode?: string;
+  assetLocation?: string;
+  requesterName?: string;
+  requesterNip?: string;
+  validatorName?: string;
+  validatorNip?: string;
+  scheduleId?: number;
+  type: MaintenanceType;
+  status: MaintenanceStatus;
+  scheduledDate: Date;
+  completedDate?: Date;
+  description: string;
+  technician?: string;
+  cost?: number;
+  notes?: string;
+  createdBy: number;
+  completedBy?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type MaintenanceType = 'preventive' | 'corrective' | 'calibration' | 'inspection';
+
+export type MaintenanceStatus =
+  | 'requested'
+  | 'scheduled'
+  | 'in_progress'
+  | 'completed'
+  | 'validated'
+  | 'cancelled';
+
+export interface CreateMaintenanceDTO {
+  assetId: number;
+  assetType?: AssetType;
+  type: MaintenanceType;
+  status?: MaintenanceStatus;
+  scheduledDate: Date;
+  description: string;
+  assetDetailId?: string;
+  assetDetailName?: string;
+  assetDetailCode?: string;
+  assetLocation?: string;
+  technician?: string;
+  cost?: number;
+  notes?: string;
+  createdBy: number;
+  scheduleId?: number;
+}
+
+export interface UpdateMaintenanceDTO {
+  assetId?: number;
+  assetType?: AssetType;
+  status?: MaintenanceStatus;
+  type?: MaintenanceType;
+  scheduledDate?: Date;
+  description?: string;
+  assetDetailId?: string;
+  assetDetailName?: string;
+  assetDetailCode?: string;
+  assetLocation?: string;
+  technician?: string;
+  cost?: number;
+  notes?: string;
+}
+
+export interface CompleteMaintenanceDTO {
+  notes?: string;
+  cost?: number;
+  completedBy: number;
+}
+
+export interface MaintenanceFilters {
+  page: number;
+  limit: number;
+  status?: string;
+  assetId?: string;
+  assetType?: AssetType;
+  type?: string;
+}

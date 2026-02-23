@@ -1,0 +1,32 @@
+{
+  "name": "sipena",
+  "version": "2.5.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=inventory-frontend",
+    "build": "npm run build --workspace=inventory-frontend",
+    "start": "npm run start --workspace=inventory-frontend",
+    "dev:backend": "npm run dev --workspace=inventory-backend",
+    "build:backend": "npm run build --workspace=inventory-backend",
+    "start:backend": "npm run start --workspace=inventory-backend",
+    "dev:all": "npm run dev --workspaces"
+  },
+  "overrides": {
+    "@types/node": "20.19.27",
+    "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.27",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@types/sequelize": "^4.28.20",
+    "axios": "^1.13.2",
+    "eslint": "4.0.0",
+    "sequelize": "^6.37.7",
+    "sequelize-typescript": "^0.6.0"
+  }
+}
