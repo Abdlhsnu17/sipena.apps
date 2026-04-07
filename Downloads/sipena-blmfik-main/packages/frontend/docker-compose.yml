@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_changeme}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sipena_db_local}
+      MYSQL_USER: ${MYSQL_USER:-sipena_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-4000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-sipena_db_local}
+      DB_USER: ${DB_USER:-sipena_app}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-changeme_with_strong_secret}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
