@@ -213,4 +213,5 @@ Catatan:
 
 ## Catatan Dokumentasi
 
-Diagram backend yang diperbarui ada di [packages/backend/src/routes/uml-latest.puml](packages/backend/src/routes/uml-latest.puml).
+- [packages/backend/src/routes/uml-latest.puml](packages/backend/src/routes/uml-latest.puml): diagram domain/class untuk struktur dan relasi utama backend.
+- [packages/backend/src/routes/uml-usecase.puml](packages/backend/src/routes/uml-usecase.puml): diagram use case untuk alur interaksi pengguna dengan fitur sistem.

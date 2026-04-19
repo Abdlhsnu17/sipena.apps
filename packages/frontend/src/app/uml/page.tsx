@@ -9,7 +9,6 @@ import type { ReactNode } from "react"
 type DiagramLink = {
   id: string
   label: string
-  description: string
 }
 
 type ActivityStep = {
@@ -21,26 +20,22 @@ const umlSections: DiagramLink[] = [
   {
     id: "activity",
     label: "Activity Diagram",
-    description: "Alur proses utama dari autentikasi sampai pengelolaan inventaris.",
   },
   {
     id: "class",
     label: "Class Diagram",
-    description: "Struktur kelas inti dan relasi objek utama dalam sistem.",
   },
   {
     id: "erd",
     label: "Entity Relationship Diagram",
-    description: "Representasi tabel dan hubungan data pada basis data aplikasi.",
   },
   {
     id: "use-case",
     label: "Use Case Diagram",
-    description: "Interaksi aktor dengan modul yang tersedia di dalam sistem.",
   },
 ]
 
-const activityFlows: { title: string; color: "amber" | "fuchsia" | "purple" | "teal"; steps: ActivityStep[] }[] = [
+const activityFlows: { title: string; color: "amber" | "emerald" | "fuchsia" | "orange" | "purple" | "rose" | "teal"; steps: ActivityStep[] }[] = [
   {
     title: "Alur Daftar Akun",
     color: "fuchsia",
@@ -88,6 +83,50 @@ const activityFlows: { title: string; color: "amber" | "fuchsia" | "purple" | "t
       { step: "Isi data detail", type: "action" },
       { step: "Validasi", type: "decision" },
       { step: "Simpan ke master inventory", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Pemeliharaan Sarana",
+    color: "emerald",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Pilih aset yang akan dipelihara", type: "action" },
+      { step: "Buat jadwal pemeliharaan", type: "action" },
+      { step: "Jadwal valid?", type: "decision" },
+      { step: "Teknisi melakukan pemeliharaan", type: "action" },
+      { step: "Update status dan catatan hasil", type: "action" },
+      { step: "Validasi selesai", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Peminjaman Alat",
+    color: "orange",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Pilih alat yang tersedia", type: "action" },
+      { step: "Isi form peminjaman", type: "action" },
+      { step: "Data lengkap?", type: "decision" },
+      { step: "Kirim permintaan peminjaman", type: "action" },
+      { step: "Admin/leader review permintaan", type: "action" },
+      { step: "Disetujui?", type: "decision" },
+      { step: "Status alat menjadi dipinjam", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Pengembalian Alat",
+    color: "rose",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Pengguna pilih data peminjaman aktif", type: "action" },
+      { step: "Isi kondisi dan catatan pengembalian", type: "action" },
+      { step: "Data valid?", type: "decision" },
+      { step: "Kirim pengajuan pengembalian", type: "action" },
+      { step: "Petugas verifikasi kondisi alat", type: "action" },
+      { step: "Alat sesuai?", type: "decision" },
+      { step: "Status alat menjadi tersedia", type: "action" },
       { step: "End", type: "end" },
     ],
   },
@@ -259,72 +298,6 @@ export default function UMLPage() {
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
-        <section className="overflow-hidden rounded-4xl border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/70">
-          <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.95fr] lg:p-8">
-            <div className="space-y-5">
-              <Badge className="w-fit rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-teal-700 hover:bg-teal-50 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
-                Halaman Dokumentasi
-              </Badge>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-linear-to-br from-teal-500 to-cyan-500 p-3 shadow-lg">
-                    <FileCode2 className="h-7 w-7 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground lg:text-4xl">Dokumentasi Sistem</h1>
-                    <p className="text-sm text-muted-foreground">Materi UML dan dokumentasi unggahan dipisah agar lebih jelas saat dibaca.</p>
-                  </div>
-                </div>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                  Bagian dokumentasi UML hanya menampilkan empat diagram inti, yaitu Activity Diagram, Class Diagram, Entity Relationship Diagram, dan Use Case Diagram.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {umlSections.map((section) => (
-                  <span
-                    key={section.id}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200"
-                  >
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white dark:bg-white dark:text-slate-900">
-                      {section.label.charAt(0)}
-                    </span>
-                    {section.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="rounded-3xl border border-teal-200/70 bg-linear-to-br from-teal-50 to-cyan-50 p-5 dark:border-teal-800/70 dark:from-teal-950/30 dark:to-cyan-950/20">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700 dark:text-teal-200">Urutan</p>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {["A", "C", "E", "U"].map((letter) => (
-                    <div key={letter} className="rounded-2xl bg-white px-3 py-4 text-center text-lg font-bold text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100">
-                      {letter}
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-sm text-muted-foreground">Diagram ditata alfabetis supaya lebih cepat dipindai pada desktop maupun mobile.</p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200/70 bg-slate-50/80 p-5 dark:border-slate-700 dark:bg-slate-800/50">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300">Ruang Lingkup</p>
-                <div className="mt-3 space-y-3">
-                  {umlSections.map((section) => (
-                    <div key={section.id} className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm dark:bg-slate-900">
-                      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{section.label}</p>
-                        <p className="text-xs leading-6 text-muted-foreground">{section.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className="grid gap-4 xl:grid-cols-2">
           <FeatureCard
             title="Dokumentasi UML"
@@ -369,7 +342,7 @@ export default function UMLPage() {
                 </div>
                 <div>
                   <CardTitle>Activity Diagram</CardTitle>
-                  <CardDescription>Alur proses dalam sistem inventaris.</CardDescription>
+                  <CardDescription>Alur proses utama termasuk peminjaman, pengembalian, dan pemeliharaan sarana.</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -599,13 +572,16 @@ function ActivityFlow({
   steps,
 }: {
   title: string
-  color: "amber" | "fuchsia" | "purple" | "teal"
+  color: "amber" | "emerald" | "fuchsia" | "orange" | "purple" | "rose" | "teal"
   steps: ActivityStep[]
 }) {
   const colorClasses: Record<typeof color, string> = {
     amber: "from-amber-500 to-amber-600 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
+    emerald: "from-emerald-500 to-green-500 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
     fuchsia: "from-fuchsia-500 to-pink-500 bg-fuchsia-50 dark:bg-fuchsia-950/30 border-fuchsia-200 dark:border-fuchsia-800",
+    orange: "from-orange-500 to-amber-500 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800",
     purple: "from-purple-500 to-indigo-500 bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800",
+    rose: "from-rose-500 to-pink-500 bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800",
     teal: "from-teal-500 to-cyan-500 bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800",
   }
 
