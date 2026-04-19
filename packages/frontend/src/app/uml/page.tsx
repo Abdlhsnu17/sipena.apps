@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getCurrentUser } from "@/services/auth-utils"
 import { normalizeUserRole } from "@/utils/role"
 import {
@@ -21,69 +20,12 @@ import {
     Zap
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function UMLPage() {
   const [currentUser] = useState(getCurrentUser())
   const role = normalizeUserRole(currentUser?.role ?? "user")
   const canViewClassAndErd = role === "admin"
-  const tabDefinitions = [
-    {
-      value: "usecase",
-      label: "Use Case",
-      icon: Users,
-      activeClass:
-        "data-[state=active]:bg-linear-to-r data-[state=active]:from-teal-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white",
-      roles: ["admin", "leader", "staff", "staff_pj", "teknisi", "user"],
-    },
-    {
-      value: "class",
-      label: "Class Diagram",
-      icon: Box,
-      activeClass:
-        "data-[state=active]:bg-linear-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white",
-      roles: ["admin"],
-    },
-    {
-      value: "activity",
-      label: "Activity",
-      icon: Workflow,
-      activeClass:
-        "data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white",
-      roles: ["admin", "leader", "staff", "staff_pj", "teknisi", "user"],
-    },
-    {
-      value: "erd",
-      label: "ERD",
-      icon: Database,
-      activeClass:
-        "data-[state=active]:bg-linear-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-green-500 data-[state=active]:text-white",
-      roles: ["admin"],
-    },
-    {
-      value: "unggahan",
-      label: "Unggahan",
-      icon: UploadCloud,
-      activeClass:
-        "data-[state=active]:bg-linear-to-r data-[state=active]:from-slate-900/90 data-[state=active]:to-slate-500/70 data-[state=active]:text-white",
-      roles: ["admin", "leader", "staff", "staff_pj", "teknisi", "user"],
-    },
-  ]
-  const visibleTabs = tabDefinitions.filter((tab) => tab.roles.includes(role))
-  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.value ?? "usecase")
-  const router = useRouter()
-
-  // Handle tab value change - navigate to unggahan if needed
-  const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    if (value === "unggahan") {
-      // Use setTimeout to ensure state update completes first
-      setTimeout(() => {
-        router.push("/unggahan")
-      }, 0)
-    }
-  }
   const useCaseRoleCards: UseCaseRoleCard[] = [
     {
       key: "admin",
@@ -307,25 +249,9 @@ export default function UMLPage() {
             </div>
           </div>
 
-        {/* Navigation Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <TabsList className="grid w-full min-w-0 grid-cols-2 gap-2 rounded-xl border border-gray-200/50 bg-white/50 p-2 backdrop-blur-sm dark:border-gray-700/50 dark:bg-slate-800/50 lg:grid-cols-5">
-              {visibleTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className={`${tab.activeClass} data-[state=active]:shadow-lg py-3 px-4 rounded-lg transition-all flex items-center gap-2`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          {/* Use Case Diagram Tab */}
-          <TabsContent value="usecase" className="space-y-6">
+        <div className="space-y-6">
+          {/* Use Case Diagram */}
+          <section className="space-y-6">
             <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardHeader className="border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3">
@@ -411,10 +337,10 @@ export default function UMLPage() {
                 </div>
             </CardContent>
           </Card>
-        </TabsContent>
+          </section>
 
-        {/* Unggahan Tab */}
-        <TabsContent value="unggahan" className="space-y-6">
+        {/* Unggahan */}
+        <section className="space-y-6">
           <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
@@ -441,10 +367,10 @@ export default function UMLPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-          {/* Class Diagram Tab */}
-          <TabsContent value="class" className="space-y-6">
+          {/* Class Diagram */}
+          <section className="space-y-6">
             {canViewClassAndErd ? (
               <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-800">
@@ -646,10 +572,10 @@ export default function UMLPage() {
             ) : (
               <RestrictedNotice feature="Class Diagram" />
             )}
-          </TabsContent>
+          </section>
 
-          {/* Activity Diagram Tab */}
-          <TabsContent value="activity" className="space-y-6">
+          {/* Activity Diagram */}
+          <section className="space-y-6">
             <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardHeader className="border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3">
@@ -793,10 +719,10 @@ export default function UMLPage() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </section>
 
-          {/* ERD Tab */}
-          <TabsContent value="erd" className="space-y-6">
+          {/* ERD */}
+          <section className="space-y-6">
             {canViewClassAndErd ? (
               <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-800">
@@ -933,8 +859,8 @@ export default function UMLPage() {
             ) : (
               <RestrictedNotice feature="ERD" />
             )}
-          </TabsContent>
-        </Tabs>
+          </section>
+        </div>
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
