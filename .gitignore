@@ -44,10 +44,21 @@ packages/backend/uploads/
 .DS_Store
 Thumbs.db
 ._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100/
+.Trashes/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
 
 # Local backups / duplicated project folders
 Downloads/
+**/Downloads/
 sipena-rsup/
+*-main/
 
 # Editor directories and files
 .idea/

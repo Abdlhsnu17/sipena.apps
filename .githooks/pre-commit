@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+blocked_regex='^(Downloads/|.*/Downloads/|sipena-rsup/|.*-main/|.*\.DS_Store$|.*/\._[^/]+$)'
+max_size_bytes=$((5 * 1024 * 1024))
+
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if [[ -z "${staged_files}" ]]; then
+  exit 0
+fi
+
+blocked_paths=()
+large_files=()
+
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+
+  if [[ "${file}" =~ ${blocked_regex} ]]; then
+    blocked_paths+=("${file}")
+  fi
+
+  if [[ -f "${file}" ]]; then
+    size=$(wc -c < "${file}" | tr -d ' ')
+    if [[ "${size}" -gt "${max_size_bytes}" ]]; then
+      large_files+=("${file} (${size} bytes)")
+    fi
+  fi
+done <<< "${staged_files}"
+
+if (( ${#blocked_paths[@]} > 0 )) || (( ${#large_files[@]} > 0 )); then
+  echo "Commit diblokir untuk mencegah file tidak penting ikut ke-push."
+
+  if (( ${#blocked_paths[@]} > 0 )); then
+    echo ""
+    echo "Path yang diblokir:"
+    printf ' - %s\n' "${blocked_paths[@]}"
+  fi
+
+  if (( ${#large_files[@]} > 0 )); then
+    echo ""
+    echo "File terlalu besar (>5MB):"
+    printf ' - %s\n' "${large_files[@]}"
+  fi
+
+  echo ""
+  echo "Jika memang perlu commit file tersebut, sesuaikan .gitignore atau hook ini."
+  exit 1
+fi
+
+exit 0
