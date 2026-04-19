@@ -244,9 +244,9 @@ export default function SettingsPage() {
   const profileImageSrc = localPhotoPreview || remotePhotoUrl
 
   return (
-    <div className="min-h-screen flex-1 bg-slate-50/60 dark:bg-slate-950/80">
+    <div className="bg-slate-50/60 dark:bg-slate-950/80">
       <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
-        <div className="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-sm">
               <Settings className="h-5 w-5 text-white" />
@@ -258,7 +258,7 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">

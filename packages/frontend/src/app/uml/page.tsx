@@ -208,8 +208,8 @@ export default function UMLPage() {
   ]
 
   return (
-    <div className="flex-1 overflow-auto bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30 min-h-screen">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
         <div className="space-y-6">
           {/* Header */}
         <div className="mb-8">
@@ -249,9 +249,28 @@ export default function UMLPage() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-gray-200/60 bg-white/70 p-2 backdrop-blur-sm dark:border-gray-700/60 dark:bg-slate-900/60">
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="#dokumentasi"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r from-teal-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
+              >
+                <FileCode2 className="h-4 w-4" />
+                Dokumentasi
+              </Link>
+              <Link
+                href="#unggahan"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <UploadCloud className="h-4 w-4" />
+                Unggahan
+              </Link>
+            </div>
+          </div>
+
         <div className="space-y-6">
           {/* Use Case Diagram */}
-          <section className="space-y-6">
+          <section id="dokumentasi" className="space-y-6 scroll-mt-28">
             <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardHeader className="border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3">
@@ -340,7 +359,7 @@ export default function UMLPage() {
           </section>
 
         {/* Unggahan */}
-        <section className="space-y-6">
+        <section id="unggahan" className="space-y-6 scroll-mt-28">
           <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">

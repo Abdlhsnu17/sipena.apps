@@ -431,8 +431,8 @@ export default function UnggahanPage() {
 
   return (
     <div className="flex-1 bg-background">
-      <main className="flex min-h-screen flex-col overflow-y-auto bg-linear-to-br from-slate-50 via-white to-teal-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 lg:px-8">
+      <main className="flex flex-col bg-linear-to-br from-slate-50 via-white to-teal-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 lg:px-8">
           <section className="overflow-hidden rounded-4xl border border-white/60 bg-white/85 shadow-[0_30px_80px_rgba(14,165,233,0.14)] backdrop-blur-sm">
             <div className="bg-linear-to-r from-slate-900 via-cyan-800 to-teal-600 p-6 text-white md:p-8">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

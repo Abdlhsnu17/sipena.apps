@@ -247,46 +247,48 @@ export default function ReportsPage() {
 
   return (
     <div
-      className="flex-1 bg-white dark:bg-slate-950 min-h-screen"
+      className="bg-white dark:bg-slate-950"
       data-main-scroll
     >
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1 lg:pr-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-linear-to-br from-cyan-500 to-teal-500 shadow-xl">
-                <BookOpen className="w-5 h-5 text-white" />
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-lg">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight text-foreground lg:text-3xl">
+                    Laporan & Analitik
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Ringkasan operasional inventaris, pemeliharaan, dan peminjaman.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground">
-                  Laporan & Analitik
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700 border-slate-300">
+                  <ChartBar className="mr-1 h-3 w-3" />
+                  Laporan Terintegrasi
+                </Badge>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">
-                <ChartBar className="w-3 h-3 mr-1" />
-                Laporan Terintegrasi
-              </Badge>
-            </div>
+            <Button onClick={exportReport} className="rounded-2xl bg-slate-700 px-5 text-white shadow-lg hover:bg-slate-800">
+              Unduh Laporan
+            </Button>
           </div>
-          <Button onClick={exportReport} className="bg-slate-700 hover:bg-slate-800 text-white shadow-lg">
-            Unduh Laporan
-          </Button>
-        </div>
+        </section>
 
-        <div className="p-4 bg-slate-100/80 border border-slate-300 rounded-3xl backdrop-blur-sm">
+        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/50">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-xl">
-              <BookOpen className="w-5 h-5 text-white" />
+            <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2">
+              <BookOpen className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800">Ringkasan Terpadu</h3>
-              <p className="text-sm text-slate-700/80 mt-1">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100">Ringkasan Terpadu</h3>
+              <p className="mt-1 text-sm text-slate-700/80 dark:text-slate-300/80">
                 Laporan ini menyatukan titik data penting dari inventaris, pemeliharaan, dan peminjaman untuk mendukung keputusan operasional.
               </p>
             </div>

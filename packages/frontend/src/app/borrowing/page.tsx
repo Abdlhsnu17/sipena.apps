@@ -1293,9 +1293,9 @@ export default function BorrowingPage() {
       className="min-h-full bg-white"
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
     >
-      <div className="py-6 px-4 lg:px-10">
+      <div className="p-6 lg:p-8">
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="rounded-3xl border border-amber-100/80 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:border-amber-900/60 dark:bg-slate-900/70">
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-5 items-center">
                 <div className="p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg">
@@ -1303,12 +1303,12 @@ export default function BorrowingPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">Peminjaman Alat</h1>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Audit, validasi, dan monitoring status alat dalam satu halaman.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-200 text-[11px]">
-                      
+                    <Badge variant="outline" className="rounded-full bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-200 text-[11px]">
+                      Peminjaman aktif
                     </Badge>
                   </div>
                 </div>

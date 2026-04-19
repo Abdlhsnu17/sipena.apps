@@ -249,7 +249,7 @@ export default function UsersPage() {
 
   if (!currentUser || !canViewUsers) {
     return (
-      <div className="flex-1 overflow-auto bg-linear-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
+      <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
         <div className="max-w-4xl mx-auto p-6 space-y-4">
 
           <div className="flex flex-col gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
@@ -265,67 +265,57 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-linear-to-br from-slate-50 via-white to-teal-50/30 min-h-screen">
+    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
       <div className="w-full max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
         <div className="space-y-6">
-
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-linear-to-br from-teal-500 to-cyan-500 rounded-2xl shadow-lg">
-                  <Users className="w-6 h-6 text-white" />
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-2xl bg-linear-to-br from-teal-500 to-cyan-500 p-3 shadow-lg">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-foreground">Manajemen Pengguna</h1>
+                    <p className="text-sm text-muted-foreground">
+                      Pengaturan akun, akses role, dan kontrol perubahan data pengguna.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-foreground">Manajemen Pengguna</h1>
-                  <p className="text-sm text-muted-foreground">
-  
-                  </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
+                    Akses admin
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full bg-blue-50 text-blue-700 border-blue-200">
+                    Audit pengguna
+                  </Badge>
                 </div>
               </div>
+
               <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant="outline"
-                  className="bg-teal-50 text-teal-700 border-teal-200"
-                >
-                  
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="bg-blue-50 text-blue-700 border-blue-200"
-                >
-
-                </Badge>
+                {canCreateUsers && (
+                  <Button onClick={handleAddUser} size="sm" className="rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
+                    <Plus className="mr-1 h-4 w-4" />
+                    Tambah Pengguna
+                  </Button>
+                )}
+                {currentUser?.role === "admin" && (
+                  <Button variant="destructive" size="sm" className="rounded-2xl" onClick={handleDeleteAllUsers}>
+                    <Trash2 className="mr-1 h-4 w-4" />
+                    Hapus Semua
+                  </Button>
+                )}
               </div>
             </div>
+          </section>
 
-            <div className="flex flex-wrap gap-2">
-              {canCreateUsers && (
-                <Button onClick={handleAddUser} size="sm" className="bg-teal-600 hover:bg-teal-700 text-white">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Tambah Pengguna
-                </Button>
-              )}
-              {currentUser?.role === "admin" && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDeleteAllUsers}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Hapus Semua
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-teal-200/70 bg-white/80 p-5 shadow-sm backdrop-blur-sm">
+          <div className="rounded-2xl border border-teal-200/70 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-teal-900/50 dark:bg-slate-900/50">
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-teal-700/90">
-                Dashboard ini menampilkan alur pengelolaan pengguna yang mengikuti kaidah mulai dari otentikasi hingga pemberian
-                akses untuk inventaris medis dan non-medis.
+              <p className="text-sm text-teal-700/90 dark:text-teal-200/90">
+                Dashboard ini menampilkan alur pengelolaan pengguna yang mengikuti kaidah mulai dari otentikasi hingga pemberian akses untuk inventaris medis dan non-medis.
               </p>
               <p className="text-xs text-muted-foreground">
-                Pastikan setiap perubahan pengguna terdokumentasi dengan baik dan direfleksikan
+                Setiap perubahan pengguna perlu tercatat agar kontrol akses tetap konsisten.
               </p>
             </div>
           </div>

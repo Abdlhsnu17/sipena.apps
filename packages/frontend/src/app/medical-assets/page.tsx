@@ -375,7 +375,7 @@ export default function MedicalAssetsPage() {
   })
 
   return (
-    <div className="flex-1 overflow-auto bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/30 min-h-screen">
+    <div className="bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/30">
       <div className="w-full max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
         <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <CardContent className="p-0">

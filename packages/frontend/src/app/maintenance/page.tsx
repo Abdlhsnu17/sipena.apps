@@ -949,9 +949,9 @@ export default function MaintenancePage() {
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
       data-maintenance-page
     >
-      <div className="py-6 px-4 lg:px-10">
+      <div className="p-6 lg:p-8">
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="rounded-3xl border border-teal-100/80 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-900/60 dark:bg-slate-900/70">
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-5 items-center">
                 <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg">
@@ -959,12 +959,12 @@ export default function MaintenancePage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">Pemelirahaan Sarana</h1>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    & validasi pemeliharaan sesuai dokumentasi Monitor jadwal
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Monitoring jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]">
-                      
+                    <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]">
+                      Pemeliharaan aktif
                     </Badge>
                   </div>
                 </div>
@@ -980,7 +980,7 @@ export default function MaintenancePage() {
                     }}
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Tambah Pemelirahaan
+                    Tambah Pemeliharaan
                   </Button>
                 )}
               </div>
