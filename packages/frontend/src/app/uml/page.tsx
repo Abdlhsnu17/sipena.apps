@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/services/auth-utils"
 import { normalizeUserRole } from "@/utils/role"
 import {
     ArrowRight,
+  Activity,
     BookOpen,
     Box,
     Database,
@@ -14,332 +15,221 @@ import {
     GitBranch,
     Network,
     Shield,
-    UploadCloud,
     Users,
     Workflow,
     Zap
 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+                      <div className="rounded-lg bg-linear-to-br from-purple-500 to-indigo-500 p-2">
+                        <Box className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle>Class Diagram</CardTitle>
+                        <CardDescription>Struktur kelas dan entitas sistem</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      <ClassCard name="User" color="teal" badge="Core" properties={[{ name: "id", type: "string" }, { name: "nip", type: "string" }, { name: "name", type: "string" }, { name: "email", type: "string" }, { name: "role", type: "UserRole" }, { name: "createdAt", type: "Date" }]} methods={["login()", "logout()", "updateProfile()"]} />
+                      <ClassCard name="MedicalAsset" color="purple" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "inventoryName", type: "string" }, { name: "name", type: "string" }, { name: "type", type: "string" }, { name: "serialNumber", type: "string" }, { name: "purchaseDate", type: "Date" }, { name: "lastMaintenance", type: "Date" }, { name: "nextMaintenance", type: "Date" }, { name: "category", type: "string" }, { name: "status", type: "AssetStatus" }, { name: "roomId", type: "string" }, { name: "notes", type: "string" }, { name: "condition", type: "string" }, { name: "usagePurpose", type: "string" }]} methods={["create()", "update()", "delete()"]} />
+                      <ClassCard name="NonMedicalAsset" color="blue" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "inventoryName", type: "string" }, { name: "name", type: "string" }, { name: "type", type: "string" }, { name: "serialNumber", type: "string" }, { name: "purchaseDate", type: "Date" }, { name: "lastMaintenance", type: "Date" }, { name: "nextMaintenance", type: "Date" }, { name: "category", type: "string" }, { name: "status", type: "AssetStatus" }, { name: "roomId", type: "string" }, { name: "notes", type: "string" }, { name: "condition", type: "string" }, { name: "usagePurpose", type: "string" }]} methods={["create()", "update()", "delete()"]} />
+                      <ClassCard name="Borrowing" color="orange" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "userId", type: "string" }, { name: "assetId", type: "string" }, { name: "borrowDate", type: "Date" }, { name: "returnDate", type: "Date" }, { name: "status", type: "BorrowStatus" }]} methods={["request()", "approve()", "return()"]} />
+                      <ClassCard name="Maintenance" color="emerald" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "assetId", type: "string" }, { name: "type", type: "string" }, { name: "scheduledDate", type: "Date" }, { name: "status", type: "string" }, { name: "cost", type: "number" }]} methods={["schedule()", "complete()", "cancel()"]} />
+                      <ClassCard name="Return" color="rose" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "borrowingId", type: "string" }, { name: "returnDate", type: "Date" }, { name: "condition", type: "string" }, { name: "notes", type: "string" }]} methods={["submit()", "verify()"]} />
+                    </div>
+                    <div className="mt-8 rounded-2xl bg-linear-to-r from-purple-50 to-indigo-50 p-6 dark:from-purple-950/30 dark:to-indigo-950/30">
+                      <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><GitBranch className="h-5 w-5 text-purple-600" />Relasi Antar Kelas</h4>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {[
+                          { from: "User", to: "Borrowing", rel: "1 : N", desc: "User dapat memiliki banyak peminjaman" },
+                          { from: "User", to: "Maintenance", rel: "1 : N", desc: "User dapat membuat banyak jadwal" },
+                          { from: "MedicalAsset", to: "Borrowing", rel: "1 : N", desc: "Aset dapat dipinjam berkali-kali" },
+                          { from: "Borrowing", to: "Return", rel: "1 : 1", desc: "Setiap peminjaman punya 1 pengembalian" },
+                        ].map((rel, i) => (
+                          <div key={i} className="flex items-center gap-4 rounded-xl bg-white/60 p-3 dark:bg-slate-800/60">
+                            <Badge variant="outline" className="bg-purple-100 text-purple-700">{rel.from}</Badge>
+                            <div className="flex flex-1 items-center gap-2">
+                              <div className="h-px flex-1 bg-purple-300" />
+                              <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-xs">{rel.rel}</span>
+                              <div className="h-px flex-1 bg-purple-300" />
+                            </div>
+                            <Badge variant="outline" className="bg-indigo-100 text-indigo-700">{rel.to}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <RestrictedNotice feature="Class Diagram" />
+              )}
+            </section>
 
-export default function UMLPage() {
-  const [currentUser] = useState(getCurrentUser())
-  const role = normalizeUserRole(currentUser?.role ?? "user")
-  const canViewClassAndErd = role === "admin"
-  const useCaseRoleCards: UseCaseRoleCard[] = [
-    {
-      key: "admin",
-      title: "Administrator",
-      roleIcon: "🛡️",
-      summary: "Mengelola seluruh modul inti, menjaga kualitas data, dan memegang validasi akhir proses operasional.",
-      badge: "Akses Penuh",
-      titleClass: "text-teal-800 dark:text-teal-200",
-      badgeClass: "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
-      containerClass: "bg-linear-to-br from-teal-500/5 via-teal-500/10 to-cyan-500/5 border-teal-200/50 dark:border-teal-800/50",
-      glowClass: "bg-linear-to-br from-teal-500/20 to-cyan-500/20",
-      iconWrapClass: "bg-linear-to-br from-teal-500 to-cyan-500",
-      items: [
-        { icon: "👥", title: "Kelola Pengguna", desc: "CRUD pengguna dan kontrol akun non-aktif" },
-        { icon: "🏥", title: "Kelola Inventaris", desc: "Tambah, ubah, dan hapus inventaris medis/non-medis" },
-        { icon: "📋", title: "Kelola Peminjaman", desc: "Review, update, dan tindak lanjut peminjaman" },
-        { icon: "✅", title: "Validasi Pengembalian", desc: "Final approval kondisi aset saat kembali" },
-        { icon: "🔧", title: "Kelola Pemeliharaan", desc: "Buat, edit, hapus, dan validasi status pemeliharaan" },
-        { icon: "🧾", title: "Akses Dokumentasi Lengkap", desc: "Laporan, unggahan, class diagram, dan ERD" },
-      ],
-    },
-    {
-      key: "leader",
-      title: "Leader",
-      roleIcon: "🎯",
-      summary: "Berperan sebagai pengawas operasional lintas modul tanpa mengambil alih kontrol administrasi pengguna.",
-      badge: "Akses Operasional Luas",
-      titleClass: "text-purple-800 dark:text-purple-200",
-      badgeClass: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-      containerClass: "bg-linear-to-br from-purple-500/5 via-purple-500/10 to-indigo-500/5 border-purple-200/50 dark:border-purple-800/50",
-      glowClass: "bg-linear-to-br from-purple-500/20 to-indigo-500/20",
-      iconWrapClass: "bg-linear-to-br from-purple-500 to-indigo-500",
-      items: [
-        { icon: "👁️", title: "Monitoring Seluruh Modul", desc: "Pantau inventaris, peminjaman, dan pemeliharaan" },
-        { icon: "🏥", title: "Kelola Inventaris", desc: "Akses CRUD inventaris medis/non-medis" },
-        { icon: "📋", title: "Review Peminjaman", desc: "Verifikasi proses pinjam dan tindak lanjut data" },
-        { icon: "✅", title: "Validasi Pengembalian", desc: "Menyetujui pengembalian aset sebelum ditutup" },
-        { icon: "🔧", title: "Kelola Status Lanjutan", desc: "Boleh set status selesai atau dibatalkan" },
-        { icon: "🚫", title: "Tidak Kelola Pengguna", desc: "Manajemen pengguna tetap kewenangan admin", disabled: true },
-      ],
-    },
-    {
-      key: "staff",
-      title: "Staff Pelayanan",
-      roleIcon: "👤",
-      summary: "Fokus pada alur harian seperti pemeliharaan, peminjaman, pengembalian, dan pemantauan laporan.",
-      badge: "Akses Terbatas",
-      titleClass: "text-blue-800 dark:text-blue-200",
-      badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-      containerClass: "bg-linear-to-br from-blue-500/5 via-blue-500/10 to-indigo-500/5 border-blue-200/50 dark:border-blue-800/50",
-      glowClass: "bg-linear-to-br from-blue-500/20 to-indigo-500/20",
-      iconWrapClass: "bg-linear-to-br from-blue-500 to-indigo-500",
-      items: [
-        { icon: "🔧", title: "Akses Pemeliharaan", desc: "Membuka modul pemeliharaan untuk monitoring dan tindak lanjut awal" },
-        { icon: "📅", title: "Jadwal Pemeliharaan", desc: "Membuat dan memantau jadwal pemeliharaan aset" },
-        { icon: "📦", title: "Peminjaman Alat", desc: "Mengajukan dan memantau proses peminjaman alat" },
-        { icon: "↩️", title: "Pengembalian Alat", desc: "Mengirim data kondisi aset saat pengembalian" },
-        { icon: "📊", title: "Akses Laporan", desc: "Melihat rekap inventaris, pemeliharaan, dan peminjaman" },
-        { icon: "⚙️", title: "Kelola Pengaturan", desc: "Memperbarui preferensi dan profil akun sendiri" },
-      ],
-    },
-    {
-      key: "user",
-      title: "Pengguna",
-      roleIcon: "🙋",
-      summary: "Memakai fitur self-service untuk peminjaman, pengembalian, dokumentasi, dan pengaturan akun sendiri.",
-      badge: "Akses Self-Service",
-      titleClass: "text-emerald-800 dark:text-emerald-200",
-      badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-      containerClass: "bg-linear-to-br from-emerald-500/5 via-emerald-500/10 to-teal-500/5 border-emerald-200/50 dark:border-emerald-800/50",
-      glowClass: "bg-linear-to-br from-emerald-500/20 to-teal-500/20",
-      iconWrapClass: "bg-linear-to-br from-emerald-500 to-teal-500",
-      items: [
-        { icon: "🏠", title: "Lihat Dashboard", desc: "Memantau ringkasan aktivitas peminjaman pribadi" },
-        { icon: "📦", title: "Ajukan Peminjaman", desc: "Membuat transaksi peminjaman alat yang tersedia" },
-        { icon: "↩️", title: "Proses Pengembalian", desc: "Mengirim kondisi alat saat pengembalian" },
-        { icon: "🧾", title: "Akses Dokumentasi UML & Unggahan", desc: "Melihat dokumentasi dan mengunggah laporan secara mandiri" },
-        { icon: "⚙️", title: "Kelola Pengaturan", desc: "Memperbarui profil dan preferensi akun sendiri" },
-      ],
-    },
-    {
-      key: "staff_pj",
-      title: "Staff PJ",
-      roleIcon: "📌",
-      summary: "Menangani inventaris unit kerja sekaligus mendukung operasional pemeliharaan dan pelaporan unit.",
-      badge: "Akses Inventaris Unit",
-      titleClass: "text-indigo-800 dark:text-indigo-200",
-      badgeClass: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
-      containerClass: "bg-linear-to-br from-indigo-500/5 via-indigo-500/10 to-violet-500/5 border-indigo-200/50 dark:border-indigo-800/50",
-      glowClass: "bg-linear-to-br from-indigo-500/20 to-violet-500/20",
-      iconWrapClass: "bg-linear-to-br from-indigo-500 to-violet-500",
-      items: [
-        { icon: "🏥", title: "Input Aset Medis", desc: "Menambah dan melengkapi data inventaris medis pada unit kerja" },
-        { icon: "🏢", title: "Input Aset Non-Medis", desc: "Menambah dan memperbarui data inventaris non-medis" },
-        { icon: "🔧", title: "Akses Pemeliharaan", desc: "Membuka modul pemeliharaan untuk monitoring dan tindak lanjut awal" },
-        { icon: "📅", title: "Jadwal Pemeliharaan", desc: "Buat jadwal dan update progres dasar pemeliharaan" },
-        { icon: "📦", title: "Peminjaman & Pengembalian", desc: "Mengelola alur pinjam-kembali alat di unit tanggung jawab" },
-        { icon: "📊", title: "Akses Laporan", desc: "Melihat rekap inventaris, pemeliharaan, dan peminjaman unit" },
-        { icon: "⚙️", title: "Kelola Pengaturan", desc: "Memperbarui preferensi dan profil akun sendiri" },
-      ],
-    },
-    {
-      key: "teknisi",
-      title: "Teknisi",
-      roleIcon: "🛠️",
-      summary: "Berfokus pada pekerjaan teknis pemeliharaan, pembaruan status, dan pencatatan hasil pengerjaan.",
-      badge: "Fokus Pemeliharaan",
-      titleClass: "text-amber-800 dark:text-amber-200",
-      badgeClass: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-      containerClass: "bg-linear-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5 border-amber-200/50 dark:border-amber-800/50",
-      glowClass: "bg-linear-to-br from-amber-500/20 to-orange-500/20",
-      iconWrapClass: "bg-linear-to-br from-amber-500 to-orange-500",
-      items: [
-        { icon: "🔧", title: "Eksekusi Pemeliharaan", desc: "Berfokus pada pekerjaan pemeliharaan aset" },
-        { icon: "👁️", title: "Lihat Jadwal Pemeliharaan", desc: "Akses daftar jadwal untuk ditindaklanjuti" },
-        { icon: "✅", title: "Selesaikan / Batalkan", desc: "Dapat set status selesai atau dibatalkan" },
-        { icon: "💰", title: "Catat Biaya & Notes", desc: "Mengisi biaya dan catatan hasil pekerjaan" },
-        { icon: "📈", title: "Monitoring Maintenance", desc: "Memantau progres maintenance di dashboard teknisi" },
-        { icon: "🚫", title: "Tanpa Akses Inventaris/User", desc: "Tidak menambah jadwal baru, tidak kelola pengguna", disabled: true },
-      ],
-    },
-  ]
+            <section id="erd" className="space-y-6">
+              {canViewClassAndErd ? (
+                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                  <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-linear-to-br from-emerald-500 to-green-500 p-2">
+                        <Database className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle>Entity Relationship Diagram</CardTitle>
+                        <CardDescription>Struktur database sistem</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      <TableCard name="users" color="teal" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "nip", type: "VARCHAR(20)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "email", type: "VARCHAR(255)", key: "UQ" }, { name: "password", type: "VARCHAR(255)" }, { name: "role", type: "ENUM" }, { name: "created_at", type: "TIMESTAMP" }]} />
+                      <TableCard name="medical_assets" color="purple" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "inventory_name", type: "VARCHAR(255)" }, { name: "category", type: "VARCHAR(100)" }, { name: "type", type: "VARCHAR(20)" }, { name: "serial_number", type: "VARCHAR(100)" }, { name: "condition", type: "VARCHAR(20)" }, { name: "status", type: "ENUM" }, { name: "location", type: "VARCHAR(255)" }, { name: "purchase_date", type: "DATE" }, { name: "next_maintenance", type: "DATE" }, { name: "last_maintenance", type: "DATE" }, { name: "specifications", type: "JSON/TEXT" }, { name: "created_by", type: "INT", key: "FK" }]} />
+                      <TableCard name="non_medical_assets" color="blue" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "inventory_name", type: "VARCHAR(255)" }, { name: "category", type: "VARCHAR(100)" }, { name: "type", type: "VARCHAR(20)" }, { name: "serial_number", type: "VARCHAR(100)" }, { name: "condition", type: "VARCHAR(20)" }, { name: "status", type: "ENUM" }, { name: "location", type: "VARCHAR(255)" }, { name: "purchase_date", type: "DATE" }, { name: "next_maintenance", type: "DATE" }, { name: "last_maintenance", type: "DATE" }, { name: "specifications", type: "JSON/TEXT" }, { name: "created_by", type: "INT", key: "FK" }]} />
+                      <TableCard name="borrowing_records" color="orange" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "user_id", type: "INT", key: "FK" }, { name: "asset_type", type: "VARCHAR(20)" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "borrowed_date", type: "TIMESTAMP" }, { name: "status", type: "ENUM" }]} />
+                      <TableCard name="return_records" color="rose" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "borrowing_id", type: "INT", key: "FK" }, { name: "return_date", type: "TIMESTAMP" }, { name: "condition", type: "ENUM" }, { name: "received_by", type: "INT", key: "FK" }]} />
+                      <TableCard name="maintenance_records" color="emerald" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_type", type: "VARCHAR(20)" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "maintenance_type", type: "VARCHAR(50)" }, { name: "status", type: "ENUM" }, { name: "cost", type: "DECIMAL(10,2)" }]} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <RestrictedNotice feature="ERD" />
+              )}
+            </section>
 
-  const useCaseSummaryCards: UseCaseSummaryCard[] = [
-    {
-      title: "Admin",
-      containerClass: "bg-teal-50 dark:bg-teal-950/30 border border-teal-200/50 dark:border-teal-800/50",
-      titleClass: "text-teal-700 dark:text-teal-300",
-      items: ["Kontrol lintas modul", "Validasi akhir operasional"],
-    },
-    {
-      title: "Leader",
-      containerClass: "bg-purple-50 dark:bg-purple-950/30 border border-purple-200/50 dark:border-purple-800/50",
-      titleClass: "text-purple-700 dark:text-purple-300",
-      items: ["Koordinasi proses harian", "Validasi peminjaman dan return"],
-    },
-    {
-      title: "Staff",
-      containerClass: "bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50",
-      titleClass: "text-blue-700 dark:text-blue-300",
-      items: ["Pemeliharaan, jadwal, dan laporan", "Peminjaman, pengembalian, dan pengaturan"],
-    },
-    {
-      title: "Pengguna",
-      containerClass: "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/50",
-      titleClass: "text-emerald-700 dark:text-emerald-300",
-      items: ["Dashboard, UML, pengaturan", "Peminjaman dan pengembalian mandiri"],
-    },
-    {
-      title: "Staff PJ",
-      containerClass: "bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200/50 dark:border-indigo-800/50",
-      titleClass: "text-indigo-700 dark:text-indigo-300",
-      items: ["Input aset medis dan non-medis", "Pemeliharaan, laporan, dan pengaturan unit"],
-    },
-    {
-      title: "Teknisi",
-      containerClass: "bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/50",
-      titleClass: "text-amber-700 dark:text-amber-300",
-      items: ["Status selesai/batal maintenance", "Catatan teknis & biaya"],
-    },
-    {
-      title: "Sistem",
-      containerClass: "bg-slate-100 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60",
-      titleClass: "text-slate-700 dark:text-slate-300",
-      items: ["Role-based authorization", "Audit trail dan sinkronisasi data"],
-    },
-  ]
-  const enabledUseCaseCount = useCaseRoleCards.reduce(
-    (total, card) => total + card.items.filter((item) => !item.disabled).length,
-    0
-  )
-  const restrictedUseCaseCount = useCaseRoleCards.reduce(
-    (total, card) => total + card.items.filter((item) => item.disabled).length,
-    0
-  )
-  const useCaseQuickSummary = [
-    { label: "Role aktif", value: `${useCaseRoleCards.length}` },
-    { label: "Interaksi utama", value: `${enabledUseCaseCount}` },
-    { label: "Batasan akses", value: `${restrictedUseCaseCount}` },
-  ]
+            <section id="use-case" className="space-y-6 scroll-mt-28">
+              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2">
+                      <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle>Use Case Diagram</CardTitle>
+                      <CardDescription>Interaksi pengguna dengan sistem inventaris</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-8 p-6">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-slate-700/70 dark:bg-slate-900/40">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ringkasan Akses per Role</h3>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">Tampilan di bawah difokuskan untuk memperjelas hak akses, tanggung jawab, dan batasan setiap role tanpa elemen visual yang berlebihan.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {useCaseQuickSummary.map((item) => (
+                          <Badge key={item.label} className="border border-slate-200 bg-white text-slate-700 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{item.label}: {item.value}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Role dan Tanggung Jawab</h4>
+                        <p className="text-sm text-muted-foreground">Kartu berikut menampilkan ruang lingkup kerja tiap aktor beserta fitur yang dibatasi.</p>
+                      </div>
+                      <Badge className="w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Disusun untuk desktop dan mobile</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                      {useCaseRoleCards.map((card) => <RoleUseCaseCard key={card.key} card={card} />)}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-gray-200/60 bg-linear-to-r from-gray-50 to-slate-50 p-6 dark:border-gray-700/60 dark:from-slate-800/50 dark:to-slate-900/50">
+                    <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Network className="h-5 w-5 text-gray-600" />Matriks Ringkas Role</h4>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      {useCaseSummaryCards.map((card, i) => (
+                        <div key={i} className={`rounded-2xl p-4 ${card.containerClass}`}>
+                          <p className={`font-semibold ${card.titleClass}`}>{card.title}</p>
+                          <div className="space-y-2">
+                            {card.items.map((item, j) => (
+                              <div key={j} className="mt-3 flex items-start gap-2 text-sm text-muted-foreground"><ArrowRight className="mt-1 h-3 w-3 shrink-0" /><span>{item}</span></div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
 
-  return (
-    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8">
-        <div className="space-y-6">
-          {/* Header */}
-        <div className="mb-8">
-
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-xl shadow-lg">
-                  <FileCode2 className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-2xl lg:text-3xl font-bold bg-linear-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                  Dokumentasi UML Diagram Use Case & Unggahan
-                </h1>
-              </div>
-              <p className="text-muted-foreground">
-                Arsitektur sistem inventaris dan pemeliharaan RSUP Persahabatan
-              </p>
-            </div>
+            <div className="mt-8 border-t border-gray-200 pt-6 text-center dark:border-gray-800">
+              <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
+              <p className="mt-1 text-xs text-muted-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
             </div>
           </div>
+        </div>
+                      color="blue"
+                      columns={[
+                      { name: "id", type: "INT", key: "PK" },
+                        { name: "asset_code", type: "VARCHAR(50)", key: "UQ" },
+                        { name: "name", type: "VARCHAR(255)" },
+                        { name: "inventory_name", type: "VARCHAR(255)" },
+                        { name: "category", type: "VARCHAR(100)" },
+                        { name: "type", type: "VARCHAR(20)" },
+                        { name: "serial_number", type: "VARCHAR(100)" },
+                        { name: "condition", type: "VARCHAR(20)" },
+                        { name: "status", type: "ENUM" },
+                        { name: "location", type: "VARCHAR(255)" },
+                        { name: "purchase_date", type: "DATE" },
+                        { name: "next_maintenance", type: "DATE" },
+                        { name: "last_maintenance", type: "DATE" },
+                        { name: "specifications", type: "JSON/TEXT" },
+                        { name: "created_by", type: "INT", key: "FK" },
+                      ]}
+                    />
 
-          {/* Info Banner */}
-          <div className="mt-6 p-4 bg-linear-to-r from-teal-500/10 via-cyan-500/10 to-blue-500/10 border border-teal-200/50 dark:border-teal-800/50 rounded-xl backdrop-blur-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-teal-100 dark:bg-teal-900 rounded-lg">
-                <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-teal-800 dark:text-teal-200">Tentang Dokumentasi</h3>
-                <p className="text-sm text-teal-700/80 dark:text-teal-300/80 mt-1">
-                  Dokumentasi ini menjelaskan arsitektur sistem, hubungan antar entitas, dan alur kerja proses peminjaman serta pemeliharaan inventaris menggunakan standar 
-                </p>
-                <p className="text-xs text-teal-600/90 dark:text-teal-300/80 mt-1">
-                
-                </p>
-              </div>
-            </div>
-          </div>
+                    {/* Borrowing Records Table */}
+                    <TableCard 
+                      name="borrowing_records"
+                      color="orange"
+                      columns={[
+                        { name: "id", type: "INT", key: "PK" },
+                        { name: "user_id", type: "INT", key: "FK" },
+                        { name: "asset_type", type: "VARCHAR(20)" },
+                        { name: "asset_id", type: "INT", key: "FK" },
+                        { name: "borrowed_date", type: "TIMESTAMP" },
+                        { name: "status", type: "ENUM" },
+                      ]}
+                    />
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="border border-slate-200/70 bg-white/85 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
-              <CardHeader className="space-y-3 border-b border-slate-100/80 dark:border-slate-800/70">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-linear-to-br from-teal-500 to-cyan-500 p-2.5 shadow-sm">
-                    <FileCode2 className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Dokumentasi UML</CardTitle>
-                    <CardDescription>Data diagram, role, class, relasi, dan alur sistem.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Bagian ini berisi dokumentasi inti sistem inventaris dan pemeliharaan, termasuk use case, class diagram,
-                  activity diagram, dan ERD.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
-                    Use Case
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full bg-cyan-50 text-cyan-700 border-cyan-200">
-                    Class Diagram
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full bg-indigo-50 text-indigo-700 border-indigo-200">
-                    ERD
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href="#dokumentasi"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r from-teal-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
-                  >
-                    <FileCode2 className="h-4 w-4" />
-                    Buka Dokumentasi
-                  </Link>
-                  <Link
-                    href="#unggahan"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                  >
-                    <UploadCloud className="h-4 w-4" />
-                    Lihat Unggahan
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+                    {/* Return Records Table */}
+                    <TableCard 
+                      name="return_records"
+                      color="rose"
+                      columns={[
+                        { name: "id", type: "INT", key: "PK" },
+                        { name: "borrowing_id", type: "INT", key: "FK" },
+                        { name: "return_date", type: "TIMESTAMP" },
+                        { name: "condition", type: "ENUM" },
+                        { name: "received_by", type: "INT", key: "FK" },
+                      ]}
+                    />
 
-            <Card className="border border-slate-200/70 bg-white/85 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
-              <CardHeader className="space-y-3 border-b border-slate-100/80 dark:border-slate-800/70">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-linear-to-br from-slate-800 to-slate-500 p-2.5 shadow-sm">
-                    <UploadCloud className="h-5 w-5 text-white" />
+                    {/* Maintenance Records Table */}
+                    <TableCard 
+                      name="maintenance_records"
+                      color="emerald"
+                      columns={[
+                        { name: "id", type: "INT", key: "PK" },
+                        { name: "asset_type", type: "VARCHAR(20)" },
+                        { name: "asset_id", type: "INT", key: "FK" },
+                        { name: "maintenance_type", type: "VARCHAR(50)" },
+                        { name: "status", type: "ENUM" },
+                        { name: "cost", type: "DECIMAL(10,2)" },
+                      ]}
+                    />
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">Dokumentasi Unggahan</CardTitle>
-                    <CardDescription>Arsip file laporan yang terhubung dengan halaman unggahan utama.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 p-5">
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Fitur ini memisahkan dokumentasi unggahan agar lebih mudah ditemukan, dipantau, dan dibuka sebagai
-                  fitur mandiri dari halaman UML.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700 border-slate-300">
-                    Arsip File
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
-                    PDF / Office
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full bg-cyan-50 text-cyan-700 border-cyan-200">
-                    Tautan Utama
-                  </Badge>
-                </div>
-                <div className="flex justify-end">
-                  <Button size="sm" asChild className="rounded-lg bg-slate-800 text-white hover:bg-slate-700">
-                    <Link href="/unggahan" className="inline-flex items-center gap-2">
-                      <UploadCloud className="h-4 w-4" />
-                      Buka Halaman Unggahan
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <RestrictedNotice feature="ERD" />
+            )}
+          </section>
 
-        <div className="space-y-6">
           {/* Use Case Diagram */}
-          <section id="dokumentasi" className="space-y-6 scroll-mt-28">
+          <section id="use-case" className="space-y-6 scroll-mt-28">
             <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
               <CardHeader className="border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3">
@@ -427,467 +317,6 @@ export default function UMLPage() {
           </Card>
           </section>
 
-        {/* Unggahan */}
-        <section id="unggahan" className="space-y-6 scroll-mt-28">
-          <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-linear-to-br from-slate-800 to-slate-500 rounded-lg">
-                  <UploadCloud className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle>Unggahan Terintegrasi</CardTitle>
-                  <CardDescription>Selaras dengan dokumentasi UML, file laporan mudah diakses.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">
-                Tombol unggahan sebagai bagian dari tab membantu auditor dan tim pengembangan menjaga visibilitas proses. Klik tombol di bawah untuk membuka fitur unggah utama.
-              </p>
-              <div className="mt-4 flex justify-end">
-                <Button size="sm" asChild>
-                  <Link href="/unggahan" className="inline-flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4" />
-                    Buka Unggahan
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-          {/* Class Diagram */}
-          <section className="space-y-6">
-            {canViewClassAndErd ? (
-              <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-linear-to-br from-purple-500 to-indigo-500 rounded-lg">
-                      <Box className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle>Class Diagram</CardTitle>
-                      <CardDescription>Struktur kelas dan entitas sistem</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* User Class */}
-                    <ClassCard 
-                      name="User"
-                      color="teal"
-                      badge="Core"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "nip", type: "string" }, 
-                        { name: "name", type: "string" }, 
-                        { name: "email", type: "string" }, 
-                        { name: "role", type: "UserRole" }, 
-                        { name: "createdAt", type: "Date" } 
-                      ]} 
-                      methods={[ 
-                        "login()", 
-                        "logout()", 
-                        "updateProfile()" 
-                      ]} 
-                    />
-
-                    {/* MedicalAsset Class */}
-                    <ClassCard 
-                      name="MedicalAsset"
-                      color="purple"
-                      badge="Entity"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "assetCode", type: "string" }, 
-                        { name: "inventoryName", type: "string" },
-                        { name: "name", type: "string" }, 
-                        { name: "type", type: "string" },
-                        { name: "serialNumber", type: "string" },
-                        { name: "purchaseDate", type: "Date" },
-                        { name: "lastMaintenance", type: "Date" },
-                        { name: "nextMaintenance", type: "Date" },
-                        { name: "category", type: "string" }, 
-                        { name: "status", type: "AssetStatus" }, 
-                        { name: "roomId", type: "string" },
-                        { name: "notes", type: "string" },
-                        { name: "condition", type: "string" }, 
-                        { name: "usagePurpose", type: "string" }, 
-                      ]} 
-                      methods={[ 
-                        "create()", 
-                        "update()", 
-                        "delete()" 
-                      ]} 
-                    />
-
-                    {/* NonMedicalAsset Class */}
-                    <ClassCard 
-                      name="NonMedicalAsset"
-                      color="blue"
-                      badge="Entity"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "assetCode", type: "string" }, 
-                        { name: "inventoryName", type: "string" },
-                        { name: "name", type: "string" }, 
-                        { name: "type", type: "string" },
-                        { name: "serialNumber", type: "string" },
-                        { name: "purchaseDate", type: "Date" },
-                        { name: "lastMaintenance", type: "Date" },
-                        { name: "nextMaintenance", type: "Date" },
-                        { name: "category", type: "string" }, 
-                        { name: "status", type: "AssetStatus" }, 
-                        { name: "roomId", type: "string" },
-                        { name: "notes", type: "string" },
-                        { name: "condition", type: "string" }, 
-                        { name: "usagePurpose", type: "string" }, 
-                      ]}  
-                      methods={[ 
-                        "create()", 
-                        "update()", 
-                        "delete()" 
-                      ]} 
-                    />
-
-                    {/* Borrowing Class */}
-                    <ClassCard 
-                      name="Borrowing"
-                      color="orange"
-                      badge="Transaction"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "userId", type: "string" }, 
-                        { name: "assetId", type: "string" }, 
-                        { name: "borrowDate", type: "Date" }, 
-                        { name: "returnDate", type: "Date" }, 
-                        { name: "status", type: "BorrowStatus" } 
-                      ]} 
-                      methods={[ 
-                        "request()", 
-                        "approve()", 
-                        "return()" 
-                      ]} 
-                    />
-                    <ClassCard 
-                      name="ReportUpload"
-                      color="rose"
-                      badge="Storage"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "userId", type: "string" }, 
-                        { name: "filename", type: "string" }, 
-                        { name: "contentType", type: "string" }, 
-                        { name: "sizeBytes", type: "number" }, 
-                        { name: "uploadedAt", type: "Date" }, 
-                        { name: "notes", type: "string" }, 
-                      ]} 
-                      methods={[ 
-                        "store()", 
-                        "delete()", 
-                        "download()" 
-                      ]} 
-                    />
-
-                    {/* Maintenance Class */}
-                    <ClassCard 
-                      name="Maintenance"
-                      color="emerald"
-                      badge="Transaction"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "assetId", type: "string" }, 
-                        { name: "type", type: "string" }, 
-                        { name: "scheduledDate", type: "Date" }, 
-                        { name: "status", type: "string" }, 
-                        { name: "cost", type: "number" } 
-                      ]} 
-                      methods={[ 
-                        "schedule()", 
-                        "complete()", 
-                        "cancel()" 
-                      ]} 
-                    />
-
-                    {/* Return Class */}
-                    <ClassCard 
-                      name="Return"
-                      color="rose"
-                      badge="Transaction"
-                      properties={[ 
-                        { name: "id", type: "string" }, 
-                        { name: "borrowingId", type: "string" }, 
-                        { name: "returnDate", type: "Date" }, 
-                        { name: "condition", type: "string" }, 
-                        { name: "notes", type: "string" } 
-                      ]} 
-                      methods={[ 
-                        "submit()", 
-                        "verify()" 
-                      ]} 
-                    />
-                  </div>
-
-                  {/* Relationships */}
-                  <div className="mt-8 p-6 bg-linear-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-2xl">
-                    <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <GitBranch className="w-5 h-5 text-purple-600" />
-                      Relasi Antar Kelas
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {[
-                        { from: "User", to: "Borrowing", rel: "1 : N", desc: "User dapat memiliki banyak peminjaman" },
-                        { from: "User", to: "Maintenance", rel: "1 : N", desc: "User dapat membuat banyak jadwal" },
-                        { from: "MedicalAsset", to: "Borrowing", rel: "1 : N", desc: "Aset dapat dipinjam berkali-kali" },
-                        { from: "Borrowing", to: "Return", rel: "1 : 1", desc: "Setiap peminjaman punya 1 pengembalian" },
-                      ].map((rel, i) => (
-                        <div key={i} className="flex items-center gap-4 p-3 bg-white/60 dark:bg-slate-800/60 rounded-xl">
-                          <Badge variant="outline" className="bg-purple-100 text-purple-700">{rel.from}</Badge>
-                          <div className="flex-1 flex items-center gap-2">
-                            <div className="h-px flex-1 bg-purple-300"></div>
-                            <span className="text-xs font-mono bg-purple-100 px-2 py-0.5 rounded">{rel.rel}</span>
-                            <div className="h-px flex-1 bg-purple-300"></div>
-                          </div>
-                          <Badge variant="outline" className="bg-indigo-100 text-indigo-700">{rel.to}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <RestrictedNotice feature="Class Diagram" />
-            )}
-          </section>
-
-          {/* Activity Diagram */}
-          <section className="space-y-6">
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-linear-to-br from-orange-500 to-amber-500 rounded-lg">
-                    <Workflow className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle>Activity Diagram</CardTitle>
-                    <CardDescription>Alur proses dalam sistem</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <ActivityFlow 
-                    title="Alur Login"
-                    color="purple"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "Input NIP & Password", type: "action" },
-                      { step: "Validasi kredensial", type: "action" },
-                      { step: "Valid?", type: "decision" },
-                      { step: "Generate token", type: "action" },
-                      { step: "Redirect dashboard", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-                  <ActivityFlow 
-                    title="Alur Lupa Password"
-                    color="amber"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "User klik Lupa Password", type: "action" },
-                      { step: "Tampilkan form email/username", type: "action" },
-                      { step: "User mengirim identifier", type: "action" },
-                      { step: "Validasi input", type: "action" },
-                      { step: "Valid?", type: "decision" },
-                      { step: "Kirim tautan atau kode reset", type: "action" },
-                      { step: "User buka tautan/masukkan kode", type: "action" },
-                      { step: "User atur password baru", type: "action" },
-                      { step: "Perbarui kredensial & konfirmasi", type: "action" },
-                      { step: "Kembali ke login", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-                  <ActivityFlow 
-                    title="Alur Daftar Akun"
-                    color="fuchsia"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "User klik Buat Akun", type: "action" },
-                      { step: "Tampilkan formulir pendaftaran", type: "action" },
-                      { step: "User isi nama, email, password, dll.", type: "action" },
-                      { step: "Validasi format & keunikan", type: "action" },
-                      { step: "Valid?", type: "decision" },
-                      { step: "Buat akun baru", type: "action" },
-                      { step: "Kirim email verifikasi (opsional)", type: "action" },
-                      { step: "Tampilkan konfirmasi dan redirect", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-                  <ActivityFlow 
-                    title="Alur Penambahan Inventaris"
-                    color="teal"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "User pilih Tambah Inventaris", type: "action" },
-                      { step: "Pilih kategori aset (medis/non-medis)", type: "action" },
-                      { step: "Isi data detail & spesifikasi", type: "action" },
-                      { step: "Unggah dokumen pendukung (foto/sertifikat)", type: "action" },
-                      { step: "Validasi data & anggaran", type: "action" },
-                      { step: "Valid?", type: "decision" },
-                      { step: "Simpan aset ke master inventory", type: "action" },
-                      { step: "Update status ruangan & laporan", type: "action" },
-                      { step: "Notifikasi approval ke penanggung jawab", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-
-                  {/* Borrowing Flow */}
-                  <ActivityFlow 
-                    title="Alur Peminjaman"
-                    color="orange"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "Pengguna/Staff memilih aset", type: "action" },
-                      { step: "Cek ketersediaan", type: "decision" },
-                      { step: "Isi form pinjam & submit", type: "action" },
-                      { step: "Sistem simpan transaksi", type: "action" },
-                      { step: "Auto approve sesuai alur aktif", type: "action" },
-                      { step: "Aset dipinjam", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-
-                  {/* Maintenance Flow */}
-                  <ActivityFlow 
-                    title="Alur Pemeliharaan"
-                    color="blue"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "Staff/Staff PJ buat jadwal", type: "action" },
-                      { step: "Set tanggal & prioritas", type: "action" },
-                      { step: "Notifikasi dikirim", type: "action" },
-                      { step: "Teknisi mengerjakan", type: "action" },
-                      { step: "Update progress", type: "action" },
-                      { step: "Leader/Admin validasi lanjutan", type: "action" },
-                      { step: "Mark complete", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-
-                  {/* Return Flow */}
-                  <ActivityFlow 
-                    title="Alur Pengembalian"
-                    color="emerald"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "Pengguna/Staff submit return", type: "action" },
-                      { step: "Pilih kondisi aset", type: "action" },
-                      { step: "Sistem simpan data pengembalian", type: "action" },
-                      { step: "Admin/Leader verifikasi", type: "action" },
-                      { step: "Kondisi OK?", type: "decision" },
-                      { step: "Update status aset", type: "action" },
-                      { step: "Selesai", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-                  <ActivityFlow 
-                    title="Alur Laporan & Unggah"
-                    color="rose"
-                    steps={[
-                      { step: "Start", type: "start" },
-                      { step: "Tampilkan ringkasan data", type: "action" },
-                      { step: "Pilih format PDF/Excel/Word", type: "action" },
-                      { step: "Unggah file", type: "action" },
-                      { step: "Simpan ke arsip & log", type: "action" },
-                      { step: "End", type: "end" },
-                    ]}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* ERD */}
-          <section className="space-y-6">
-            {canViewClassAndErd ? (
-              <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-linear-to-br from-emerald-500 to-green-500 rounded-lg">
-                      <Database className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle>Entity Relationship Diagram</CardTitle>
-                      <CardDescription>Struktur database sistem</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Users Table */}
-                    <TableCard 
-                      name="users"
-                      color="teal"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "nip", type: "VARCHAR(20)", key: "UQ" },
-                        { name: "name", type: "VARCHAR(255)" },
-                        { name: "email", type: "VARCHAR(255)", key: "UQ" },
-                        { name: "password", type: "VARCHAR(255)" },
-                        { name: "role", type: "ENUM" },
-                        { name: "created_at", type: "TIMESTAMP" },
-                      ]}
-                    />
-
-                    {/* Medical Assets Table */}
-                    <TableCard 
-                      name="medical_assets"
-                      color="purple"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "asset_code", type: "VARCHAR(50)", key: "UQ" },
-                        { name: "name", type: "VARCHAR(255)" },
-                        { name: "inventory_name", type: "VARCHAR(255)" },
-                        { name: "category", type: "VARCHAR(100)" },
-                        { name: "type", type: "VARCHAR(20)" },
-                        { name: "serial_number", type: "VARCHAR(100)" },
-                        { name: "condition", type: "VARCHAR(20)" },
-                        { name: "status", type: "ENUM" },
-                        { name: "location", type: "VARCHAR(255)" },
-                        { name: "purchase_date", type: "DATE" },
-                        { name: "next_maintenance", type: "DATE" },
-                        { name: "last_maintenance", type: "DATE" },
-                        { name: "specifications", type: "JSON/TEXT" },
-                        { name: "created_by", type: "INT", key: "FK" },
-                      ]}
-                    />
-
-                    {/* Non-Medical Assets Table */}
-                    <TableCard 
-                      name="non_medical_assets"
-                      color="blue"
-                      columns={[
-                      { name: "id", type: "INT", key: "PK" },
-                        { name: "asset_code", type: "VARCHAR(50)", key: "UQ" },
-                        { name: "name", type: "VARCHAR(255)" },
-                        { name: "inventory_name", type: "VARCHAR(255)" },
-                        { name: "category", type: "VARCHAR(100)" },
-                        { name: "type", type: "VARCHAR(20)" },
-                        { name: "serial_number", type: "VARCHAR(100)" },
-                        { name: "condition", type: "VARCHAR(20)" },
-                        { name: "status", type: "ENUM" },
-                        { name: "location", type: "VARCHAR(255)" },
-                        { name: "purchase_date", type: "DATE" },
-                        { name: "next_maintenance", type: "DATE" },
-                        { name: "last_maintenance", type: "DATE" },
-                        { name: "specifications", type: "JSON/TEXT" },
-                        { name: "created_by", type: "INT", key: "FK" },
-                      ]}
-                    />
-
-                    {/* Borrowing Records Table */}
                     <TableCard 
                       name="borrowing_records"
                       color="orange"
