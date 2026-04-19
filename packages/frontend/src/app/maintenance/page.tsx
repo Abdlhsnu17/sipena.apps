@@ -12,7 +12,8 @@ import {
     ShieldCheck,
     Trash2,
     UserCheck,
-    Wrench
+    Wrench,
+    XCircle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
@@ -501,8 +502,8 @@ export default function MaintenancePage() {
         })
       } else if (newStatus === "in_progress") {
         toast({
-          title: "Pemelirahaan sarana sedang diproses",
-          description: "Status pemeliharaan sudah diubah ke proses.",
+          title: "Pemeliharaan sarana di proses",
+          description: "Status pemeliharaan sudah diubah ke tahap di proses.",
         })
       } else if (newStatus === "completed") {
         toast({
@@ -719,6 +720,10 @@ export default function MaintenancePage() {
   )
   const completedCount = useMemo(
     () => maintenance.filter((m) => m.status === "validated").length,
+    [maintenance]
+  )
+  const cancelledCount = useMemo(
+    () => maintenance.filter((m) => m.status === "cancelled").length,
     [maintenance]
   )
   const getMaintenanceNoId = (item: Maintenance) => formatNoId("JDW", item.id, item.maintenanceCode)
@@ -990,7 +995,7 @@ export default function MaintenancePage() {
 
           <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70" data-maintenance-summary>
             <CardContent className="p-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50/70 dark:bg-slate-950/30 p-3">
                   <div>
                     <p className="text-[12px] text-muted-foreground">Diajukan / Disetujui</p>
@@ -1000,24 +1005,31 @@ export default function MaintenancePage() {
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Sedang Diproses</p>
+                    <p className="text-[12px] text-muted-foreground">Di Proses</p>
                     <p className="text-xl font-semibold text-teal-600 mt-1">{inProgressCount.toLocaleString("id-ID")}</p>
                   </div>
                   <Wrench className="h-4 w-4 text-teal-500 shrink-0" />
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Menunggu Validasi</p>
+                    <p className="text-[12px] text-muted-foreground">Sedang Dalam Pengerjaan</p>
                     <p className="text-xl font-semibold text-foreground mt-1">{awaitingValidationCount.toLocaleString("id-ID")}</p>
                   </div>
                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Selesai Final</p>
+                    <p className="text-[12px] text-muted-foreground">Selesai Pemeliharaan Sarana</p>
                     <p className="text-xl font-semibold text-foreground mt-1">{completedCount.toLocaleString("id-ID")}</p>
                   </div>
                   <UserCheck className="h-4 w-4 text-indigo-500 shrink-0" />
+                </div>
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/30 p-3">
+                  <div>
+                    <p className="text-[12px] text-muted-foreground">Ditolak / Dibatalkan</p>
+                    <p className="text-xl font-semibold text-rose-600 mt-1">{cancelledCount.toLocaleString("id-ID")}</p>
+                  </div>
+                  <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
                 </div>
               </div>
             </CardContent>
@@ -1137,7 +1149,7 @@ export default function MaintenancePage() {
                     <option value="requested">Diajukan</option>
                     <option value="scheduled">Disetujui</option>
                     <option value="in_progress">Diproses</option>
-                    <option value="completed">Menunggu Validasi</option>
+                    <option value="completed">Sedang Dalam Pengerjaan</option>
                     <option value="validated">Selesai</option>
                     <option value="cancelled">Ditolak / Dibatalkan</option>
                   </select>

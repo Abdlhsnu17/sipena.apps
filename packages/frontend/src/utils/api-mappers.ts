@@ -101,9 +101,9 @@ export const maintenanceStatusLabel = (status: string): string => {
     case "in_progress":
       return "Diproses"
     case "completed":
-      return "Menunggu Validasi"
+      return "Sedang Dalam Pengerjaan"
     case "validated":
-      return "Selesai"
+      return "Selesai Pemeliharaan Sarana"
     case "cancelled":
       return "Ditolak / Dibatalkan"
     default:
