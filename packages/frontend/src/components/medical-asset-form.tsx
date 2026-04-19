@@ -150,18 +150,6 @@ export default function MedicalAssetForm({
     })
   }
 
-  const filteredTypeOptions = useMemo(() => {
-    const query = typeSearch.trim().toLowerCase()
-    if (!query) {
-      return medicalTypeCategoryOptions
-    }
-
-    return medicalTypeCategoryOptions.filter(
-      (option) =>
-        option.label.toLowerCase().includes(query),
-    )
-  }, [medicalTypeCategoryOptions, typeSearch])
-
   const typeOptions = useMemo(() => {
     const customType = formData.type?.trim()
     if (!customType) {

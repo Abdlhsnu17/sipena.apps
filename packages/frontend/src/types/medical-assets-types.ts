@@ -148,6 +148,7 @@ export interface MedicalAsset {
     | "surgery-set-major"
     | "pet-ct"
     | "dsa"
+    | string
   name: string
   serialNumber: string
   purchaseDate: string

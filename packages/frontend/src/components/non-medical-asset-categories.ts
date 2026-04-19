@@ -696,7 +696,7 @@ export const NON_MEDICAL_ASSET_CLASSIFICATIONS = buildClassifications(RAW_NON_ME
 
 export const NON_MEDICAL_ASSET_CATEGORIES: Record<string, NonMedicalAssetCategory> = {
   "Non Medis": {
-    description: "Daftar inventaris non-medis yang sudah dinormalisasi, dideduplikasi, dan dipetakan ke fungsi penggunaan serta rekomendasi tipe alat.",
+    description: "",
     assetTypes: NON_MEDICAL_ASSET_CLASSIFICATIONS.map((item) => item.inventoryName),
     classifications: NON_MEDICAL_ASSET_CLASSIFICATIONS,
   },
