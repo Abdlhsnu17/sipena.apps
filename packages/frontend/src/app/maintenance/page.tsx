@@ -11,6 +11,7 @@ import {
     Search,
     ShieldCheck,
     Trash2,
+    UserCheck,
     Wrench,
     XCircle
 } from "lucide-react"
@@ -717,6 +718,10 @@ export default function MaintenancePage() {
     () => maintenance.filter((m) => m.status === "completed").length,
     [maintenance]
   )
+  const completedCount = useMemo(
+    () => maintenance.filter((m) => m.status === "validated").length,
+    [maintenance]
+  )
   const cancelledCount = useMemo(
     () => maintenance.filter((m) => m.status === "cancelled").length,
     [maintenance]
@@ -990,7 +995,7 @@ export default function MaintenancePage() {
 
           <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70" data-maintenance-summary>
             <CardContent className="p-4">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50/70 dark:bg-slate-950/30 p-3">
                   <div>
                     <p className="text-[12px] text-muted-foreground">Diajukan / Disetujui</p>
@@ -1012,6 +1017,13 @@ export default function MaintenancePage() {
                   </div>
                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
                 </div>
+                  <div className="flex items-start justify-between gap-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 p-3">
+                    <div>
+                      <p className="text-[12px] text-muted-foreground">Selesai Pemeliharaan Sarana</p>
+                      <p className="text-xl font-semibold text-foreground mt-1">{completedCount.toLocaleString("id-ID")}</p>
+                    </div>
+                    <UserCheck className="h-4 w-4 text-indigo-500 shrink-0" />
+                  </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/30 p-3">
                   <div>
                     <p className="text-[12px] text-muted-foreground">Ditolak / Dibatalkan</p>
