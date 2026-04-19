@@ -5,11 +5,11 @@ WORKDIR /app
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/frontend/package.json packages/frontend/package.json
 
-RUN npm ci
+RUN npm install
 
 COPY packages/frontend packages/frontend
 

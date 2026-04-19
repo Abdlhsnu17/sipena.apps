@@ -4,14 +4,14 @@ WORKDIR /app
 
 ENV CI=true
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/frontend/package.json packages/frontend/package.json
 
-RUN npm ci
+RUN npm install
 
 COPY packages/backend packages/backend
-COPY packages/db packages/db
+COPY packages/database packages/db
 
 RUN npm run build --workspace=inventory-backend
 
