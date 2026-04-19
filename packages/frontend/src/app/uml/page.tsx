@@ -1,394 +1,12 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCurrentUser } from "@/services/auth-utils"
 import { normalizeUserRole } from "@/utils/role"
-import {
-    ArrowRight,
-  Activity,
-    BookOpen,
-    Box,
-    Database,
-    FileCode2,
-    GitBranch,
-    Network,
-    Shield,
-    Users,
-    Workflow,
-    Zap
-} from "lucide-react"
+import { ArrowRight, Box, Database, FileCode2, GitBranch, Network, Shield, Users, Workflow, Zap } from "lucide-react"
 import Link from "next/link"
-                      <div className="rounded-lg bg-linear-to-br from-purple-500 to-indigo-500 p-2">
-                        <Box className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle>Class Diagram</CardTitle>
-                        <CardDescription>Struktur kelas dan entitas sistem</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      <ClassCard name="User" color="teal" badge="Core" properties={[{ name: "id", type: "string" }, { name: "nip", type: "string" }, { name: "name", type: "string" }, { name: "email", type: "string" }, { name: "role", type: "UserRole" }, { name: "createdAt", type: "Date" }]} methods={["login()", "logout()", "updateProfile()"]} />
-                      <ClassCard name="MedicalAsset" color="purple" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "inventoryName", type: "string" }, { name: "name", type: "string" }, { name: "type", type: "string" }, { name: "serialNumber", type: "string" }, { name: "purchaseDate", type: "Date" }, { name: "lastMaintenance", type: "Date" }, { name: "nextMaintenance", type: "Date" }, { name: "category", type: "string" }, { name: "status", type: "AssetStatus" }, { name: "roomId", type: "string" }, { name: "notes", type: "string" }, { name: "condition", type: "string" }, { name: "usagePurpose", type: "string" }]} methods={["create()", "update()", "delete()"]} />
-                      <ClassCard name="NonMedicalAsset" color="blue" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "inventoryName", type: "string" }, { name: "name", type: "string" }, { name: "type", type: "string" }, { name: "serialNumber", type: "string" }, { name: "purchaseDate", type: "Date" }, { name: "lastMaintenance", type: "Date" }, { name: "nextMaintenance", type: "Date" }, { name: "category", type: "string" }, { name: "status", type: "AssetStatus" }, { name: "roomId", type: "string" }, { name: "notes", type: "string" }, { name: "condition", type: "string" }, { name: "usagePurpose", type: "string" }]} methods={["create()", "update()", "delete()"]} />
-                      <ClassCard name="Borrowing" color="orange" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "userId", type: "string" }, { name: "assetId", type: "string" }, { name: "borrowDate", type: "Date" }, { name: "returnDate", type: "Date" }, { name: "status", type: "BorrowStatus" }]} methods={["request()", "approve()", "return()"]} />
-                      <ClassCard name="Maintenance" color="emerald" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "assetId", type: "string" }, { name: "type", type: "string" }, { name: "scheduledDate", type: "Date" }, { name: "status", type: "string" }, { name: "cost", type: "number" }]} methods={["schedule()", "complete()", "cancel()"]} />
-                      <ClassCard name="Return" color="rose" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "borrowingId", type: "string" }, { name: "returnDate", type: "Date" }, { name: "condition", type: "string" }, { name: "notes", type: "string" }]} methods={["submit()", "verify()"]} />
-                    </div>
-                    <div className="mt-8 rounded-2xl bg-linear-to-r from-purple-50 to-indigo-50 p-6 dark:from-purple-950/30 dark:to-indigo-950/30">
-                      <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><GitBranch className="h-5 w-5 text-purple-600" />Relasi Antar Kelas</h4>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {[
-                          { from: "User", to: "Borrowing", rel: "1 : N", desc: "User dapat memiliki banyak peminjaman" },
-                          { from: "User", to: "Maintenance", rel: "1 : N", desc: "User dapat membuat banyak jadwal" },
-                          { from: "MedicalAsset", to: "Borrowing", rel: "1 : N", desc: "Aset dapat dipinjam berkali-kali" },
-                          { from: "Borrowing", to: "Return", rel: "1 : 1", desc: "Setiap peminjaman punya 1 pengembalian" },
-                        ].map((rel, i) => (
-                          <div key={i} className="flex items-center gap-4 rounded-xl bg-white/60 p-3 dark:bg-slate-800/60">
-                            <Badge variant="outline" className="bg-purple-100 text-purple-700">{rel.from}</Badge>
-                            <div className="flex flex-1 items-center gap-2">
-                              <div className="h-px flex-1 bg-purple-300" />
-                              <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-xs">{rel.rel}</span>
-                              <div className="h-px flex-1 bg-purple-300" />
-                            </div>
-                            <Badge variant="outline" className="bg-indigo-100 text-indigo-700">{rel.to}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <RestrictedNotice feature="Class Diagram" />
-              )}
-            </section>
-
-            <section id="erd" className="space-y-6">
-              {canViewClassAndErd ? (
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-                  <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-linear-to-br from-emerald-500 to-green-500 p-2">
-                        <Database className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle>Entity Relationship Diagram</CardTitle>
-                        <CardDescription>Struktur database sistem</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      <TableCard name="users" color="teal" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "nip", type: "VARCHAR(20)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "email", type: "VARCHAR(255)", key: "UQ" }, { name: "password", type: "VARCHAR(255)" }, { name: "role", type: "ENUM" }, { name: "created_at", type: "TIMESTAMP" }]} />
-                      <TableCard name="medical_assets" color="purple" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "inventory_name", type: "VARCHAR(255)" }, { name: "category", type: "VARCHAR(100)" }, { name: "type", type: "VARCHAR(20)" }, { name: "serial_number", type: "VARCHAR(100)" }, { name: "condition", type: "VARCHAR(20)" }, { name: "status", type: "ENUM" }, { name: "location", type: "VARCHAR(255)" }, { name: "purchase_date", type: "DATE" }, { name: "next_maintenance", type: "DATE" }, { name: "last_maintenance", type: "DATE" }, { name: "specifications", type: "JSON/TEXT" }, { name: "created_by", type: "INT", key: "FK" }]} />
-                      <TableCard name="non_medical_assets" color="blue" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "inventory_name", type: "VARCHAR(255)" }, { name: "category", type: "VARCHAR(100)" }, { name: "type", type: "VARCHAR(20)" }, { name: "serial_number", type: "VARCHAR(100)" }, { name: "condition", type: "VARCHAR(20)" }, { name: "status", type: "ENUM" }, { name: "location", type: "VARCHAR(255)" }, { name: "purchase_date", type: "DATE" }, { name: "next_maintenance", type: "DATE" }, { name: "last_maintenance", type: "DATE" }, { name: "specifications", type: "JSON/TEXT" }, { name: "created_by", type: "INT", key: "FK" }]} />
-                      <TableCard name="borrowing_records" color="orange" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "user_id", type: "INT", key: "FK" }, { name: "asset_type", type: "VARCHAR(20)" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "borrowed_date", type: "TIMESTAMP" }, { name: "status", type: "ENUM" }]} />
-                      <TableCard name="return_records" color="rose" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "borrowing_id", type: "INT", key: "FK" }, { name: "return_date", type: "TIMESTAMP" }, { name: "condition", type: "ENUM" }, { name: "received_by", type: "INT", key: "FK" }]} />
-                      <TableCard name="maintenance_records" color="emerald" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_type", type: "VARCHAR(20)" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "maintenance_type", type: "VARCHAR(50)" }, { name: "status", type: "ENUM" }, { name: "cost", type: "DECIMAL(10,2)" }]} />
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <RestrictedNotice feature="ERD" />
-              )}
-            </section>
-
-            <section id="use-case" className="space-y-6 scroll-mt-28">
-              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2">
-                      <Users className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle>Use Case Diagram</CardTitle>
-                      <CardDescription>Interaksi pengguna dengan sistem inventaris</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-8 p-6">
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-slate-700/70 dark:bg-slate-900/40">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ringkasan Akses per Role</h3>
-                        <p className="mt-1 text-sm leading-6 text-muted-foreground">Tampilan di bawah difokuskan untuk memperjelas hak akses, tanggung jawab, dan batasan setiap role tanpa elemen visual yang berlebihan.</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {useCaseQuickSummary.map((item) => (
-                          <Badge key={item.label} className="border border-slate-200 bg-white text-slate-700 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{item.label}: {item.value}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Role dan Tanggung Jawab</h4>
-                        <p className="text-sm text-muted-foreground">Kartu berikut menampilkan ruang lingkup kerja tiap aktor beserta fitur yang dibatasi.</p>
-                      </div>
-                      <Badge className="w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Disusun untuk desktop dan mobile</Badge>
-                    </div>
-                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                      {useCaseRoleCards.map((card) => <RoleUseCaseCard key={card.key} card={card} />)}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-gray-200/60 bg-linear-to-r from-gray-50 to-slate-50 p-6 dark:border-gray-700/60 dark:from-slate-800/50 dark:to-slate-900/50">
-                    <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Network className="h-5 w-5 text-gray-600" />Matriks Ringkas Role</h4>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      {useCaseSummaryCards.map((card, i) => (
-                        <div key={i} className={`rounded-2xl p-4 ${card.containerClass}`}>
-                          <p className={`font-semibold ${card.titleClass}`}>{card.title}</p>
-                          <div className="space-y-2">
-                            {card.items.map((item, j) => (
-                              <div key={j} className="mt-3 flex items-start gap-2 text-sm text-muted-foreground"><ArrowRight className="mt-1 h-3 w-3 shrink-0" /><span>{item}</span></div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            <div className="mt-8 border-t border-gray-200 pt-6 text-center dark:border-gray-800">
-              <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
-              <p className="mt-1 text-xs text-muted-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
-            </div>
-          </div>
-        </div>
-                      color="blue"
-                      columns={[
-                      { name: "id", type: "INT", key: "PK" },
-                        { name: "asset_code", type: "VARCHAR(50)", key: "UQ" },
-                        { name: "name", type: "VARCHAR(255)" },
-                        { name: "inventory_name", type: "VARCHAR(255)" },
-                        { name: "category", type: "VARCHAR(100)" },
-                        { name: "type", type: "VARCHAR(20)" },
-                        { name: "serial_number", type: "VARCHAR(100)" },
-                        { name: "condition", type: "VARCHAR(20)" },
-                        { name: "status", type: "ENUM" },
-                        { name: "location", type: "VARCHAR(255)" },
-                        { name: "purchase_date", type: "DATE" },
-                        { name: "next_maintenance", type: "DATE" },
-                        { name: "last_maintenance", type: "DATE" },
-                        { name: "specifications", type: "JSON/TEXT" },
-                        { name: "created_by", type: "INT", key: "FK" },
-                      ]}
-                    />
-
-                    {/* Borrowing Records Table */}
-                    <TableCard 
-                      name="borrowing_records"
-                      color="orange"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "user_id", type: "INT", key: "FK" },
-                        { name: "asset_type", type: "VARCHAR(20)" },
-                        { name: "asset_id", type: "INT", key: "FK" },
-                        { name: "borrowed_date", type: "TIMESTAMP" },
-                        { name: "status", type: "ENUM" },
-                      ]}
-                    />
-
-                    {/* Return Records Table */}
-                    <TableCard 
-                      name="return_records"
-                      color="rose"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "borrowing_id", type: "INT", key: "FK" },
-                        { name: "return_date", type: "TIMESTAMP" },
-                        { name: "condition", type: "ENUM" },
-                        { name: "received_by", type: "INT", key: "FK" },
-                      ]}
-                    />
-
-                    {/* Maintenance Records Table */}
-                    <TableCard 
-                      name="maintenance_records"
-                      color="emerald"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "asset_type", type: "VARCHAR(20)" },
-                        { name: "asset_id", type: "INT", key: "FK" },
-                        { name: "maintenance_type", type: "VARCHAR(50)" },
-                        { name: "status", type: "ENUM" },
-                        { name: "cost", type: "DECIMAL(10,2)" },
-                      ]}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <RestrictedNotice feature="ERD" />
-            )}
-          </section>
-
-          {/* Use Case Diagram */}
-          <section id="use-case" className="space-y-6 scroll-mt-28">
-            <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg">
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle>Use Case Diagram</CardTitle>
-                    <CardDescription>Interaksi pengguna dengan sistem inventaris</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-8 p-6">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-slate-700/70 dark:bg-slate-900/40">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        Ringkasan Akses per Role
-                      </h3>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        Tampilan di bawah difokuskan untuk memperjelas hak akses, tanggung jawab, dan batasan setiap
-                        role tanpa elemen visual yang berlebihan.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {useCaseQuickSummary.map((item) => (
-                        <Badge
-                          key={item.label}
-                          className="bg-white text-slate-700 border border-slate-200 hover:bg-white dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700"
-                        >
-                          {item.label}: {item.value}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        Role dan Tanggung Jawab
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Kartu berikut menampilkan ruang lingkup kerja tiap aktor beserta fitur yang dibatasi.
-                      </p>
-                    </div>
-                    <Badge className="w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      Disusun untuk desktop dan mobile
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                    {useCaseRoleCards.map((card) => (
-                      <RoleUseCaseCard key={card.key} card={card} />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-gray-200/60 bg-linear-to-r from-gray-50 to-slate-50 p-6 dark:border-gray-700/60 dark:from-slate-800/50 dark:to-slate-900/50">
-                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Network className="w-5 h-5 text-gray-600" />
-                    Matriks Ringkas Role
-                  </h4>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {useCaseSummaryCards.map((card, i) => (
-                      <div key={i} className={`rounded-2xl p-4 ${card.containerClass}`}>
-                        <p className={`font-semibold ${card.titleClass}`}>{card.title}</p>
-                        <div className="space-y-2">
-                          {card.items.map((item, j) => (
-                            <div key={j} className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
-                              <ArrowRight className="mt-1 h-3 w-3 shrink-0" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-xs text-muted-foreground">
-                    Matriks ini diselaraskan dengan role aktif sistem: <span className="font-medium">admin, leader, staff, staff_pj, teknisi, user</span>.
-                  </p>
-                </div>
-            </CardContent>
-          </Card>
-          </section>
-
-                    <TableCard 
-                      name="borrowing_records"
-                      color="orange"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "user_id", type: "INT", key: "FK" },
-                        { name: "asset_type", type: "VARCHAR(20)" },
-                        { name: "asset_id", type: "INT", key: "FK" },
-                        { name: "borrowed_date", type: "TIMESTAMP" },
-                        { name: "status", type: "ENUM" },
-                      ]}
-                    />
-
-                    {/* Return Records Table */}
-                    <TableCard 
-                      name="return_records"
-                      color="rose"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "borrowing_id", type: "INT", key: "FK" },
-                        { name: "return_date", type: "TIMESTAMP" },
-                        { name: "condition", type: "ENUM" },
-                        { name: "received_by", type: "INT", key: "FK" },
-                      ]}
-                    />
-
-                    {/* Maintenance Records Table */}
-                    <TableCard 
-                      name="maintenance_records"
-                      color="emerald"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "asset_type", type: "VARCHAR(20)" },
-                        { name: "asset_id", type: "INT", key: "FK" },
-                        { name: "maintenance_type", type: "VARCHAR(50)" },
-                        { name: "status", type: "ENUM" },
-                        { name: "cost", type: "DECIMAL(10,2)" },
-                      ]}
-                    />
-                    <TableCard 
-                      name="report_uploads"
-                      color="rose"
-                      columns={[
-                        { name: "id", type: "INT", key: "PK" },
-                        { name: "user_id", type: "INT", key: "FK" },
-                        { name: "filename", type: "VARCHAR(255)" },
-                        { name: "content_type", type: "VARCHAR(100)" },
-                        { name: "size_bytes", type: "INT" },
-                        { name: "stored_path", type: "VARCHAR(255)" },
-                        { name: "uploaded_at", type: "TIMESTAMP" },
-                        { name: "notes", type: "TEXT" },
-                      ]}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <RestrictedNotice feature="ERD" />
-            )}
-          </section>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
-          <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
-          <p className="text-xs text-muted-foreground mt-1">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
-        </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { useState } from "react"
 
 type UseCaseRoleItem = {
   icon: string
@@ -397,17 +15,12 @@ type UseCaseRoleItem = {
   disabled?: boolean
 }
 
-type UseCaseRoleCard = {
+type UseCaseRoleCardType = {
   key: string
   title: string
   roleIcon: string
   summary: string
   badge: string
-  titleClass: string
-  badgeClass: string
-  containerClass: string
-  glowClass: string
-  iconWrapClass: string
   items: UseCaseRoleItem[]
 }
 
@@ -418,7 +31,297 @@ type UseCaseSummaryCard = {
   items: string[]
 }
 
-function RoleUseCaseCard({ card }: { card: UseCaseRoleCard }) {
+export default function UMLPage() {
+  const [currentUser] = useState(getCurrentUser())
+  const role = normalizeUserRole(currentUser?.role ?? "user")
+  const canViewClassAndErd = role === "admin"
+
+  const useCaseRoleCards: UseCaseRoleCardType[] = [
+    {
+      key: "admin",
+      title: "Administrator",
+      roleIcon: "🛡️",
+      summary: "Mengelola seluruh modul inti dan menjaga validasi akhir proses operasional.",
+      badge: "Akses Penuh",
+      items: [
+        { icon: "👥", title: "Kelola Pengguna", desc: "CRUD pengguna dan kontrol akun non-aktif" },
+        { icon: "🏥", title: "Kelola Inventaris", desc: "Tambah, ubah, dan hapus inventaris medis/non-medis" },
+        { icon: "📋", title: "Kelola Peminjaman", desc: "Review, update, dan tindak lanjut peminjaman" },
+        { icon: "✅", title: "Validasi Pengembalian", desc: "Final approval kondisi aset saat kembali" },
+        { icon: "🔧", title: "Kelola Pemeliharaan", desc: "Buat, edit, hapus, dan validasi status pemeliharaan" },
+      ],
+    },
+    {
+      key: "leader",
+      title: "Leader",
+      roleIcon: "🎯",
+      summary: "Mengawasi operasional lintas modul tanpa mengambil alih kontrol administrasi pengguna.",
+      badge: "Akses Operasional Luas",
+      items: [
+        { icon: "👁️", title: "Monitoring Modul", desc: "Pantau inventaris, peminjaman, dan pemeliharaan" },
+        { icon: "🏥", title: "Kelola Inventaris", desc: "Akses CRUD inventaris medis/non-medis" },
+        { icon: "📋", title: "Review Peminjaman", desc: "Verifikasi proses pinjam dan tindak lanjut data" },
+        { icon: "✅", title: "Validasi Pengembalian", desc: "Menyetujui pengembalian aset sebelum ditutup" },
+        { icon: "🚫", title: "Tanpa Kelola Pengguna", desc: "Manajemen pengguna tetap kewenangan admin", disabled: true },
+      ],
+    },
+    {
+      key: "staff",
+      title: "Staff",
+      roleIcon: "👤",
+      summary: "Fokus pada alur harian seperti pemeliharaan, peminjaman, dan pengembalian.",
+      badge: "Akses Terbatas",
+      items: [
+        { icon: "🔧", title: "Akses Pemeliharaan", desc: "Monitoring dan tindak lanjut awal pemeliharaan" },
+        { icon: "📅", title: "Jadwal Pemeliharaan", desc: "Membuat dan memantau jadwal pemeliharaan" },
+        { icon: "📦", title: "Peminjaman Alat", desc: "Mengajukan dan memantau proses peminjaman" },
+        { icon: "↩️", title: "Pengembalian Alat", desc: "Mengirim data kondisi aset saat pengembalian" },
+      ],
+    },
+  ]
+
+  const useCaseSummaryCards: UseCaseSummaryCard[] = [
+    {
+      title: "Admin",
+      containerClass: "bg-teal-50 dark:bg-teal-950/30 border border-teal-200/50 dark:border-teal-800/50",
+      titleClass: "text-teal-700 dark:text-teal-300",
+      items: ["Kontrol lintas modul", "Validasi akhir operasional"],
+    },
+    {
+      title: "Leader",
+      containerClass: "bg-purple-50 dark:bg-purple-950/30 border border-purple-200/50 dark:border-purple-800/50",
+      titleClass: "text-purple-700 dark:text-purple-300",
+      items: ["Koordinasi proses harian", "Validasi peminjaman dan return"],
+    },
+    {
+      title: "Staff",
+      containerClass: "bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50",
+      titleClass: "text-blue-700 dark:text-blue-300",
+      items: ["Pemeliharaan dan jadwal", "Peminjaman dan pengembalian"],
+    },
+    {
+      title: "Sistem",
+      containerClass: "bg-slate-100 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60",
+      titleClass: "text-slate-700 dark:text-slate-300",
+      items: ["Role-based authorization", "Audit trail"],
+    },
+  ]
+
+  const enabledUseCaseCount = useCaseRoleCards.reduce((total, card) => total + card.items.filter((item) => !item.disabled).length, 0)
+  const restrictedUseCaseCount = useCaseRoleCards.reduce((total, card) => total + card.items.filter((item) => item.disabled).length, 0)
+
+  return (
+    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
+      <div className="mx-auto max-w-7xl space-y-6 p-6 lg:p-8">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-linear-to-br from-teal-500 to-cyan-500 p-2.5 shadow-lg">
+              <FileCode2 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground lg:text-3xl">Dokumentasi UML</h1>
+              <p className="text-sm text-muted-foreground">Activity Diagram, Class Diagram, Entity Relationship Diagram, Use Case Diagram.</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div className="flex flex-wrap gap-3">
+            <Link href="#activity" className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-200">
+              Activity Diagram
+            </Link>
+            <Link href="#class" className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-5 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-800/70 dark:bg-cyan-950/40 dark:text-cyan-200">
+              Class Diagram
+            </Link>
+            <Link href="#erd" className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 dark:border-violet-800/70 dark:bg-violet-950/40 dark:text-violet-200">
+              ERD
+            </Link>
+            <Link href="#use-case" className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-5 py-3 text-sm font-semibold text-teal-700 transition hover:bg-teal-100 dark:border-teal-800/70 dark:bg-teal-950/40 dark:text-teal-200">
+              Use Case Diagram
+            </Link>
+          </div>
+        </div>
+
+        <section id="activity" className="space-y-6 scroll-mt-28">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+            <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-linear-to-br from-orange-500 to-amber-500 p-2">
+                  <Workflow className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Activity Diagram</CardTitle>
+                  <CardDescription>Alur proses dalam sistem</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <ActivityFlow title="Alur Login" color="purple" steps={[{ step: "Start", type: "start" }, { step: "Input NIP & Password", type: "action" }, { step: "Validasi kredensial", type: "action" }, { step: "Valid?", type: "decision" }, { step: "Generate token", type: "action" }, { step: "Redirect dashboard", type: "action" }, { step: "End", type: "end" }]} />
+                <ActivityFlow title="Alur Lupa Password" color="amber" steps={[{ step: "Start", type: "start" }, { step: "Klik Lupa Password", type: "action" }, { step: "Isi email atau username", type: "action" }, { step: "Valid?", type: "decision" }, { step: "Kirim tautan reset", type: "action" }, { step: "Atur password baru", type: "action" }, { step: "End", type: "end" }]} />
+                <ActivityFlow title="Alur Daftar Akun" color="fuchsia" steps={[{ step: "Start", type: "start" }, { step: "Klik Buat Akun", type: "action" }, { step: "Isi formulir", type: "action" }, { step: "Valid?", type: "decision" }, { step: "Buat akun", type: "action" }, { step: "End", type: "end" }]} />
+                <ActivityFlow title="Alur Penambahan Inventaris" color="teal" steps={[{ step: "Start", type: "start" }, { step: "Pilih kategori aset", type: "action" }, { step: "Isi data detail", type: "action" }, { step: "Validasi", type: "decision" }, { step: "Simpan ke master inventory", type: "action" }, { step: "End", type: "end" }]} />
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section id="class" className="space-y-6 scroll-mt-28">
+          {canViewClassAndErd ? (
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-linear-to-br from-purple-500 to-indigo-500 p-2">
+                    <Box className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle>Class Diagram</CardTitle>
+                    <CardDescription>Struktur kelas dan entitas sistem</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <ClassCard name="User" color="teal" badge="Core" properties={[{ name: "id", type: "string" }, { name: "nip", type: "string" }, { name: "name", type: "string" }, { name: "email", type: "string" }, { name: "role", type: "UserRole" }]} methods={["login()", "logout()", "updateProfile()"]} />
+                  <ClassCard name="MedicalAsset" color="purple" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "name", type: "string" }, { name: "status", type: "AssetStatus" }]} methods={["create()", "update()", "delete()"]} />
+                  <ClassCard name="NonMedicalAsset" color="blue" badge="Entity" properties={[{ name: "id", type: "string" }, { name: "assetCode", type: "string" }, { name: "name", type: "string" }, { name: "status", type: "AssetStatus" }]} methods={["create()", "update()", "delete()"]} />
+                  <ClassCard name="Borrowing" color="orange" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "userId", type: "string" }, { name: "assetId", type: "string" }, { name: "status", type: "BorrowStatus" }]} methods={["request()", "approve()", "return()"]} />
+                  <ClassCard name="Maintenance" color="emerald" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "assetId", type: "string" }, { name: "status", type: "string" }, { name: "cost", type: "number" }]} methods={["schedule()", "complete()", "cancel()"]} />
+                  <ClassCard name="Return" color="rose" badge="Transaction" properties={[{ name: "id", type: "string" }, { name: "borrowingId", type: "string" }, { name: "condition", type: "string" }, { name: "notes", type: "string" }]} methods={["submit()", "verify()"]} />
+                </div>
+                <div className="mt-8 rounded-2xl bg-linear-to-r from-purple-50 to-indigo-50 p-6 dark:from-purple-950/30 dark:to-indigo-950/30">
+                  <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><GitBranch className="h-5 w-5 text-purple-600" />Relasi Antar Kelas</h4>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {[
+                      { from: "User", to: "Borrowing", rel: "1 : N" },
+                      { from: "User", to: "Maintenance", rel: "1 : N" },
+                      { from: "MedicalAsset", to: "Borrowing", rel: "1 : N" },
+                      { from: "Borrowing", to: "Return", rel: "1 : 1" },
+                    ].map((rel, i) => (
+                      <div key={i} className="flex items-center gap-4 rounded-xl bg-white/60 p-3 dark:bg-slate-800/60">
+                        <Badge variant="outline" className="bg-purple-100 text-purple-700">{rel.from}</Badge>
+                        <div className="flex flex-1 items-center gap-2">
+                          <div className="h-px flex-1 bg-purple-300" />
+                          <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-xs">{rel.rel}</span>
+                          <div className="h-px flex-1 bg-purple-300" />
+                        </div>
+                        <Badge variant="outline" className="bg-indigo-100 text-indigo-700">{rel.to}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <RestrictedNotice feature="Class Diagram" />
+          )}
+        </section>
+
+        <section id="erd" className="space-y-6 scroll-mt-28">
+          {canViewClassAndErd ? (
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-linear-to-br from-emerald-500 to-green-500 p-2">
+                    <Database className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle>Entity Relationship Diagram</CardTitle>
+                    <CardDescription>Struktur database sistem</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <TableCard name="users" color="teal" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "nip", type: "VARCHAR(20)", key: "UQ" }, { name: "email", type: "VARCHAR(255)", key: "UQ" }, { name: "role", type: "ENUM" }]} />
+                  <TableCard name="medical_assets" color="purple" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "status", type: "ENUM" }]} />
+                  <TableCard name="non_medical_assets" color="blue" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_code", type: "VARCHAR(50)", key: "UQ" }, { name: "name", type: "VARCHAR(255)" }, { name: "status", type: "ENUM" }]} />
+                  <TableCard name="borrowing_records" color="orange" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "user_id", type: "INT", key: "FK" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "status", type: "ENUM" }]} />
+                  <TableCard name="return_records" color="rose" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "borrowing_id", type: "INT", key: "FK" }, { name: "condition", type: "ENUM" }, { name: "received_by", type: "INT", key: "FK" }]} />
+                  <TableCard name="maintenance_records" color="emerald" columns={[{ name: "id", type: "INT", key: "PK" }, { name: "asset_id", type: "INT", key: "FK" }, { name: "maintenance_type", type: "VARCHAR(50)" }, { name: "status", type: "ENUM" }]} />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <RestrictedNotice feature="ERD" />
+          )}
+        </section>
+
+        <section id="use-case" className="space-y-6 scroll-mt-28">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+            <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Use Case Diagram</CardTitle>
+                  <CardDescription>Interaksi pengguna dengan sistem inventaris</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8 p-6">
+              <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-slate-700/70 dark:bg-slate-900/40">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ringkasan Akses per Role</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">Hak akses utama per role pada sistem.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className="border border-slate-200 bg-white text-slate-700 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Role aktif: {useCaseRoleCards.length}</Badge>
+                    <Badge className="border border-slate-200 bg-white text-slate-700 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Interaksi utama: {enabledUseCaseCount}</Badge>
+                    <Badge className="border border-slate-200 bg-white text-slate-700 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">Batasan: {restrictedUseCaseCount}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Role dan Tanggung Jawab</h4>
+                    <p className="text-sm text-muted-foreground">Kartu berikut menampilkan ruang lingkup kerja tiap aktor.</p>
+                  </div>
+                  <Badge className="w-fit bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Disusun untuk desktop dan mobile</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  {useCaseRoleCards.map((card) => (
+                    <RoleUseCaseCard key={card.key} card={card} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-gray-200/60 bg-linear-to-r from-gray-50 to-slate-50 p-6 dark:border-gray-700/60 dark:from-slate-800/50 dark:to-slate-900/50">
+                <h4 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Network className="h-5 w-5 text-gray-600" />Matriks Ringkas Role</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {useCaseSummaryCards.map((card, i) => (
+                    <div key={i} className={`rounded-2xl p-4 ${card.containerClass}`}>
+                      <p className={`font-semibold ${card.titleClass}`}>{card.title}</p>
+                      <div className="space-y-2">
+                        {card.items.map((item, j) => (
+                          <div key={j} className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                            <ArrowRight className="mt-1 h-3 w-3 shrink-0" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <div className="mt-8 border-t border-gray-200 pt-6 text-center dark:border-gray-800">
+          <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
+          <p className="mt-1 text-xs text-muted-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RoleUseCaseCard({ card }: { card: UseCaseRoleCardType }) {
   return (
     <div className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -457,9 +360,7 @@ function RoleUseCaseCard({ card }: { card: UseCaseRoleCard }) {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.title}</p>
-                {item.disabled && (
-                  <Badge className="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">Dibatasi</Badge>
-                )}
+                {item.disabled && <Badge className="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">Dibatasi</Badge>}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
             </div>
@@ -470,8 +371,13 @@ function RoleUseCaseCard({ card }: { card: UseCaseRoleCard }) {
   )
 }
 
-// Component: Class Card
-function ClassCard({ name, color, badge, properties, methods }: {
+function ClassCard({
+  name,
+  color,
+  badge,
+  properties,
+  methods,
+}: {
   name: string
   color: string
   badge: string
@@ -488,16 +394,16 @@ function ClassCard({ name, color, badge, properties, methods }: {
   }
 
   return (
-    <div className={`rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-lg ${colorClasses[color]?.split(' ').slice(1).join(' ')}`}>
-      <div className={`bg-linear-to-r ${colorClasses[color]?.split(' ').slice(0, 2).join(' ')} p-3`}>
+    <div className={`overflow-hidden rounded-xl border bg-white shadow-lg dark:bg-slate-900 ${colorClasses[color]?.split(" ").slice(1).join(" ")}`}>
+      <div className={`bg-linear-to-r p-3 ${colorClasses[color]?.split(" ").slice(0, 2).join(" ")}`}>
         <div className="flex items-center justify-between">
           <h4 className="font-bold text-white">{name}</h4>
-          <Badge className="bg-white/20 text-white border-0">{badge}</Badge>
+          <Badge className="border-0 bg-white/20 text-white">{badge}</Badge>
         </div>
       </div>
-      <div className="p-4 space-y-4">
+      <div className="space-y-4 p-4">
         <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Properties</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Properties</p>
           <div className="space-y-1">
             {properties.map((prop, i) => (
               <div key={i} className="flex justify-between text-xs">
@@ -508,12 +414,10 @@ function ClassCard({ name, color, badge, properties, methods }: {
           </div>
         </div>
         <div className="border-t pt-3">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Methods</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Methods</p>
           <div className="space-y-1">
             {methods.map((method, i) => (
-              <div key={i} className="text-xs font-mono text-blue-600 dark:text-blue-400">
-                + {method}
-              </div>
+              <div key={i} className="font-mono text-xs text-blue-600 dark:text-blue-400">+ {method}</div>
             ))}
           </div>
         </div>
@@ -522,8 +426,11 @@ function ClassCard({ name, color, badge, properties, methods }: {
   )
 }
 
-// Component: Activity Flow
-function ActivityFlow({ title, color, steps }: {
+function ActivityFlow({
+  title,
+  color,
+  steps,
+}: {
   title: string
   color: string
   steps: { step: string; type: string }[]
@@ -539,43 +446,41 @@ function ActivityFlow({ title, color, steps }: {
     teal: "from-teal-500 to-cyan-500 bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800",
   }
 
-  const bgClass = colorClasses[color]?.split(' ').slice(2, 4).join(' ')
-  const borderClass = colorClasses[color]?.split(' ').slice(4).join(' ')
-  const gradientClass = colorClasses[color]?.split(' ').slice(0, 2).join(' ')
+  const bgClass = colorClasses[color]?.split(" ").slice(2, 4).join(" ")
+  const borderClass = colorClasses[color]?.split(" ").slice(4).join(" ")
+  const gradientClass = colorClasses[color]?.split(" ").slice(0, 2).join(" ")
 
   return (
-    <div className={`rounded-xl p-4 border ${bgClass} ${borderClass}`}>
+    <div className={`rounded-xl border p-4 ${bgClass} ${borderClass}`}>
       <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        <div className={`w-3 h-3 rounded-full bg-linear-to-r ${gradientClass}`}></div>
+        <div className={`h-3 w-3 rounded-full bg-linear-to-r ${gradientClass}`} />
         {title}
       </h4>
       <div className="space-y-1.5">
         {steps.map((s, i) => (
           <div key={i} className="flex items-start gap-2.5">
             {s.type === "start" && (
-              <div className="mt-0.5 h-7 w-7 rounded-full bg-green-500 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-white"></div>
+              <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-green-500">
+                <div className="h-3 w-3 rounded-full bg-white" />
               </div>
             )}
             {s.type === "end" && (
-              <div className="mt-0.5 h-7 w-7 rounded-full bg-red-500 border-4 border-red-300 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-white"></div>
+              <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full border-4 border-red-300 bg-red-500">
+                <div className="h-2 w-2 rounded-full bg-white" />
               </div>
             )}
             {s.type === "action" && (
-              <div className="mt-0.5 h-7 w-7 rounded-lg bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-[10px] font-bold">
+              <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-[10px] font-bold dark:border-gray-600 dark:bg-slate-800">
                 {i}
               </div>
             )}
             {s.type === "decision" && (
-              <div className="mt-0.5 h-7 w-7 rotate-45 bg-yellow-400 border-2 border-yellow-500 flex items-center justify-center">
+              <div className="mt-0.5 flex h-7 w-7 rotate-45 items-center justify-center border-2 border-yellow-500 bg-yellow-400">
                 <span className="-rotate-45 text-[10px]">?</span>
               </div>
             )}
             <span className="flex-1 text-[12px] leading-snug text-slate-700 dark:text-slate-200">{s.step}</span>
-            {i < steps.length - 1 && (
-              <Zap className="h-3.5 w-3.5 text-gray-400" />
-            )}
+            {i < steps.length - 1 && <Zap className="h-3.5 w-3.5 text-gray-400" />}
           </div>
         ))}
       </div>
@@ -583,8 +488,11 @@ function ActivityFlow({ title, color, steps }: {
   )
 }
 
-// Component: Table Card (ERD)
-function TableCard({ name, color, columns }: {
+function TableCard({
+  name,
+  color,
+  columns,
+}: {
   name: string
   color: string
   columns: { name: string; type: string; key?: string }[]
@@ -599,26 +507,35 @@ function TableCard({ name, color, columns }: {
   }
 
   return (
-    <div className={`rounded-xl border bg-white dark:bg-slate-900 overflow-hidden shadow-lg ${colorClasses[color]?.split(' ').slice(1).join(' ')}`}>
-      <div className={`bg-linear-to-r ${colorClasses[color]?.split(' ').slice(0, 2).join(' ')} p-3`}>
+    <div className={`overflow-hidden rounded-xl border bg-white shadow-lg dark:bg-slate-900 ${colorClasses[color]?.split(" ").slice(1).join(" ")}`}>
+      <div className={`bg-linear-to-r p-3 ${colorClasses[color]?.split(" ").slice(0, 2).join(" ")}`}>
         <div className="flex items-center gap-2">
-          <Database className="w-4 h-4 text-white" />
-          <h4 className="font-bold text-white font-mono text-sm">{name}</h4>
+          <Database className="h-4 w-4 text-white" />
+          <h4 className="font-mono text-sm font-bold text-white">{name}</h4>
         </div>
       </div>
       <div className="p-3">
         <div className="space-y-1">
           {columns.map((col, i) => (
-            <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-800 last:border-0">
+            <div key={i} className="flex items-center justify-between border-b border-gray-100 py-1 text-xs last:border-0 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 {col.key && (
-                  <Badge variant="outline" className={`text-[10px] px-1 py-0 ${col.key === 'PK' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : col.key === 'FK' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                  <Badge
+                    variant="outline"
+                    className={`px-1 py-0 text-[10px] ${
+                      col.key === "PK"
+                        ? "border-yellow-300 bg-yellow-100 text-yellow-700"
+                        : col.key === "FK"
+                          ? "border-blue-300 bg-blue-100 text-blue-700"
+                          : "border-gray-300 bg-gray-100 text-gray-700"
+                    }`}
+                  >
                     {col.key}
                   </Badge>
                 )}
                 <span className="font-mono text-foreground">{col.name}</span>
               </div>
-              <span className="font-mono text-muted-foreground text-[10px]">{col.type}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{col.type}</span>
             </div>
           ))}
         </div>
@@ -629,11 +546,11 @@ function TableCard({ name, color, columns }: {
 
 function RestrictedNotice({ feature }: { feature: string }) {
   return (
-    <Card className="border-0 shadow-xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
+    <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-slate-900/70">
       <CardHeader className="border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-linear-to-br from-slate-600 to-slate-800 rounded-lg">
-            <Shield className="w-5 h-5 text-white" />
+          <div className="rounded-lg bg-linear-to-br from-slate-600 to-slate-800 p-2">
+            <Shield className="h-5 w-5 text-white" />
           </div>
           <div>
             <CardTitle>{feature}</CardTitle>
@@ -641,13 +558,9 @@ function RestrictedNotice({ feature }: { feature: string }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 text-center space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Diagram ini hanya bisa dilihat oleh Administrator untuk menjaga kerahasiaan struktur aplikasi.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Silakan hubungi admin apabila membutuhkan penjelasan tambahan.
-        </p>
+      <CardContent className="space-y-2 p-6 text-center">
+        <p className="text-sm text-muted-foreground">Diagram ini hanya bisa dilihat oleh Administrator untuk menjaga kerahasiaan struktur aplikasi.</p>
+        <p className="text-xs text-muted-foreground">Silakan hubungi admin apabila membutuhkan penjelasan tambahan.</p>
       </CardContent>
     </Card>
   )
