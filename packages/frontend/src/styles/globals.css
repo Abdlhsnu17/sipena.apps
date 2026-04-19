@@ -401,15 +401,13 @@
     scrollbar-gutter: stable both-edges;
   }
 
-  body[data-mobile-viewport="landscape"] [data-app-shell="authenticated"],
-  body[data-mobile-viewport="portrait"] [data-app-shell="authenticated"] {
+  [data-app-shell="authenticated"] {
     width: 100%;
     min-height: 100dvh;
     min-height: 100svh;
   }
 
-  body[data-mobile-viewport="landscape"] [data-main-scroll],
-  body[data-mobile-viewport="portrait"] [data-main-scroll] {
+  [data-main-scroll] {
     height: auto;
     min-height: 0;
     overflow-x: hidden;
@@ -420,15 +418,14 @@
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 
-  body[data-mobile-viewport="landscape"] [data-page-width="responsive"],
-  body[data-mobile-viewport="portrait"] [data-page-width="responsive"] {
+  [data-page-width="responsive"] {
     max-width: 100%;
     min-width: 0;
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
   }
 
-  body.auth-mobile-form[data-mobile-viewport="landscape"] .auth-safe-area {
+  body.auth-mobile-form .auth-safe-area {
     align-items: center;
     justify-content: center;
     padding-top: max(0.75rem, env(safe-area-inset-top));
@@ -437,14 +434,8 @@
     padding-left: max(0.75rem, env(safe-area-inset-left));
   }
 
-  body.auth-mobile-form[data-mobile-viewport="landscape"] [data-auth-card] {
+  body.auth-mobile-form [data-auth-card] {
     width: 100%;
     max-width: min(100%, 28rem);
-  }
-
-  body[data-mobile-viewport="landscape"] [data-maintenance-page] [data-maintenance-summary],
-  body[data-mobile-viewport="landscape"] [data-maintenance-page] [data-maintenance-list],
-  body[data-mobile-viewport="landscape"] [data-maintenance-page] [data-maintenance-history] {
-    display: none;
   }
 }

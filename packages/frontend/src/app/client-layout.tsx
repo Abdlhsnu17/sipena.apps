@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Topbar from "@/components/topbar"
 import { Toaster } from "@/components/ui/toaster"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useOrientation } from "@/hooks/use-orientation"
 import { useToast } from "@/hooks/use-toast"
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import type { User } from "@/types/auth-types"
@@ -31,8 +30,6 @@ export default function ClientLayout({
   const [loading, setLoading] = useState(true)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const isMobile = useIsMobile()
-  const orientation = useOrientation()
-  const isMobileLandscape = isMobile && orientation === "landscape"
 
   useEffect(() => {
     const syncUser = () => {
@@ -110,18 +107,6 @@ export default function ClientLayout({
     document.body.classList.remove(bodyClass)
   }, [isAuthPage])
 
-  useEffect(() => {
-    if (typeof document === "undefined") return
-
-    document.body.dataset.mobileOrientation = orientation
-    document.body.dataset.mobileViewport = isMobileLandscape ? "landscape" : isMobile ? "portrait" : "desktop"
-
-    return () => {
-      delete document.body.dataset.mobileOrientation
-      delete document.body.dataset.mobileViewport
-    }
-  }, [isMobile, isMobileLandscape, orientation])
-
   const shouldBlockProtectedPage = showLayout && (!user || (user && !isAllowedPath))
 
   if (loading) {
@@ -173,8 +158,7 @@ export default function ClientLayout({
               >
                 <div
                   className={cn(
-                    "min-h-full w-full px-3 py-3 sm:px-4 sm:py-4 lg:px-6 xl:px-8",
-                    isMobileLandscape ? "max-w-none" : "mx-auto max-w-7xl",
+                    "mx-auto min-h-full w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 xl:px-8",
                   )}
                   data-page-width="responsive"
                 >

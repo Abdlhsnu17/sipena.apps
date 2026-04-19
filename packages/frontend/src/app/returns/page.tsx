@@ -1002,12 +1002,10 @@ export default function ReturnsPage() {
   }
 
   return (
-    <main
-      className="min-h-full bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40"
-      style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
+    <div
+      className="min-h-full space-y-4 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40"
+      style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
     >
-      <div className="py-6 px-4 lg:px-10">
-        <div className="mx-auto w-full max-w-7xl space-y-4">
           <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-5 items-center">
@@ -1146,7 +1144,7 @@ export default function ReturnsPage() {
               {filteredActiveBorrowings.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-[13px]">Tidak ada alat yang perlu dikembalikan</p>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-2 sm:px-4 sm:pb-6">
+                <div className="max-h-180 overflow-y-scroll px-3 pb-4 pr-2 [scrollbar-gutter:stable] sm:px-4 sm:pb-6">
                   <div className="space-y-4">
                     {filteredActiveBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
@@ -1420,7 +1418,7 @@ export default function ReturnsPage() {
                   Tidak ada riwayat pengembalian yang sesuai pencarian/filter.
                 </p>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-2 sm:px-4 sm:pb-6">
+                <div className="max-h-180 overflow-y-scroll px-3 pb-4 pr-2 [scrollbar-gutter:stable] sm:px-4 sm:pb-6">
                   <div className="space-y-4">
                     {filteredReturnedBorrowings.map((b) => {
                     const detailInfo = resolveDetailForBorrowing(b)
@@ -1765,8 +1763,6 @@ export default function ReturnsPage() {
             Kementerian Kesehatan RI - RSUP Persahabatan<br />
             Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
           </div>
-        </div>
-      </div>
-    </main>
+    </div>
   )
 }
