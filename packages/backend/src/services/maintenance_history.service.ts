@@ -1,7 +1,9 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
+import { AssetType } from '../models';
 import { MaintenanceStatus, MaintenanceType } from '../models/maintenance.model';
 import { CreateMaintenanceHistoryDTO, MaintenanceHistory } from '../models/maintenance_history.model';
+import { AssetService } from './asset.service';
 
 export interface CompleteMaintenanceHistoryDTO {
   notes?: string;
@@ -34,6 +36,14 @@ interface MaintenanceHistoryRow extends RowDataPacket {
   validator_name?: string;
   validator_nip?: string;
 }
+
+interface MaintenanceAssetContext {
+  assetId: number;
+  assetType: AssetType;
+}
+
+const ACTIVE_MAINTENANCE_STATUSES: MaintenanceStatus[] = ['scheduled', 'in_progress', 'completed'];
+const RELEASABLE_MAINTENANCE_STATUSES: MaintenanceStatus[] = ['validated', 'cancelled'];
 
 const SELECT_WITH_USERS = `
   SELECT
@@ -101,6 +111,8 @@ const toSqlDateTime = (value?: Date | string | null): string | null => {
   return formatDateTimeForMySQL(parsed);
 };
 
+const normalizeAssetType = (value?: string | null): AssetType => (value === 'non_medical' ? 'non_medical' : 'medical');
+
 const toIsoString = (value?: Date | string | null): string | undefined => {
   if (value === undefined || value === null) return undefined;
   if (value instanceof Date) return formatDateTimeAsLocalIso(value);
@@ -145,6 +157,94 @@ const mapRowToHistory = (row: MaintenanceHistoryRow): MaintenanceHistory => ({
   validatorName: row.validator_name ?? undefined,
   validatorNip: row.validator_nip ?? undefined,
 });
+
+const assetService = new AssetService();
+
+const resolveMaintenanceAssetContext = async (
+  maintenanceId: number,
+  fallbackAssetId: number
+): Promise<MaintenanceAssetContext | null> => {
+  const [maintenanceRows] = await pool.query<RowDataPacket[]>(
+    `SELECT asset_id, COALESCE(asset_type, 'medical') AS asset_type
+     FROM maintenance_records
+     WHERE id = ?
+     LIMIT 1`,
+    [maintenanceId]
+  );
+
+  if (maintenanceRows.length > 0) {
+    const assetId = Number(maintenanceRows[0].asset_id ?? fallbackAssetId);
+    if (Number.isFinite(assetId) && assetId > 0) {
+      return {
+        assetId,
+        assetType: normalizeAssetType(String(maintenanceRows[0].asset_type || 'medical'))
+      };
+    }
+  }
+
+  const medicalAsset = await assetService.getById(String(fallbackAssetId), 'medical');
+  if (medicalAsset.success && medicalAsset.data) {
+    return { assetId: fallbackAssetId, assetType: 'medical' };
+  }
+
+  const nonMedicalAsset = await assetService.getById(String(fallbackAssetId), 'non_medical');
+  if (nonMedicalAsset.success && nonMedicalAsset.data) {
+    return { assetId: fallbackAssetId, assetType: 'non_medical' };
+  }
+
+  return null;
+};
+
+const hasOtherActiveMaintenance = async (
+  assetId: number,
+  assetType: AssetType,
+  excludeMaintenanceId?: number
+): Promise<boolean> => {
+  const params: any[] = [assetId, assetType, ...ACTIVE_MAINTENANCE_STATUSES];
+  let query = `
+    SELECT COUNT(*) as count
+    FROM maintenance_records
+    WHERE asset_id = ?
+      AND COALESCE(asset_type, 'medical') = ?
+      AND status IN (?, ?, ?)
+  `;
+
+  if (excludeMaintenanceId !== undefined) {
+    query += ' AND id <> ?';
+    params.push(excludeMaintenanceId);
+  }
+
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
+  return Number((rows[0] as any)?.count || 0) > 0;
+};
+
+const syncAssetAvailability = async (
+  maintenanceId: number,
+  maintenanceStatus: MaintenanceStatus,
+  fallbackAssetId: number
+): Promise<void> => {
+  const context = await resolveMaintenanceAssetContext(maintenanceId, fallbackAssetId);
+  if (!context) return;
+
+  if (ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus)) {
+    await assetService.updateStatus(String(context.assetId), 'maintenance', context.assetType);
+    return;
+  }
+
+  if (!RELEASABLE_MAINTENANCE_STATUSES.includes(maintenanceStatus)) {
+    return;
+  }
+
+  const stillHasActiveMaintenance = await hasOtherActiveMaintenance(
+    context.assetId,
+    context.assetType,
+    maintenanceId
+  );
+
+  if (!stillHasActiveMaintenance) {
+    await assetService.updateStatus(String(context.assetId), 'available', context.assetType);
+  }
+};
 
 const getRawById = async (id: number): Promise<MaintenanceHistoryRow | null> => {
   const [rows] = await pool.query<MaintenanceHistoryRow[]>(`SELECT * FROM maintenance_history WHERE id = ?`, [id]);
@@ -227,6 +327,11 @@ export const create = async (data: CreateMaintenanceHistoryDTO): Promise<Mainten
   if (!history) {
     throw new Error('Gagal mengambil riwayat setelah penyimpanan');
   }
+
+  if (history.status) {
+    await syncAssetAvailability(history.maintenanceId, history.status, history.assetId);
+  }
+
   return history;
 };
 
@@ -295,7 +400,12 @@ export const complete = async (id: number, data: CompleteMaintenanceHistoryDTO):
   const query = `UPDATE maintenance_history SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`;
   await pool.query(query, [...params, id]);
 
-  return getHistoryById(id);
+  const updated = await getHistoryById(id);
+  if (updated?.status) {
+    await syncAssetAvailability(updated.maintenanceId, updated.status as MaintenanceStatus, updated.assetId);
+  }
+
+  return updated;
 };
 
 export const completeByMaintenanceId = async (
@@ -327,7 +437,12 @@ export const validate = async (id: number, validatedBy: number, validatedAt: Dat
   const query = `UPDATE maintenance_history SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`;
   await pool.query(query, [...params, id]);
 
-  return getHistoryById(id);
+  const updated = await getHistoryById(id);
+  if (updated?.status) {
+    await syncAssetAvailability(updated.maintenanceId, updated.status as MaintenanceStatus, updated.assetId);
+  }
+
+  return updated;
 };
 
 export const validateByMaintenanceId = async (

@@ -492,6 +492,7 @@ export default function MaintenancePage() {
 
       await loadMaintenance()
       await loadAssets()
+      window.dispatchEvent(new Event("inventory-refresh"))
 
       if (newStatus === "scheduled") {
         toast({

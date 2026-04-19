@@ -180,6 +180,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
           cost: completeForm.cost ? Number(completeForm.cost) : undefined,
         });
       }
+      window.dispatchEvent(new Event('inventory-refresh'))
       setEditId(null);
       setCompleteForm({ notes: '', status: 'completed', completedDate: '', technician: '', cost: '' });
       setError(null);
@@ -251,6 +252,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
           validatedAt: new Date().toISOString(),
         });
       }
+      window.dispatchEvent(new Event('inventory-refresh'))
       setError(null);
       if (!maintenance) fetchHistories();
     } catch (err: any) {
@@ -267,6 +269,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       } else {
         await apiService.delete(`/maintenance-history/${id}`);
       }
+      window.dispatchEvent(new Event('inventory-refresh'))
       setError(null);
       if (!maintenance) fetchHistories();
     } catch (err: any) {
