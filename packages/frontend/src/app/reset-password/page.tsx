@@ -1,14 +1,14 @@
 "use client"
 
+import AuthHeader from "@/components/auth-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { Spinner } from "@/components/ui/spinner"
 import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
 import authService from "@/services/auth.service"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, KeyRound, Lock, RotateCcw } from "lucide-react"
-import Image from "next/image"
+import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, RotateCcw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type React from "react"
 import { useState } from "react"
@@ -93,7 +93,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div
-      className="auth-safe-area relative flex min-h-dvh items-start justify-center overflow-y-auto sm:items-center sm:py-8"
+      className="auth-safe-area relative flex min-h-svh items-center justify-center overflow-y-auto py-4"
       onFocusCapture={handleFocusCapture}
     >
       <div className="absolute inset-0">
@@ -108,27 +108,15 @@ export default function ResetPasswordPage() {
       </div>
 
       <Card
-        className="relative z-10 my-2 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg sm:my-0 sm:max-h-none"
+        className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/images/logo-RS.png"
-              alt="Logo RS Kemenkes Persahabatan"
-              width={180}
-              height={80}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
-            <KeyRound className="h-6 w-6 text-teal-700" />
-          </div>
-          <CardTitle>Lupa Password</CardTitle>
-          <CardDescription>
-            Verifikasi dilakukan dengan kode angka 6 digit yang dibuat langsung di aplikasi ini tanpa pengiriman email.
-          </CardDescription>
+        <CardHeader className="pb-4 text-center">
+          <AuthHeader
+            title="Lupa Password"
+            description="Verifikasi dilakukan dengan kode angka 6 digit yang dibuat langsung di aplikasi ini tanpa pengiriman email."
+            showRecoveryIcon
+          />
         </CardHeader>
         <CardContent className="space-y-4">
           {step === "request" ? (

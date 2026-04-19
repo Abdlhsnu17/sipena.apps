@@ -126,7 +126,7 @@ export default function ClientLayout({
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
+      <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     )
@@ -134,7 +134,7 @@ export default function ClientLayout({
 
   if (shouldBlockProtectedPage) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
+      <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     )
@@ -150,7 +150,7 @@ export default function ClientLayout({
       <ConfirmProvider>
         {showLayout ? (
           <div
-            className="relative h-dvh overflow-hidden bg-background"
+            className="relative h-svh min-h-svh overflow-hidden bg-background"
             data-app-shell="authenticated"
           >
             <Sidebar
@@ -159,21 +159,21 @@ export default function ClientLayout({
             />
             <div
               className={cn(
-                "flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300 ease-in-out",
+                "flex h-svh min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300 ease-in-out",
                 isSidebarCollapsed ? "xl:pl-20" : "xl:pl-64",
               )}
             >
               <Topbar />
               <main
                 className={cn(
-                  "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden",
+                  "flex min-h-0 flex-1 flex-col overflow-y-scroll overflow-x-hidden",
                   isMobile && "overscroll-contain",
                 )}
                 data-main-scroll
               >
                 <div
                   className={cn(
-                    "min-h-full w-full px-3 py-3 sm:px-4 sm:py-4 lg:px-6",
+                    "min-h-full w-full px-3 py-3 sm:px-4 sm:py-4 lg:px-6 xl:px-8",
                     isMobileLandscape ? "max-w-none" : "mx-auto max-w-7xl",
                   )}
                   data-page-width="responsive"
@@ -184,7 +184,7 @@ export default function ClientLayout({
             </div>
           </div>
         ) : (
-          <div className="min-h-dvh bg-background" data-app-shell="auth">
+          <div className="min-h-svh bg-background" data-app-shell="auth">
             {children}
           </div>
         )}

@@ -1,13 +1,13 @@
 "use client"
 
+import AuthHeader from "@/components/auth-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
 import authService from "@/services/auth.service"
 import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, Mail, User2 } from "lucide-react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import type React from "react"
 import { useState } from "react"
@@ -64,7 +64,7 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="auth-safe-area relative flex min-h-dvh items-start justify-center overflow-y-auto sm:items-center sm:py-8"
+      className="auth-safe-area relative flex min-h-svh items-center justify-center overflow-y-auto py-4"
       onFocusCapture={handleFocusCapture}
     >
       <div className="absolute inset-0">
@@ -79,24 +79,14 @@ export default function RegisterPage() {
       </div>
 
       <Card
-        className="relative z-10 my-2 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg sm:my-0 sm:max-h-none"
+        className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/images/logo-RS.png"
-              alt="Logo RS Kemenkes Persahabatan"
-              width={180}
-              height={80}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <CardTitle>Pendaftaran Akun</CardTitle>
-          <CardDescription>
-            Isi data dasar akun dengan benar setelah akun berhasil dibuat lalukan login
-          </CardDescription>
+        <CardHeader className="pb-4 text-center">
+          <AuthHeader
+            title="Pendaftaran Akun"
+            description="Isi data dasar akun dengan benar setelah akun berhasil dibuat lalu lakukan login."
+          />
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -336,13 +336,13 @@ export default function Topbar() {
     <header className="z-30 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
       <div className="border-b border-border/70 bg-muted/40 px-3 py-1 xl:px-6">
         <div className="overflow-hidden">
-          <div className="animate-topbar-marquee whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <span>{topbarAnnouncement}</span>
-            <span className="ml-14">{topbarAnnouncement}</span>
+          <div className="animate-topbar-marquee flex w-max items-center text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground will-change-transform">
+            <span className="shrink-0 pr-14">{topbarAnnouncement}</span>
+            <span className="shrink-0 pr-14" aria-hidden="true">{topbarAnnouncement}</span>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-4 py-3 pr-4 pl-16 xl:px-6">
+      <div className="flex items-center justify-between gap-4 px-3 py-3 sm:px-4 lg:px-6 xl:px-8">
         <p className="min-w-0 truncate font-bold" style={{ fontSize: 16 }}>{formattedDate}</p>
         <div className="flex items-center gap-3">
           <DropdownMenu>

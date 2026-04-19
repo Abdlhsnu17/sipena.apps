@@ -1,5 +1,6 @@
 "use client"
 
+import AuthHeader from "@/components/auth-header"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -8,7 +9,6 @@ import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
 import { resolveSafeRedirectPath } from "@/services/auth-utils"
 import authService from "@/services/auth.service"
 import { AlertCircle, Eye, EyeOff, IdCard, KeyRound, Lock } from "lucide-react"
-import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import type React from "react"
 import { useEffect, useState } from "react"
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="auth-safe-area relative flex min-h-dvh flex-col overflow-y-auto landscape:flex-row landscape:items-stretch landscape:justify-between"
+      className="auth-safe-area relative flex min-h-svh items-center justify-center overflow-y-auto py-4"
       onFocusCapture={handleFocusCapture}
     >
       <div className="absolute inset-0">
@@ -68,50 +68,14 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-linear-to-t from-slate-900/20 via-transparent to-white/10" />
       </div>
 
-      <div className="relative z-10 hidden w-full flex-1 flex-col justify-between gap-8 border-r border-white/10 px-6 py-8 text-white landscape:flex landscape:px-10 landscape:py-10">
-        <div className="max-w-xl space-y-4">
-          <Image
-            src="/images/logo-RS.png"
-            alt="Logo RS Kemenkes Persahabatan"
-            width={180}
-            height={80}
-            className="object-contain drop-shadow-lg"
-            priority
-          />
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold leading-tight lg:text-4xl">
-              Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
-            </h1>
-            <p className="max-w-lg text-sm leading-6 text-white/80 lg:text-base">
-              Gunakan mode landscape untuk menempatkan panel informasi dan formulir masuk secara berdampingan.
-            </p>
-          </div>
-        </div>
-        <div className="max-w-md rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur-xl">
-          <p className="text-sm leading-6 text-white/85">
-            Login tetap cepat di portrait, tetapi landscape memberi ruang visual yang lebih lega untuk layar tablet dan ponsel yang diputar.
-          </p>
-        </div>
-      </div>
-
-      <div className="relative z-10 flex w-full justify-center px-4 py-4 landscape:w-2xl landscape:flex-none landscape:items-center landscape:px-8 landscape:py-8">
+      <div className="relative z-10 flex w-full justify-center px-2 sm:px-4">
         <div className="w-full max-w-md" data-auth-card>
-          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:max-h-none sm:p-8">
-            <div className="mb-8 text-center">
-              <div className="mb-4 flex justify-center">
-                <Image
-                  src="/images/logo-RS.png"
-                  alt="Logo RS Kemenkes Persahabatan"
-                  width={180}
-                  height={80}
-                  className="object-contain transition-transform duration-300 hover:scale-105"
-                  priority
-                />
-              </div>
-              <h1 className="mb-2 text-xl font-bold text-foreground">
-                Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
-              </h1>
-              <p className="text-sm text-muted-foreground">"SiPeNa"</p>
+          <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:p-8">
+            <div className="mb-6">
+              <AuthHeader
+                title="Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana"
+                description="SiPeNa"
+              />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

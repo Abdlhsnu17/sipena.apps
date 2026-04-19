@@ -118,6 +118,7 @@
     width: 100%;
     min-height: 100%;
     min-height: 100dvh;
+    min-height: 100svh;
     max-width: 100%;
     overflow-x: clip;
     scrollbar-gutter: stable;
@@ -146,7 +147,7 @@
   }
 
   [data-main-scroll] {
-    scrollbar-gutter: stable;
+    scrollbar-gutter: stable both-edges;
     overscroll-behavior-y: contain;
   }
 }
@@ -381,17 +382,17 @@
   }
   @keyframes topbar-marquee {
     0% {
-      transform: translateX(100%);
+      transform: translate3d(0, 0, 0);
     }
     100% {
-      transform: translateX(-100%);
+      transform: translate3d(-50%, 0, 0);
     }
   }
   .animate-scroll {
     animation: scroll 30s linear infinite;
   }
   .animate-topbar-marquee {
-    animation: topbar-marquee 42s linear infinite;
+    animation: topbar-marquee 26s linear infinite;
   }
 }
 
@@ -403,18 +404,18 @@
   body[data-mobile-viewport="landscape"] [data-app-shell="authenticated"],
   body[data-mobile-viewport="portrait"] [data-app-shell="authenticated"] {
     width: 100%;
-    min-height: 100svh;
     min-height: 100dvh;
+    min-height: 100svh;
   }
 
   body[data-mobile-viewport="landscape"] [data-main-scroll],
   body[data-mobile-viewport="portrait"] [data-main-scroll] {
     height: auto;
     min-height: 0;
-    overflow-x: auto;
-    overflow-y: auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
+    overscroll-behavior-x: none;
     overscroll-behavior-y: contain;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
@@ -428,7 +429,8 @@
   }
 
   body.auth-mobile-form[data-mobile-viewport="landscape"] .auth-safe-area {
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
     padding-top: max(0.75rem, env(safe-area-inset-top));
     padding-right: max(0.75rem, env(safe-area-inset-right));
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
@@ -437,7 +439,7 @@
 
   body.auth-mobile-form[data-mobile-viewport="landscape"] [data-auth-card] {
     width: 100%;
-    max-width: min(100%, 64rem);
+    max-width: min(100%, 28rem);
   }
 
   body[data-mobile-viewport="landscape"] [data-maintenance-page] [data-maintenance-summary],
