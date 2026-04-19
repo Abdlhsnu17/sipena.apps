@@ -249,23 +249,92 @@ export default function UMLPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200/60 bg-white/70 p-2 backdrop-blur-sm dark:border-gray-700/60 dark:bg-slate-900/60">
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="#dokumentasi"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r from-teal-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
-              >
-                <FileCode2 className="h-4 w-4" />
-                Dokumentasi
-              </Link>
-              <Link
-                href="#unggahan"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              >
-                <UploadCloud className="h-4 w-4" />
-                Unggahan
-              </Link>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="border border-slate-200/70 bg-white/85 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+              <CardHeader className="space-y-3 border-b border-slate-100/80 dark:border-slate-800/70">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-linear-to-br from-teal-500 to-cyan-500 p-2.5 shadow-sm">
+                    <FileCode2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Dokumentasi UML</CardTitle>
+                    <CardDescription>Data diagram, role, class, relasi, dan alur sistem.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-5">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Bagian ini berisi dokumentasi inti sistem inventaris dan pemeliharaan, termasuk use case, class diagram,
+                  activity diagram, dan ERD.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
+                    Use Case
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full bg-cyan-50 text-cyan-700 border-cyan-200">
+                    Class Diagram
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full bg-indigo-50 text-indigo-700 border-indigo-200">
+                    ERD
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="#dokumentasi"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r from-teal-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
+                  >
+                    <FileCode2 className="h-4 w-4" />
+                    Buka Dokumentasi
+                  </Link>
+                  <Link
+                    href="#unggahan"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  >
+                    <UploadCloud className="h-4 w-4" />
+                    Lihat Unggahan
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-slate-200/70 bg-white/85 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+              <CardHeader className="space-y-3 border-b border-slate-100/80 dark:border-slate-800/70">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-linear-to-br from-slate-800 to-slate-500 p-2.5 shadow-sm">
+                    <UploadCloud className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Dokumentasi Unggahan</CardTitle>
+                    <CardDescription>Arsip file laporan yang terhubung dengan halaman unggahan utama.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-5">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Fitur ini memisahkan dokumentasi unggahan agar lebih mudah ditemukan, dipantau, dan dibuka sebagai
+                  fitur mandiri dari halaman UML.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700 border-slate-300">
+                    Arsip File
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
+                    PDF / Office
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full bg-cyan-50 text-cyan-700 border-cyan-200">
+                    Tautan Utama
+                  </Badge>
+                </div>
+                <div className="flex justify-end">
+                  <Button size="sm" asChild className="rounded-lg bg-slate-800 text-white hover:bg-slate-700">
+                    <Link href="/unggahan" className="inline-flex items-center gap-2">
+                      <UploadCloud className="h-4 w-4" />
+                      Buka Halaman Unggahan
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
         <div className="space-y-6">
