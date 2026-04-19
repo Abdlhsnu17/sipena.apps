@@ -13,7 +13,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#5eead4",
   },
   dokumentasi_unggahan: {
-    label: "Dokumentasi & Unggahan",
+    label: "Dokumentasi UML & Unggahan",
     backgroundColor: "#e2e8f0",
     textColor: "#475569",
     borderColor: "#cbd5e1",
@@ -84,7 +84,7 @@ const FEATURE_ALIASES: Record<string, string> = {
   dashboard: "dashboard",
   dokumentasi: "dokumentasi_unggahan",
   "dokumentasi unggahan": "dokumentasi_unggahan",
-  "dokumentasi & unggahan": "dokumentasi_unggahan",
+  "dokumentasi UML & unggahan": "dokumentasi_unggahan",
   uml: "dokumentasi_unggahan",
   unggahan: "unggahan",
   "inventaris medis": "inventaris_medis",

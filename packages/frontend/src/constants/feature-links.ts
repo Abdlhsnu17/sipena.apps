@@ -22,7 +22,7 @@ export type FeatureLink = {
 
 export const featureLinks: FeatureLink[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, iconColor: "text-teal-700" },
-  { label: "Dokumentasi & Unggahan", href: "/uml", icon: FileText, iconColor: "text-slate-500" },
+  { label: "Dokumentasi UML & Unggahan", href: "/uml", icon: FileText, iconColor: "text-slate-500" },
   { label: "Inventaris Medis", href: "/medical-assets", icon: Stethoscope, iconColor: "text-cyan-600" },
   { label: "Inventaris Non-Medis", href: "/non-medical-assets", icon: Building, iconColor: "text-teal-600" },
   { label: "Jadwal Pemeliharaan", href: "/maintenance", icon: Calendar, iconColor: "text-red-600" },

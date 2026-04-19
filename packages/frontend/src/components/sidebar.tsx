@@ -406,7 +406,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const fullAccessLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi & Unggahan", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemelirahaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
@@ -419,7 +419,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const staffLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi & Unggahan", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/maintenance", label: "Pemelirahaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
     { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
@@ -429,7 +429,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const staffPjLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi & Unggahan", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemelirahaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
@@ -441,14 +441,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const technicianLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi & Unggahan", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/maintenance", label: "Pemelirahaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const userLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "arsip"] },
+    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
