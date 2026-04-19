@@ -1236,6 +1236,8 @@ export default function BorrowingPage() {
   )
 
   const handleToggleBorrowableAsset = (asset: BorrowableAsset) => {
+    const isSelectingAsset = !selectedBorrowableAssetIds.includes(asset.detailId)
+
     setSelectedBorrowableAssetIds((prev) =>
       prev.includes(asset.detailId)
         ? prev.filter((item) => item !== asset.detailId)
@@ -1246,10 +1248,52 @@ export default function BorrowingPage() {
       ...prev,
       ownerWorkUnit: prev.ownerWorkUnit || asset.roomName || asset.assetLocation || "",
     }))
+
+    if (!isSelectingAsset) {
+      return
+    }
+
+    window.setTimeout(() => {
+      const borrowDateInput = borrowDateInputRef.current
+      if (!borrowDateInput) return
+
+      const rect = borrowDateInput.getBoundingClientRect()
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight
+
+      if (!isVisible) {
+        borrowDateInput.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        })
+      }
+
+      borrowDateInput.focus({ preventScroll: true })
+    }, 120)
   }
 
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const searchDropdownRef = useRef<HTMLDivElement | null>(null)
+  const borrowingFormRef = useRef<HTMLDivElement | null>(null)
+  const borrowingAssetPickerRef = useRef<HTMLDivElement | null>(null)
+  const borrowDateInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    if (!showForm) return
+
+    window.requestAnimationFrame(() => {
+      borrowingFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      })
+
+      const pickerButton = borrowingAssetPickerRef.current?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Pilih satu atau lebih inventaris"]'
+      )
+      pickerButton?.focus({ preventScroll: true })
+    })
+  }, [showForm])
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -1359,7 +1403,7 @@ export default function BorrowingPage() {
           </Card>
 
           {showForm && (
-            <Card className="rounded-3xl border border-slate-200 bg-white/80 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
+              <Card ref={borrowingFormRef} className="rounded-3xl border border-slate-200 bg-white/80 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Form Peminjaman Baru</CardTitle>
                 <CardDescription className="text-[12px] text-muted-foreground">
@@ -1368,7 +1412,7 @@ export default function BorrowingPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid mobile-form-grid gap-3">
-                <div>
+                  <div ref={borrowingAssetPickerRef}>
                   <label className="block text-[14px] font-medium text-foreground mb-2">Pilih Inventaris</label>
                   <InventoryPicker
                     assets={borrowableAssets}
@@ -1416,6 +1460,7 @@ export default function BorrowingPage() {
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Tanggal Pinjam</label>
                     <input
+                        ref={borrowDateInputRef}
                       type="datetime-local"
                       value={formData.borrowDate}
                       onChange={(e) => setFormData({ ...formData, borrowDate: e.target.value })}
