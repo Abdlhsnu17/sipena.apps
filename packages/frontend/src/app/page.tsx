@@ -335,7 +335,7 @@ export default function DashboardPage() {
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">
-                {stats.nonMedicalRoomCount.toLocaleString("id-ID")} ruangan non-medis aktif dari total {stats.totalRoomCount.toLocaleString("id-ID")} ruangan tercatat.
+                Ruangan tercatat saja.
               </p>
               <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
@@ -365,7 +365,7 @@ export default function DashboardPage() {
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">
-                {stats.medicalRoomCount.toLocaleString("id-ID")} ruangan medis aktif dari total {stats.totalRoomCount.toLocaleString("id-ID")} ruangan tercatat.
+                Ruangan tercatat saja.
               </p>
               <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
