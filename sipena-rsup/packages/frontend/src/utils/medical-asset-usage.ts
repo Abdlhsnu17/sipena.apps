@@ -1,0 +1,15 @@
+export const MEDICAL_USAGE_OPTIONS = [
+  "Perawatan pasien dan dukungan ruang rawat",
+  "Monitoring pasien dan pemeriksaan klinis",
+  "Diagnostik, pencitraan, dan analisis medis",
+  "Pemeriksaan spesialistik dan tindakan klinis",
+  "Terapi, perawatan, dan dukungan hidup",
+  "Monitoring intensif dan dukungan hidup kritis",
+  "Tindakan bedah dan prosedur steril",
+  "Pelayanan ibu, bayi, dan neonatal",
+  "Hemodialisis dan terapi penunjang ginjal",
+  "Laboratorium, farmasi, dan pengolahan sampel",
+  "Rehabilitasi medik dan mobilisasi pasien",
+  "Operasional bersama",
+  "Tim medis",
+] as const
