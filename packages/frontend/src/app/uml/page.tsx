@@ -4,19 +4,21 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react"
 import Link from "next/link"
-import type { ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 
 type DiagramLink = {
   id: string
   label: string
 }
 
+type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
+
 type ActivityStep = {
   step: string
   type: "start" | "action" | "decision" | "end"
 }
 
-const umlSections: DiagramLink[] = [
+const umlSections: { id: DiagramSectionId; label: string }[] = [
   {
     id: "activity",
     label: "Activity Diagram",
@@ -34,6 +36,29 @@ const umlSections: DiagramLink[] = [
     label: "Use Case Diagram",
   },
 ]
+
+function isDiagramSectionId(value: string | null | undefined): value is DiagramSectionId {
+  if (!value) {
+    return false
+  }
+
+  return umlSections.some((section) => section.id === value)
+}
+
+function resolveSectionFromLocation(): DiagramSectionId {
+  const hashSection = window.location.hash.replace("#", "")
+  const querySection = new URLSearchParams(window.location.search).get("diagram")
+
+  if (isDiagramSectionId(hashSection)) {
+    return hashSection
+  }
+
+  if (isDiagramSectionId(querySection)) {
+    return querySection
+  }
+
+  return "activity"
+}
 
 const activityFlows: { title: string; color: "amber" | "emerald" | "fuchsia" | "orange" | "purple" | "rose" | "teal"; steps: ActivityStep[] }[] = [
   {
@@ -295,6 +320,50 @@ const useCaseActors = [
 ]
 
 export default function UMLPage() {
+  const [activeSection, setActiveSection] = useState<DiagramSectionId>("activity")
+  const sectionContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const initialSection = resolveSectionFromLocation()
+    setActiveSection(initialSection)
+
+    const syncFromLocation = () => {
+      setActiveSection(resolveSectionFromLocation())
+    }
+
+    window.addEventListener("hashchange", syncFromLocation)
+    window.addEventListener("popstate", syncFromLocation)
+
+    return () => {
+      window.removeEventListener("hashchange", syncFromLocation)
+      window.removeEventListener("popstate", syncFromLocation)
+    }
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    params.set("diagram", activeSection)
+    const query = params.toString()
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}#${activeSection}`
+
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl)
+    }
+
+    if (sectionContainerRef.current) {
+      sectionContainerRef.current.animate(
+        [
+          { opacity: 0, transform: "translateY(12px) scale(0.995)" },
+          { opacity: 1, transform: "translateY(0) scale(1)" },
+        ],
+        {
+          duration: 280,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      )
+    }
+  }, [activeSection])
+
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
@@ -315,25 +384,32 @@ export default function UMLPage() {
             buttonLabel="Buka Dokumentasi Unggahan"
             icon={<UploadCloud className="h-5 w-5 text-white" />}
             iconContainerClass="from-amber-500 to-orange-500"
-            items={["Form unggah file", "Riwayat unggahan", "Preview dokumen", "Pengelolaan file"]}
           />
         </section>
 
         <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex flex-wrap gap-3">
             {umlSections.map((section) => (
-              <Link
+              <button
                 key={section.id}
-                href={`#${section.id}`}
-                className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-5 py-3 text-sm font-semibold text-teal-700 transition hover:bg-teal-100 dark:border-teal-800/70 dark:bg-teal-950/40 dark:text-teal-200"
+                type="button"
+                onClick={() => setActiveSection(section.id)}
+                className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
+                  activeSection === section.id
+                    ? "border-teal-600 bg-teal-600 text-white dark:border-teal-500 dark:bg-teal-500"
+                    : "border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:border-teal-800/70 dark:bg-teal-950/40 dark:text-teal-200"
+                }`}
+                aria-pressed={activeSection === section.id}
               >
                 {section.label}
-              </Link>
+              </button>
             ))}
           </div>
         </div>
 
-        <section id="activity" className="scroll-mt-28">
+        <div ref={sectionContainerRef}>
+        {activeSection === "activity" && (
+          <section id="activity" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
@@ -354,9 +430,11 @@ export default function UMLPage() {
               </div>
             </CardContent>
           </Card>
-        </section>
+          </section>
+        )}
 
-        <section id="class" className="scroll-mt-28">
+        {activeSection === "class" && (
+          <section id="class" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
@@ -404,9 +482,12 @@ export default function UMLPage() {
               </div>
             </CardContent>
           </Card>
-        </section>
+          </section>
+        )}
+        </div>
 
-        <section id="erd" className="scroll-mt-28">
+        {activeSection === "erd" && (
+          <section id="erd" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
@@ -427,9 +508,11 @@ export default function UMLPage() {
               </div>
             </CardContent>
           </Card>
-        </section>
+          </section>
+        )}
 
-        <section id="use-case" className="scroll-mt-28">
+        {activeSection === "use-case" && (
+          <section id="use-case" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
@@ -450,7 +533,8 @@ export default function UMLPage() {
               </div>
             </CardContent>
           </Card>
-        </section>
+          </section>
+        )}
 
         <div className="border-t border-gray-200 pt-6 text-center dark:border-gray-800">
           <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
@@ -468,7 +552,6 @@ function FeatureCard({
   buttonLabel,
   icon,
   iconContainerClass,
-  items,
 }: {
   title: string
   description: string
@@ -476,7 +559,6 @@ function FeatureCard({
   buttonLabel: string
   icon: ReactNode
   iconContainerClass: string
-  items: string[]
 }) {
   return (
     <Card className="border-slate-200/70 bg-white/90 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/70">
@@ -490,13 +572,6 @@ function FeatureCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {items.map((item) => (
-            <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
-              {item}
-            </div>
-          ))}
-        </div>
         <Link
           href={href}
           className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
