@@ -507,8 +507,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   }
 
   const SidebarContent = () => (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-border p-4">
+    <>
+      <div className="p-4 border-b border-border">
         {isCollapsed ? (
           <div className="hidden xl:flex flex-col items-center gap-3">
             <Image
@@ -559,207 +559,205 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <nav
-          className={cn(
-            "min-h-0 space-y-2",
-            isCollapsed ? "p-2" : "p-4",
-          )}
-        >
-          {visibleLinks.map((link) => {
-              const Icon = link.icon
-              const isActive = isLinkActive(link.href)
-              const iconColorClass = isActive ? "text-white" : link.iconColor ?? "text-foreground"
-              const isVisualAdjustedIcon = link.href === "/borrowing" || link.href === "/settings" || link.href === "/users"
-              const iconSizeClass = isCollapsed
-                ? isVisualAdjustedIcon
-                  ? "w-[22px] h-[22px]"
-                  : "w-5 h-5"
-                : isVisualAdjustedIcon
-                  ? "w-[18px] h-[18px]"
-                  : "w-4 h-4"
-              return (
-                <Link 
-                  key={link.href} 
-                  href={link.href} 
-                  onClick={handleLinkClick}
-                  aria-current={isActive ? "page" : undefined}
-                  className="block touch-manipulation"
+      <nav
+        className={cn(
+          "flex-1 min-h-0 space-y-2 overflow-y-auto",
+          isCollapsed ? "p-2" : "p-4",
+        )}
+      >
+        {visibleLinks.map((link) => {
+            const Icon = link.icon
+            const isActive = isLinkActive(link.href)
+            const iconColorClass = isActive ? "text-white" : link.iconColor ?? "text-foreground"
+            const isVisualAdjustedIcon = link.href === "/borrowing" || link.href === "/settings" || link.href === "/users"
+            const iconSizeClass = isCollapsed
+              ? isVisualAdjustedIcon
+                ? "w-[22px] h-[22px]"
+                : "w-5 h-5"
+              : isVisualAdjustedIcon
+                ? "w-[18px] h-[18px]"
+                : "w-4 h-4"
+            return (
+              <Link 
+                key={link.href} 
+                href={link.href} 
+                onClick={handleLinkClick}
+                aria-current={isActive ? "page" : undefined}
+                className="block touch-manipulation"
+              >
+                <div
+                  className={cn(
+                    "flex items-center rounded-lg transition-colors cursor-pointer select-none",
+                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-4 py-2",
+                    isActive ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted",
+                  )}
+                  title={link.label}
+                  role="menuitem"
+                  onMouseDown={(event) => {
+                    event.stopPropagation()
+                  }}
                 >
-                  <div
-                    className={cn(
-                      "flex items-center rounded-lg transition-colors cursor-pointer select-none",
-                      isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-4 py-2",
-                      isActive ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted",
-                    )}
-                    title={link.label}
-                    role="menuitem"
-                    onMouseDown={(event) => {
-                      event.stopPropagation()
-                    }}
-                  >
-                    <Icon className={cn(iconSizeClass, iconColorClass)} />
-                    {isCollapsed ? (
-                      <span className="sr-only">{link.label}</span>
-                    ) : (
-                      <span className="text-sm font-bold">{link.label}</span>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
-        </nav>
+                  <Icon className={cn(iconSizeClass, iconColorClass)} />
+                  {isCollapsed ? (
+                    <span className="sr-only">{link.label}</span>
+                  ) : (
+                    <span className="text-sm font-bold">{link.label}</span>
+                  )}
+                </div>
+              </Link>
+            )
+          })}
+      </nav>
 
-        {currentUser && !isCollapsed && (
-          <div className="px-4 pb-0 z-0">
-            <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_10px_25px_rgba(15,23,42,0.06)] dark:border-slate-800/70 dark:bg-slate-900/70">
-              <div className="w-full border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Clock3 className="h-3.5 w-3.5 text-teal-600" />
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
-                      Riwayat Aktivitas
+      {currentUser && !isCollapsed && (
+        <div className="px-4 pb-0 z-0">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_10px_25px_rgba(15,23,42,0.06)] dark:border-slate-800/70 dark:bg-slate-900/70">
+            <div className="w-full border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Clock3 className="h-3.5 w-3.5 text-teal-600" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
+                    Riwayat Aktivitas
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsActivityHistoryExpanded(!isActivityHistoryExpanded)}
+                  className="rounded-full p-2 text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-label={isActivityHistoryExpanded ? "Sembunyikan riwayat" : "Tampilkan riwayat"}
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform duration-300",
+                      isActivityHistoryExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+            <div
+              className={cn(
+                "transition-all duration-300 ease-in-out overflow-hidden",
+                isActivityHistoryExpanded ? "max-h-60 overflow-y-auto" : "max-h-0"
+              )}
+            >
+              <div className="px-2 py-1.5">
+                {recentActivities.length === 0 ? (
+                  <p className="py-2 text-center text-[11px] text-muted-foreground">Belum ada aktivitas tercatat.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {recentActivities.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="rounded-xl border border-slate-200/70 bg-white/90 px-2 py-1.5 dark:border-slate-800/70 dark:bg-slate-900/60"
+                      >
+                        <p className="text-[10px] font-semibold text-teal-700 dark:text-teal-300">
+                          {getFeatureLabel(activity.feature)}
+                        </p>
+                        <p className="text-xs leading-snug text-foreground">{formatActivityDescription(activity)}</p>
+                        {getActivityItemName(activity) ? (
+                          <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300">
+                            Nama Alat: {getActivityItemName(activity)}
+                          </p>
+                        ) : null}
+                        {getActivityItemCode(activity) ? (
+                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Kode Barang: {getActivityItemCode(activity)}
+                          </p>
+                        ) : null}
+                        {getActivityTransactionId(activity) ? (
+                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            No ID: {getActivityTransactionId(activity)}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                          {formatActivityTime(activity.createdAt)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {currentUser && !isCollapsed && (
+        <div className="px-4 py-2 z-0">
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_15px_30px_rgba(15,23,42,0.08)] dark:border-slate-800/70 dark:bg-slate-900/70">
+            <button
+              onClick={() => setIsProfileExpanded(!isProfileExpanded)}
+              className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-2xl cursor-pointer"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
+                Profil Akun
+              </p>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 text-teal-600 transition-transform duration-300",
+                  isProfileExpanded ? "rotate-0" : "-rotate-90"
+                )}
+              />
+            </button>
+            <div
+              className={cn(
+                "transition-all duration-300 ease-in-out overflow-hidden",
+                isProfileExpanded ? "max-h-96" : "max-h-0"
+              )}
+            >
+              <div className="flex flex-col gap-3 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-16 w-16 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
+                    {profileImageUrl ? (
+                      <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
+                    ) : (
+                      <AvatarFallback className="text-lg font-semibold uppercase text-muted-foreground dark:text-slate-300">
+                        {getInitials()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="flex-1 space-y-0.5">
+                    <p className="text-sm font-semibold text-foreground leading-snug">{currentUser.name}</p>
+                    <p className="text-xs text-muted-foreground">NIP {currentUser.nip}</p>
+                    <p className="text-[10px] uppercase tracking-[0.4em] text-teal-600 dark:text-teal-300">
+                      {getRoleLabel()}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsActivityHistoryExpanded(!isActivityHistoryExpanded)}
-                    className="rounded-full p-2 text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    aria-label={isActivityHistoryExpanded ? "Sembunyikan riwayat" : "Tampilkan riwayat"}
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 transition-transform duration-300",
-                        isActivityHistoryExpanded ? "rotate-0" : "-rotate-90"
-                      )}
-                    />
-                  </button>
-                </div>
-              </div>
-              <div
-                className={cn(
-                  "transition-all duration-300 ease-in-out overflow-hidden",
-                  isActivityHistoryExpanded ? "max-h-60 overflow-y-auto" : "max-h-0"
-                )}
-              >
-                <div className="px-2 py-1.5">
-                  {recentActivities.length === 0 ? (
-                    <p className="py-2 text-center text-[11px] text-muted-foreground">Belum ada aktivitas tercatat.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {recentActivities.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="rounded-xl border border-slate-200/70 bg-white/90 px-2 py-1.5 dark:border-slate-800/70 dark:bg-slate-900/60"
-                        >
-                          <p className="text-[10px] font-semibold text-teal-700 dark:text-teal-300">
-                            {getFeatureLabel(activity.feature)}
-                          </p>
-                          <p className="text-xs leading-snug text-foreground">{formatActivityDescription(activity)}</p>
-                          {getActivityItemName(activity) ? (
-                            <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300">
-                              Nama Alat: {getActivityItemName(activity)}
-                            </p>
-                          ) : null}
-                          {getActivityItemCode(activity) ? (
-                            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                              Kode Barang: {getActivityItemCode(activity)}
-                            </p>
-                          ) : null}
-                          {getActivityTransactionId(activity) ? (
-                            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                              No ID: {getActivityTransactionId(activity)}
-                            </p>
-                          ) : null}
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                            {formatActivityTime(activity.createdAt)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-
-        {currentUser && !isCollapsed && (
-          <div className="px-4 py-2 z-0">
-            <div className="rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_15px_30px_rgba(15,23,42,0.08)] dark:border-slate-800/70 dark:bg-slate-900/70">
-              <button
-                onClick={() => setIsProfileExpanded(!isProfileExpanded)}
-                className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-2xl cursor-pointer"
+            <div className="border-t border-slate-200/70 dark:border-slate-800/70 px-3 py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs font-semibold uppercase tracking-[0.4em]"
+                onClick={handleLogout}
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
-                  Profil Akun
-                </p>
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 text-teal-600 transition-transform duration-300",
-                    isProfileExpanded ? "rotate-0" : "-rotate-90"
-                  )}
-                />
-              </button>
-              <div
-                className={cn(
-                  "transition-all duration-300 ease-in-out overflow-hidden",
-                  isProfileExpanded ? "max-h-96" : "max-h-0"
-                )}
-              >
-                <div className="flex flex-col gap-3 px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-16 w-16 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
-                      {profileImageUrl ? (
-                        <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
-                      ) : (
-                        <AvatarFallback className="text-lg font-semibold uppercase text-muted-foreground dark:text-slate-300">
-                          {getInitials()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-sm font-semibold text-foreground leading-snug">{currentUser.name}</p>
-                      <p className="text-xs text-muted-foreground">NIP {currentUser.nip}</p>
-                      <p className="text-[10px] uppercase tracking-[0.4em] text-teal-600 dark:text-teal-300">
-                        {getRoleLabel()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="border-t border-slate-200/70 dark:border-slate-800/70 px-3 py-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs font-semibold uppercase tracking-[0.4em]"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="mr-1 h-3 w-3" />
-                  Logout
-                </Button>
-              </div>
+                <LogOut className="mr-1 h-3 w-3" />
+                Logout
+              </Button>
             </div>
           </div>
-        )}
-        {currentUser && isCollapsed && (
-          <div className="flex flex-col items-center p-2 pb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-teal-700 hover:bg-teal-100"
-              onClick={handleLogout}
-              title="Logout"
-              aria-label="Logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+      {currentUser && isCollapsed && (
+        <div className="flex flex-col items-center p-2 pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-teal-700 hover:bg-teal-100"
+            onClick={handleLogout}
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
 
-      <div className="shrink-0 border-t border-border p-4">
+      <div className="p-4 border-t border-border">
         <div className={cn(
           "flex items-center justify-center gap-2",
           isCollapsed ? "flex-col gap-1" : ""
@@ -780,7 +778,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 
   return (
@@ -816,7 +814,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         />
         <aside
           className={cn(
-            "relative h-dvh min-h-dvh w-[min(88vw,22rem)] max-w-88 overflow-hidden bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+            "relative h-dvh min-h-dvh w-[min(88vw,22rem)] max-w-88 overflow-y-auto bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           )}
           style={{ minWidth: 0 }}
@@ -837,7 +835,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <aside
         className={cn(
-        "hidden xl:flex bg-card h-screen overflow-hidden xl:sticky xl:top-0 flex-col transition-all duration-300 ease-in-out",
+        "hidden xl:flex bg-card h-screen xl:sticky xl:top-0 flex-col transition-all duration-300 ease-in-out",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
