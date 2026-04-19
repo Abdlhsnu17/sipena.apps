@@ -218,6 +218,124 @@ const hasOtherActiveMaintenance = async (
   return Number((rows[0] as any)?.count || 0) > 0;
 };
 
+const parseAssetSpecifications = (raw: unknown): Record<string, any> => {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  if (typeof raw === 'object') {
+    return raw as Record<string, any>;
+  }
+
+  return {};
+};
+
+const normalizeDetailIdentifier = (value?: string | number | null): string => {
+  if (value === undefined || value === null) return '';
+  return String(value).trim();
+};
+
+const matchesAssetDetail = (
+  detail: Record<string, any>,
+  detailId?: string | null,
+  detailCode?: string | null
+): boolean => {
+  const normalizedTargetId = normalizeDetailIdentifier(detailId);
+  const normalizedTargetCode = normalizeDetailIdentifier(detailCode);
+  const detailCandidates = [
+    normalizeDetailIdentifier(detail.id),
+    normalizeDetailIdentifier(detail.detailId),
+    normalizeDetailIdentifier(detail.assetDetailId),
+    normalizeDetailIdentifier(detail.assetCode),
+    normalizeDetailIdentifier(detail.detailCode),
+    normalizeDetailIdentifier(detail.serialNumber)
+  ].filter(Boolean);
+
+  if (normalizedTargetId && detailCandidates.includes(normalizedTargetId)) {
+    return true;
+  }
+
+  if (normalizedTargetCode && detailCandidates.includes(normalizedTargetCode)) {
+    return true;
+  }
+
+  return false;
+};
+
+const syncAssetDetailStatus = async (
+  context: MaintenanceAssetContext,
+  maintenanceId: number,
+  maintenanceStatus: MaintenanceStatus
+): Promise<void> => {
+  if (
+    !ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus) &&
+    !RELEASABLE_MAINTENANCE_STATUSES.includes(maintenanceStatus)
+  ) {
+    return;
+  }
+
+  const [maintenanceRows] = await pool.query<RowDataPacket[]>(
+    `SELECT asset_detail_id, asset_detail_code
+     FROM maintenance_records
+     WHERE id = ?
+     LIMIT 1`,
+    [maintenanceId]
+  );
+
+  const detailId = normalizeDetailIdentifier(maintenanceRows[0]?.asset_detail_id);
+  const detailCode = normalizeDetailIdentifier(maintenanceRows[0]?.asset_detail_code);
+  const shouldMatchSpecificDetail = Boolean(detailId || detailCode);
+
+  const assetResponse = await assetService.getById(String(context.assetId), context.assetType);
+  if (!assetResponse.success || !assetResponse.data) return;
+
+  const specifications = parseAssetSpecifications(assetResponse.data.specifications);
+  const details = Array.isArray(specifications.details) ? specifications.details : [];
+  if (details.length === 0) return;
+
+  const nextDetailStatus = ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus)
+    ? 'Dalam Perbaikan'
+    : 'Aktif';
+
+  let hasChanges = false;
+  const updatedDetails = details.map((rawDetail: any) => {
+    const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
+    if (!detail || typeof detail !== 'object') return rawDetail;
+
+    const isTarget = shouldMatchSpecificDetail
+      ? matchesAssetDetail(detail, detailId, detailCode)
+      : true;
+
+    if (!isTarget) return rawDetail;
+
+    if (detail.status !== nextDetailStatus) {
+      detail.status = nextDetailStatus;
+      hasChanges = true;
+    }
+
+    return detail;
+  });
+
+  if (!hasChanges) return;
+
+  await assetService.update(
+    String(context.assetId),
+    {
+      specifications: {
+        ...specifications,
+        details: updatedDetails
+      }
+    },
+    context.assetType
+  );
+};
+
 const syncAssetAvailability = async (
   maintenanceId: number,
   maintenanceStatus: MaintenanceStatus,
@@ -228,6 +346,7 @@ const syncAssetAvailability = async (
 
   if (ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus)) {
     await assetService.updateStatus(String(context.assetId), 'maintenance', context.assetType);
+    await syncAssetDetailStatus(context, maintenanceId, maintenanceStatus);
     return;
   }
 
@@ -244,6 +363,8 @@ const syncAssetAvailability = async (
   if (!stillHasActiveMaintenance) {
     await assetService.updateStatus(String(context.assetId), 'available', context.assetType);
   }
+
+  await syncAssetDetailStatus(context, maintenanceId, maintenanceStatus);
 };
 
 const getRawById = async (id: number): Promise<MaintenanceHistoryRow | null> => {
