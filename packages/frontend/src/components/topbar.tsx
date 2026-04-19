@@ -55,6 +55,8 @@ const getIdentityLabel = (name?: string, nip?: string) => {
 }
 
 export default function Topbar() {
+  const topbarAnnouncement =
+    "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat."
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const router = useRouter()
@@ -334,9 +336,10 @@ export default function Topbar() {
     <header className="z-30 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
       <div className="border-b border-border/70 bg-muted/40 px-3 py-1 xl:px-6">
         <div className="overflow-hidden">
-          <p className="truncate text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat.
-          </p>
+          <div className="animate-topbar-marquee whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <span>{topbarAnnouncement}</span>
+            <span className="ml-14">{topbarAnnouncement}</span>
+          </div>
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 py-3 pr-4 pl-16 xl:px-6">
