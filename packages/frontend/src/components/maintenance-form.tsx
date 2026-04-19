@@ -86,6 +86,9 @@ export default function MaintenanceForm({
   const [selectedAsset, setSelectedAsset] = useState<DetailInventoryItem | null>(null)
   const defaultRepairNote = useMemo(() => buildRepairNoteTemplate(selectedAsset), [selectedAsset])
   const prevAutoRepairNoteRef = useRef(defaultRepairNote)
+  const formCardRef = useRef<HTMLDivElement | null>(null)
+  const inventoryPickerRef = useRef<HTMLDivElement | null>(null)
+  const scheduledDateInputRef = useRef<HTMLInputElement | null>(null)
 
   const [formData, setFormData] = useState(() => ({
     inventarisInput: "",
@@ -196,6 +199,23 @@ export default function MaintenanceForm({
     prevAutoRepairNoteRef.current = defaultRepairNote
   }, [defaultRepairNote, maintenance])
 
+  useEffect(() => {
+    if (maintenance) return
+
+    window.requestAnimationFrame(() => {
+      formCardRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      })
+
+      const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
+      )
+      pickerButton?.focus({ preventScroll: true })
+    })
+  }, [maintenance])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -219,6 +239,24 @@ export default function MaintenanceForm({
       assetDetailCode: asset.detailCode || prev.assetDetailCode,
       assetLocation: asset.assetLocation || prev.assetLocation,
     }))
+
+    window.setTimeout(() => {
+      const scheduledDateInput = scheduledDateInputRef.current
+      if (!scheduledDateInput) return
+
+      const rect = scheduledDateInput.getBoundingClientRect()
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight
+
+      if (!isVisible) {
+        scheduledDateInput.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        })
+      }
+
+      scheduledDateInput.focus({ preventScroll: true })
+    }, 120)
   }
 
   const findMatchedAsset = () => {
@@ -266,7 +304,7 @@ export default function MaintenanceForm({
 
 
   return (
-    <Card className="mb-6">
+    <Card ref={formCardRef} className="mb-6">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle>{maintenance ? "Edit Pemelirahaan Sarana" : "Tambah Pemelirahaan Sarana"}</CardTitle>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
@@ -276,7 +314,7 @@ export default function MaintenanceForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid mobile-form-grid gap-4">
-            <div>
+            <div ref={inventoryPickerRef}>
               <label className="block text-sm font-medium text-foreground mb-2">Pilih Inventaris</label>
               <InventoryPicker
                 assets={assets}
@@ -291,6 +329,7 @@ export default function MaintenanceForm({
                 searchValue={buildInventorySearchKey}
                 placeholder="Cari inventaris..."
                 buttonLabel="Pilih inventaris"
+                ariaLabel="Pilih inventaris untuk pemeliharaan"
                 renderItemMeta={(asset) => getDetailInventoryStatusLabel(asset)}
                 noResultsLabel="Tidak ada hasil"
               />
@@ -315,6 +354,7 @@ export default function MaintenanceForm({
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Tanggal &amp; Waktu Jadwal</label>
               <input
+                ref={scheduledDateInputRef}
                 type="datetime-local"
                 name="scheduledDate"
                 value={formData.scheduledDate}
