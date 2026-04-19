@@ -3,6 +3,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
+import { useIsMobile } from "@/hooks/use-mobile"
+import { useOrientation } from "@/hooks/use-orientation"
 import { buildLoginRedirectUrl } from "@/services/auth-utils"
 import type { User } from "@/services/auth.service"
 import authService from "@/services/auth.service"
@@ -269,6 +271,10 @@ const formatActivityTime = (value: string) => {
 export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const isMobile = useIsMobile()
+  const orientation = useOrientation()
+  const isMobileLandscape = isMobile && orientation === "landscape"
+  const showLandscapeCollapsed = isCollapsed && isMobileLandscape
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
@@ -289,6 +295,12 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   useEffect(() => {
     closeMobileMenu()
   }, [closeMobileMenu, pathname])
+
+  useEffect(() => {
+    if (isMobileLandscape) {
+      closeMobileMenu()
+    }
+  }, [closeMobileMenu, isMobileLandscape])
 
 
 
@@ -510,7 +522,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     <>
       <div className="p-4 border-b border-border">
         {isCollapsed ? (
-          <div className="hidden xl:flex flex-col items-center gap-3">
+          <div className={cn("flex flex-col items-center gap-3", !isMobileLandscape && "hidden xl:flex")}>
             <Image
               src="/images/logo-RS.png"
               alt="Logo Kemenkes RS Persahabatan"
@@ -544,7 +556,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden xl:block p-2 hover:bg-muted rounded-lg"
+              className={cn("p-2 hover:bg-muted rounded-lg", !isMobileLandscape && "hidden xl:block")}
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
@@ -561,7 +573,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <nav
         className={cn(
-          "flex-1 min-h-0 space-y-2 overflow-y-auto",
+          "flex-1 min-h-0 space-y-2 overflow-y-scroll [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
           isCollapsed ? "p-2" : "p-4",
         )}
       >
@@ -637,8 +649,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <div
               className={cn(
-                "transition-all duration-300 ease-in-out overflow-hidden",
-                isActivityHistoryExpanded ? "max-h-60 overflow-y-auto" : "max-h-0"
+                "transition-all duration-300 ease-in-out overflow-hidden [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
+                isActivityHistoryExpanded ? "max-h-64 overflow-y-scroll pr-1" : "max-h-0"
               )}
             >
               <div className="px-2 py-1.5">
@@ -787,6 +799,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
           "xl:hidden fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg shadow-md hover:bg-muted transition-colors",
+          isMobileLandscape && "hidden",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Open menu"
@@ -803,40 +816,43 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         />
       </button>
 
-      <div className={cn("xl:hidden fixed inset-0 z-40 flex", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
-      >
-        <div
-          className={cn("absolute inset-0 bg-black/60 z-40 transition-opacity duration-300", 
-            isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-          onClick={closeMobileMenu}
-          role="presentation"
-        />
-        <aside
-          className={cn(
-            "relative h-dvh min-h-dvh w-[min(88vw,22rem)] max-w-88 overflow-y-auto bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
-            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          )}
-          style={{ minWidth: 0 }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu navigasi"
+      {!isMobileLandscape && (
+        <div className={cn("xl:hidden fixed inset-0 z-40 flex", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
         >
-          <button
+          <div
+            className={cn("absolute inset-0 bg-black/60 z-40 transition-opacity duration-300", 
+              isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
             onClick={closeMobileMenu}
-            className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors z-40"
-            aria-label="Close menu"
+            role="presentation"
+          />
+          <aside
+            className={cn(
+              "relative h-dvh min-h-dvh w-[min(88vw,22rem)] max-w-88 overflow-y-auto bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+              isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+            style={{ minWidth: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu navigasi"
           >
-            <X className="w-5 h-5 text-foreground" />
-          </button>
-          <SidebarContent />
-        </aside>
-      </div>
+            <button
+              onClick={closeMobileMenu}
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors z-40"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5 text-foreground" />
+            </button>
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
 
       <aside
         className={cn(
-          "hidden xl:fixed xl:inset-y-0 xl:left-0 xl:z-40 xl:flex bg-card h-screen flex-col border-r border-border transition-all duration-300 ease-in-out",
-          isCollapsed ? "w-20" : "w-64"
+          "relative shrink-0 border-r border-border bg-card h-dvh flex-col overflow-y-scroll overscroll-contain [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent transition-all duration-300 ease-in-out xl:fixed xl:inset-y-0 xl:left-0 xl:z-40",
+          isMobileLandscape ? "flex" : "hidden xl:flex",
+          isMobileLandscape ? (showLandscapeCollapsed ? "w-16 min-w-16" : "w-72 min-w-72") : (isCollapsed ? "w-20" : "w-64")
         )}
       >
         <SidebarContent />
