@@ -1,11 +1,14 @@
 
-import { NON_MEDICAL_ASSET_CATEGORIES } from "@/components/non-medical-asset-categories"
+import {
+  NON_MEDICAL_ASSET_CATEGORIES,
+  NON_MEDICAL_ASSET_CLASSIFICATIONS,
+} from "@/components/non-medical-asset-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    getNonMedicalAssetTypeLabel,
-    NON_MEDICAL_ASSET_TYPE_OPTIONS,
-    type NonMedicalAssetTypeOption,
+  getNonMedicalAssetTypeLabel,
+  NON_MEDICAL_ASSET_TYPE_OPTIONS,
+  type NonMedicalAssetTypeOption,
 } from "@/constants/non-medical-asset-types"
 import type { NonMedicalAsset } from "@/types/non-medical-assets-types"
 import { inferNonMedicalUsagePurpose, matchNonMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier"
@@ -197,35 +200,90 @@ export default function NonMedicalAssetForm({
     return inventoryOptions.filter((option) => matchesSearchKeyword(query, [option]))
   }, [formData.inventoryName, inventoryOptions])
 
-  const selectInventoryOption = (value: string) => {
-    const matchedTypeOption = matchNonMedicalTypeFromInventoryName(value)
-    if (matchedTypeOption) {
-      setTypeSearch(matchedTypeOption.label)
+  const classificationByInventoryName = useMemo(() => {
+    const lookup = new Map<string, (typeof NON_MEDICAL_ASSET_CLASSIFICATIONS)[number]>()
+
+    NON_MEDICAL_ASSET_CLASSIFICATIONS.forEach((classification) => {
+      lookup.set(classification.inventoryName.trim().toLowerCase(), classification)
+      classification.aliases.forEach((alias) => {
+        lookup.set(alias.trim().toLowerCase(), classification)
+      })
+    })
+
+    return lookup
+  }, [])
+
+  const resolveMatchedType = (inventoryName: string) => {
+    const exactType = matchNonMedicalTypeFromInventoryName(inventoryName)
+    if (exactType) {
+      return {
+        typeValue: exactType.value,
+        typeLabel: exactType.label,
+        usagePurpose: inferNonMedicalUsagePurpose(inventoryName, exactType.value),
+      }
     }
+
+    const classification = classificationByInventoryName.get(inventoryName.trim().toLowerCase())
+    if (!classification) {
+      return undefined
+    }
+
+    const recommendedTypeOption = NON_MEDICAL_ASSET_TYPE_OPTIONS.find(
+      (option) => option.label.toLowerCase() === classification.recommendedType.toLowerCase(),
+    )
+
+    if (!recommendedTypeOption) {
+      return {
+        typeValue: defaultTypeValue,
+        typeLabel: classification.recommendedType,
+        usagePurpose: classification.usagePurpose,
+      }
+    }
+
+    return {
+      typeValue: recommendedTypeOption.value,
+      typeLabel: recommendedTypeOption.label,
+      usagePurpose: classification.usagePurpose,
+    }
+  }
+
+  const selectInventoryOption = (value: string) => {
+    const matchedType = resolveMatchedType(value)
+    if (matchedType) {
+      setTypeSearch(matchedType.typeLabel)
+    }
+
     setFormData((prev) => {
-      const resolvedType = matchedTypeOption?.value ?? prev.type
+      const resolvedType = matchedType?.typeValue ?? prev.type
       return {
         ...prev,
         inventoryName: value,
         type: resolvedType,
-        usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose(value, resolvedType), USAGE_OPTIONS),
+        usagePurpose: normalizeUsagePurpose(
+          matchedType?.usagePurpose ?? inferNonMedicalUsagePurpose(value, resolvedType),
+          USAGE_OPTIONS,
+        ),
       }
     })
     setShowInventorySuggestions(false)
   }
 
   const handleInventoryInputChange = (value: string) => {
-    const matchedTypeOption = matchNonMedicalTypeFromInventoryName(value)
-    if (matchedTypeOption) {
-      setTypeSearch(matchedTypeOption.label)
+    const matchedType = resolveMatchedType(value)
+    if (matchedType) {
+      setTypeSearch(matchedType.typeLabel)
     }
+
     setFormData((prev) => {
-      const resolvedType = matchedTypeOption?.value ?? prev.type
+      const resolvedType = matchedType?.typeValue ?? prev.type
       return {
         ...prev,
         inventoryName: value,
         type: resolvedType,
-        usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose(value, resolvedType), USAGE_OPTIONS),
+        usagePurpose: normalizeUsagePurpose(
+          matchedType?.usagePurpose ?? inferNonMedicalUsagePurpose(value, resolvedType),
+          USAGE_OPTIONS,
+        ),
       }
     })
     setShowInventorySuggestions(true)
