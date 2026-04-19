@@ -43,6 +43,11 @@ packages/backend/uploads/
 # Other
 .DS_Store
 Thumbs.db
+._*
+
+# Local backups / duplicated project folders
+Downloads/
+sipena-rsup/
 
 # Editor directories and files
 .idea/
@@ -51,4 +56,3 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-../../
