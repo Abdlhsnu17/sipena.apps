@@ -6,9 +6,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getNonMedicalAssetTypeLabel,
   NON_MEDICAL_ASSET_TYPE_OPTIONS,
-  type NonMedicalAssetTypeOption,
 } from "@/constants/non-medical-asset-types"
 import type { NonMedicalAsset } from "@/types/non-medical-assets-types"
 import { inferNonMedicalUsagePurpose, matchNonMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier"
@@ -48,8 +46,8 @@ const createInitialFormData = (defaultTypeValue: NonMedicalAsset["type"]) => ({
   usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose("", defaultTypeValue), USAGE_OPTIONS),
 })
 
-const createCustomTypeOption = (value: string): NonMedicalAssetTypeOption => ({
-  value: value as NonMedicalAssetTypeOption["value"],
+const createCustomTypeOption = (value: string) => ({
+  value,
   label: value,
   category: "Tipe Manual",
 })
@@ -63,9 +61,21 @@ export default function NonMedicalAssetForm({
   onSave: (asset: NonMedicalAsset) => void
   onCancel: () => void
 }) {
+  const nonMedicalTypeCategoryOptions = useMemo(
+    () =>
+      Array.from(new Set(NON_MEDICAL_ASSET_TYPE_OPTIONS.map((option) => option.category)))
+        .sort((a, b) => a.localeCompare(b))
+        .map((category) => ({
+          value: category,
+          label: category,
+        })),
+    [],
+  )
+
   const defaultTypeValue =
-    NON_MEDICAL_ASSET_TYPE_OPTIONS[0]?.value ?? ("laptop" as NonMedicalAsset["type"])
-  const defaultTypeLabel = getNonMedicalAssetTypeLabel(defaultTypeValue)
+    (nonMedicalTypeCategoryOptions[0]?.value as NonMedicalAsset["type"]) ??
+    ("IT & Elektronik" as NonMedicalAsset["type"])
+  const defaultTypeLabel = defaultTypeValue
 
   const [formData, setFormData] = useState(createInitialFormData(defaultTypeValue))
   const [typeSearch, setTypeSearch] = useState(defaultTypeLabel)
@@ -89,11 +99,12 @@ export default function NonMedicalAssetForm({
   useEffect(() => {
     if (asset) {
       const resolvedType = asset.type ?? defaultTypeValue
-      const resolvedTypeLabel = getNonMedicalAssetTypeLabel(resolvedType) ?? defaultTypeLabel
+      const resolvedTypeCategory =
+        NON_MEDICAL_ASSET_TYPE_OPTIONS.find((option) => option.value === resolvedType)?.category ?? resolvedType
       setFormData({
         assetCode: asset.assetCode ?? "",
         inventoryName: asset.inventoryName ?? "",
-        type: resolvedType,
+        type: resolvedTypeCategory,
         name: asset.name ?? (asset as NonMedicalAsset & { brandModel?: string }).brandModel ?? "",
         serialNumber: asset.serialNumber ?? "",
         purchaseDate: toDateInputValue(asset.purchaseDate),
@@ -103,14 +114,14 @@ export default function NonMedicalAssetForm({
         status: (asset.status as StatusType) ?? "Aktif",
         notes: asset.notes ?? "",
         usagePurpose: normalizeUsagePurpose(
-          asset.usagePurpose ?? inferNonMedicalUsagePurpose(asset.inventoryName, resolvedType),
+          asset.usagePurpose ?? inferNonMedicalUsagePurpose(asset.inventoryName, resolvedTypeCategory),
           USAGE_OPTIONS,
         ),
       })
-      setTypeSearch(resolvedTypeLabel)
+      setTypeSearch(resolvedTypeCategory)
     } else {
       setFormData(createInitialFormData(defaultTypeValue))
-      setTypeSearch(getNonMedicalAssetTypeLabel(defaultTypeValue))
+      setTypeSearch(defaultTypeValue)
     }
   }, [asset, defaultTypeLabel, defaultTypeValue])
 
@@ -180,16 +191,24 @@ export default function NonMedicalAssetForm({
   const typeOptions = useMemo(() => {
     const customType = formData.type?.trim()
     if (!customType) {
-      return NON_MEDICAL_ASSET_TYPE_OPTIONS
+      return nonMedicalTypeCategoryOptions.map((option) => ({
+        ...option,
+        category: "Kategori Tipe",
+      }))
     }
 
-    const alreadyExists = NON_MEDICAL_ASSET_TYPE_OPTIONS.some((option) => option.value === customType)
+    const baseOptions = nonMedicalTypeCategoryOptions.map((option) => ({
+      ...option,
+      category: "Kategori Tipe",
+    }))
+
+    const alreadyExists = baseOptions.some((option) => option.value.toLowerCase() === customType.toLowerCase())
     if (alreadyExists) {
-      return NON_MEDICAL_ASSET_TYPE_OPTIONS
+      return baseOptions
     }
 
-    return [createCustomTypeOption(customType), ...NON_MEDICAL_ASSET_TYPE_OPTIONS]
-  }, [formData.type])
+    return [createCustomTypeOption(customType), ...baseOptions]
+  }, [formData.type, nonMedicalTypeCategoryOptions])
 
   const filteredInventoryOptions = useMemo(() => {
     const query = formData.inventoryName.trim()
@@ -217,8 +236,8 @@ export default function NonMedicalAssetForm({
     const exactType = matchNonMedicalTypeFromInventoryName(inventoryName)
     if (exactType) {
       return {
-        typeValue: exactType.value,
-        typeLabel: exactType.label,
+        typeValue: exactType.category,
+        typeLabel: exactType.category,
         usagePurpose: inferNonMedicalUsagePurpose(inventoryName, exactType.value),
       }
     }
@@ -234,15 +253,15 @@ export default function NonMedicalAssetForm({
 
     if (!recommendedTypeOption) {
       return {
-        typeValue: defaultTypeValue,
-        typeLabel: classification.recommendedType,
+        typeValue: classification.recommendedTypeCategory,
+        typeLabel: classification.recommendedTypeCategory,
         usagePurpose: classification.usagePurpose,
       }
     }
 
     return {
-      typeValue: recommendedTypeOption.value,
-      typeLabel: recommendedTypeOption.label,
+      typeValue: recommendedTypeOption.category,
+      typeLabel: recommendedTypeOption.category,
       usagePurpose: classification.usagePurpose,
     }
   }
@@ -325,8 +344,8 @@ export default function NonMedicalAssetForm({
     [formData.usagePurpose],
   )
 
-  const selectTypeOption = (option: typeof NON_MEDICAL_ASSET_TYPE_OPTIONS[number]) => {
-    setTypeSearch(option.label)
+  const selectTypeOption = (option: { value: string; label: string; category: string }) => {
+    setTypeSearch(option.value)
     setFormData((prev) => ({
       ...prev,
       type: option.value,
@@ -338,8 +357,10 @@ export default function NonMedicalAssetForm({
   const handleTypeInputChange = (value: string) => {
     setTypeSearch(value)
     setShowTypeSuggestions(true)
-    const exactMatch = NON_MEDICAL_ASSET_TYPE_OPTIONS.find(
-      (option) => option.label.toLowerCase() === value.trim().toLowerCase()
+    const exactMatch = typeOptions.find(
+      (option) =>
+        option.value.toLowerCase() === value.trim().toLowerCase() ||
+        option.label.toLowerCase() === value.trim().toLowerCase(),
     )
     setFormData((prev) => ({
       ...prev,
@@ -450,7 +471,6 @@ export default function NonMedicalAssetForm({
                         className="flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted"
                       >
                         <span className="font-medium leading-tight">{option.label}</span>
-                        <span className="text-xs text-muted-foreground">{option.category}</span>
                       </button>
                     ))
                   )}

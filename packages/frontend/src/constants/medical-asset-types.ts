@@ -1300,6 +1300,17 @@ export const MEDICAL_ASSET_TYPE_OPTIONS: MedicalAssetTypeOption[] = (
   category: MEDICAL_ASSET_TYPE_DEFINITIONS[type].category,
 }))
 
+const MEDICAL_ASSET_CATEGORY_COLORS: Record<string, string> = MEDICAL_ASSET_TYPE_OPTIONS.reduce(
+  (acc, option) => {
+    const color = MEDICAL_ASSET_TYPE_DEFINITIONS[option.value].color
+    if (!acc[option.category]) {
+      acc[option.category] = color
+    }
+    return acc
+  },
+  {} as Record<string, string>,
+)
+
 export const getMedicalAssetTypeLabel = (type?: string) => {
   if (!type) return ""
   const entry = MEDICAL_ASSET_TYPE_DEFINITIONS[type as MedicalAsset["type"]]
@@ -1309,5 +1320,5 @@ export const getMedicalAssetTypeLabel = (type?: string) => {
 export const getMedicalAssetTypeColor = (type?: string) => {
   if (!type) return "bg-gray-100 text-gray-800"
   const entry = MEDICAL_ASSET_TYPE_DEFINITIONS[type as MedicalAsset["type"]]
-  return entry?.color ?? "bg-gray-100 text-gray-800"
+  return entry?.color ?? MEDICAL_ASSET_CATEGORY_COLORS[type] ?? "bg-gray-100 text-gray-800"
 }

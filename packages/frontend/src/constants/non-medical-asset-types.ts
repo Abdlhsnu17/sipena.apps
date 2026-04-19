@@ -1672,6 +1672,17 @@ export const NON_MEDICAL_ASSET_TYPE_OPTIONS: NonMedicalAssetTypeOption[] = (
   category: NON_MEDICAL_ASSET_TYPE_DEFINITIONS[type].category,
 }))
 
+const NON_MEDICAL_ASSET_CATEGORY_COLORS: Record<string, string> = NON_MEDICAL_ASSET_TYPE_OPTIONS.reduce(
+  (acc, option) => {
+    const color = NON_MEDICAL_ASSET_TYPE_DEFINITIONS[option.value].color
+    if (!acc[option.category]) {
+      acc[option.category] = color
+    }
+    return acc
+  },
+  {} as Record<string, string>,
+)
+
 export const getNonMedicalAssetTypeLabel = (type?: string) => {
   if (!type) return ""
   const entry = NON_MEDICAL_ASSET_TYPE_DEFINITIONS[type as NonMedicalAssetType]
@@ -1681,5 +1692,5 @@ export const getNonMedicalAssetTypeLabel = (type?: string) => {
 export const getNonMedicalAssetTypeColor = (type?: string) => {
   if (!type) return "bg-gray-100 text-gray-800"
   const entry = NON_MEDICAL_ASSET_TYPE_DEFINITIONS[type as NonMedicalAssetType]
-  return entry?.color ?? "bg-gray-100 text-gray-800"
+  return entry?.color ?? NON_MEDICAL_ASSET_CATEGORY_COLORS[type] ?? "bg-gray-100 text-gray-800"
 }

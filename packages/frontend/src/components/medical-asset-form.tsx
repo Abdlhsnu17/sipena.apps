@@ -1,7 +1,7 @@
 import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MEDICAL_ASSET_TYPE_OPTIONS, getMedicalAssetTypeLabel } from "@/constants/medical-asset-types"
+import { MEDICAL_ASSET_TYPE_OPTIONS } from "@/constants/medical-asset-types"
 import type { MedicalAsset } from "@/types/medical-assets-types"
 import { inferMedicalUsagePurpose, matchMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier"
 import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage"
@@ -38,6 +38,12 @@ const createInitialFormData = (defaultTypeValue: MedicalAsset["type"]) => ({
   usagePurpose: normalizeUsagePurpose(inferMedicalUsagePurpose("", defaultTypeValue), MEDICAL_USAGE_OPTIONS),
 })
 
+const createCustomTypeOption = (value: string) => ({
+  value,
+  label: value,
+  category: "Kategori Tipe",
+})
+
 export default function MedicalAssetForm({
   asset,
   onSave,
@@ -47,9 +53,21 @@ export default function MedicalAssetForm({
   onSave: (asset: MedicalAsset) => void
   onCancel: () => void
 }) {
+  const medicalTypeCategoryOptions = useMemo(
+    () =>
+      Array.from(new Set(MEDICAL_ASSET_TYPE_OPTIONS.map((option) => option.category)))
+        .sort((a, b) => a.localeCompare(b))
+        .map((category) => ({
+          value: category,
+          label: category,
+          category: "Kategori Tipe",
+        })),
+    [],
+  )
+
   const defaultTypeValue =
-    MEDICAL_ASSET_TYPE_OPTIONS[0]?.value ?? ("" as MedicalAsset["type"])
-  const defaultTypeLabel = getMedicalAssetTypeLabel(defaultTypeValue)
+    (medicalTypeCategoryOptions[0]?.value as MedicalAsset["type"]) ?? ("Perlengkapan Ruang Perawatan" as MedicalAsset["type"])
+  const defaultTypeLabel = defaultTypeValue
 
   const [formData, setFormData] = useState(createInitialFormData(defaultTypeValue))
   const [typeSearch, setTypeSearch] = useState(defaultTypeLabel)
@@ -69,10 +87,12 @@ export default function MedicalAssetForm({
   useEffect(() => {
     if (asset) {
       const typeValue = asset.type ?? defaultTypeValue
+      const resolvedTypeCategory =
+        MEDICAL_ASSET_TYPE_OPTIONS.find((option) => option.value === typeValue)?.category ?? typeValue
       setFormData({
         assetCode: asset.assetCode ?? "",
         inventoryName: asset.inventoryName ?? "",
-        type: typeValue,
+        type: resolvedTypeCategory,
         name: asset.name ?? "",
         serialNumber: asset.serialNumber ?? "",
         purchaseDate: toDateInputValue(asset.purchaseDate),
@@ -82,15 +102,14 @@ export default function MedicalAssetForm({
         status: (asset.status as StatusType) ?? "Aktif",
         notes: asset.notes ?? "",
         usagePurpose: normalizeUsagePurpose(
-          asset.usagePurpose ?? inferMedicalUsagePurpose(asset.inventoryName, typeValue),
+          asset.usagePurpose ?? inferMedicalUsagePurpose(asset.inventoryName, resolvedTypeCategory),
           MEDICAL_USAGE_OPTIONS,
         ),
       })
-      const resolvedLabel = getMedicalAssetTypeLabel(typeValue) || getMedicalAssetTypeLabel(defaultTypeValue)
-      setTypeSearch(resolvedLabel)
+      setTypeSearch(resolvedTypeCategory)
     } else {
       setFormData(createInitialFormData(defaultTypeValue))
-      setTypeSearch(getMedicalAssetTypeLabel(defaultTypeValue))
+      setTypeSearch(defaultTypeValue)
     }
   }, [asset, defaultTypeValue])
 
@@ -134,15 +153,39 @@ export default function MedicalAssetForm({
   const filteredTypeOptions = useMemo(() => {
     const query = typeSearch.trim().toLowerCase()
     if (!query) {
-      return MEDICAL_ASSET_TYPE_OPTIONS
+      return medicalTypeCategoryOptions
     }
 
-    return MEDICAL_ASSET_TYPE_OPTIONS.filter(
+    return medicalTypeCategoryOptions.filter(
       (option) =>
-        option.label.toLowerCase().includes(query) ||
-        option.category.toLowerCase().includes(query),
+        option.label.toLowerCase().includes(query),
     )
-  }, [typeSearch])
+  }, [medicalTypeCategoryOptions, typeSearch])
+
+  const typeOptions = useMemo(() => {
+    const customType = formData.type?.trim()
+    if (!customType) {
+      return medicalTypeCategoryOptions
+    }
+
+    const alreadyExists = medicalTypeCategoryOptions.some(
+      (option) => option.value.toLowerCase() === customType.toLowerCase(),
+    )
+    if (alreadyExists) {
+      return medicalTypeCategoryOptions
+    }
+
+    return [createCustomTypeOption(customType), ...medicalTypeCategoryOptions]
+  }, [formData.type, medicalTypeCategoryOptions])
+
+  const filteredTypedOptions = useMemo(() => {
+    const query = typeSearch.trim().toLowerCase()
+    if (!query) {
+      return typeOptions
+    }
+
+    return typeOptions.filter((option) => option.label.toLowerCase().includes(query))
+  }, [typeOptions, typeSearch])
 
   const inferredUsagePurpose = useMemo(
     () => normalizeUsagePurpose(inferMedicalUsagePurpose(formData.inventoryName, formData.type), MEDICAL_USAGE_OPTIONS),
@@ -154,8 +197,8 @@ export default function MedicalAssetForm({
     [formData.usagePurpose],
   )
 
-  const selectTypeOption = (option: (typeof MEDICAL_ASSET_TYPE_OPTIONS)[number]) => {
-    setTypeSearch(option.label)
+  const selectTypeOption = (option: { value: string; label: string; category: string }) => {
+    setTypeSearch(option.value)
     setFormData((prev) => ({
       ...prev,
       type: option.value,
@@ -167,19 +210,19 @@ export default function MedicalAssetForm({
   const handleTypeInputChange = (value: string) => {
     setTypeSearch(value)
     setShowTypeSuggestions(true)
-    const exactMatch = MEDICAL_ASSET_TYPE_OPTIONS.find(
-      (option) => option.label.toLowerCase() === value.trim().toLowerCase(),
+    const exactMatch = typeOptions.find(
+      (option) =>
+        option.value.toLowerCase() === value.trim().toLowerCase() ||
+        option.label.toLowerCase() === value.trim().toLowerCase(),
     )
-    if (exactMatch) {
-      setFormData((prev) => ({
-        ...prev,
-        type: exactMatch.value,
-        usagePurpose: normalizeUsagePurpose(
-          inferMedicalUsagePurpose(prev.inventoryName, exactMatch.value),
-          MEDICAL_USAGE_OPTIONS,
-        ),
-      }))
-    }
+    setFormData((prev) => ({
+      ...prev,
+      type: exactMatch?.value ?? value.trim(),
+      usagePurpose: normalizeUsagePurpose(
+        inferMedicalUsagePurpose(prev.inventoryName, exactMatch?.value ?? value.trim()),
+        MEDICAL_USAGE_OPTIONS,
+      ),
+    }))
   }
 
   const handleTypeInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -188,9 +231,9 @@ export default function MedicalAssetForm({
       return
     }
 
-    if (event.key === "Enter" && showTypeSuggestions && filteredTypeOptions.length > 0) {
+    if (event.key === "Enter" && showTypeSuggestions && filteredTypedOptions.length > 0) {
       event.preventDefault()
-      selectTypeOption(filteredTypeOptions[0])
+      selectTypeOption(filteredTypedOptions[0])
     }
   }
 
@@ -206,15 +249,18 @@ export default function MedicalAssetForm({
   const selectInventoryOption = (value: string) => {
     const matchedTypeOption = matchMedicalTypeFromInventoryName(value)
     if (matchedTypeOption) {
-      setTypeSearch(matchedTypeOption.label)
+      setTypeSearch(matchedTypeOption.category)
     }
     setFormData((prev) => {
-      const resolvedType = matchedTypeOption?.value ?? prev.type
+      const resolvedType = matchedTypeOption?.category ?? prev.type
       return {
         ...prev,
         inventoryName: value,
         type: resolvedType,
-        usagePurpose: normalizeUsagePurpose(inferMedicalUsagePurpose(value, resolvedType), MEDICAL_USAGE_OPTIONS),
+        usagePurpose: normalizeUsagePurpose(
+          inferMedicalUsagePurpose(value, matchedTypeOption?.value ?? resolvedType),
+          MEDICAL_USAGE_OPTIONS,
+        ),
       }
     })
     setShowInventorySuggestions(false)
@@ -223,15 +269,18 @@ export default function MedicalAssetForm({
   const handleInventoryInputChange = (value: string) => {
     const matchedTypeOption = matchMedicalTypeFromInventoryName(value)
     if (matchedTypeOption) {
-      setTypeSearch(matchedTypeOption.label)
+      setTypeSearch(matchedTypeOption.category)
     }
     setFormData((prev) => {
-      const resolvedType = matchedTypeOption?.value ?? prev.type
+      const resolvedType = matchedTypeOption?.category ?? prev.type
       return {
         ...prev,
         inventoryName: value,
         type: resolvedType,
-        usagePurpose: normalizeUsagePurpose(inferMedicalUsagePurpose(value, resolvedType), MEDICAL_USAGE_OPTIONS),
+        usagePurpose: normalizeUsagePurpose(
+          inferMedicalUsagePurpose(value, matchedTypeOption?.value ?? resolvedType),
+          MEDICAL_USAGE_OPTIONS,
+        ),
       }
     })
     setShowInventorySuggestions(true)
@@ -322,10 +371,10 @@ export default function MedicalAssetForm({
               />
               {showTypeSuggestions && (
                 <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
-                  {filteredTypeOptions.length === 0 ? (
+                  {filteredTypedOptions.length === 0 ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground">Tidak ada hasil pencarian</div>
                   ) : (
-                    filteredTypeOptions.map((option) => (
+                    filteredTypedOptions.map((option) => (
                       <button
                         key={option.value}
                         type="button"
@@ -334,7 +383,6 @@ export default function MedicalAssetForm({
                         className="flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted"
                       >
                         <span className="font-medium leading-tight">{option.label}</span>
-                        <span className="text-xs text-muted-foreground">{option.category}</span>
                       </button>
                     ))
                   )}
