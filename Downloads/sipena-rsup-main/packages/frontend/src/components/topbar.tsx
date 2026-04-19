@@ -332,21 +332,16 @@ export default function Topbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-      <div className="border-b border-border/70 bg-muted/40">
-        <div className="mx-auto w-full max-w-340 px-3 py-1 sm:px-4 lg:px-5 xl:px-6">
-          <div className="overflow-hidden whitespace-nowrap">
-            <p className="animate-scroll text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Selamat datang di sistem informasi manajemen sarana dan prasarana pastikan untuk selalu memeriksa pemberitahuan agar tidak ketinggalan informasi penting
-            </p>
-          </div>
+      <div className="border-b border-border/70 bg-muted/40 px-3 py-1 xl:px-6">
+        <div className="overflow-hidden whitespace-nowrap">
+          <p className="animate-scroll text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Selamat datang di sistem informasi manajemen sarana dan prasarana pastikan untuk selalu memeriksa pemberitahuan agar tidak ketinggalan informasi penting
+          </p>
         </div>
       </div>
-      <div
-        className="mx-auto flex w-full max-w-340 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:px-5 xl:gap-4 xl:px-6"
-        data-topbar-row
-      >
+      <div className="flex items-center justify-between gap-4 py-3 pr-4 pl-16 xl:px-6">
         <p className="min-w-0 truncate font-bold" style={{ fontSize: 16 }}>{formattedDate}</p>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:h-9 sm:w-9 md:h-10 md:w-10"
