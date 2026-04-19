@@ -1,0 +1,20 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+export default function FeaturesPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace("/maintenance")
+  }, [router])
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="text-lg">Mengalihkan ke halaman Pemeliharaan...</p>
+      </div>
+    </div>
+  )
+}
