@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCurrentUser } from "@/services/auth-utils"
 import { normalizeUserRole } from "@/utils/role"
-import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react"
+import { ArrowRight, Box, Database, FileCode2, Users, Workflow, Zap } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
@@ -302,22 +302,32 @@ const useCaseActors = [
   {
     actor: "Administrator",
     accent: "teal" as const,
-    items: ["Kelola inventaris medis dan non-medis", "Kelola pengguna", "Validasi peminjaman dan pengembalian", "Kelola jadwal pemeliharaan"],
+    items: ["Kelola inventaris", "Kelola pengguna", "Validasi transaksi", "Kelola pemeliharaan"],
   },
   {
     actor: "Leader",
     accent: "violet" as const,
-    items: ["Monitoring modul operasional", "Review proses peminjaman", "Validasi pengembalian", "Mengawasi aktivitas inventaris"],
+    items: ["Pantau operasional", "Review peminjaman", "Validasi pengembalian"],
   },
   {
-    actor: "Staff",
+    actor: "Staff PJ",
     accent: "blue" as const,
-    items: ["Ajukan peminjaman alat", "Kirim data pengembalian", "Membuat jadwal pemeliharaan", "Memantau progres pemeliharaan"],
+    items: ["Lihat inventaris", "Atur jadwal pemeliharaan", "Pantau progres", "Lihat laporan"],
   },
   {
-    actor: "User",
+    actor: "Staff Pelayanan",
+    accent: "sky" as const,
+    items: ["Lihat inventaris", "Ajukan peminjaman", "Kirim pengembalian"],
+  },
+  {
+    actor: "Teknisi",
+    accent: "orange" as const,
+    items: ["Lihat jadwal", "Update progres", "Isi catatan hasil"],
+  },
+  {
+    actor: "Pengguna",
     accent: "amber" as const,
-    items: ["Akses dokumentasi", "Ajukan peminjaman", "Lihat status pengembalian", "Perbarui profil akun"],
+    items: ["Lihat dokumentasi", "Lihat inventaris", "Ajukan peminjaman"],
   },
 ]
 
@@ -398,23 +408,15 @@ export default function UMLPage() {
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
-        <section className="grid gap-4 xl:grid-cols-2">
+          <section className="grid gap-4">
           <FeatureCard
             title="Dokumentasi UML"
-            description="Berisi diagram inti sesuai hak akses pengguna agar dokumentasi teknis tetap terpisah dari unggahan."
+              description="Lihat Activity Diagram dan Use Case Diagram sesuai akses Anda."
             href={`#${visibleSectionIds[0] ?? "activity"}`}
             buttonLabel="Lihat Dokumentasi UML"
             icon={<FileCode2 className="h-5 w-5 text-white" />}
             iconContainerClass="from-teal-500 to-cyan-500"
             items={visibleSections.map((section) => section.label)}
-          />
-          <FeatureCard
-            title="Dokumentasi Unggahan"
-            description="Masuk ke halaman unggahan terpisah untuk melihat proses unggah file tanpa tercampur dengan materi UML."
-            href="/unggahan"
-            buttonLabel="Buka Dokumentasi Unggahan"
-            icon={<UploadCloud className="h-5 w-5 text-white" />}
-            iconContainerClass="from-amber-500 to-orange-500"
           />
         </section>
 
@@ -795,7 +797,7 @@ function UseCaseActorCard({
   items,
 }: {
   actor: string
-  accent: "teal" | "violet" | "blue" | "amber"
+    accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange"
   items: string[]
 }) {
   const accentClass: Record<typeof accent, string> = {
@@ -803,6 +805,8 @@ function UseCaseActorCard({
     violet: "border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/20",
     blue: "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20",
     amber: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20",
+      sky: "border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20",
+      orange: "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20",
   }
 
   return (

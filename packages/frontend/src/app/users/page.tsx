@@ -205,12 +205,56 @@ export default function UsersPage() {
   const getAccessTypeLabel = (type?: StaffAccessType) => {
     switch (type) {
       case "medis":
-        return "Medis"
+        return "Inventaris Medis"
       case "non-medis":
-        return "Non-Medis"
+        return "Inventaris Non-Medis"
       default:
-        return "Semua"
+        return "Semua Inventaris"
     }
+  }
+
+  const getAccessLabelByRole = (role?: string, staffAccessType?: StaffAccessType) => {
+    const normalizedRole = normalizeUserRole(role)
+
+    if (normalizedRole === "staff" || normalizedRole === "staff_pj") {
+      return getAccessTypeLabel(staffAccessType)
+    }
+
+    if (normalizedRole === "teknisi") {
+      return "Dashboard & Pemeliharaan"
+    }
+
+    if (normalizedRole === "user") {
+      return "Self Service"
+    }
+
+    return "Full Access"
+  }
+
+  const getAccessDescriptionByRole = (role?: string, staffAccessType?: StaffAccessType) => {
+    const normalizedRole = normalizeUserRole(role)
+
+    if (normalizedRole === "admin") {
+      return "Akses penuh semua modul dan manajemen pengguna"
+    }
+
+    if (normalizedRole === "leader") {
+      return "Akses penuh modul operasional dan pengawasan"
+    }
+
+    if (normalizedRole === "staff_pj") {
+      return `Staff PJ dengan cakupan ${getAccessTypeLabel(staffAccessType).toLowerCase()}`
+    }
+
+    if (normalizedRole === "staff") {
+      return `Staff Pelayanan dengan cakupan ${getAccessTypeLabel(staffAccessType).toLowerCase()}`
+    }
+
+    if (normalizedRole === "teknisi") {
+      return "Akses teknisi untuk pekerjaan pemeliharaan"
+    }
+
+    return "Akses mandiri untuk alur pinjam/kembali dan lihat inventaris"
   }
 
   const getRoleLabel = (role?: string) => {
@@ -441,6 +485,11 @@ export default function UsersPage() {
 
         {/* Users Management Table */}
         <div className="bg-white/90 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+            <div className="border-b border-border/70 bg-slate-50/70 px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Keterangan akses: <span className="font-medium text-foreground">Full Access</span> (Admin/Leader), <span className="font-medium text-foreground">Self Service</span> (Pengguna), <span className="font-medium text-foreground">Dashboard & Pemeliharaan</span> (Teknisi), dan Staff mengikuti cakupan inventaris.
+              </p>
+            </div>
           <div className="mobile-table-scroll">
             <table className="w-full text-sm">
             <thead className="bg-muted border-b border-border">
@@ -468,19 +517,12 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {normalizeUserRole(user.role) === "staff" || normalizeUserRole(user.role) === "staff_pj" ? (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                        {getAccessTypeLabel(user.staffAccessType)}
+                      <span
+                        className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                        title={getAccessDescriptionByRole(user.role, user.staffAccessType)}
+                      >
+                        {getAccessLabelByRole(user.role, user.staffAccessType)}
                       </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {normalizeUserRole(user.role) === "user"
-                          ? "Self Service"
-                          : normalizeUserRole(user.role) === "teknisi"
-                            ? "Dashboard & Pemeliharaan"
-                            : "Full Access"}
-                      </span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
                     {user.createdAt
