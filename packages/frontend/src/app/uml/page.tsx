@@ -2,9 +2,11 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { getCurrentUser } from "@/services/auth-utils"
+import { normalizeUserRole } from "@/utils/role"
 import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
 type DiagramLink = {
   id: string
@@ -45,19 +47,19 @@ function isDiagramSectionId(value: string | null | undefined): value is DiagramS
   return umlSections.some((section) => section.id === value)
 }
 
-function resolveSectionFromLocation(): DiagramSectionId {
+function resolveSectionFromLocation(allowedSections: DiagramSectionId[]): DiagramSectionId {
   const hashSection = window.location.hash.replace("#", "")
   const querySection = new URLSearchParams(window.location.search).get("diagram")
 
-  if (isDiagramSectionId(hashSection)) {
+  if (isDiagramSectionId(hashSection) && allowedSections.includes(hashSection)) {
     return hashSection
   }
 
-  if (isDiagramSectionId(querySection)) {
+  if (isDiagramSectionId(querySection) && allowedSections.includes(querySection)) {
     return querySection
   }
 
-  return "activity"
+  return allowedSections[0] ?? "activity"
 }
 
 const activityFlows: { title: string; color: "amber" | "emerald" | "fuchsia" | "orange" | "purple" | "rose" | "teal"; steps: ActivityStep[] }[] = [
@@ -320,15 +322,38 @@ const useCaseActors = [
 ]
 
 export default function UMLPage() {
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser())
   const [activeSection, setActiveSection] = useState<DiagramSectionId>("activity")
   const sectionContainerRef = useRef<HTMLDivElement>(null)
 
+  const visibleSections = useMemo(() => {
+    const role = normalizeUserRole(currentUser?.role)
+    if (role === "admin") {
+      return umlSections
+    }
+
+    return umlSections.filter((section) => section.id === "activity" || section.id === "use-case")
+  }, [currentUser?.role])
+
+  const visibleSectionIds = useMemo(
+    () => visibleSections.map((section) => section.id),
+    [visibleSections]
+  )
+
   useEffect(() => {
-    const initialSection = resolveSectionFromLocation()
+    const syncUser = () => setCurrentUser(getCurrentUser())
+    syncUser()
+
+    window.addEventListener("auth-user-updated", syncUser)
+    return () => window.removeEventListener("auth-user-updated", syncUser)
+  }, [])
+
+  useEffect(() => {
+    const initialSection = resolveSectionFromLocation(visibleSectionIds)
     setActiveSection(initialSection)
 
     const syncFromLocation = () => {
-      setActiveSection(resolveSectionFromLocation())
+      setActiveSection(resolveSectionFromLocation(visibleSectionIds))
     }
 
     window.addEventListener("hashchange", syncFromLocation)
@@ -338,7 +363,13 @@ export default function UMLPage() {
       window.removeEventListener("hashchange", syncFromLocation)
       window.removeEventListener("popstate", syncFromLocation)
     }
-  }, [])
+  }, [visibleSectionIds])
+
+  useEffect(() => {
+    if (!visibleSectionIds.includes(activeSection)) {
+      setActiveSection(visibleSectionIds[0] ?? "activity")
+    }
+  }, [activeSection, visibleSectionIds])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -370,12 +401,12 @@ export default function UMLPage() {
         <section className="grid gap-4 xl:grid-cols-2">
           <FeatureCard
             title="Dokumentasi UML"
-            description="Berisi empat diagram inti yang disusun alfabetis agar materi teknis tidak bercampur dengan dokumentasi unggahan."
-            href="#activity"
+            description="Berisi diagram inti sesuai hak akses pengguna agar dokumentasi teknis tetap terpisah dari unggahan."
+            href={`#${visibleSectionIds[0] ?? "activity"}`}
             buttonLabel="Lihat Dokumentasi UML"
             icon={<FileCode2 className="h-5 w-5 text-white" />}
             iconContainerClass="from-teal-500 to-cyan-500"
-            items={umlSections.map((section) => section.label)}
+            items={visibleSections.map((section) => section.label)}
           />
           <FeatureCard
             title="Dokumentasi Unggahan"
@@ -389,7 +420,7 @@ export default function UMLPage() {
 
         <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex flex-wrap gap-3">
-            {umlSections.map((section) => (
+              {visibleSections.map((section) => (
               <button
                 key={section.id}
                 type="button"
@@ -433,7 +464,7 @@ export default function UMLPage() {
           </section>
         )}
 
-        {activeSection === "class" && (
+          {activeSection === "class" && visibleSectionIds.includes("class") && (
           <section id="class" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">
@@ -486,7 +517,7 @@ export default function UMLPage() {
         )}
         </div>
 
-        {activeSection === "erd" && (
+          {activeSection === "erd" && visibleSectionIds.includes("erd") && (
           <section id="erd" className="scroll-mt-28">
           <Card className="border-0 bg-white/80 shadow-xl backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="border-b border-gray-100 dark:border-gray-800">

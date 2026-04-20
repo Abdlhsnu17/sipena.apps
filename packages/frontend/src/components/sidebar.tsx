@@ -11,23 +11,23 @@ import { getFeatureLabel } from "@/utils/feature-presentation"
 import { toPublicPhotoUrl } from "@/utils/photoUrl"
 import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role"
 import {
-    BarChart3,
-    Building,
-    Calendar,
-    ChevronDown,
-    ChevronLeft,
-    Clock3,
-    FileText,
-    HandHelping,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    RotateCcw,
-    Settings,
-    Sparkles,
-    Stethoscope,
-    Users,
-    X
+  BarChart3,
+  Building,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  Clock3,
+  FileText,
+  HandHelping,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  RotateCcw,
+  Settings,
+  Sparkles,
+  Stethoscope,
+  Users,
+  X
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -420,6 +420,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const staffLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
     { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
+    { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemelirahaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
     { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
@@ -449,6 +451,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const userLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
     { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
+    { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },

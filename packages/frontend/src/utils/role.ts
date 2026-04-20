@@ -51,7 +51,8 @@ const staffPjRoutes = [
   "/settings",
 ]
 const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/settings"]
-const userRoutes = ["/", "/uml", "/unggahan", "/borrowing", "/returns", "/settings"]
+const inventoryRoutes = ["/medical-assets", "/non-medical-assets"]
+const userRoutes = ["/", "/uml", "/unggahan", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
 
 export const getAllowedRoutesForRole = (role?: string | UserRole | null): string[] => {
   switch (normalizeUserRole(role)) {
@@ -65,7 +66,7 @@ export const getAllowedRoutesForRole = (role?: string | UserRole | null): string
     case "user":
       return userRoutes
     default:
-      return staffRoutes
+        return [...staffRoutes, ...inventoryRoutes]
   }
 }
 
