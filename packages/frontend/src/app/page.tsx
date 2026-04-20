@@ -36,23 +36,23 @@ const quickActionLinks: QuickActionLink[] = [
   {
     key: "uml",
     label: "Dokumentasi UML",
-    description: "Buka panduan diagram UML dan alur teknis.",
+    description: "Lihat Activity Diagram dan Use Case Diagram.",
     href: "/uml",
     icon: FileText,
     gradient: "from-emerald-500/70 via-teal-500/70 to-blue-500/60",
   },
   {
     key: "medical-assets",
-    label: "Tambah Inventaris Medis",
-    description: "Masuk ke form input dan edit inventaris medis.",
+    label: "Inventaris Medis",
+    description: "Lihat dan kelola data inventaris medis.",
     href: "/medical-assets",
     icon: Stethoscope,
     gradient: "from-cyan-500/70 via-blue-500/60 to-purple-500/50",
   },
   {
     key: "non-medical-assets",
-    label: "Tambah Inventaris Non-Medis",
-    description: "Masuk ke form input dan edit inventaris non-medis.",
+    label: "Inventaris Non-Medis",
+    description: "Lihat dan kelola data inventaris non-medis.",
     href: "/non-medical-assets",
     icon: Building2,
     gradient: "from-teal-500/80 via-cyan-500/70 to-cyan-400/60",
@@ -110,7 +110,18 @@ const quickActionLinks: QuickActionLink[] = [
 const quickActionKeysByRole: Record<string, string[]> = {
   admin: quickActionLinks.map((action) => action.key),
   leader: quickActionLinks.map((action) => action.key),
-  staff: ["dashboard", "uml", "maintenance-schedule", "unggahan", "reports", "borrowing", "returns", "settings"],
+  staff: [
+    "dashboard",
+    "uml",
+    "medical-assets",
+    "non-medical-assets",
+    "maintenance-schedule",
+    "unggahan",
+    "reports",
+    "borrowing",
+    "returns",
+    "settings",
+  ],
   staff_pj: [
     "dashboard",
     "uml",
@@ -124,7 +135,7 @@ const quickActionKeysByRole: Record<string, string[]> = {
     "settings",
   ],
   teknisi: ["dashboard", "uml", "maintenance-schedule", "unggahan", "settings"],
-  user: ["dashboard", "uml", "unggahan", "borrowing", "returns", "settings"],
+  user: ["dashboard", "uml", "medical-assets", "non-medical-assets", "unggahan", "borrowing", "returns", "settings"],
 }
 
 export default function DashboardPage() {
