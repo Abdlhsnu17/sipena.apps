@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCurrentUser } from "@/services/auth-utils"
 import { normalizeUserRole } from "@/utils/role"
-import { ArrowRight, Box, Database, FileCode2, Users, Workflow, Zap } from "lucide-react"
+import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
@@ -408,7 +408,7 @@ export default function UMLPage() {
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
-          <section className="grid gap-4">
+          <section className="grid gap-4 xl:grid-cols-2">
           <FeatureCard
             title="Dokumentasi UML"
               description="Lihat Activity Diagram dan Use Case Diagram sesuai akses Anda."
@@ -418,6 +418,14 @@ export default function UMLPage() {
             iconContainerClass="from-teal-500 to-cyan-500"
             items={visibleSections.map((section) => section.label)}
           />
+            <FeatureCard
+              title="Dokumentasi Unggahan"
+              description="Buka dokumentasi unggahan file dan alur arsip pendukung."
+              href="/unggahan"
+              buttonLabel="Buka Dokumentasi Unggahan"
+              icon={<UploadCloud className="h-5 w-5 text-white" />}
+              iconContainerClass="from-amber-500 to-orange-500"
+            />
         </section>
 
         <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
