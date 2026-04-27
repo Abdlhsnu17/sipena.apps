@@ -32,7 +32,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, type ComponentType } from "react"
+import { useCallback, useEffect, useState, type ComponentType, type SyntheticEvent } from "react"
 
 
 
@@ -493,7 +493,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     (currentUser as any)?.updatedAt || currentUser?.lastLogin || currentUser?.createdAt || Date.now()
   const profileImageUrl = toPublicPhotoUrl(currentUser?.photoPath, cacheKey)
 
-  const handleProfileImageError = (error: Event) => {
+  const handleProfileImageError = (error: SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('[Sidebar] Profile image failed to load:', error)
     setProfileImageError(true)
   }

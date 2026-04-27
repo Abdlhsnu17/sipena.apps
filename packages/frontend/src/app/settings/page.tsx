@@ -15,7 +15,7 @@ import { userService } from "@/services/user.service"
 import { toPublicPhotoUrl } from "@/utils/photoUrl"
 // ...existing code...
 import { Eye, EyeOff, Monitor, Moon, Settings, Sun } from "lucide-react"
-import { ChangeEvent, useEffect, useState } from "react"
+import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react"
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -188,7 +188,7 @@ export default function SettingsPage() {
     setLocalPhotoPreview(null)
   }
 
-  const handleImageError = (error: Event) => {
+  const handleImageError = (error: SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('[Photo] Image failed to load:', error)
     setImageError(true)
   }
@@ -297,12 +297,12 @@ export default function SettingsPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col gap-2">
-                        <p className="text-sm text-muted-foreground">Unggah foto profil (JPG/PNG hingga 5MB)</p>
+                        <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB)</p>
                         <label
                           htmlFor="profilePhoto"
                           className="inline-flex items-center gap-2 rounded-full border border-teal-200 px-4 py-1 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
                         >
-                          <span>Unggah Foto</span>
+                          <span>Pilih Foto</span>
                           <input
                             id="profilePhoto"
                             type="file"
@@ -312,9 +312,14 @@ export default function SettingsPage() {
                           />
                         </label>
                         {photoFile && (
-                          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearPhotoSelection}>
-                            Batalkan pilihan
-                          </Button>
+                          <>
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                              Pratinjau foto sudah tampil. Klik <span className="font-semibold">Simpan Profil</span> agar avatar akun ikut berubah.
+                            </p>
+                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearPhotoSelection}>
+                              Batalkan pratinjau
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -388,7 +393,7 @@ export default function SettingsPage() {
                         onClick={handleProfileSubmit}
                         disabled={profileLoading || isUpdatingProfile}
                       >
-                        {isUpdatingProfile ? "Menyimpan..." : "Simpan Profil"}
+                        {isUpdatingProfile ? "Menyimpan..." : photoFile ? "Simpan Profil & Foto" : "Simpan Profil"}
                       </Button>
                     </div>
                   </>

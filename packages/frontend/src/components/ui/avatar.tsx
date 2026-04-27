@@ -26,9 +26,9 @@ function AvatarImage({
   onError,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image> & {
-  onError?: (error: Event) => void;
+  onError?: React.ReactEventHandler<HTMLImageElement>;
 }) {
-  const handleError = React.useCallback((error: Event) => {
+  const handleError = React.useCallback<React.ReactEventHandler<HTMLImageElement>>((error) => {
     if (onError) {
       onError(error)
     }
@@ -61,4 +61,3 @@ function AvatarFallback({
 }
 
 export { Avatar, AvatarFallback, AvatarImage }
-
