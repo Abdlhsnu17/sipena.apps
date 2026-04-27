@@ -9,7 +9,12 @@ import {
     ReturnBorrowingDTO,
     UpdateBorrowingDTO
 } from '../models';
-import { buildOverdueSanctionNote, generateBorrowingCode, getOverdueDays } from '../utils/helpers';
+import {
+  buildOverdueSanctionNote,
+  formatDateTimeForMySQL,
+  generateBorrowingCode,
+  getOverdueDays
+} from '../utils/helpers';
 import { AssetService } from './asset.service';
 
 /**
@@ -50,20 +55,33 @@ const normalizeDateInput = (value?: string | Date): Date | undefined => {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
-const formatDateTimeForMySQL = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
 const normalizeOptionalText = (value?: string | null): string | null => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+};
+
+const borrowingDateFields = [
+  'borrow_date',
+  'due_date',
+  'return_date',
+  'approved_at',
+  'rejected_at',
+  'sanction_applied_at',
+  'created_at',
+  'updated_at',
+  'return_validated_at'
+] as const;
+
+export const normalizeBorrowingDateFields = <T extends Record<string, any>>(row: T): T => {
+  const nextRow: Record<string, any> = { ...row };
+
+  for (const field of borrowingDateFields) {
+    if (nextRow[field] === undefined) continue;
+    nextRow[field] = formatDateTimeForMySQL(nextRow[field]) ?? nextRow[field];
+  }
+
+  return nextRow as T;
 };
 
 // Interface untuk hasil query gabungan
@@ -530,7 +548,7 @@ export class BorrowingService {
     return {
       success: true,
       message: 'Borrowings retrieved successfully',
-      data: dataRows,
+      data: dataRows.map((row) => normalizeBorrowingDateFields(row)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     };
   }
@@ -566,7 +584,11 @@ export class BorrowingService {
       return { success: false, message: 'Borrowing not found' };
     }
 
-    return { success: true, message: 'Borrowing retrieved successfully', data: rows[0] };
+    return {
+      success: true,
+      message: 'Borrowing retrieved successfully',
+      data: normalizeBorrowingDateFields(rows[0])
+    };
   }
 
   async create(data: CreateBorrowingDTO): Promise<ApiResponse<Borrowing>> {
