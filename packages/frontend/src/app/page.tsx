@@ -329,10 +329,10 @@ export default function DashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className={statCardClass}>
+          <Card className={`${statCardClass} bg-linear-to-br from-teal-50/65 via-white to-cyan-50/50`}>
             <CardHeader className="flex items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Inventaris Non Medis</CardTitle>
-              <div className="rounded-2xl bg-teal-50/80 p-2 text-teal-600 shadow-inner">
+              <div className="rounded-2xl bg-linear-to-br from-teal-100 to-cyan-100 p-2 text-teal-700 shadow-inner">
                 <Building2 className="w-5 h-5" />
               </div>
             </CardHeader>
@@ -341,14 +341,14 @@ export default function DashboardPage() {
                 <div className="text-4xl font-semibold text-muted-foreground tracking-tight">
                   {stats.activeNonMedicalAssets.toLocaleString("id-ID")}
                 </div>
-                <Badge variant="outline" className="text-[10px] uppercase tracking-[0.4em] text-teal-500 border-teal-200">
+                <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-teal-600 border-teal-300 bg-teal-50/70">
                   Ruangan Aktif
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">
                 Ruangan tercatat
               </p>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-2xl border border-teal-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Detail inventaris terinput</span>
                   <span className="text-muted-foreground">
@@ -359,10 +359,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className={statCardClass}>
+          <Card className={`${statCardClass} bg-linear-to-br from-cyan-50/65 via-white to-sky-50/50`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Inventaris Medis</CardTitle>
-              <div className="rounded-2xl bg-cyan-50/80 p-2 text-cyan-600 shadow-inner">
+              <div className="rounded-2xl bg-linear-to-br from-cyan-100 to-sky-100 p-2 text-cyan-700 shadow-inner">
                 <Stethoscope className="w-5 h-5" />
               </div>
             </CardHeader>
@@ -371,14 +371,14 @@ export default function DashboardPage() {
                 <div className="text-4xl font-semibold text-muted-foreground tracking-tight">
                   {stats.activeMedicalAssets.toLocaleString("id-ID")}
                 </div>
-                <Badge variant="outline" className="text-[10px] uppercase tracking-[0.4em] text-cyan-500 border-cyan-200">
+                <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-cyan-600 border-cyan-300 bg-cyan-50/70">
                   Ruangan Aktif
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">
                 Ruangan tercatat
               </p>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-2xl border border-cyan-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Detail inventaris terinput</span>
                   <span className="text-muted-foreground">
@@ -389,22 +389,22 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className={statCardClass}>
+          <Card className={`${statCardClass} bg-linear-to-br from-amber-50/65 via-white to-orange-50/45`}>
             <CardHeader className="flex items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Peminjaman Aktif</CardTitle>
-              <div className="rounded-2xl bg-amber-50/80 p-2 text-amber-600 shadow-inner">
+              <div className="rounded-2xl bg-linear-to-br from-amber-100 to-orange-100 p-2 text-amber-700 shadow-inner">
                 <HandHelping className="w-5 h-5" />
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-end gap-2">
+              <div className="flex flex-wrap items-end gap-2">
                 <div className="text-4xl font-semibold text-muted-foreground tracking-tight">{stats.activeBorrowings}</div>
-                <Badge variant="outline" className="text-[10px] uppercase tracking-[0.4em] text-amber-500 border-amber-200">
+                <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-amber-600 border-amber-300 bg-amber-50/70">
                   Aktif
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">Status peminjaman yang sedang berjalan</p>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-2xl border border-amber-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Dikembalikan</span>
                   <span className="text-muted-foreground">{stats.returnedBorrowings}</span>
@@ -413,22 +413,22 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className={statCardClass}>
+          <Card className={`${statCardClass} bg-linear-to-br from-rose-50/65 via-white to-red-50/45`}>
             <CardHeader className="flex items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Pemelirahaan Sarana</CardTitle>
-              <div className="rounded-2xl bg-red-50/80 p-2 text-red-600 shadow-inner">
+              <div className="rounded-2xl bg-linear-to-br from-rose-100 to-red-100 p-2 text-rose-700 shadow-inner">
                 <Wrench className="w-5 h-5" />
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-end gap-2">
+              <div className="flex flex-wrap items-end gap-2">
                 <div className="text-4xl font-semibold text-muted-foreground tracking-tight">{stats.maintenanceDue}</div>
-                <Badge variant="outline" className="text-[10px] uppercase tracking-[0.4em] text-red-500 border-red-200">
+                <Badge variant="outline" className="max-w-full whitespace-normal wrap-break-word text-[10px] leading-4 uppercase tracking-[0.24em] text-rose-600 border-rose-300 bg-rose-50/70">
                   Perlu Tindak Lanjut
                 </Badge>
               </div>
               <p className="text-sm text-foreground/70">Jadwal pemeliharaan dan inspeksi yang menunggu teknisi</p>
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-2xl border border-rose-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Selesai Final</span>
                   <span className="text-muted-foreground">{stats.completedMaintenance}</span>
