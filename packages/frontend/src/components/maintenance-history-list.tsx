@@ -17,7 +17,7 @@ import maintenanceService, { type Maintenance } from "@/services/maintenance.ser
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { cn } from "@/utils";
-import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, type AssetSourceKey } from "@/utils/api-mappers";
+import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel, type AssetSourceKey } from "@/utils/api-mappers";
 import { ExportFormat, exportMaintenanceHistory, type MaintenanceHistoryExportEntry } from "@/utils/export-table";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
@@ -883,6 +883,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           {meta.inventoryBadgeLabel}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
+                          {maintenanceTypeLabel(h.type)}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px]">
                           Jadwal {meta.scheduledLabel}
                         </Badge>
                       </div>
@@ -908,6 +911,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <SectionHeader label="Informasi Dasar Alat" />
                         <div className="rounded-xl border border-slate-200 bg-white">
                           <InfoRow label="Jenis Inventaris">{meta.inventoryBadgeLabel}</InfoRow>
+                          <InfoRow label="Tipe Layanan">{maintenanceTypeLabel(h.type)}</InfoRow>
                           <InfoRow label="No ID Jadwal">{historyNoId}</InfoRow>
                           <InfoRow label="Nama Alat">{meta.assetName}</InfoRow>
                           <InfoRow label="Kode Alat">{meta.assetCode}</InfoRow>

@@ -54,7 +54,7 @@ import { borrowingService } from "@/services/borrowing.service"
 import { maintenanceService, type Maintenance } from "@/services/maintenance.service"
 import type { User } from "@/types/auth-types"
 import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel } from "@/utils/api-mappers"
+import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers"
 import { flattenDetailInventories } from "@/utils/detail-inventory"
 import { formatDayTimeLabel } from "@/utils/format"
 import { formatNoId } from "@/utils/record-id"
@@ -1242,6 +1242,9 @@ export default function MaintenancePage() {
                                 {inventoryTypeLabel}
                               </Badge>
                               <Badge variant="outline" className="text-[10px]">
+                                {maintenanceTypeLabel(m.type)}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px]">
                                 {roomNameLabel}
                               </Badge>
                             </div>
@@ -1267,6 +1270,7 @@ export default function MaintenancePage() {
                             <SectionHeader label="Informasi Dasar Alat" />
                             <div className="rounded-xl border border-slate-200 bg-white">
                               <InfoRow label="Jenis Inventaris">{inventoryTypeLabel}</InfoRow>
+                              <InfoRow label="Tipe Layanan">{maintenanceTypeLabel(m.type)}</InfoRow>
                               <InfoRow label="No ID Jadwal">{maintenanceNoId}</InfoRow>
                               <InfoRow label="Nama Alat">{inventoryName}</InfoRow>
                               <InfoRow label="Kode Alat">{codeLabel}</InfoRow>

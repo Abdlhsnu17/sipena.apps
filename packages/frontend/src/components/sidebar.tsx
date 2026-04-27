@@ -11,23 +11,23 @@ import { getFeatureLabel } from "@/utils/feature-presentation"
 import { toPublicPhotoUrl } from "@/utils/photoUrl"
 import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role"
 import {
-  BarChart3,
-  Building,
-  Calendar,
-  ChevronDown,
-  ChevronLeft,
-  Clock3,
-  FileText,
-  HandHelping,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  RotateCcw,
-  Settings,
-  Sparkles,
-  Stethoscope,
-  Users,
-  X
+    BarChart3,
+    Building,
+    Calendar,
+    ChevronDown,
+    ChevronLeft,
+    Clock3,
+    FileText,
+    HandHelping,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    RotateCcw,
+    Settings,
+    Sparkles,
+    Stethoscope,
+    Users,
+    X
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -705,12 +705,13 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             <div
               className={cn(
                 "transition-all duration-300 ease-in-out overflow-hidden",
-                isProfileExpanded ? "max-h-96" : "max-h-0"
+                isProfileExpanded ? "max-h-112" : "max-h-0"
               )}
             >
-              <div className="flex flex-col gap-3 px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-16 w-16 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
+              <div className="px-3 py-3">
+                <div className="rounded-xl border border-teal-100/80 bg-linear-to-br from-teal-50/80 via-white to-cyan-50/80 p-3 shadow-sm dark:border-teal-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-16 w-16 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
                     {profileImageUrl ? (
                       <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
                     ) : (
@@ -719,12 +720,16 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                       </AvatarFallback>
                     )}
                   </Avatar>
-                  <div className="flex-1 space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground leading-snug">{currentUser.name}</p>
-                    <p className="text-xs text-muted-foreground">NIP {currentUser.nip}</p>
-                    <p className="text-[10px] uppercase tracking-[0.4em] text-teal-600 dark:text-teal-300">
-                      {getRoleLabel()}
-                    </p>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-sm font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
+                      <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1 dark:border-slate-700/70 dark:bg-slate-900/70">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">NIP</p>
+                        <p className="mt-0.5 text-xs font-semibold text-slate-700 break-all dark:text-slate-200">{currentUser.nip}</p>
+                      </div>
+                      <span className="inline-flex max-w-full rounded-full border border-teal-200/80 bg-teal-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700 wrap-break-word dark:border-teal-700 dark:bg-teal-950/60 dark:text-teal-200">
+                        {getRoleLabel()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -733,10 +738,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-xs font-semibold uppercase tracking-[0.4em]"
+                className="w-full justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em]"
                 onClick={handleLogout}
               >
-                <LogOut className="mr-1 h-3 w-3" />
+                <LogOut className="h-3.5 w-3.5" />
                 Logout
               </Button>
             </div>
