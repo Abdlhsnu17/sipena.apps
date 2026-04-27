@@ -68,8 +68,13 @@ interface ReportUploadRow extends RowDataPacket {
   notes: string | null;
 }
 
+interface ColumnCountRow extends RowDataPacket {
+  count: number;
+}
+
 export class ReportService {
   private uploadDir: string;
+  private borrowingSanctionColumnAvailable: boolean | null = null;
 
   constructor() {
     this.uploadDir = path.join(process.cwd(), 'uploads', 'reports');
@@ -94,6 +99,28 @@ export class ReportService {
     };
   }
 
+  private async hasBorrowingSanctionColumn(): Promise<boolean> {
+    if (this.borrowingSanctionColumnAvailable !== null) {
+      return this.borrowingSanctionColumnAvailable;
+    }
+
+    try {
+      const [rows] = await pool.query<ColumnCountRow[]>(
+        `SELECT COUNT(*) as count
+         FROM information_schema.columns
+         WHERE table_schema = DATABASE()
+           AND table_name = 'borrowing_records'
+           AND column_name = 'sanction_status'`
+      );
+
+      this.borrowingSanctionColumnAvailable = Number(rows[0]?.count || 0) === 1;
+    } catch {
+      this.borrowingSanctionColumnAvailable = false;
+    }
+
+    return this.borrowingSanctionColumnAvailable;
+  }
+
   getUploadFilePath(storedPath: string | null | undefined): string {
     if (!storedPath) {
       return this.uploadDir;
@@ -111,6 +138,8 @@ export class ReportService {
   }
 
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+    const hasBorrowingSanctionColumn = await this.hasBorrowingSanctionColumn();
+
     const [assetsStats] = await pool.query<StatsRow[]>(`
       SELECT 
         COUNT(*) as total,
@@ -122,7 +151,8 @@ export class ReportService {
       FROM medical_assets
     `);
 
-    const [borrowingStats] = await pool.query<StatsRow[]>(`
+    const borrowingStatsQuery = hasBorrowingSanctionColumn
+      ? `
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -130,7 +160,18 @@ export class ReportService {
         SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
         SUM(CASE WHEN sanction_status = 'active' THEN 1 ELSE 0 END) as active_sanctions
       FROM borrowing_records
-    `);
+    `
+      : `
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status IN ('approved', 'borrowed') THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+        0 as active_sanctions
+      FROM borrowing_records
+    `;
+
+    const [borrowingStats] = await pool.query<StatsRow[]>(borrowingStatsQuery);
 
     const [maintenanceStats] = await pool.query<StatsRow[]>(`
       SELECT 

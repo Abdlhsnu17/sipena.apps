@@ -51,10 +51,15 @@ interface CountRow extends RowDataPacket {
   count: number;
 }
 
+interface ColumnCountRow extends RowDataPacket {
+  count: number;
+}
+
 export class BorrowingService {
   private assetService: AssetService;
   private readonly activeBorrowingStatuses = ['pending', 'approved', 'borrowed', 'overdue'] as const;
   private readonly activeMaintenanceStatuses = ['requested', 'scheduled', 'in_progress'] as const;
+  private sanctionColumnsAvailable: boolean | null = null;
 
   constructor() {
     this.assetService = new AssetService();
@@ -156,7 +161,42 @@ export class BorrowingService {
     return `(${statusColumn} IN ('pending', 'approved', 'borrowed', 'overdue') OR (${statusColumn} = 'returned' AND ${returnValidatedColumn} IS NULL))`;
   }
 
+  private async hasSanctionColumns(): Promise<boolean> {
+    if (this.sanctionColumnsAvailable !== null) {
+      return this.sanctionColumnsAvailable;
+    }
+
+    try {
+      const [rows] = await pool.query<ColumnCountRow[]>(
+        `SELECT COUNT(*) as count
+         FROM information_schema.columns
+         WHERE table_schema = DATABASE()
+           AND table_name = 'borrowing_records'
+           AND column_name IN ('overdue_days', 'sanction_status', 'sanction_notes', 'sanction_applied_at')`
+      );
+
+      this.sanctionColumnsAvailable = Number(rows[0]?.count || 0) === 4;
+    } catch {
+      this.sanctionColumnsAvailable = false;
+    }
+
+    return this.sanctionColumnsAvailable;
+  }
+
   private async syncOverdueBorrowings(): Promise<void> {
+    const hasSanctionColumns = await this.hasSanctionColumns();
+
+    if (!hasSanctionColumns) {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET status = 'overdue', updated_at = NOW()
+         WHERE status IN ('approved', 'borrowed')
+           AND due_date IS NOT NULL
+           AND NOW() > due_date`
+      );
+      return;
+    }
+
     await pool.query(
       `UPDATE borrowing_records
        SET status = 'overdue',
@@ -790,6 +830,7 @@ export class BorrowingService {
 
   async validateReturn(id: string, validatorId: number): Promise<ApiResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
+    const hasSanctionColumns = await this.hasSanctionColumns();
 
     const borrowing = await this.getById(id);
     if (!borrowing.success || !borrowing.data) return borrowing;
@@ -811,15 +852,26 @@ export class BorrowingService {
       return { success: false, message: 'Return already validated' };
     }
 
-    await pool.query(
-      `UPDATE borrowing_records
-       SET return_validated_by = ?,
-           return_validated_at = NOW(),
-           sanction_status = CASE WHEN overdue_days > 0 THEN 'resolved' ELSE sanction_status END,
-           updated_at = NOW()
-       WHERE id = ?`,
-      [validatorId, id]
-    );
+    if (hasSanctionColumns) {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET return_validated_by = ?,
+             return_validated_at = NOW(),
+             sanction_status = CASE WHEN overdue_days > 0 THEN 'resolved' ELSE sanction_status END,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [validatorId, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET return_validated_by = ?,
+             return_validated_at = NOW(),
+             updated_at = NOW()
+         WHERE id = ?`,
+        [validatorId, id]
+      );
+    }
 
     await this.syncAssetMasterAfterValidatedReturn(assetId, assetType, {
       borrowingId: id,
@@ -859,6 +911,7 @@ export class BorrowingService {
 
   async return(id: string, data: ReturnBorrowingDTO): Promise<ApiResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
+    const hasSanctionColumns = await this.hasSanctionColumns();
 
     const borrowing = await this.getById(id);
     if (!borrowing.success || !borrowing.data) return borrowing;
@@ -876,31 +929,51 @@ export class BorrowingService {
 
     const overdueInfo = this.getOverdueBorrowingInfo(borrowingRow.dueDate ?? borrowingRow.due_date, new Date());
 
-    await pool.query(
-      `UPDATE borrowing_records
-       SET status = ?,
-           return_date = NOW(),
-           return_condition = ?,
-           return_notes = ?,
-           returned_by = ?,
-           overdue_days = ?,
-           sanction_status = ?,
-           sanction_notes = ?,
-           sanction_applied_at = COALESCE(sanction_applied_at, ?),
-           updated_at = NOW()
-       WHERE id = ?`,
-      [
-        'returned',
-        data.condition,
-        data.notes || null,
-        data.returnedBy || null,
-        overdueInfo.overdueDays,
-        overdueInfo.sanctionStatus,
-        overdueInfo.sanctionNotes,
-        overdueInfo.sanctionAppliedAt,
-        id
-      ]
-    );
+    if (hasSanctionColumns) {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET status = ?,
+             return_date = NOW(),
+             return_condition = ?,
+             return_notes = ?,
+             returned_by = ?,
+             overdue_days = ?,
+             sanction_status = ?,
+             sanction_notes = ?,
+             sanction_applied_at = COALESCE(sanction_applied_at, ?),
+             updated_at = NOW()
+         WHERE id = ?`,
+        [
+          'returned',
+          data.condition,
+          data.notes || null,
+          data.returnedBy || null,
+          overdueInfo.overdueDays,
+          overdueInfo.sanctionStatus,
+          overdueInfo.sanctionNotes,
+          overdueInfo.sanctionAppliedAt,
+          id
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET status = ?,
+             return_date = NOW(),
+             return_condition = ?,
+             return_notes = ?,
+             returned_by = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [
+          'returned',
+          data.condition,
+          data.notes || null,
+          data.returnedBy || null,
+          id
+        ]
+      );
+    }
 
     await this.syncAssetDetailBorrowingState(assetId, assetType, {
       detailId: assetDetailId,

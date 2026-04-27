@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { MaintenanceService } from '../services/maintenance.service';
 import { recordUserActivity } from '../services/user_activity.service';
-import { canManageMaintenanceCompletion } from '../utils/role';
+import { canManageMaintenanceCompletion, hasAnyRole } from '../utils/role';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -182,7 +182,23 @@ export class MaintenanceController {
       const { id } = req.params;
       const requester = req.user;
       const requesterRole = requester?.role;
+      const isAdmin = hasAnyRole(requesterRole, ['admin']);
       const actorId = getActorUserId(req);
+
+      const existingResult = await this.maintenanceService.getById(id);
+      if (!existingResult.success || !existingResult.data) {
+        res.status(404).json(existingResult);
+        return;
+      }
+
+      const existingStatus = existingResult.data.status;
+      if (existingStatus === 'validated' && !isAdmin) {
+        res.status(403).json({
+          success: false,
+          message: 'Pemeliharaan yang sudah selesai final tidak bisa diedit selain oleh admin'
+        });
+        return;
+      }
 
       if (req.body.status === 'validated' && !canManageMaintenanceCompletion(requesterRole)) {
         res.status(403).json({
@@ -193,6 +209,14 @@ export class MaintenanceController {
       }
 
       if (req.body.status === 'validated') {
+        if (existingStatus === 'validated') {
+          res.status(400).json({
+            success: false,
+            message: 'Pemeliharaan yang sudah selesai final tidak dapat diajukan validasi ulang'
+          });
+          return;
+        }
+
         if (!actorId) {
           res.status(401).json({
             success: false,

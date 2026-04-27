@@ -542,18 +542,17 @@ export const validate = async (id: number, validatedBy: number, validatedAt: Dat
   const existing = await getRawById(id);
   if (!existing) return undefined;
 
-  if (existing.status !== 'completed' && existing.status !== 'validated') {
+  if (existing.status === 'validated') {
+    throw new Error('Pemeliharaan yang sudah selesai final tidak dapat diajukan validasi ulang');
+  }
+
+  if (existing.status !== 'completed') {
     throw new Error('Validasi riwayat hanya dapat dilakukan setelah perbaikan selesai');
   }
 
   const parsedValidatedAt = toSqlDateTime(validatedAt) || toSqlDateTime(new Date());
-  const updates = ['validated_by = ?', 'validated_at = ?'];
-  const params: any[] = [validatedBy, parsedValidatedAt];
-
-  if (existing.status === 'completed') {
-    updates.push('status = ?');
-    params.push('validated');
-  }
+  const updates = ['validated_by = ?', 'validated_at = ?', 'status = ?'];
+  const params: any[] = [validatedBy, parsedValidatedAt, 'validated'];
 
   const query = `UPDATE maintenance_history SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`;
   await pool.query(query, [...params, id]);
