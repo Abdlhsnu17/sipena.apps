@@ -95,6 +95,47 @@ const toLocalInputValue = (value?: string | Date | null): string => {
   return String(value)
 }
 
+const parseLocalDateTimeInput = (value?: string | null): Date | null => {
+  if (!value) return null
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const matched = raw.match(/^((\d{4})-(\d{2})-(\d{2}))[T ](\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!matched) {
+    const fallback = new Date(raw)
+    return Number.isNaN(fallback.getTime()) ? null : fallback
+  }
+
+  const [, , year, month, day, hour, minute, second = "0"] = matched
+  const parsed = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second)
+  )
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatDurationDiff = (diffMs: number): string => {
+  if (!Number.isFinite(diffMs) || diffMs <= 0) return "0 menit"
+
+  const totalSeconds = Math.floor(diffMs / 1000)
+  const days = Math.floor(totalSeconds / (24 * 60 * 60))
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60))
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60)
+  const seconds = totalSeconds % 60
+
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days} hari`)
+  if (hours > 0) parts.push(`${hours} jam`)
+  if (minutes > 0) parts.push(`${minutes} menit`)
+  if (seconds > 0 && days === 0) parts.push(`${seconds} detik`)
+
+  return parts.length > 0 ? parts.join(" ") : "0 menit"
+}
+
 const borrowingPurposeTypeLabels = {
   inside_hospital: "Penggunaan di dalam Rumah Sakit",
   outside_hospital: "Penggunaan di luar Rumah Sakit",
@@ -371,6 +412,7 @@ export default function BorrowingPage() {
   })
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [countdownTime, setCountdownTime] = useState<string>("")
+  const [selectedDurationPreview, setSelectedDurationPreview] = useState<string>("")
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -394,13 +436,20 @@ export default function BorrowingPage() {
   useEffect(() => {
     if (!formData.borrowDate) {
       setFormData(prev => ({ ...prev, dueDate: "" }))
+      setSelectedDurationPreview("")
       return
     }
 
-    const borrowDate = new Date(formData.borrowDate)
+    const borrowDate = parseLocalDateTimeInput(formData.borrowDate)
+    if (!borrowDate) {
+      setFormData(prev => ({ ...prev, dueDate: "" }))
+      setSelectedDurationPreview("")
+      return
+    }
+
     const dueDate = new Date(borrowDate)
     
-    const duration = parseInt(formData.durationValue) || 0
+    const duration = parseInt(formData.durationValue, 10) || 0
     if (formData.durationType === "day") {
       dueDate.setDate(dueDate.getDate() + duration)
     } else if (formData.durationType === "month") {
@@ -410,6 +459,8 @@ export default function BorrowingPage() {
     }
 
     const dueDateString = toDateTimeLocalInputValue(dueDate)
+    const selectedDiff = dueDate.getTime() - borrowDate.getTime()
+    setSelectedDurationPreview(formatDurationDiff(selectedDiff))
     setFormData(prev => ({ ...prev, dueDate: dueDateString }))
   }, [formData.borrowDate, formData.durationValue, formData.durationType])
 
@@ -422,7 +473,11 @@ export default function BorrowingPage() {
 
     const calculateCountdown = () => {
       try {
-        const dueDate = new Date(formData.dueDate)
+        const dueDate = parseLocalDateTimeInput(formData.dueDate)
+        if (!dueDate) {
+          setCountdownTime("")
+          return
+        }
         const now = new Date()
         const diff = dueDate.getTime() - now.getTime()
 
@@ -431,18 +486,7 @@ export default function BorrowingPage() {
           return
         }
 
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-        if (days > 0) {
-          setCountdownTime(`${days}h ${hours}j ${minutes}m ${seconds}d`)
-        } else if (hours > 0) {
-          setCountdownTime(`${hours}j ${minutes}m ${seconds}d`)
-        } else {
-          setCountdownTime(`${minutes}m ${seconds}d`)
-        }
+        setCountdownTime(formatDurationDiff(diff))
       } catch {
         // Prevent error if date parsing fails
       }
@@ -1460,7 +1504,12 @@ export default function BorrowingPage() {
                     />
                     {countdownTime && (
                       <div className="mt-2 p-3 rounded-xl bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200">
-                        <p className="text-[14px] font-semibold text-amber-700">Sisa Waktu Peminjaman:</p>
+                        {selectedDurationPreview ? (
+                          <p className="text-[13px] font-medium text-amber-700">
+                            Durasi sesuai pilihan: {selectedDurationPreview}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-[14px] font-semibold text-amber-700">Sisa Waktu Saat Ini:</p>
                         <p className="text-lg font-bold text-orange-600 font-mono mt-1">{countdownTime}</p>
                       </div>
                     )}
