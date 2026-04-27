@@ -56,7 +56,7 @@ import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanc
 import { flattenDetailInventories } from "@/utils/detail-inventory"
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format"
 import { formatNoId } from "@/utils/record-id"
-import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role"
+import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole, isUserRole } from "@/utils/role"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
 
 type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
@@ -255,9 +255,11 @@ export default function MaintenancePage() {
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteMaintenance = isAdminRole(currentUser?.role)
   const isTechnician = isTechnicianRole(currentUser?.role)
+  const isRequesterOnly = isUserRole(currentUser?.role)
   const canCreateMaintenance = canCreateMaintenanceRole(currentUser?.role)
   const canEditMaintenance = hasFullAccess || isTechnician
   const canManageAdvancedStatuses = canManageMaintenanceStatusRole(currentUser?.role)
+  const createMaintenanceActionLabel = isRequesterOnly ? "Ajukan Pemeliharaan" : "Tambah Pemeliharaan"
 
   const handleStatusSelection = (id: string | number, newStatus: string) => {
     if (newStatus === "cancelled") {
@@ -363,7 +365,7 @@ export default function MaintenancePage() {
         }
       } else {
         if (!canCreateMaintenance) {
-          alert("Hanya Admin, Leader, Staff PJ, dan Staff Pelayanan yang dapat menambah pemeliharaan sarana")
+          alert("Anda tidak memiliki izin untuk menambah pengajuan pemeliharaan sarana")
           return
         }
 
@@ -512,13 +514,13 @@ export default function MaintenancePage() {
         })
       } else if (newStatus === "in_progress") {
         toast({
-          title: "Pemeliharaan sarana di proses",
-          description: "Status pemeliharaan sudah diubah ke tahap di proses.",
+          title: "Pemeliharaan sarana sedang pengecekan lanjutan",
+          description: "Status pemeliharaan sudah diubah ke tahap pengecekan lanjutan.",
         })
       } else if (newStatus === "completed") {
         toast({
-          title: "Perbaikan selesai",
-          description: "Status pemeliharaan sudah masuk ke tahap menunggu validasi.",
+          title: "Pemeliharaan dalam proses pengerjaan",
+          description: "Status pemeliharaan sudah diubah ke tahap dalam proses pengerjaan.",
         })
       } else if (newStatus === "validated") {
         toast({
@@ -1037,7 +1039,7 @@ export default function MaintenancePage() {
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">Pemeliharaan Sarana</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Monitoring jadwal, proses perbaikan, dan validasi pemeliharaan.
+                    Monitoring pengajuan, jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]">
@@ -1057,7 +1059,7 @@ export default function MaintenancePage() {
                     }}
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Tambah Pemeliharaan
+                    {createMaintenanceActionLabel}
                   </Button>
                 )}
               </div>
@@ -1076,14 +1078,14 @@ export default function MaintenancePage() {
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Di Proses</p>
+                    <p className="text-[12px] text-muted-foreground">Sedang Pengecekan Lanjutan</p>
                     <p className="text-xl font-semibold text-teal-600 mt-1">{inProgressCount.toLocaleString("id-ID")}</p>
                   </div>
                   <Wrench className="h-4 w-4 text-teal-500 shrink-0" />
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Sedang Dalam Pengerjaan</p>
+                    <p className="text-[12px] text-muted-foreground">Dalam Proses Pengerjaan</p>
                     <p className="text-xl font-semibold text-foreground mt-1">{awaitingValidationCount.toLocaleString("id-ID")}</p>
                   </div>
                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
@@ -1219,8 +1221,8 @@ export default function MaintenancePage() {
                     <option>Semua</option>
                     <option value="requested">Diajukan</option>
                     <option value="scheduled">Disetujui</option>
-                    <option value="in_progress">Diproses</option>
-                    <option value="completed">Sedang Dalam Pengerjaan</option>
+                    <option value="in_progress">Sedang Pengecekan Lanjutan</option>
+                    <option value="completed">Dalam Proses Pengerjaan</option>
                     <option value="validated">Selesai</option>
                     <option value="cancelled">Ditolak / Dibatalkan</option>
                   </select>
@@ -1565,7 +1567,7 @@ export default function MaintenancePage() {
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Tambah Pemeliharaan
+            {createMaintenanceActionLabel}
           </Button>
         </div>
       )}

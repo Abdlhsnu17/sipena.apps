@@ -42,8 +42,8 @@ type NotificationItem = {
 }
 
 const categoryLabelByKey: Record<NotificationItem["category"], string> = {
-  schedule: "Pemelirahaan Sarana",
-  maintenance: "Pemelirahaan Sarana",
+  schedule: "Pemeliharaan Sarana",
+  maintenance: "Pemeliharaan Sarana",
   borrowing: "Peminjaman Alat",
   returns: "Pengembalian Alat",
 }

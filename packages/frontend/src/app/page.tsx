@@ -59,7 +59,7 @@ const quickActionLinks: QuickActionLink[] = [
   },
   {
     key: "maintenance-schedule",
-    label: "Pemelirahaan Sarana",
+    label: "Pemeliharaan Sarana",
     description: "Buat dan kelola proses pemelirahaan sarana aset.",
     href: "/maintenance",
     icon: Wrench,
@@ -106,37 +106,6 @@ const quickActionLinks: QuickActionLink[] = [
     gradient: "from-emerald-500/70 via-lime-500/60 to-emerald-400/50",
   },
 ]
-
-const quickActionKeysByRole: Record<string, string[]> = {
-  admin: quickActionLinks.map((action) => action.key),
-  leader: quickActionLinks.map((action) => action.key),
-  staff: [
-    "dashboard",
-    "uml",
-    "medical-assets",
-    "non-medical-assets",
-    "maintenance-schedule",
-    "unggahan",
-    "reports",
-    "borrowing",
-    "returns",
-    "settings",
-  ],
-  staff_pj: [
-    "dashboard",
-    "uml",
-    "medical-assets",
-    "non-medical-assets",
-    "maintenance-schedule",
-    "unggahan",
-    "reports",
-    "borrowing",
-    "returns",
-    "settings",
-  ],
-  teknisi: ["dashboard", "uml", "maintenance-schedule", "unggahan", "settings"],
-  user: ["dashboard", "uml", "medical-assets", "non-medical-assets", "unggahan", "borrowing", "returns", "settings"],
-}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -263,10 +232,7 @@ export default function DashboardPage() {
 
   const quickActions = useMemo(() => {
     const normalizedRole = normalizeUserRole(currentUser?.role)
-    const allowedKeys =
-      quickActionKeysByRole[normalizedRole] ?? quickActionKeysByRole.user
-
-    return quickActionLinks.filter((action) => allowedKeys.includes(action.key))
+    return quickActionLinks.filter((action) => canAccessRoute(normalizedRole, action.href))
   }, [currentUser?.role])
 
   const handleQuickActionClick = (action: QuickActionLink) => {
@@ -415,7 +381,7 @@ export default function DashboardPage() {
 
           <Card className={`${statCardClass} bg-linear-to-br from-rose-50/65 via-white to-red-50/45`}>
             <CardHeader className="flex items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pemelirahaan Sarana</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pemeliharaan Sarana</CardTitle>
               <div className="rounded-2xl bg-linear-to-br from-rose-100 to-red-100 p-2 text-rose-700 shadow-inner">
                 <Wrench className="w-5 h-5" />
               </div>

@@ -62,9 +62,9 @@ const CANCELLATION_REASON_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: "requested", label: "Diajukan" },
   { value: "scheduled", label: "Disetujui" },
-  { value: "in_progress", label: "Diproses" },
-  { value: "completed", label: "Menunggu Validasi" },
-  { value: "validated", label: "Selesai" },
+  { value: "in_progress", label: "Sedang Pengecekan Lanjutan" },
+  { value: "completed", label: "Dalam Proses Pengerjaan" },
+  { value: "validated", label: "Selesai Pemeliharaan Sarana" },
   { value: "cancelled", label: "Ditolak / Dibatalkan" },
 ] as const
 
@@ -306,7 +306,7 @@ export default function MaintenanceForm({
   return (
     <Card ref={formCardRef} className="mb-6">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle>{maintenance ? "Edit Pemelirahaan Sarana" : "Tambah Pemelirahaan Sarana"}</CardTitle>
+        <CardTitle>{maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}</CardTitle>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
           <X className="w-5 h-5" />
         </button>
@@ -372,10 +372,12 @@ export default function MaintenanceForm({
                 name="technician"
                 value={formData.technician}
                 onChange={handleChange}
-                required
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                placeholder="Nama teknisi"
+                placeholder="Opsional"
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Dapat diisi setelah teknisi atau penanggung jawab ditentukan.
+              </p>
             </div>
 
             <div>
@@ -394,7 +396,7 @@ export default function MaintenanceForm({
               </select>
               {!maintenance && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Pengajuan baru selalu masuk ke tahap diajukan dan harus disetujui sebelum diproses.
+                  Pengajuan baru selalu masuk ke tahap diajukan dan harus disetujui sebelum lanjut ke pengecekan.
                 </p>
               )}
             </div>

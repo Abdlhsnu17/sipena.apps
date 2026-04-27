@@ -1453,7 +1453,9 @@ export default function ReturnsPage() {
                                   <div className="flex flex-col items-start gap-1 sm:items-end">
                                     {getStatusBadge(b.status)}
                                     {showDamagedNotice && (
-                                      <span className="text-[11px] font-semibold text-red-600">Alat rusak</span>
+                                      <Badge className="border border-red-200 bg-red-100 text-red-800">
+                                        Alat rusak
+                                      </Badge>
                                     )}
                                   </div>
                                 </div>

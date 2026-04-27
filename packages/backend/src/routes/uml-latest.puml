@@ -136,7 +136,7 @@ Asset "1" -- "*" MaintenanceSchedule : dijadwalkan
 MaintenanceSchedule "1" -- "0..1" Maintenance : sinkron
 Maintenance "1" -- "*" MaintenanceHistory : memiliki riwayat
 User "1" -- "*" Borrowing : meminjam
-User "1" -- "*" Maintenance : membuat / memvalidasi
+User "1" -- "*" Maintenance : membuat / memantau
 User "1" -- "*" MaintenanceHistory : validasi
 User "1" -- "*" ReportUpload : unggah
 User "1" -- "*" UserActivity : aktivitas
@@ -145,6 +145,13 @@ note right of User
   Role aktif:
   admin, leader, staff,
   staff_pj, teknisi, user
+end note
+
+note right of Maintenance
+  Terminologi status:
+  in_progress = sedang pengecekan lanjutan
+  completed = dalam proses pengerjaan
+  validated = selesai pemeliharaan sarana
 end note
 
 AssetController ..> AssetService

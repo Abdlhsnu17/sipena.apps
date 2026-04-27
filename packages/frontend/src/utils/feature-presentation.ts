@@ -31,7 +31,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#5eead4",
   },
   pemeliharaan: {
-    label: "Pemelirahaan Sarana",
+    label: "Pemeliharaan Sarana",
     backgroundColor: "#fee2e2",
     textColor: "#dc2626",
     borderColor: "#fca5a5",

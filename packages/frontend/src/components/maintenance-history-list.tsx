@@ -905,7 +905,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
               className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
             >
               <option value="Semua">Semua Status</option>
-              <option value="completed">Sedang Dalam Pengerjaan</option>
+              <option value="completed">Dalam Proses Pengerjaan</option>
               <option value="validated">Selesai Pemeliharaan Sarana</option>
               <option value="cancelled">Ditolak / Dibatalkan</option>
             </select>

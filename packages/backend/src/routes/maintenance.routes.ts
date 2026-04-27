@@ -41,7 +41,7 @@ router.post(
     body('notes').optional().trim(),
     body('cancellationReason').optional().trim()
   ],
-  requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj']),
+  requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user']),
   maintenanceController.create
 );
 

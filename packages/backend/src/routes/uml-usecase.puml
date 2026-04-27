@@ -60,12 +60,12 @@ rectangle "SIPENA" {
   }
 
   package "Pemeliharaan" {
-    usecase "Buat Permintaan Pemeliharaan" as UC_CreateMaintenance
+    usecase "Buat Pemeliharaan Sarana" as UC_CreateMaintenance
     usecase "Lihat Daftar Pemeliharaan" as UC_ViewMaintenance
     usecase "Lihat Detail Pemeliharaan" as UC_MaintenanceDetail
     usecase "Ubah Pemeliharaan" as UC_EditMaintenance
-    usecase "Selesaikan Pemeliharaan" as UC_CompleteMaintenance
-    usecase "Validasi Pemeliharaan" as UC_ValidateMaintenance
+    usecase "Tandai Pengecekan Lanjutan" as UC_CompleteMaintenance
+    usecase "Validasi Akhir Pemeliharaan" as UC_ValidateMaintenance
     usecase "Batalkan Pemeliharaan" as UC_CancelMaintenance
     usecase "Hapus Record Pemeliharaan" as UC_DeleteMaintenance
   }
@@ -128,6 +128,8 @@ User --> UC_CreateBorrowing
 User --> UC_ViewBorrowing
 User --> UC_BorrowingDetail
 User --> UC_ReturnBorrowing
+User --> UC_ViewMaintenance
+User --> UC_CreateMaintenance
 User --> UC_ViewProfile
 User --> UC_EditProfile
 
