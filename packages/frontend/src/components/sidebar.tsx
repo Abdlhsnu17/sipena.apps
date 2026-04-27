@@ -498,6 +498,18 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     return getUserRoleLabel(currentUser?.role)
   }
 
+  const getCompactRoleLabel = () => {
+    const label = getRoleLabel()
+    const compactRoleMap: Record<string, string> = {
+      Administrator: "Admin",
+      "Staff Pelayanan": "Staff",
+      "Staff PJ": "Staff PJ",
+      "Kepala Unit": "Leader",
+    }
+
+    return compactRoleMap[label] ?? label
+  }
+
   const getInitials = () => {
     const name = (currentUser?.name ?? "").trim()
     if (!name) return "U"
@@ -709,24 +721,30 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               )}
             >
               <div className="px-3 py-2.5">
-                <div className="rounded-xl border border-teal-100/80 bg-linear-to-br from-teal-50/70 via-white to-cyan-50/60 p-2.5 shadow-sm dark:border-teal-900/70 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="h-14 w-14 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
-                    {profileImageUrl ? (
-                      <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
-                    ) : (
-                      <AvatarFallback className="text-base font-semibold uppercase text-muted-foreground dark:text-slate-300">
-                        {getInitials()}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
+                <div className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-13 w-13 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
+                      {profileImageUrl ? (
+                        <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
+                      ) : (
+                        <AvatarFallback className="text-sm font-semibold uppercase text-muted-foreground dark:text-slate-300">
+                          {getInitials()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
-                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">NIP</p>
-                      <p className="text-xs font-semibold leading-tight text-slate-700 break-all dark:text-slate-200">{currentUser.nip}</p>
-                      <span className="mt-1.5 inline-flex max-w-full rounded-full border border-teal-200/80 bg-teal-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-teal-700 dark:border-teal-700 dark:bg-teal-950/60 dark:text-teal-200">
-                        <span className="max-w-full break-all leading-tight">{getRoleLabel()}</span>
-                      </span>
+                      <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-0.5 text-[11px] leading-tight">
+                        <span className="text-muted-foreground">NIP</span>
+                        <span className="min-w-0 font-semibold text-slate-700 break-all dark:text-slate-200">{currentUser.nip}</span>
+                        <span className="text-muted-foreground">Role</span>
+                        <span
+                          className="min-w-0 font-semibold text-teal-700 wrap-break-word dark:text-teal-300"
+                          title={getRoleLabel()}
+                        >
+                          {getCompactRoleLabel()}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
