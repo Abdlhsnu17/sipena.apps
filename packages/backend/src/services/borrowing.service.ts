@@ -12,12 +12,41 @@ import {
 import { buildOverdueSanctionNote, generateBorrowingCode, getOverdueDays } from '../utils/helpers';
 import { AssetService } from './asset.service';
 
+/**
+ * Parse datetime string as LOCAL time (not UTC)
+ * Expects format: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
+ */
 const normalizeDateInput = (value?: string | Date): Date | undefined => {
   if (value === undefined || value === null) return undefined;
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? undefined : value;
   }
-  const parsed = new Date(value);
+  
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+  
+  // Replace T with space for consistency
+  const normalized = raw.replace('T', ' ');
+  
+  // Match: YYYY-MM-DD HH:mm:ss or YYYY-MM-DD HH:mm
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) {
+    // Fallback to native parsing for other formats
+    const fallback = new Date(raw);
+    return Number.isNaN(fallback.getTime()) ? undefined : fallback;
+  }
+  
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  // Create date in LOCAL timezone (not UTC)
+  const parsed = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second)
+  );
+  
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
