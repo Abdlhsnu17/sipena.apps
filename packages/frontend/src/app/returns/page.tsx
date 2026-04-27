@@ -961,6 +961,11 @@ export default function ReturnsPage() {
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
 
+  const isDamagedReturnCondition = (condition?: string | null) => {
+    const normalized = String(condition || "").trim().toLowerCase()
+    return normalized.includes("rusak") || normalized.includes("damaged") || normalized.includes("broken")
+  }
+
   return (
     <div
       className="mx-auto w-full max-w-7xl min-h-full space-y-4 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40"
@@ -1396,6 +1401,8 @@ export default function ReturnsPage() {
                     const borrowerName = b.userName || "-"
                     const returnDateLabel = b.returnDate ? formatDayTimeLabel(b.returnDate) : "Belum dikembalikan"
                     const isExpanded = expandedHistoryReturnIds.has(b.id)
+                    const showDamagedNotice =
+                      b.status === "returned" && isDamagedReturnCondition(b.returnCondition)
                     return (
                         <div
                           key={`history-card-${b.id}`}
@@ -1443,7 +1450,12 @@ export default function ReturnsPage() {
                                     <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu Kembali</span>
                                     <span className="text-[13px] font-semibold text-foreground">{returnDateLabel}</span>
                                   </div>
-                                  <div>{getStatusBadge(b.status)}</div>
+                                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                                    {getStatusBadge(b.status)}
+                                    {showDamagedNotice && (
+                                      <span className="text-[11px] font-semibold text-red-600">Alat rusak</span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
