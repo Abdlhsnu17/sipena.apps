@@ -293,36 +293,100 @@ const erdTables = [
   },
 ]
 
-const useCaseActors = [
+type UseCaseActor = {
+  actor: string
+  accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange" | "emerald" | "rose"
+  summary: string
+  items: string[]
+  note?: string
+}
+
+const useCaseActors: UseCaseActor[] = [
+  {
+    actor: "Pengguna Publik",
+    accent: "rose",
+    summary: "Aktor yang belum login dan hanya berinteraksi dengan modul autentikasi awal.",
+    items: ["Login ke sistem", "Registrasi akun baru", "Reset password melalui verifikasi NIP"],
+  },
+  {
+    actor: "Pengguna Terautentikasi",
+    accent: "emerald",
+    summary: "Hak akses dasar yang otomatis dimiliki semua akun setelah berhasil login.",
+    items: [
+      "Logout dan kelola profil sendiri",
+      "Unggah foto profil dan ubah password",
+      "Akses dokumentasi UML dan riwayat aktivitas",
+      "Unggah, lihat, unduh, dan pratinjau dokumen sesuai hak akses",
+    ],
+  },
   {
     actor: "Administrator",
     accent: "teal" as const,
-    items: ["Kelola inventaris", "Kelola pengguna", "Validasi transaksi", "Kelola pemeliharaan"],
+    summary: "Role dengan kontrol penuh terhadap data master, transaksi, dokumentasi, dan manajemen pengguna.",
+    items: [
+      "CRUD inventaris medis dan non-medis",
+      "Validasi peminjaman, pengembalian, dan pemeliharaan",
+      "Kelola jadwal pemeliharaan termasuk hapus jadwal dan record",
+      "Kelola semua pengguna, seluruh laporan, dan hapus unggahan",
+    ],
   },
   {
     actor: "Leader",
     accent: "violet" as const,
-    items: ["Pantau operasional", "Review peminjaman", "Validasi pengembalian"],
+    summary: "Role pengawas operasional yang memvalidasi proses inti tanpa hak hapus setingkat admin.",
+    items: [
+      "Pantau inventaris, peminjaman, pengembalian, dan pemeliharaan",
+      "Setujui atau tolak transaksi serta validasi pengembalian",
+      "Kelola jadwal dan status pemeliharaan tingkat operasional",
+      "Tambah dan ubah user operasional non-admin serta akses laporan",
+    ],
+    note: "Leader tidak menghapus aset, jadwal, user admin, atau unggahan.",
   },
   {
     actor: "Staff PJ",
     accent: "blue" as const,
-    items: ["Lihat inventaris", "Atur jadwal pemeliharaan", "Pantau progres", "Lihat laporan"],
+    summary: "Penanggung jawab unit yang menangani input inventaris dan koordinasi operasional harian.",
+    items: [
+      "Tambah dan ubah inventaris sesuai cakupan unit",
+      "Ajukan peminjaman dan catat pengembalian alat",
+      "Buat permintaan serta jadwal pemeliharaan",
+      "Pantau laporan operasional dan progres tindak lanjut",
+    ],
+    note: "Cakupan inventaris mengikuti staff access type: medis, non-medis, atau all.",
   },
   {
     actor: "Staff Pelayanan",
     accent: "sky" as const,
-    items: ["Lihat inventaris", "Ajukan peminjaman", "Kirim pengembalian"],
+    summary: "Role operasional layanan yang fokus pada penggunaan aset dan pelaporan kebutuhan pemeliharaan.",
+    items: [
+      "Lihat inventaris sesuai cakupan unit",
+      "Ajukan peminjaman dan catat pengembalian alat",
+      "Buat permintaan pemeliharaan",
+      "Lihat jadwal serta laporan operasional",
+    ],
+    note: "Cakupan inventaris mengikuti staff access type: medis, non-medis, atau all.",
   },
   {
     actor: "Teknisi",
     accent: "orange" as const,
-    items: ["Lihat jadwal", "Update progres", "Isi catatan hasil"],
+    summary: "Role eksekutor teknis yang berfokus pada pengerjaan dan pembaruan status pemeliharaan.",
+    items: [
+      "Lihat daftar pemeliharaan dan jadwal kerja",
+      "Ubah status jadwal pemeliharaan di lapangan",
+      "Tandai perbaikan selesai dan isi catatan hasil",
+      "Validasi akhir atau batalkan pemeliharaan jika diperlukan",
+    ],
   },
   {
     actor: "Pengguna",
     accent: "amber" as const,
-    items: ["Lihat dokumentasi", "Lihat inventaris", "Ajukan peminjaman"],
+    summary: "Role self-service untuk kebutuhan pinjam pakai tanpa akses laporan dan manajemen data master.",
+    items: [
+      "Lihat inventaris medis dan non-medis",
+      "Ajukan peminjaman dan lihat riwayat peminjaman sendiri",
+      "Catat pengembalian alat yang sedang dipakai",
+      "Akses profil, pengaturan akun, dan dokumentasi sistem",
+    ],
   },
 ]
 
@@ -557,7 +621,7 @@ export default function UMLPage() {
                 </div>
                 <div>
                   <CardTitle>Use Case Diagram</CardTitle>
-                  <CardDescription>Interaksi aktor dengan modul inti sistem inventaris.</CardDescription>
+                  <CardDescription>Interaksi aktor dengan modul inti sistem inventaris beserta batas akses setiap role.</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -808,24 +872,31 @@ function TableCard({
 function UseCaseActorCard({
   actor,
   accent,
+  summary,
   items,
+  note,
 }: {
   actor: string
-    accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange"
+  accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange" | "emerald" | "rose"
+  summary: string
   items: string[]
+  note?: string
 }) {
   const accentClass: Record<typeof accent, string> = {
     teal: "border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/20",
     violet: "border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/20",
     blue: "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20",
     amber: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20",
-      sky: "border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20",
-      orange: "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20",
+    sky: "border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20",
+    orange: "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20",
+    emerald: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20",
+    rose: "border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/20",
   }
 
   return (
     <div className={`rounded-2xl border p-5 ${accentClass[accent]}`}>
       <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{actor}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{summary}</p>
       <div className="mt-4 space-y-3">
         {items.map((item) => (
           <div key={`${actor}-${item}`} className="flex items-start gap-3 rounded-xl bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200">
@@ -834,6 +905,11 @@ function UseCaseActorCard({
           </div>
         ))}
       </div>
+      {note ? (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300/80 bg-white/70 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+          {note}
+        </div>
+      ) : null}
     </div>
   )
 }

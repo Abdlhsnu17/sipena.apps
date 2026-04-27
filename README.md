@@ -125,12 +125,19 @@ Endpoint utama yang aktif mencakup:
 
 ## Hak Akses
 
-- Admin: akses penuh.
-- Leader: akses penuh operasional dan manajemen pengguna.
-- Staff: pemeliharaan, jadwal, peminjaman, pengembalian, laporan, dan pengaturan.
-- Staff PJ: input aset medis/non-medis, pemeliharaan, jadwal, peminjaman, pengembalian, laporan, dan pengaturan.
-- Teknisi: fokus pada proses pemeliharaan dan update status jadwal.
-- User: akses terbatas ke dashboard, peminjaman, pengembalian, pengaturan, dan UML.
+- Pengguna Publik: hanya dapat login, register, dan reset password.
+- Pengguna Terautentikasi: dapat logout, mengelola profil sendiri, unggah foto profil, ubah password, akses UML, riwayat aktivitas, serta unggahan sesuai hak akses file.
+- Admin: akses paling luas untuk CRUD inventaris, validasi transaksi, kelola pemeliharaan dan jadwal, kelola seluruh laporan, hapus unggahan, serta manajemen penuh pengguna.
+- Leader: mengawasi operasional, memvalidasi peminjaman, pengembalian, dan pemeliharaan, mengelola user operasional, serta mengakses laporan; tidak menghapus aset, jadwal, user admin, atau unggahan.
+- Staff Pelayanan: melihat inventaris sesuai `staffAccessType`, mengajukan peminjaman, mencatat pengembalian, membuat permintaan pemeliharaan, melihat jadwal, dan mengakses laporan operasional.
+- Staff PJ: melihat inventaris serta menambah atau mengubah data inventaris sesuai `staffAccessType`, mengajukan peminjaman, mencatat pengembalian, membuat jadwal pemeliharaan, dan memantau laporan.
+- Teknisi: fokus pada daftar pemeliharaan dan jadwal, mengubah status jadwal, menandai pekerjaan selesai, melakukan validasi akhir teknis, dan membatalkan pemeliharaan bila diperlukan.
+- User: role self-service untuk melihat inventaris, mengajukan peminjaman, mencatat pengembalian, dan mengelola akun sendiri; tidak memiliki akses ke laporan maupun manajemen data master.
+
+Catatan:
+
+- `staffAccessType` membatasi cakupan inventaris untuk role `staff` dan `staff_pj` menjadi `medis`, `non-medis`, atau `all`.
+- Dokumentasi UML di frontend menampilkan rincian role pada halaman `/uml`, sedangkan sumber diagram use case tersimpan di `packages/backend/src/routes/uml-usecase.puml`.
 
 ## Prasyarat
 
