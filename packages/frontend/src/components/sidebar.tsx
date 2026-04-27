@@ -270,6 +270,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [profileImageError, setProfileImageError] = useState(false)
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [isActivityHistoryExpanded, setIsActivityHistoryExpanded] = useState(() => {
     if (typeof window === "undefined") return true
@@ -305,7 +306,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   }, [currentUser?.id])
 
   useEffect(() => {
-    const handler = () => setCurrentUser(authService.getCurrentUser())
+    const handler = () => {
+      setCurrentUser(authService.getCurrentUser())
+      setProfileImageError(false)
+    }
     if (typeof window !== "undefined") {
       window.addEventListener("auth-user-updated", handler)
     }
@@ -488,6 +492,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const cacheKey =
     (currentUser as any)?.updatedAt || currentUser?.lastLogin || currentUser?.createdAt || Date.now()
   const profileImageUrl = toPublicPhotoUrl(currentUser?.photoPath, cacheKey)
+
+  const handleProfileImageError = (error: Event) => {
+    console.error('[Sidebar] Profile image failed to load:', error)
+    setProfileImageError(true)
+  }
 
   const handleLogout = async () => {
     await authService.logout()
@@ -724,13 +733,12 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                 <div className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-13 w-13 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
-                      {profileImageUrl ? (
-                        <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} />
-                      ) : (
-                        <AvatarFallback className="text-sm font-semibold uppercase text-muted-foreground dark:text-slate-300">
-                          {getInitials()}
-                        </AvatarFallback>
-                      )}
+                      {profileImageUrl && !profileImageError ? (
+                        <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} onError={handleProfileImageError} />
+                      ) : null}
+                      <AvatarFallback className="text-sm font-semibold uppercase text-white dark:text-slate-100">
+                        {getInitials()}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>

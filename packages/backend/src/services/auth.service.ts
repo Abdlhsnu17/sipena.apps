@@ -300,6 +300,7 @@ export class AuthService {
     if (photoPath) {
       fields.push('photo_path = ?');
       values.push(photoPath);
+      console.log(`[Service] Setting photo path: ${photoPath}`);
     }
 
     if (fields.length === 0) {
@@ -311,7 +312,9 @@ export class AuthService {
 
     try {
       await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+      console.log(`[Service] Profile updated for user ${userId}`);
     } catch (error: any) {
+      console.error(`[Service] Database error during profile update:`, error);
       if (error.code === 'ER_DUP_ENTRY') {
         return { success: false, message: 'NIP atau email sudah digunakan' };
       }
@@ -328,6 +331,7 @@ export class AuthService {
     }
 
     const updatedUser = this.mapRowToUser(rows[0]);
+    console.log(`[Service] Updated user photo_path:`, updatedUser.photoPath);
 
     return {
       success: true,

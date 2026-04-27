@@ -23,12 +23,22 @@ function Avatar({
 
 function AvatarImage({
   className,
+  onError,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Image> & {
+  onError?: (error: Event) => void;
+}) {
+  const handleError = React.useCallback((error: Event) => {
+    if (onError) {
+      onError(error)
+    }
+  }, [onError])
+
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn('aspect-square size-full', className)}
+      className={cn('aspect-square size-full object-cover', className)}
+      onError={handleError}
       {...props}
     />
   )
@@ -42,7 +52,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        'bg-muted flex size-full items-center justify-center rounded-full',
+        'flex size-full items-center justify-center rounded-full bg-linear-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700',
         className,
       )}
       {...props}

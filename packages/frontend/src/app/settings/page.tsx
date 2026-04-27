@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [remotePhotoUrl, setRemotePhotoUrl] = useState<string | null>(null)
   const [photoPath, setPhotoPath] = useState<string | null>(null)
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  const [imageError, setImageError] = useState<boolean>(false)
 
   const getPhotoVersion = (user?: {
     updatedAt?: string | number | null
@@ -47,6 +48,7 @@ export default function SettingsPage() {
   const updateRemotePhotoState = (path: string | null, version: string | number | null = null) => {
     setPhotoPath(path)
     setRemotePhotoUrl(toPublicPhotoUrl(path, version))
+    setImageError(false)
   }
   
   // Password change state
@@ -173,6 +175,8 @@ export default function SettingsPage() {
       const previewUrl = URL.createObjectURL(file)
       setLocalPhotoPreview(previewUrl)
       setPhotoFile(file)
+      setImageError(false)
+      console.log(`[Photo] Selected file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`)
     } else {
       setLocalPhotoPreview(null)
       setPhotoFile(null)
@@ -184,9 +188,15 @@ export default function SettingsPage() {
     setLocalPhotoPreview(null)
   }
 
+  const handleImageError = (error: Event) => {
+    console.error('[Photo] Image failed to load:', error)
+    setImageError(true)
+  }
+
   const handleProfileSubmit = async () => {
     setIsUpdatingProfile(true)
     try {
+      console.log(`[Profile] Submitting profile update with${photoFile ? ` photo file: ${photoFile.name}` : ' no photo'}`)
       const response = await authService.updateProfile({
         nip: profileForm.nip || undefined,
         name: profileForm.name || undefined,
@@ -199,6 +209,7 @@ export default function SettingsPage() {
 
       if (response.success && response.data?.user) {
         const updated = response.data.user
+        console.log(`[Profile] Update successful. New photoPath:`, updated.photoPath)
         setProfileForm({
           nip: updated.nip ?? "",
           name: updated.name ?? "",
@@ -224,6 +235,7 @@ export default function SettingsPage() {
           description: "Data profil sudah tersimpan.",
         })
       } else {
+        console.error(`[Profile] Update failed:`, response.message)
         toast({
           title: "Error",
           description: response.message,
@@ -231,6 +243,7 @@ export default function SettingsPage() {
         })
       }
     } catch (error: any) {
+      console.error('[Profile] Error during submit:', error)
       toast({
         title: "Error",
         description: error.message || "Gagal memperbarui profil",
@@ -276,13 +289,12 @@ export default function SettingsPage() {
                   <>
                     <div className="flex flex-col gap-4 md:flex-row md:items-center">
                       <Avatar className="h-20 w-20">
-                        {profileImageSrc ? (
-                          <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} />
-                        ) : (
-                          <AvatarFallback className="text-lg uppercase text-muted-foreground">
-                            {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
-                          </AvatarFallback>
-                        )}
+                        {profileImageSrc && !imageError ? (
+                          <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
+                        ) : null}
+                        <AvatarFallback className="text-lg font-semibold uppercase text-white">
+                          {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col gap-2">
                         <p className="text-sm text-muted-foreground">Unggah foto profil (JPG/PNG hingga 5MB)</p>

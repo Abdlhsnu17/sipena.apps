@@ -1,8 +1,8 @@
-import fs from 'fs';
-import path from 'path';
 import { Router } from 'express';
 import { body } from 'express-validator';
+import fs from 'fs';
 import multer from 'multer';
+import path from 'path';
 import authController from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
@@ -92,6 +92,22 @@ router.post('/logout', authController.logout);
 
 router.get('/me', authMiddleware, authController.getProfile);
 
-router.patch('/me', authMiddleware, profileUpload.single('photo'), authController.updateProfile);
+router.patch(
+  '/me',
+  authMiddleware,
+  (req, res, next) => {
+    profileUpload.single('photo')(req, res, (err) => {
+      if (err) {
+        console.error('[Multer Error]', err);
+        return res.status(400).json({
+          success: false,
+          message: err.message || 'File upload failed'
+        });
+      }
+      next();
+    });
+  },
+  authController.updateProfile
+);
 
 export default router;

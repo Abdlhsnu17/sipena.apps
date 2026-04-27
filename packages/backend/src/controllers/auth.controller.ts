@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AuthService } from '../services/auth.service';
 import {
-  LoginCredentials,
-  PasswordResetConfirmPayload,
-  PasswordResetRequestPayload,
-  RegisterCredentials
+    LoginCredentials,
+    PasswordResetConfirmPayload,
+    PasswordResetRequestPayload,
+    RegisterCredentials
 } from '../types/auth';
 
 const getAuthenticatedUserId = (req: Request): number | null => {
@@ -219,6 +219,11 @@ export class AuthController {
 
       const { name, email, nip, gender, workUnit, homeAddress } = req.body;
       const file = (req.file as Express.Multer.File | undefined);
+      
+      if (file) {
+        console.log(`[Upload] Profile photo uploaded: ${file.filename}, size: ${file.size} bytes, mime: ${file.mimetype}`);
+      }
+      
       const photoPath = file ? `profiles/${file.filename}` : undefined;
 
       const result = await this.authService.updateProfile(userId, {
@@ -230,9 +235,15 @@ export class AuthController {
         homeAddress
       }, photoPath);
 
+      if (result.success) {
+        console.log(`[Upload] Profile update successful for user ${userId}${photoPath ? ` with photo: ${photoPath}` : ''}`);
+      } else {
+        console.error(`[Upload] Profile update failed: ${result.message}`);
+      }
+
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('[Upload] Update profile error:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error'
