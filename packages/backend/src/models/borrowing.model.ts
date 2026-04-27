@@ -44,11 +44,16 @@ export interface Borrowing {
   returnedBy?: number;
   returnedByName?: string;
   returnedByNip?: string;
+  overdueDays?: number;
+  sanctionStatus?: BorrowingSanctionStatus;
+  sanctionNotes?: string;
+  sanctionAppliedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export type BorrowingStatus = 'pending' | 'approved' | 'rejected' | 'borrowed' | 'returned' | 'overdue';
+export type BorrowingSanctionStatus = 'none' | 'active' | 'resolved';
 export type BorrowingPurposeType = 'inside_hospital' | 'outside_hospital';
 export type BorrowingDurationUnit = 'day' | 'month' | 'year';
 

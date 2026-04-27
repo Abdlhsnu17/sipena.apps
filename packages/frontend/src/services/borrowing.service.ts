@@ -44,6 +44,10 @@ export interface Borrowing {
   returnedBy?: number;
   returnedByName?: string;
   returnedByNip?: string;
+  overdueDays?: number;
+  sanctionStatus?: 'none' | 'active' | 'resolved';
+  sanctionNotes?: string | null;
+  sanctionAppliedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -119,6 +123,10 @@ const normalizeBorrowing = (borrowing: any): Borrowing => ({
   returnedBy: borrowing.returnedBy ?? borrowing.returned_by,
   returnedByName: borrowing.returnedByName ?? borrowing.returned_by_name,
   returnedByNip: borrowing.returnedByNip ?? borrowing.returned_by_nip,
+  overdueDays: borrowing.overdueDays ?? borrowing.overdue_days,
+  sanctionStatus: borrowing.sanctionStatus ?? borrowing.sanction_status,
+  sanctionNotes: borrowing.sanctionNotes ?? borrowing.sanction_notes,
+  sanctionAppliedAt: borrowing.sanctionAppliedAt ?? borrowing.sanction_applied_at,
   createdAt: borrowing.createdAt ?? borrowing.created_at,
   updatedAt: borrowing.updatedAt ?? borrowing.updated_at,
 });

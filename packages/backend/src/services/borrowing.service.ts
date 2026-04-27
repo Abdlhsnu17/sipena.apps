@@ -9,7 +9,7 @@ import {
     ReturnBorrowingDTO,
     UpdateBorrowingDTO
 } from '../models';
-import { generateBorrowingCode } from '../utils/helpers';
+import { buildOverdueSanctionNote, generateBorrowingCode, getOverdueDays } from '../utils/helpers';
 import { AssetService } from './asset.service';
 
 const normalizeDateInput = (value?: string | Date): Date | undefined => {
@@ -154,6 +154,51 @@ export class BorrowingService {
 
   private getBorrowingLockWhereClause(statusColumn: string, returnValidatedColumn: string): string {
     return `(${statusColumn} IN ('pending', 'approved', 'borrowed', 'overdue') OR (${statusColumn} = 'returned' AND ${returnValidatedColumn} IS NULL))`;
+  }
+
+  private async syncOverdueBorrowings(): Promise<void> {
+    await pool.query(
+      `UPDATE borrowing_records
+       SET status = 'overdue',
+           overdue_days = CASE
+             WHEN due_date IS NULL OR NOW() <= due_date THEN 0
+             ELSE CEIL(TIMESTAMPDIFF(SECOND, due_date, NOW()) / 86400)
+           END,
+           sanction_status = 'active',
+           sanction_notes = CASE
+             WHEN due_date IS NULL OR NOW() <= due_date THEN sanction_notes
+             ELSE CONCAT('Terlambat ', CEIL(TIMESTAMPDIFF(SECOND, due_date, NOW()) / 86400), ' hari')
+           END,
+           sanction_applied_at = COALESCE(sanction_applied_at, NOW()),
+           updated_at = NOW()
+       WHERE status IN ('approved', 'borrowed')
+         AND due_date IS NOT NULL
+         AND NOW() > due_date`
+    );
+  }
+
+  private getOverdueBorrowingInfo(dueDate?: Date | string | null, referenceDate: Date = new Date()): {
+    overdueDays: number;
+    sanctionStatus: 'none' | 'active' | 'resolved';
+    sanctionNotes: string | null;
+    sanctionAppliedAt: Date | null;
+  } {
+    const overdueDays = getOverdueDays(dueDate, referenceDate);
+    if (!overdueDays) {
+      return {
+        overdueDays: 0,
+        sanctionStatus: 'none',
+        sanctionNotes: null,
+        sanctionAppliedAt: null
+      };
+    }
+
+    return {
+      overdueDays,
+      sanctionStatus: 'active',
+      sanctionNotes: buildOverdueSanctionNote(overdueDays),
+      sanctionAppliedAt: referenceDate
+    };
   }
 
   private async syncAssetMasterAfterValidatedReturn(
@@ -343,6 +388,8 @@ export class BorrowingService {
   }
 
   async getAll(filters: BorrowingFilters): Promise<PaginatedResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
     const { page, limit, status, userId, assetId, assetType } = filters;
     const offset = (page - 1) * limit;
 
@@ -420,6 +467,8 @@ export class BorrowingService {
   }
 
   async getById(id: string): Promise<ApiResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
     // Query getById disamakan logikanya dengan getAll untuk konsistensi
     const [rows] = await pool.query<BorrowingRow[]>(
       `SELECT b.*,
@@ -740,6 +789,8 @@ export class BorrowingService {
   }
 
   async validateReturn(id: string, validatorId: number): Promise<ApiResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
     const borrowing = await this.getById(id);
     if (!borrowing.success || !borrowing.data) return borrowing;
 
@@ -761,7 +812,12 @@ export class BorrowingService {
     }
 
     await pool.query(
-      'UPDATE borrowing_records SET return_validated_by = ?, return_validated_at = NOW(), updated_at = NOW() WHERE id = ?',
+      `UPDATE borrowing_records
+       SET return_validated_by = ?,
+           return_validated_at = NOW(),
+           sanction_status = CASE WHEN overdue_days > 0 THEN 'resolved' ELSE sanction_status END,
+           updated_at = NOW()
+       WHERE id = ?`,
       [validatorId, id]
     );
 
@@ -802,6 +858,8 @@ export class BorrowingService {
   }
 
   async return(id: string, data: ReturnBorrowingDTO): Promise<ApiResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
     const borrowing = await this.getById(id);
     if (!borrowing.success || !borrowing.data) return borrowing;
 
@@ -812,13 +870,36 @@ export class BorrowingService {
     const assetDetailId = borrowingRow.assetDetailId ?? borrowingRow.asset_detail_id ?? null;
     const assetDetailCode = borrowingRow.assetDetailCode ?? borrowingRow.asset_detail_code ?? null;
 
-    if (borrowingStatus !== 'approved' && borrowingStatus !== 'borrowed') {
-      return { success: false, message: 'Only approved/borrowed items can be returned' };
+    if (borrowingStatus !== 'approved' && borrowingStatus !== 'borrowed' && borrowingStatus !== 'overdue') {
+      return { success: false, message: 'Only approved/borrowed/overdue items can be returned' };
     }
 
+    const overdueInfo = this.getOverdueBorrowingInfo(borrowingRow.dueDate ?? borrowingRow.due_date, new Date());
+
     await pool.query(
-      'UPDATE borrowing_records SET status = ?, return_date = NOW(), return_condition = ?, return_notes = ?, returned_by = ?, updated_at = NOW() WHERE id = ?',
-      ['returned', data.condition, data.notes || null, data.returnedBy || null, id]
+      `UPDATE borrowing_records
+       SET status = ?,
+           return_date = NOW(),
+           return_condition = ?,
+           return_notes = ?,
+           returned_by = ?,
+           overdue_days = ?,
+           sanction_status = ?,
+           sanction_notes = ?,
+           sanction_applied_at = COALESCE(sanction_applied_at, ?),
+           updated_at = NOW()
+       WHERE id = ?`,
+      [
+        'returned',
+        data.condition,
+        data.notes || null,
+        data.returnedBy || null,
+        overdueInfo.overdueDays,
+        overdueInfo.sanctionStatus,
+        overdueInfo.sanctionNotes,
+        overdueInfo.sanctionAppliedAt,
+        id
+      ]
     );
 
     await this.syncAssetDetailBorrowingState(assetId, assetType, {
@@ -831,6 +912,8 @@ export class BorrowingService {
   }
 
   async update(id: string, data: UpdateBorrowingDTO): Promise<ApiResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
     const borrowing = await this.getById(id);
     if (!borrowing.success || !borrowing.data) {
       return { success: false, message: 'Borrowing not found' };
@@ -982,6 +1065,8 @@ export class BorrowingService {
   }
 
   async delete(id: string): Promise<ApiResponse> {
+    await this.syncOverdueBorrowings();
+
     const [rows] = await pool.query<RowDataPacket[]>(
       'SELECT id, asset_id, asset_type, asset_detail_id, status FROM borrowing_records WHERE id = ?',
       [id]

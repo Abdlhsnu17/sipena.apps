@@ -133,6 +133,40 @@ export function isOverdue(dueDate?: Date | string | null): boolean {
 }
 
 /**
+ * Calculate overdue days, rounded up to the next full day.
+ */
+export function getOverdueDays(
+  dueDate?: Date | string | null,
+  referenceDate: Date = new Date()
+): number {
+  if (!dueDate) return 0;
+
+  const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
+  if (Number.isNaN(due.getTime()) || referenceDate <= due) return 0;
+
+  return Math.max(daysBetween(due, referenceDate), 1);
+}
+
+/**
+ * Build a short sanction note for overdue borrowings.
+ */
+export function buildOverdueSanctionNote(
+  overdueDays: number,
+  fallbackNote?: string | null
+): string | null {
+  if (!overdueDays || overdueDays <= 0) {
+    return fallbackNote ? fallbackNote : null;
+  }
+
+  const note = `Terlambat ${overdueDays} hari`;
+  if (fallbackNote && fallbackNote.trim()) {
+    return `${note}. ${fallbackNote.trim()}`;
+  }
+
+  return note;
+}
+
+/**
  * Sanitize string for safe database query
  */
 export function sanitizeString(str: string): string {

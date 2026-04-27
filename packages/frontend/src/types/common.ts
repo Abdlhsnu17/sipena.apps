@@ -52,6 +52,8 @@ export interface DashboardStats {
   totalBorrowings: number;
   pendingBorrowings: number;
   activeBorrowings: number;
+  overdueBorrowings: number;
+  activeSanctions: number;
   totalMaintenance: number;
   scheduledMaintenance: number;
   totalUsers: number;

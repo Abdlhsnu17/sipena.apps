@@ -31,6 +31,10 @@ export interface Borrowing {
   rejectionReason?: string;
   returnCondition?: string;
   returnNotes?: string;
+  overdueDays?: number;
+  sanctionStatus?: "none" | "active" | "resolved";
+  sanctionNotes?: string | null;
+  sanctionAppliedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

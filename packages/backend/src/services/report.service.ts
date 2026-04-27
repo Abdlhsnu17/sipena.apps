@@ -22,6 +22,8 @@ interface StatsRow extends RowDataPacket {
   maintenance: number;
   pending: number;
   active: number;
+  overdue: number;
+  active_sanctions: number;
   scheduled: number;
 }
 
@@ -35,6 +37,8 @@ interface DashboardStats {
   totalBorrowings: number;
   pendingBorrowings: number;
   activeBorrowings: number;
+  overdueBorrowings: number;
+  activeSanctions: number;
   totalMaintenance: number;
   scheduledMaintenance: number;
   totalUsers: number;
@@ -122,7 +126,9 @@ export class ReportService {
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status IN ('approved', 'borrowed') THEN 1 ELSE 0 END) as active
+        SUM(CASE WHEN status IN ('approved', 'borrowed') THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+        SUM(CASE WHEN sanction_status = 'active' THEN 1 ELSE 0 END) as active_sanctions
       FROM borrowing_records
     `);
 
@@ -153,6 +159,8 @@ export class ReportService {
         totalBorrowings: Number(borrowings.total) || 0,
         pendingBorrowings: Number(borrowings.pending) || 0,
         activeBorrowings: Number(borrowings.active) || 0,
+        overdueBorrowings: Number(borrowings.overdue) || 0,
+        activeSanctions: Number(borrowings.active_sanctions) || 0,
         totalMaintenance: Number(maintenance.total) || 0,
         scheduledMaintenance: Number(maintenance.scheduled) || 0,
         totalUsers: Number(users.total) || 0

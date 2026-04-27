@@ -106,6 +106,10 @@ CREATE TABLE `borrowing_records` (
   `return_validated_by` int(11) DEFAULT NULL,
   `return_validated_at` datetime DEFAULT NULL,
   `returned_by` int(11) DEFAULT NULL,
+  `overdue_days` int(11) NOT NULL DEFAULT 0,
+  `sanction_status` varchar(20) NOT NULL DEFAULT 'none',
+  `sanction_notes` text DEFAULT NULL,
+  `sanction_applied_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
