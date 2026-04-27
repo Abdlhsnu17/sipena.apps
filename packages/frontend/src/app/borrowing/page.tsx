@@ -225,19 +225,28 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   {
     key: "namaAlat",
     label: "Nama Alat",
-    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
+        getValue: (borrowing) => {
+          const detail = resolveDetailForBorrowing(borrowing)
+          return detail?.detailInventoryName || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
+        },
     defaultSelected: true,
   },
   {
     key: "kode",
     label: "Kode",
-    getValue: (borrowing) => borrowing.assetDetailCode || borrowing.assetCode || "-",
+        getValue: (borrowing) => {
+          const detail = resolveDetailForBorrowing(borrowing)
+          return detail?.detailCode || borrowing.assetDetailCode || borrowing.assetCode || "-"
+        },
     defaultSelected: true,
   },
   {
     key: "merek",
     label: "Merek / Model",
-    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
+        getValue: (borrowing) => {
+          const detail = resolveDetailForBorrowing(borrowing)
+          return detail?.detailBrandModel || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
+        },
     defaultSelected: true,
   },
   {
@@ -1788,8 +1797,9 @@ export default function BorrowingPage() {
                   <div className="space-y-4">
                     {filteredBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
-                      const assetName = b.assetDetailName || b.assetName || "-"
-                      const assetCode = b.assetDetailCode || b.assetCode || "-"
+                      const assetName =
+                        detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
+                      const assetCode = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                       const roomNameLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
                       const inventoryTypeLabel = assetSourceLabel(
                         deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode),
@@ -1891,7 +1901,7 @@ export default function BorrowingPage() {
                                 checked={selectedBorrowingIds.has(b.id)}
                                 onChange={() => toggleBorrowingSelection(b.id)}
                                 className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                aria-label={`Pilih peminjaman ${b.assetDetailName || b.assetName || ""}`}
+                                aria-label={`Pilih peminjaman ${assetName}`}
                               />
                               Pilih kartu
                             </label>

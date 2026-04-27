@@ -566,12 +566,18 @@ export default function ReturnsPage() {
       {
         key: "alat",
         label: "Alat",
-        getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
+        getValue: (borrowing) => {
+          const detail = resolveDetailForBorrowing(borrowing)
+          return detail?.detailInventoryName || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
+        },
       },
       {
         key: "kode",
         label: "Kode",
-        getValue: (borrowing) => borrowing.assetDetailCode || borrowing.assetCode || "-",
+        getValue: (borrowing) => {
+          const detail = resolveDetailForBorrowing(borrowing)
+          return detail?.detailCode || borrowing.assetDetailCode || borrowing.assetCode || "-"
+        },
       },
       {
         key: "ruanganAlat",
@@ -1113,8 +1119,9 @@ export default function ReturnsPage() {
                   <div className="space-y-4">
                     {filteredActiveBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
-                      const assetName = b.assetDetailName || b.assetName || "-"
-                      const codeLabel = b.assetDetailCode || b.assetCode || "-"
+                      const assetName =
+                        detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
+                      const codeLabel = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                       const roomLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
                       const returnNoId = getReturnNoId(b)
                       const assetTypeLabel = assetSourceLabel(
@@ -1215,7 +1222,7 @@ export default function ReturnsPage() {
                                   checked={selectedActiveReturnIds.has(b.id)}
                                   onChange={() => toggleActiveReturnSelection(b.id)}
                                   className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                  aria-label={`Pilih pengembalian aktif ${b.assetDetailName || b.assetName || ""}`}
+                                  aria-label={`Pilih pengembalian aktif ${assetName}`}
                                 />
                                 Pilih kartu
                               </label>
@@ -1391,8 +1398,9 @@ export default function ReturnsPage() {
                       ? historySelectedReturnColumns
                       : [...historySelectedReturnColumns, "tanggalPinjam"]
                     const historySections = buildReturnNarrativeSections(historyDetailColumns)(b)
-                    const assetName = b.assetDetailName || b.assetName || "-"
-                    const codeLabel = b.assetDetailCode || b.assetCode || "-"
+                    const assetName =
+                      detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
+                    const codeLabel = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                     const roomNameLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
                     const assetTypeLabel = assetSourceLabel(
                       deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode),
@@ -1501,7 +1509,7 @@ export default function ReturnsPage() {
                                 checked={selectedHistoryReturnIds.has(b.id)}
                                 onChange={() => toggleHistoryReturnSelection(b.id)}
                                 className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                aria-label={`Pilih riwayat pengembalian ${b.assetDetailName || b.assetName || ""}`}
+                                aria-label={`Pilih riwayat pengembalian ${assetName}`}
                               />
                               Pilih kartu
                             </label>
@@ -1588,7 +1596,16 @@ export default function ReturnsPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Konfirmasi Pengembalian</CardTitle>
                   <CardDescription>
-                    Pengembalian alat: {selectedBorrowing.assetDetailName || selectedBorrowing.assetName}
+                    {(() => {
+                      const detail = resolveDetailForBorrowing(selectedBorrowing)
+                      const assetName =
+                        detail?.detailInventoryName ||
+                        detail?.detailName ||
+                        selectedBorrowing.assetDetailName ||
+                        selectedBorrowing.assetName ||
+                        "-"
+                      return `Pengembalian alat: ${assetName}`
+                    })()}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -535,17 +535,18 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     const brandModel =
       detail?.detailBrandModel ||
       detail?.detailName ||
-      detail?.assetName ||
+      history.assetDetailName ||
+      history.assetName ||
       "-";
     const assetName =
+      detail?.detailInventoryName ||
       detail?.detailName ||
-      detail?.assetName ||
       history.assetDetailName ||
       history.assetName ||
       "-";
     const assetCode =
-      history.assetDetailCode ||
       detail?.detailCode ||
+      history.assetDetailCode ||
       history.assetCode ||
       "-";
     const assetRoom = detail?.roomName || detail?.assetLocation || history.assetLocation || "-";

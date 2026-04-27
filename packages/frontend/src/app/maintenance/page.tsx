@@ -631,13 +631,7 @@ export default function MaintenancePage() {
         label: "Nama Alat",
         getValue: (item) => {
           const detail = resolveDetailForMaintenance(item)
-          return (
-            item.assetDetailName ||
-            detail?.detailInventoryName ||
-            detail?.detailName ||
-            item.assetName ||
-            "-"
-          )
+          return detail?.detailInventoryName || detail?.detailName || item.assetDetailName || item.assetName || "-"
         },
         defaultSelected: true,
       },
@@ -646,7 +640,7 @@ export default function MaintenancePage() {
         label: "Kode",
         getValue: (item) => {
           const detail = resolveDetailForMaintenance(item)
-          return item.assetDetailCode || detail?.detailCode || item.assetCode || "-"
+          return detail?.detailCode || item.assetDetailCode || item.assetCode || "-"
         },
         defaultSelected: true,
       },
@@ -1243,20 +1237,21 @@ export default function MaintenancePage() {
                 const inventoryTypeLabel = assetSourceLabel(inventoryTypeSource)
 
                 const inventoryName =
-                  m.assetDetailName ||
                   detailInfo?.detailInventoryName ||
                   detailInfo?.detailName ||
+                  m.assetDetailName ||
                   m.assetName ||
                   "-"
                 const maintenanceNoId = getMaintenanceNoId(m)
 
-                const codeLabel = m.assetDetailCode || detailInfo?.detailCode || m.assetCode || "-"
+                const codeLabel = detailInfo?.detailCode || m.assetDetailCode || m.assetCode || "-"
                 const roomNameLabel = detailInfo?.roomName || detailInfo?.assetLocation || m.assetLocation || "-"
 
                 const brandModel =
                   detailInfo?.detailBrandModel ||
                   detailInfo?.detailName ||
-                  m.description ||
+                  m.assetDetailName ||
+                  m.assetName ||
                   "-"
 
                 const scheduledLabel = formatDayTimeLabel(m.scheduledDate, { showWeekday: true })
@@ -1334,7 +1329,7 @@ export default function MaintenancePage() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                        </div>
                     )}
                     {isExpanded && (
                       <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
@@ -1383,7 +1378,7 @@ export default function MaintenancePage() {
                           checked={selectedMaintenanceIds.has(m.id)}
                           onChange={() => toggleMaintenanceSelection(m.id)}
                           className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                          aria-label={`Pilih jadwal pemeliharaan ${m.assetDetailName || m.assetName || ""}`}
+                          aria-label={`Pilih jadwal pemeliharaan ${inventoryName}`}
                         />
                         Pilih kartu
                       </label>
@@ -1450,7 +1445,7 @@ export default function MaintenancePage() {
                         </DropdownMenu>
                       </div>
                     </div>
-                    </div>
+                  </div>
                   )
                 })}
               </div>
