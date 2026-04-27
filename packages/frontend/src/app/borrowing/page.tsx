@@ -29,7 +29,7 @@ import {
 } from "@/utils/format"
 import { buildInventorySearchKey } from "@/utils/inventory-search"
 import { formatNoId } from "@/utils/record-id"
-import { getUserRoleLabel, isAdminOrLeaderRole } from "@/utils/role"
+import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
 
 import InventoryPicker from "@/components/inventory-picker"
@@ -453,6 +453,7 @@ export default function BorrowingPage() {
   }, [formData.dueDate, showForm])
 
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
+  const canDeleteBorrowing = isAdminRole(currentUser?.role)
 
   const loadAssets = async () => {
     try {
@@ -693,8 +694,8 @@ export default function BorrowingPage() {
   }
 
   const handleDeleteBorrowing = async (borrowing: ApiBorrowing) => {
-    if (!hasFullAccess) {
-      alert("Hanya Admin/Leader yang dapat menghapus data peminjaman")
+    if (!canDeleteBorrowing) {
+      alert("Hanya Admin yang dapat menghapus data peminjaman")
       return
     }
     const isConfirmed = await confirm({
@@ -1902,15 +1903,17 @@ export default function BorrowingPage() {
                                       <Pencil className="w-3 h-3" />
                                     </Button>
                                   )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
-                                    onClick={() => handleDeleteBorrowing(b)}
-                                    title="Hapus"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
+                                  {canDeleteBorrowing && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleDeleteBorrowing(b)}
+                                      title="Hapus"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  )}
                                   {b.status === "returned" && !b.returnValidatedBy && (
                                     <Button
                                       variant="outline"

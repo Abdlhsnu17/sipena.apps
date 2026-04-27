@@ -48,6 +48,6 @@ router.put(
   assetController.update
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin', 'leader']), assetController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), assetController.delete);
 
 export default router;

@@ -7,30 +7,30 @@ import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service"
 import type { User } from "@/types/auth-types"
 import {
-  assetSourceLabel,
-  borrowingStatusLabel,
-  deriveAssetSource,
-  type AssetSourceKey,
+    assetSourceLabel,
+    borrowingStatusLabel,
+    deriveAssetSource,
+    type AssetSourceKey,
 } from "@/utils/api-mappers"
 import { formatDayTimeLabel } from "@/utils/format"
-import { isAdminOrLeaderRole } from "@/utils/role"
+import { isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { useConfirm } from "@/hooks/use-confirm"
@@ -39,27 +39,27 @@ import { assetService } from "@/services/asset.service"
 import type { DetailInventoryItem } from "@/types/detail-inventory"
 import { flattenDetailInventories } from "@/utils/detail-inventory"
 import {
-  appendLine,
-  buildTableExportRows,
-  ExportFormat,
-  exportNarrativeReport,
-  exportTableData,
-  SectionBuilder,
-  type DocumentSection,
-  type SectionLine,
-  type TableExportColumn,
+    appendLine,
+    buildTableExportRows,
+    ExportFormat,
+    exportNarrativeReport,
+    exportTableData,
+    SectionBuilder,
+    type DocumentSection,
+    type SectionLine,
+    type TableExportColumn,
 } from "@/utils/export-table"
 import { formatNoId } from "@/utils/record-id"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
 import {
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  Pencil,
-  RotateCcw,
-  Search,
-  Trash2,
+    AlertCircle,
+    ChevronDown,
+    ChevronUp,
+    Download,
+    Pencil,
+    RotateCcw,
+    Search,
+    Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -293,8 +293,8 @@ export default function ReturnsPage() {
   }
 
   const handleDeleteReturn = async (borrowing: ApiBorrowing) => {
-    if (!canValidateReturns) {
-      alert("Hanya Admin/Leader yang dapat menghapus data pengembalian")
+    if (!canDeleteReturns) {
+      alert("Hanya Admin yang dapat menghapus data pengembalian")
       return
     }
     const isConfirmed = await confirm({
@@ -396,6 +396,7 @@ export default function ReturnsPage() {
   })
 
   const canValidateReturns = isAdminOrLeaderRole(currentUser?.role)
+  const canDeleteReturns = isAdminRole(currentUser?.role)
 
   const filteredReturnedBorrowings = returnedBorrowings.filter((b) => {
     const assetName = b.assetDetailName || b.assetName || ""
@@ -1543,15 +1544,17 @@ export default function ReturnsPage() {
                                   >
                                     <Pencil className="w-3 h-3" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
-                                    onClick={() => handleDeleteReturn(b)}
-                                    title="Hapus"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
+                                  {canDeleteReturns && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleDeleteReturn(b)}
+                                      title="Hapus"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  )}
                                   {b.status === "returned" &&
                                     (b.returnValidatedAt ? (
                                       <Button

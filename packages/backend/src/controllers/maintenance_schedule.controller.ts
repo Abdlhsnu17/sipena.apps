@@ -204,9 +204,9 @@ export const deleteSchedule = async (req: Request, res: Response) => {
       res.status(401).json({ success: false, message: 'Authentication required' });
       return;
     }
-    // Only admin and leader can delete schedules
-    if (!hasAnyRole(req.user.role, ['admin', 'leader'])) {
-      res.status(403).json({ success: false, message: 'Hanya admin atau leader yang dapat menghapus jadwal' });
+    // Only admin can delete schedules
+    if (!hasAnyRole(req.user.role, ['admin'])) {
+      res.status(403).json({ success: false, message: 'Hanya admin yang dapat menghapus jadwal' });
       return;
     }
     const actorId = getActorUserId(req);

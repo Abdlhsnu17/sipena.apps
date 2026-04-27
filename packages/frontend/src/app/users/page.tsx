@@ -39,7 +39,7 @@ export default function UsersPage() {
   const isLeader = currentUser?.role === "leader"
   const canViewUsers = isAdmin || isLeader
   const canCreateUsers = isAdmin || isLeader
-  const canDeleteUsers = isAdmin || isLeader
+  const canDeleteUsers = isAdmin
   const canEditAdminUsers = isAdmin
   const editableRoles = (isLeader ? ["user", "staff", "staff_pj", "teknisi"] : ["user", "admin", "leader", "staff", "staff_pj", "teknisi"]) as ManagedRole[]
 

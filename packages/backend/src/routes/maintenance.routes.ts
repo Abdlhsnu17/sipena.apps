@@ -78,6 +78,6 @@ router.patch(
   maintenanceController.complete
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin', 'leader']), maintenanceController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), maintenanceController.delete);
 
 export default router;

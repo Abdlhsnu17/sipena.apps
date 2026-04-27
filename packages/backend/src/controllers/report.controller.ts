@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ReportService } from '../services/report.service';
 import { recordUserActivity } from '../services/user_activity.service';
-import { hasAnyRole } from '../utils/role';
+import { hasAnyRole, normalizeRole } from '../utils/role';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -9,6 +9,7 @@ const getActorUserId = (req: Request): number | null => {
 };
 
 const canManageAllUploads = (req: Request): boolean => hasAnyRole(req.user?.role, ['admin', 'leader']);
+const isLeaderRole = (req: Request): boolean => normalizeRole(req.user?.role) === 'leader';
 
 const canAccessUpload = (req: Request, ownerId?: number | null): boolean => {
   if (canManageAllUploads(req)) {
@@ -350,6 +351,14 @@ export class ReportController {
    */
   deleteUpload = async (req: Request, res: Response): Promise<void> => {
     try {
+      if (isLeaderRole(req)) {
+        res.status(403).json({
+          success: false,
+          message: 'Role leader tidak dapat menghapus unggahan'
+        });
+        return;
+      }
+
       const { id } = req.params;
       const existing = await this.reportService.getUploadById(id);
       if (!existing.success || !existing.data) {

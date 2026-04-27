@@ -21,7 +21,7 @@ import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanc
 import { ExportFormat, exportMaintenanceHistory, type MaintenanceHistoryExportEntry } from "@/utils/export-table";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { canManageMaintenanceStatusRole } from "@/utils/role";
+import { canManageMaintenanceStatusRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { ChevronDown, ChevronUp, Download, Pencil, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -139,6 +139,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
 
   const canComplete = canManageMaintenanceStatusRole(safeUser.role);
   const canValidate = canManageMaintenanceStatusRole(safeUser.role);
+  const canDelete = isAdminRole(safeUser.role);
 
   const getValidatorLabel = (history: MaintenanceHistory): ValidatorInfo | null => {
     const explicitName = history.validatorName?.trim();
@@ -262,6 +263,11 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
 
   const handleDelete = async (id: number) => {
     try {
+      if (!canDelete) {
+        setError('Hanya admin yang dapat menghapus riwayat');
+        return;
+      }
+
       if (maintenance) {
         const res = await maintenanceService.delete(String(id));
         if (!res.success) throw new Error(res.message || "Gagal menghapus jadwal");
@@ -994,7 +1000,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
-                        {canValidate && (
+                        {canDelete && (
                           <Button
                             variant="ghost"
                             size="sm"

@@ -17,6 +17,8 @@ export const isAdminOrLeaderRole = (role?: string | null): boolean => {
   return normalized === "admin" || normalized === "leader"
 }
 
+export const isAdminRole = (role?: string | null): boolean => normalizeUserRole(role) === "admin"
+
 export const isTechnicianRole = (role?: string | null): boolean => normalizeUserRole(role) === "teknisi"
 
 export const isStaffPjRole = (role?: string | null): boolean => normalizeUserRole(role) === "staff_pj"

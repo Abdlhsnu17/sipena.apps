@@ -137,6 +137,6 @@ router.patch(
   borrowingController.validateReturn
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], borrowingController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), borrowingController.delete);
 
 export default router;

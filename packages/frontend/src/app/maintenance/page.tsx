@@ -58,7 +58,7 @@ import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanc
 import { flattenDetailInventories } from "@/utils/detail-inventory"
 import { formatDayTimeLabel } from "@/utils/format"
 import { formatNoId } from "@/utils/record-id"
-import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isTechnicianRole } from "@/utils/role"
+import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
 
 type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
@@ -255,6 +255,7 @@ export default function MaintenancePage() {
 
   // Cek hak akses peran
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
+  const canDeleteMaintenance = isAdminRole(currentUser?.role)
   const isTechnician = isTechnicianRole(currentUser?.role)
   const canCreateMaintenance = canCreateMaintenanceRole(currentUser?.role)
   const canEditMaintenance = hasFullAccess || isTechnician
@@ -419,8 +420,8 @@ export default function MaintenancePage() {
   }
 
   const handleDeleteMaintenance = async (id: string | number) => {
-    if (!hasFullAccess) {
-      alert("Hanya Admin/Leader yang dapat menghapus jadwal pemeliharaan")
+    if (!canDeleteMaintenance) {
+      alert("Hanya Admin yang dapat menghapus jadwal pemeliharaan")
       return
     }
     const isConfirmed = await confirm({
@@ -1374,7 +1375,7 @@ export default function MaintenancePage() {
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
-                              {hasFullAccess && (
+                              {canDeleteMaintenance && (
                                 <Button
                                   variant="ghost"
                                   size="sm"

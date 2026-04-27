@@ -140,7 +140,7 @@ export default function UnggahanPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const folderInputRef = useRef<HTMLInputElement | null>(null)
   const canDeleteUploads = currentUser
-    ? ["admin", "leader"].includes((currentUser.role ?? "").toLowerCase())
+    ? (currentUser.role ?? "").toLowerCase() === "admin"
     : false
   const totalUploads = uploadedReports.length
   const latestUploadLabel = uploadedReports[0] ? formatUploadDate(uploadedReports[0].uploadedAt) : "Belum ada unggahan"

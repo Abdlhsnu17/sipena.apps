@@ -13,7 +13,7 @@ import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import type { User } from "@/types/auth-types"
 import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers"
 import { formatNoId } from "@/utils/record-id"
-import { canManageInventoryRole, isAdminOrLeaderRole } from "@/utils/role"
+import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose"
 
@@ -141,6 +141,7 @@ export default function NonMedicalAssetsPage() {
   }, [])
 
   const isAdmin = isAdminOrLeaderRole(currentUser?.role)
+  const canDeleteInventory = isAdminRole(currentUser?.role)
   const canManageInventory = canManageInventoryRole(currentUser?.role)
 
   const handleAddRoom = async () => {
@@ -214,8 +215,8 @@ export default function NonMedicalAssetsPage() {
   }
 
   const handleDeleteRoom = async (roomId: string) => {
-    if (!isAdmin) {
-      alert("Hanya Admin/Leader yang dapat menghapus data inventaris")
+    if (!canDeleteInventory) {
+      alert("Hanya Admin yang dapat menghapus data inventaris")
       return
     }
     const isConfirmed = await confirm({
@@ -315,8 +316,8 @@ export default function NonMedicalAssetsPage() {
   }
 
   const handleDeleteAsset = async (roomId: string, assetId: string) => {
-    if (!isAdmin) {
-      alert("Hanya Admin/Leader yang dapat menghapus inventaris")
+    if (!canDeleteInventory) {
+      alert("Hanya Admin yang dapat menghapus inventaris")
       return
     }
     const isConfirmed = await confirm({
@@ -589,7 +590,7 @@ export default function NonMedicalAssetsPage() {
                           <span className="max-w-[18ch] wrap-break-word text-left sm:text-right">{categoryMeta.description}</span>
                         )}
                       </div>
-                      {isAdmin && (
+                      {canDeleteInventory && (
                         <>
                           <Button
                             variant="ghost"
@@ -758,7 +759,7 @@ export default function NonMedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {isAdmin && (
+                                {canDeleteInventory && (
                                   <div className="flex gap-1 shrink-0">
                                     <Button
                                       variant="ghost"

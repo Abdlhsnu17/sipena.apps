@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as MaintenanceHistoryController from '../controllers/maintenance_history.controller';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { authMiddleware, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -9,6 +9,6 @@ router.get('/:id', authMiddleware, MaintenanceHistoryController.getMaintenanceHi
 router.post('/', authMiddleware, MaintenanceHistoryController.createMaintenanceHistory);
 router.patch('/:id/validate', authMiddleware, MaintenanceHistoryController.validateMaintenanceHistory);
 router.patch('/:id/complete', authMiddleware, MaintenanceHistoryController.completeMaintenanceHistory);
-router.delete('/:id', authMiddleware, MaintenanceHistoryController.deleteMaintenanceHistory);
+router.delete('/:id', authMiddleware, requireRole(['admin']), MaintenanceHistoryController.deleteMaintenanceHistory);
 
 export default router;

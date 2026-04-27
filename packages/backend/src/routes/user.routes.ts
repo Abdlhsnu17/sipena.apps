@@ -50,7 +50,7 @@ router.put(
   userController.update
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin', 'leader']), userController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), userController.delete);
 
 router.patch(
   '/:id/password',
