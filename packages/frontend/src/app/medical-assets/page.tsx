@@ -123,7 +123,7 @@ export default function MedicalAssetsPage() {
     return () => window.removeEventListener("inventory-refresh", handleInventoryRefresh)
   }, [])
 
-  const isAdmin = isAdminOrLeaderRole(currentUser?.role)
+  const canEditInventory = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteInventory = isAdminRole(currentUser?.role)
   const canManageInventory = canManageInventoryRole(currentUser?.role)
   const usageCounts = rooms.reduce<Record<string, number>>((acc, room) => {
@@ -153,7 +153,7 @@ export default function MedicalAssetsPage() {
       return
     }
 
-    if (editingRoom && !isAdmin) {
+    if (editingRoom && !canEditInventory) {
       alert("Hanya Admin/Leader yang dapat mengubah data inventaris")
       return
     }
@@ -254,7 +254,7 @@ export default function MedicalAssetsPage() {
       alert("Anda tidak memiliki hak akses untuk menambah detail inventaris")
       return
     }
-    if (editingAsset && !isAdmin) {
+    if (editingAsset && !canEditInventory) {
       alert("Hanya Admin/Leader yang dapat mengubah detail inventaris")
       return
     }
@@ -547,31 +547,31 @@ export default function MedicalAssetsPage() {
                     <Badge variant="outline" className="text-[11px] text-muted-foreground">
                       Medis
                     </Badge>
+                    {canEditInventory && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditRoom(room)
+                        }}
+                        className="h-7 w-7 p-0"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     {canDeleteInventory && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditRoom(room)
-                          }}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteRoom(room.id)
-                          }}
-                          className="text-red-600 hover:bg-red-50 h-7 w-7 p-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteRoom(room.id)
+                        }}
+                        className="text-red-600 hover:bg-red-50 h-7 w-7 p-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -713,28 +713,32 @@ export default function MedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {canDeleteInventory && (
+                                {(canEditInventory || canDeleteInventory) && (
                                   <div className="flex gap-1 shrink-0">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => {
-                                        setSelectedRoomId(room.id)
-                                        setEditingAsset(asset)
-                                        setShowAssetForm(true)
-                                      }}
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
-                                      onClick={() => handleDeleteAsset(room.id, asset.id)}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
+                                    {canEditInventory && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => {
+                                          setSelectedRoomId(room.id)
+                                          setEditingAsset(asset)
+                                          setShowAssetForm(true)
+                                        }}
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
+                                    {canDeleteInventory && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                                        onClick={() => handleDeleteAsset(room.id, asset.id)}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
                                   </div>
                                 )}
                               </div>

@@ -825,7 +825,9 @@ export default function BorrowingPage() {
   const getBorrowingNoId = (borrowing: ApiBorrowing) =>
     formatNoId("PMJ", borrowing.id, borrowing.borrowingCode)
 
-  const filteredBorrowings = borrowings.filter((b) => {
+  const visibleBorrowings = borrowings.filter((b) => isBorrowingLockRecord(b))
+
+  const filteredBorrowings = visibleBorrowings.filter((b) => {
     const assetName = b.assetDetailName || b.assetName || ""
     const borrowerName = b.userName || ""
     const matchesSearch = matchesSearchKeyword(searchTerm, [
@@ -848,10 +850,9 @@ export default function BorrowingPage() {
     const matchesStatus =
       filterStatus === "Semua" ||
       (filterStatus === "Dipinjam" && ["approved", "borrowed"].includes(b.status)) ||
-      (filterStatus === "Dikembalikan" && b.status === "returned") ||
+      (filterStatus === "Menunggu Validasi" && b.status === "returned" && !b.returnValidatedAt) ||
       (filterStatus === "Terlambat" && b.status === "overdue") ||
-      (filterStatus === "Menunggu" && b.status === "pending") ||
-      (filterStatus === "Ditolak" && b.status === "rejected")
+      (filterStatus === "Menunggu" && b.status === "pending")
 
     const assetSource = deriveAssetSource(b.assetType, b.assetCode)
     const matchesSource = filterSource === "Semua" || assetSource === filterSource
@@ -1136,14 +1137,17 @@ export default function BorrowingPage() {
     return true
   })
 
-  const pendingCount = borrowings.filter((b) => b.status === "pending").length
-  const returnedCount = borrowings.filter((b) => b.status === "returned").length
-
-  const activeBorrowings = borrowings.filter(isBorrowingLockRecord)
+  const pendingCount = visibleBorrowings.filter((b) => b.status === "pending").length
+  const pendingValidationCount = visibleBorrowings.filter(
+    (b) => b.status === "returned" && !b.returnValidatedAt
+  ).length
+  const activeBorrowings = visibleBorrowings.filter((b) =>
+    ["approved", "borrowed", "overdue"].includes(b.status)
+  )
   const activeBorrowingAssetLocks = new Set<string>()
   const activeBorrowingDetailLocks = new Set<string>()
 
-  activeBorrowings.forEach((borrowing) => {
+  visibleBorrowings.forEach((borrowing) => {
     const assetType = borrowing.assetType === "non_medical" ? "non_medical" : "medical"
     const baseLockKey = `${assetType}|${borrowing.assetId}`
     const detailId = normalizeDetailIdentifier(borrowing.assetDetailId)
@@ -1394,8 +1398,8 @@ export default function BorrowingPage() {
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Sudah Dikembalikan</p>
-                    <p className="text-xl font-semibold text-teal-600 mt-1">{returnedCount}</p>
+                    <p className="text-[12px] text-muted-foreground">Menunggu Validasi</p>
+                    <p className="text-xl font-semibold text-teal-600 mt-1">{pendingValidationCount}</p>
                   </div>
                   <CheckCircle className="h-4 w-4 text-teal-500 shrink-0" />
                 </div>
@@ -1759,9 +1763,8 @@ export default function BorrowingPage() {
                   <option>Semua</option>
                   <option>Menunggu</option>
                   <option>Dipinjam</option>
-                  <option>Dikembalikan</option>
+                  <option>Menunggu Validasi</option>
                   <option>Terlambat</option>
-                  <option>Ditolak</option>
                 </select>
                 <select
                   value={filterSource}
@@ -1776,7 +1779,7 @@ export default function BorrowingPage() {
             </CardHeader>
             <CardContent className="px-0">
               {filteredBorrowings.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman</p>
+                <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
               ) : (
                 <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-2 sm:px-4 sm:pb-6">
                   <div className="space-y-4">

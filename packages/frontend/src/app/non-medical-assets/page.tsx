@@ -140,7 +140,7 @@ export default function NonMedicalAssetsPage() {
     return () => window.removeEventListener("inventory-refresh", handleInventoryRefresh)
   }, [])
 
-  const isAdmin = isAdminOrLeaderRole(currentUser?.role)
+  const canEditInventory = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteInventory = isAdminRole(currentUser?.role)
   const canManageInventory = canManageInventoryRole(currentUser?.role)
 
@@ -155,7 +155,7 @@ export default function NonMedicalAssetsPage() {
       return
     }
 
-    if (editingRoom && !isAdmin) {
+    if (editingRoom && !canEditInventory) {
       alert("Hanya Admin/Leader yang dapat mengubah data inventaris")
       return
     }
@@ -256,7 +256,7 @@ export default function NonMedicalAssetsPage() {
       alert("Anda tidak memiliki hak akses untuk menambah detail inventaris")
       return
     }
-    if (editingAsset && !isAdmin) {
+    if (editingAsset && !canEditInventory) {
       alert("Hanya Admin/Leader yang dapat mengubah detail inventaris")
       return
     }
@@ -590,31 +590,31 @@ export default function NonMedicalAssetsPage() {
                           <span className="max-w-[18ch] wrap-break-word text-left sm:text-right">{categoryMeta.description}</span>
                         )}
                       </div>
+                      {canEditInventory && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditRoom(room)
+                          }}
+                          className="h-7 w-7 p-0"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       {canDeleteInventory && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditRoom(room)
-                            }}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteRoom(room.id)
-                            }}
-                            className="text-red-600 hover:bg-red-50 h-7 w-7 p-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteRoom(room.id)
+                          }}
+                          className="text-red-600 hover:bg-red-50 h-7 w-7 p-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -759,29 +759,33 @@ export default function NonMedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {canDeleteInventory && (
+                                {(canEditInventory || canDeleteInventory) && (
                                   <div className="flex gap-1 shrink-0">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => {
-                                        setShowRoomForm(false)
-                                        setSelectedRoomId(room.id)
-                                        setEditingAsset(asset)
-                                        setShowAssetForm(true)
-                                      }}
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
-                                      onClick={() => handleDeleteAsset(room.id, asset.id)}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
+                                    {canEditInventory && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => {
+                                          setShowRoomForm(false)
+                                          setSelectedRoomId(room.id)
+                                          setEditingAsset(asset)
+                                          setShowAssetForm(true)
+                                        }}
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
+                                    {canDeleteInventory && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                                        onClick={() => handleDeleteAsset(room.id, asset.id)}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
                                   </div>
                                 )}
                               </div>
