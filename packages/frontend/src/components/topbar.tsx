@@ -360,30 +360,17 @@ export default function Topbar() {
                 <DropdownMenuLabel className="p-0 text-[10px] tracking-[0.2em] uppercase text-muted-foreground sm:text-[11px]">
                   Pemberitahuan
                 </DropdownMenuLabel>
-                <div className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setNotificationDensity("compact")
-                    }}
-                    className={`rounded px-2 py-0.5 text-[10px] transition sm:text-[11px] ${isCompactNotification ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                    aria-label="Gunakan tampilan notifikasi ringkas"
-                  >
-                    Ringkas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setNotificationDensity("normal")
-                    }}
-                    className={`rounded px-2 py-0.5 text-[10px] transition sm:text-[11px] ${!isCompactNotification ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                    aria-label="Gunakan tampilan notifikasi normal"
-                  >
-                    Normal
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setNotificationDensity("compact")
+                  }}
+                  className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] transition sm:text-[11px] bg-white text-slate-900 shadow-sm"
+                  aria-label="Tampilan notifikasi ringkas"
+                >
+                  Ringkas
+                </button>
               </div>
               <div className="px-2.5 pb-2 sm:px-3">
                 <div className="relative">
