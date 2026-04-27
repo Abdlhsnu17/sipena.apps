@@ -36,11 +36,9 @@ import {
 import { Input } from "@/components/ui/input"
 import {
     appendLine,
-    buildTableExportRows,
     DocumentSection,
     ExportFormat,
     exportNarrativeReport,
-    exportTableData,
     SectionBuilder,
     SectionLine,
     TableExportColumn,
@@ -56,7 +54,7 @@ import type { User } from "@/types/auth-types"
 import type { DetailInventoryItem } from "@/types/detail-inventory"
 import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers"
 import { flattenDetailInventories } from "@/utils/detail-inventory"
-import { formatDayTimeLabel } from "@/utils/format"
+import { formatCostLabel, formatDayTimeLabel } from "@/utils/format"
 import { formatNoId } from "@/utils/record-id"
 import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
@@ -365,7 +363,7 @@ export default function MaintenancePage() {
         }
       } else {
         if (!canCreateMaintenance) {
-          alert("Hanya Admin, Leader, Staff PJ, dan Staff Pelayanan yang dapat menambah pemelirahaan sarana")
+          alert("Hanya Admin, Leader, Staff PJ, dan Staff Pelayanan yang dapat menambah pemeliharaan sarana")
           return
         }
 
@@ -394,7 +392,7 @@ export default function MaintenancePage() {
         })
 
         if (!response.success) {
-          alert(response.message || "Gagal menambah pemelirahaan sarana")
+          alert(response.message || "Gagal menambah pemeliharaan sarana")
           return
         }
       }
@@ -407,13 +405,13 @@ export default function MaintenancePage() {
 
       if (!isEditing) {
         toast({
-          title: "Pemelirahaan sarana berhasil ditambahkan",
-          description: "Data pemelirahaan sarana sudah tersimpan.",
+          title: "Pemeliharaan sarana berhasil ditambahkan",
+          description: "Data pemeliharaan sarana sudah tersimpan.",
         })
       }
     } catch (error: any) {
       // strip any accidental hostnames from the message before showing to user
-      let msg = error?.message || "Gagal menyimpan pemelirahaan sarana";
+      let msg = error?.message || "Gagal menyimpan pemeliharaan sarana";
       msg = msg.replace(/https?:\/\/[\w.:-]+/g, '');
       alert(msg);
     }
@@ -529,7 +527,7 @@ export default function MaintenancePage() {
         })
       } else if (newStatus === "cancelled") {
         toast({
-          title: "Pemelirahaan sarana ditolak",
+          title: "Pemeliharaan sarana ditolak",
           description: "Status pemeliharaan sudah diperbarui menjadi ditolak atau dibatalkan.",
         })
       }
@@ -651,28 +649,42 @@ export default function MaintenancePage() {
         defaultSelected: true,
       },
       {
+        key: "tipeLayanan",
+        label: "Tipe Layanan",
+        getValue: (item) => maintenanceTypeLabel(item.type),
+        defaultSelected: true,
+      },
+      {
+        key: "merek",
+        label: "Merek / Model",
+        getValue: (item) => {
+          const detail = resolveDetailForMaintenance(item)
+          return detail?.detailBrandModel || detail?.detailName || item.assetDetailName || item.assetName || "-"
+        },
+        defaultSelected: true,
+      },
+      {
         key: "peminjam",
-        label: "Peminjam",
+        label: "Nama Pengirim",
         getValue: (item) => item.requesterName || "-",
         defaultSelected: true,
       },
       {
         key: "nip",
-        label: "NIP",
+        label: "NIP Pengirim",
         getValue: (item) => item.requesterNip || "-",
         defaultSelected: true,
       },
       {
         key: "tanggalPinjam",
-        label: "Tanggal Pinjam",
-        getValue: (item) => formatDayTimeLabel(item.scheduledDate),
+        label: "Jadwal Pemeliharaan",
+        getValue: (item) => formatDayTimeLabel(item.scheduledDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
         key: "tanggalKembali",
-        label: "Tanggal Kembali",
-        getValue: (item) =>
-          item.completedDate ? new Date(item.completedDate).toLocaleDateString("id-ID") : "-",
+        label: "Waktu Selesai",
+        getValue: (item) => formatDayTimeLabel(item.completedDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
@@ -685,9 +697,39 @@ export default function MaintenancePage() {
         defaultSelected: true,
       },
       {
+        key: "catatanPendaftaran",
+        label: "Catatan Pendaftaran",
+        getValue: (item) => item.description || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "teknisi",
+        label: "Teknisi Pelaksana",
+        getValue: (item) => item.technician || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "biaya",
+        label: "Biaya Pemeliharaan",
+        getValue: (item) => (item.cost ? formatCostLabel(item.cost) : "-"),
+        defaultSelected: true,
+      },
+      {
+        key: "catatanAfter",
+        label: "Catatan (After)",
+        getValue: (item) => item.notes || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "alasanPembatalan",
+        label: "Alasan Pembatalan",
+        getValue: (item) => item.cancellationReason || "-",
+        defaultSelected: true,
+      },
+      {
         key: "catatan",
-        label: "Catatan",
-        getValue: (item) => item.description || item.notes || "-",
+        label: "Ringkasan Catatan",
+        getValue: (item) => item.notes || item.description || "-",
         defaultSelected: true,
       },
       {
@@ -817,24 +859,6 @@ export default function MaintenancePage() {
     selectedMaintenanceColumns.includes(column.key)
   )
 
-  const exportMaintenanceTable = (
-    format: ExportFormat,
-    entries: Maintenance[],
-    filePrefix: string,
-    title: string
-  ) => {
-    if (!maintenanceColumnsForExport.length) return false
-    const columns = maintenanceColumnsForExport.map((column) => column.label)
-    const rows = buildTableExportRows(maintenanceColumnsForExport, entries)
-    void exportTableData(format, {
-      title,
-      columns,
-      rows,
-      filePrefix,
-    })
-    return true
-  }
-
   const handleMaintenanceExportColumnToggle = (columnKey: string) => {
     setSelectedMaintenanceColumns((previous) => {
       if (previous.includes(columnKey)) {
@@ -855,13 +879,15 @@ export default function MaintenancePage() {
       const assetName =
         item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
       const assetCode = item.assetDetailCode || detail?.detailCode || item.assetCode || "-"
-      const scheduledLabel = formatDayTimeLabel(item.scheduledDate)
-      const completedLabel = item.completedDate
-        ? new Date(item.completedDate).toLocaleDateString("id-ID")
-        : "-"
-      const notesLabel = item.description || item.notes || "-"
+      const scheduledLabel = formatDayTimeLabel(item.scheduledDate, { showWeekday: false })
+      const completedLabel = formatDayTimeLabel(item.completedDate, { showWeekday: false })
+      const registrationNotesLabel = item.description || "-"
+      const afterNotesLabel = item.notes || "-"
+      const costLabel = item.cost ? formatCostLabel(item.cost) : "-"
       const statusLabel = maintenanceStatusLabel(item.status)
       const locationLabel = detail?.roomName || detail?.assetLocation || item.assetLocation || "-"
+      const brandModelLabel =
+        detail?.detailBrandModel || detail?.detailName || item.assetDetailName || item.assetName || "-"
 
       const identities: SectionLine[] = []
       if (columnSet.has("noId")) {
@@ -876,27 +902,48 @@ export default function MaintenancePage() {
       if (columnSet.has("kode")) {
         appendLine(identities, "Kode Alat", assetCode)
       }
+      if (columnSet.has("tipeLayanan")) {
+        appendLine(identities, "Tipe Layanan", maintenanceTypeLabel(item.type))
+      }
       if (columnSet.has("ruangan")) {
         appendLine(identities, "Nama Ruangan Alat", locationLabel)
       }
+      if (columnSet.has("merek")) {
+        appendLine(identities, "Merek / Model", brandModelLabel)
+      }
 
-      const details: SectionLine[] = []
+      const administration: SectionLine[] = []
       if (columnSet.has("tanggalPinjam")) {
-        appendLine(details, "Tanggal Pinjam", scheduledLabel)
+        appendLine(administration, "Jadwal Pemeliharaan", scheduledLabel)
       }
-      if (columnSet.has("tanggalKembali")) {
-        appendLine(details, "Tanggal Kembali", completedLabel)
-      }
-
-      const logLines: SectionLine[] = []
       if (columnSet.has("peminjam")) {
-        appendLine(logLines, "Peminjam", item.requesterName || "-")
+        appendLine(administration, "Nama Pengirim", item.requesterName || "-")
       }
       if (columnSet.has("nip")) {
-        appendLine(logLines, "NIP", item.requesterNip || "-")
+        appendLine(administration, "NIP Pengirim", item.requesterNip || "-")
+      }
+      if (columnSet.has("catatanPendaftaran")) {
+        appendLine(administration, "Catatan Pendaftaran", registrationNotesLabel)
+      }
+
+      const execution: SectionLine[] = []
+      if (columnSet.has("teknisi")) {
+        appendLine(execution, "Teknisi Pelaksana", item.technician || "-")
+      }
+      if (columnSet.has("tanggalKembali")) {
+        appendLine(execution, "Waktu Selesai", completedLabel)
+      }
+      if (columnSet.has("biaya")) {
+        appendLine(execution, "Biaya Pemeliharaan", costLabel)
+      }
+      if (columnSet.has("catatanAfter")) {
+        appendLine(execution, "Catatan (After)", afterNotesLabel)
+      }
+      if (columnSet.has("alasanPembatalan") && item.cancellationReason) {
+        appendLine(execution, "Alasan Pembatalan", item.cancellationReason)
       }
       if (columnSet.has("catatan")) {
-        appendLine(logLines, "Catatan", notesLabel)
+        appendLine(execution, "Ringkasan Catatan", afterNotesLabel !== "-" ? afterNotesLabel : registrationNotesLabel)
       }
 
       const statusLines: SectionLine[] = []
@@ -908,11 +955,11 @@ export default function MaintenancePage() {
       if (identities.length) {
         sections.push({ title: "Informasi Dasar Alat", lines: identities })
       }
-      if (details.length) {
-        sections.push({ title: "Detail Pemelirahaan Sarana", lines: details })
+      if (administration.length) {
+        sections.push({ title: "Detail Administrasi", lines: administration })
       }
-      if (logLines.length) {
-        sections.push({ title: "Log Pelaksanaan & Validasi", lines: logLines })
+      if (execution.length) {
+        sections.push({ title: "Pelaksanaan & Biaya", lines: execution })
       }
       if (statusLines.length) {
         sections.push({ title: "Status Akhir", lines: statusLines })
@@ -922,45 +969,35 @@ export default function MaintenancePage() {
   }
 
   const exportSingleNarrative = async (format: ExportFormat, item: Maintenance) => {
-    if (format === "excel") {
-      exportMaintenanceTable(format, [item], `pemelirahaan-sarana-${item.id}`, "Daftar Pemelirahaan Sarana")
-      return
-    }
-
     const columnKeys =
       maintenanceColumnsForExport.length > 0
         ? maintenanceColumnsForExport.map((column) => column.key)
         : maintenanceExportColumnDefinitions.map((column) => column.key)
 
     void exportNarrativeReport(format, {
-      title: "Daftar Pemelirahaan Sarana",
+      title: "Daftar Pemeliharaan Sarana",
       subtitle: "LAPORAN PEMELIHARAAN",
       entries: [item],
       filePrefix: `jadwal-pemeliharaan-${item.id}`,
       buildSections: buildMaintenanceNarrativeSections(columnKeys),
-      emptyMessage: "Tidak ada pemelirahaan sarana yang dipilih.",
+      emptyMessage: "Tidak ada pemeliharaan sarana yang dipilih.",
     })
   }
 
   const handleExport = async (format: ExportFormat) => {
     if (!maintenanceRowsToExport.length) return
-    if (format === "excel") {
-      exportMaintenanceTable(format, maintenanceRowsToExport, "pemelirahaan-sarana", "Daftar Pemelirahaan Sarana")
-      return
-    }
-
     const columnKeys =
       maintenanceColumnsForExport.length > 0
         ? maintenanceColumnsForExport.map((column) => column.key)
         : maintenanceExportColumnDefinitions.map((column) => column.key)
 
     void exportNarrativeReport(format, {
-      title: "Daftar Pemelirahaan Sarana",
+      title: "Daftar Pemeliharaan Sarana",
       subtitle: "LAPORAN PEMELIHARAAN",
       entries: maintenanceRowsToExport,
       filePrefix: "jadwal-pemeliharaan",
       buildSections: buildMaintenanceNarrativeSections(columnKeys),
-      emptyMessage: "Tidak ada pemelirahaan sarana yang dipilih.",
+      emptyMessage: "Tidak ada pemeliharaan sarana yang dipilih.",
     })
   }
 
@@ -998,7 +1035,7 @@ export default function MaintenancePage() {
                   <ShieldCheck className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Pemelirahaan Sarana</h1>
+                  <h1 className="text-2xl font-bold text-foreground">Pemeliharaan Sarana</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Monitoring jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
@@ -1085,7 +1122,7 @@ export default function MaintenancePage() {
           <CardHeader className="space-y-3 pb-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <CardTitle className="text-lg">Daftar Pemelirahaan Sarana</CardTitle>
+                <CardTitle className="text-lg">Daftar Pemeliharaan Sarana</CardTitle>
                 <CardDescription className="text-[13px] text-muted-foreground">
                   Total: {filteredMaintenance.length} jadwal
                 </CardDescription>
@@ -1317,7 +1354,7 @@ export default function MaintenancePage() {
                             <div className="rounded-xl border border-slate-200 bg-white">
                               <InfoRow label="Nama Pengirim">{m.requesterName || "-"}</InfoRow>
                               <InfoRow label="NIP Pengirim">{m.requesterNip || "-"}</InfoRow>
-                              <InfoRow label="Jadwal Pemelirahaan Sarana">{scheduledLabel}</InfoRow>
+                              <InfoRow label="Jadwal Pemeliharaan Sarana">{scheduledLabel}</InfoRow>
                               <InfoRow label="Catatan Pendaftaran">{registrationNote}</InfoRow>
                             </div>
                           </div>
@@ -1528,7 +1565,7 @@ export default function MaintenancePage() {
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Tambah Pemelirahaan
+            Tambah Pemeliharaan
           </Button>
         </div>
       )}

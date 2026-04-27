@@ -379,6 +379,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         defaultSelected: true,
       },
       {
+        key: "tipeLayanan",
+        label: "Tipe Layanan",
+        getValue: (history) => maintenanceTypeLabel(history.type),
+        defaultSelected: true,
+      },
+      {
         key: "namaAlat",
         label: "Nama Alat",
         getValue: (history) =>
@@ -400,28 +406,36 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         defaultSelected: true,
       },
       {
+        key: "merek",
+        label: "Merek / Model",
+        getValue: (history) => {
+          const detail = findDetailInfo(history);
+          return detail?.detailBrandModel || detail?.detailName || history.assetDetailName || history.assetName || "-";
+        },
+        defaultSelected: true,
+      },
+      {
         key: "peminjam",
-        label: "Peminjam",
+        label: "Nama Pengirim",
         getValue: (history) => history.requesterName || "-",
         defaultSelected: true,
       },
       {
         key: "nip",
-        label: "NIP",
+        label: "NIP Pengirim",
         getValue: (history) => history.requesterNip || "-",
         defaultSelected: true,
       },
       {
         key: "tanggalPinjam",
-        label: "Tanggal Pinjam",
+        label: "Jadwal Pemeliharaan",
         getValue: (history) => formatDayTimeLabel(history.scheduledDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
         key: "tanggalKembali",
-        label: "Tanggal Kembali",
-        getValue: (history) =>
-          history.completedDate ? new Date(history.completedDate).toLocaleDateString("id-ID") : "-",
+        label: "Waktu Selesai",
+        getValue: (history) => formatDayTimeLabel(history.completedDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
@@ -434,9 +448,57 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         defaultSelected: true,
       },
       {
+        key: "catatanPendaftaran",
+        label: "Catatan Pendaftaran",
+        getValue: (history) => history.description || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "teknisi",
+        label: "Teknisi Pelaksana",
+        getValue: (history) => history.technician || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "biaya",
+        label: "Biaya Pemeliharaan",
+        getValue: (history) => (history.cost ? formatCostLabel(history.cost) : "-"),
+        defaultSelected: true,
+      },
+      {
+        key: "catatanAfter",
+        label: "Catatan (After)",
+        getValue: (history) => history.notes || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "alasanPembatalan",
+        label: "Alasan Pembatalan",
+        getValue: (history) => history.cancellationReason || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "validator",
+        label: "Validator",
+        getValue: (history) => getValidatorLabel(history)?.name || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "validatorNip",
+        label: "NIP Validator",
+        getValue: (history) => getValidatorLabel(history)?.nip || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "waktuValidasi",
+        label: "Waktu Validasi",
+        getValue: (history) => formatDayTimeLabel(history.validatedAt, { showWeekday: false }),
+        defaultSelected: true,
+      },
+      {
         key: "catatan",
-        label: "Catatan",
-        getValue: (history) => history.description || history.notes || "-",
+        label: "Ringkasan Catatan",
+        getValue: (history) => history.notes || history.description || "-",
         defaultSelected: true,
       },
       {
@@ -495,9 +557,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     const validatorName = validatorLabel?.name || "-";
     const validatorNip = validatorLabel?.nip || "-";
     const scheduledLabel = formatDayTimeLabel(history.scheduledDate, { showWeekday: true });
-    const completionDateShort = history.completedDate
-      ? new Date(history.completedDate).toLocaleDateString("id-ID")
-      : "-";
     const costLabel = history.cost ? formatCostLabel(history.cost) : "-";
 
     return {
@@ -515,7 +574,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       validatorName,
       validatorNip,
       scheduledLabel,
-      completionDateShort,
       costLabel,
     };
   };
@@ -557,9 +615,17 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
 
   const buildHistoryExportEntry = (history: MaintenanceHistory, columnSet: Set<string>): MaintenanceHistoryExportEntry => {
     const meta = getHistoryCardMeta(history);
-    const validator = meta.validatorName !== "-" ? meta.validatorName : meta.validatorNip;
+    const validator =
+      columnSet.has("validator") || columnSet.has("validatorNip")
+        ? meta.validatorName !== "-"
+          ? meta.validatorName
+          : meta.validatorNip
+        : undefined;
     const inventoryType = columnSet.has("jenisInventaris")
       ? meta.inventoryBadgeLabel
+      : undefined;
+    const maintenanceType = columnSet.has("tipeLayanan")
+      ? maintenanceTypeLabel(history.type)
       : undefined;
     const noId = columnSet.has("noId") ? getHistoryNoId(history) : undefined;
     const assetName =
@@ -582,36 +648,43 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       ? formatDayTimeLabel(history.scheduledDate, { showWeekday: false })
       : undefined;
     const completionDate = columnSet.has("tanggalKembali")
-      ? meta.completionDateShort
+      ? meta.completionDateLabel
       : undefined;
     const notes = columnSet.has("catatan")
-      ? history.description?.trim() || history.notes?.trim() || "-"
+      ? history.notes?.trim() || history.description?.trim() || "-"
       : undefined;
-    const brandModel = columnSet.has("namaAlat")
+    const brandModel = columnSet.has("merek")
       ? meta.brandModel
       : undefined;
-    const technician = columnSet.has("catatan")
+    const technician = columnSet.has("teknisi")
       ? history.technician || "-"
       : undefined;
-    const cost = columnSet.has("catatan")
+    const cost = columnSet.has("biaya")
       ? meta.costLabel
       : undefined;
-    const registrationNotes = columnSet.has("catatan")
+    const registrationNotes = columnSet.has("catatanPendaftaran")
       ? meta.registrationNotes
       : undefined;
-    const validationDate = columnSet.has("status")
+    const validationDate = columnSet.has("waktuValidasi")
       ? meta.validationDateLabel
       : undefined;
-    const validatorName = columnSet.has("status")
+    const validatorName = columnSet.has("validator")
       ? meta.validatorName
       : undefined;
-    const validatorNip = columnSet.has("status")
+    const validatorNip = columnSet.has("validatorNip")
       ? meta.validatorNip
+      : undefined;
+    const afterNotes = columnSet.has("catatanAfter")
+      ? meta.afterNotes
+      : undefined;
+    const cancellationReason = columnSet.has("alasanPembatalan")
+      ? history.cancellationReason || "-"
       : undefined;
 
     return {
       noId,
       inventoryType,
+      maintenanceType,
       assetName,
       assetCode,
       brandModel,
@@ -622,13 +695,14 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       technician,
       completionDate,
       cost,
-      notes,
+      notes: afterNotes ?? notes,
       registrationNotes,
       status,
       validator,
       validationDate,
       validatorName,
       validatorNip,
+      cancellationReason,
     };
   };
 

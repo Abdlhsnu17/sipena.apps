@@ -291,6 +291,7 @@ export async function exportTableData(format: ExportFormat, options: ExportTable
 export interface MaintenanceHistoryExportEntry {
   noId?: string
   inventoryType?: string
+  maintenanceType?: string
   assetName?: string
   assetCode?: string
   assetRoom?: string
@@ -308,6 +309,7 @@ export interface MaintenanceHistoryExportEntry {
   validator?: string
   validatorName?: string
   validatorNip?: string
+  cancellationReason?: string
 }
 
 export interface MaintenanceHistoryExportOptions {
@@ -638,6 +640,7 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
 const buildMaintenanceHistorySections = (entry: MaintenanceHistoryExportEntry): DocumentSection[] => {
   const identities: SectionLine[] = []
   appendLine(identities, 'Jenis Inventaris', entry.inventoryType)
+  appendLine(identities, 'Tipe Layanan', entry.maintenanceType)
   appendLine(identities, 'Nama Alat', entry.assetName)
   appendLine(identities, 'Kode Alat', entry.assetCode)
   appendLine(identities, 'Nama Ruangan Alat', entry.assetRoom)
@@ -654,6 +657,7 @@ const buildMaintenanceHistorySections = (entry: MaintenanceHistoryExportEntry): 
   appendLine(execution, 'Waktu Selesai', entry.completionDate)
   appendLine(execution, 'Biaya Pemeliharaan', entry.cost)
   appendLine(execution, 'Catatan (After)', entry.notes)
+  appendLine(execution, 'Alasan Pembatalan', entry.cancellationReason)
 
   const validationLines: SectionLine[] = []
   if (entry.validatorName) {

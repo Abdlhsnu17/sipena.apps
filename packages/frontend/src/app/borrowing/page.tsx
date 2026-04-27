@@ -57,10 +57,8 @@ import { useConfirm } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import {
     appendLine,
-    buildTableExportRows,
     ExportFormat,
     exportNarrativeReport,
-    exportTableData,
     SectionBuilder,
     TableExportColumn,
     type DocumentSection,
@@ -239,15 +237,21 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   },
   {
     key: "tanggalKembali",
-    label: "Tanggal Kembali",
+    label: "Batas Pengembalian",
     getValue: (borrowing) =>
-      borrowing.returnDate ? new Date(borrowing.returnDate).toLocaleDateString("id-ID") : "-",
+      borrowing.dueDate ? formatDayTimeLabel(borrowing.dueDate, { showWeekday: false }) : "-",
     defaultSelected: true,
   },
   {
     key: "pemilikAlat",
     label: "Pemilik Alat",
     getValue: (borrowing) => borrowing.ownerName || "-",
+    defaultSelected: true,
+  },
+  {
+    key: "jabatanPemilikAlat",
+    label: "Jabatan Pemilik Alat",
+    getValue: (borrowing) => borrowing.ownerPosition || "-",
     defaultSelected: true,
   },
   {
@@ -342,9 +346,6 @@ export default function BorrowingPage() {
   const [selectedBorrowingIds, setSelectedBorrowingIds] = useState<Set<number>>(() => new Set())
   const [selectedBorrowingExportColumns, setSelectedBorrowingExportColumns] = useState<string[]>(() =>
     borrowingExportColumnDefinitions.map((column) => column.key)
-  )
-  const borrowingColumnsForExport = borrowingExportColumnDefinitions.filter((column) =>
-    selectedBorrowingExportColumns.includes(column.key)
   )
   const [expandedBorrowingIds, setExpandedBorrowingIds] = useState<Set<number>>(() => new Set())
   const [selectedBorrowableAssetIds, setSelectedBorrowableAssetIds] = useState<string[]>([])
@@ -974,7 +975,7 @@ export default function BorrowingPage() {
       if (columnSet.has("pemilikAlat")) {
         appendLine(ownerLines, "Nama Pemilik Alat", ownerName)
       }
-      if (ownerPosition !== "-") {
+      if (columnSet.has("jabatanPemilikAlat") && ownerPosition !== "-") {
         appendLine(ownerLines, "Jabatan Pemilik Alat", ownerPosition)
       }
       if (columnSet.has("unitPemilikAlat")) {
@@ -1012,47 +1013,9 @@ export default function BorrowingPage() {
     }
   }
 
-  const exportBorrowingsTable = (
-    format: ExportFormat,
-    entries: ApiBorrowing[],
-    filePrefix: string,
-    title: string
-  ) => {
-    if (!borrowingColumnsForExport.length) return false
-    const columns = borrowingColumnsForExport.map((column) => column.label)
-    const rows = buildTableExportRows(borrowingColumnsForExport, entries)
-    void exportTableData(format, {
-      title,
-      columns,
-      rows,
-      filePrefix,
-    })
-    return true
-  }
-
-  const exportSingleBorrowingTable = (
-    format: ExportFormat,
-    borrowing: ApiBorrowing,
-    filePrefix: string,
-    title: string
-  ) => {
-    const columns = borrowingExportColumnDefinitions.map((column) => column.label)
-    const rows = buildTableExportRows(borrowingExportColumnDefinitions, [borrowing])
-    void exportTableData(format, {
-      title,
-      columns,
-      rows,
-      filePrefix,
-    })
-  }
-
   const handleExport = (format: ExportFormat) => {
     const rowsToExport = selectedBorrowings.length ? selectedBorrowings : filteredBorrowings
     if (!rowsToExport.length) return
-    if (format === "excel") {
-      exportBorrowingsTable(format, rowsToExport, "daftar-peminjaman", "Daftar Peminjaman Alat")
-      return
-    }
     void exportNarrativeReport(format, {
       title: "Daftar Peminjaman Alat",
       subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
@@ -1064,15 +1027,6 @@ export default function BorrowingPage() {
   }
 
   const exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
-    if (format === "excel") {
-      exportSingleBorrowingTable(
-        format,
-        borrowing,
-        `daftar-peminjaman-${borrowing.id}`,
-        "Daftar Peminjaman Alat"
-      )
-      return
-    }
     void exportNarrativeReport(format, {
       title: "Formulir Peminjaman Inventaris",
       subtitle: "RINGKASAN FORMULIR PEMINJAMAN",

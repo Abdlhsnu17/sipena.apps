@@ -40,10 +40,8 @@ import type { DetailInventoryItem } from "@/types/detail-inventory"
 import { flattenDetailInventories } from "@/utils/detail-inventory"
 import {
     appendLine,
-    buildTableExportRows,
     ExportFormat,
     exportNarrativeReport,
-    exportTableData,
     SectionBuilder,
     type DocumentSection,
     type SectionLine,
@@ -118,6 +116,7 @@ export default function ReturnsPage() {
   const [selectedHistoryReturnIds, setSelectedHistoryReturnIds] = useState<Set<number>>(() => new Set())
 
   const activeReturnDefaultColumns = [
+    "noId",
     "jenisInventaris",
     "alat",
     "kode",
@@ -140,6 +139,7 @@ export default function ReturnsPage() {
     "status",
   ]
   const historyReturnDefaultColumns = [
+    "noId",
     "jenisInventaris",
     "alat",
     "kode",
@@ -166,6 +166,7 @@ export default function ReturnsPage() {
     "catatanPengembalian",
     "waktuKembali",
     "kondisi",
+    "status",
   ]
   const [activeSelectedReturnColumns, setActiveSelectedReturnColumns] = useState<string[]>(() =>
     activeReturnDefaultColumns
@@ -553,6 +554,11 @@ export default function ReturnsPage() {
   const returnExportColumnDefinitions = useMemo<ReturnExportColumn[]>(
     () => [
       {
+        key: "noId",
+        label: "No ID",
+        getValue: (borrowing) => getReturnNoId(borrowing),
+      },
+      {
         key: "jenisInventaris",
         label: "Jenis Inventaris",
         getValue: (borrowing) => assetSourceLabel(deriveAssetSource(borrowing.assetType, borrowing.assetCode)),
@@ -749,6 +755,9 @@ export default function ReturnsPage() {
       const statusLabel = getNarrativeStatusLabel(borrowing.status)
 
       const identities: SectionLine[] = []
+      if (columnSet.has("noId")) {
+        appendLine(identities, "No ID Pengembalian", getReturnNoId(borrowing))
+      }
       if (columnSet.has("jenisInventaris")) {
         appendLine(identities, "Jenis Inventaris", assetTypeLabel)
       }
@@ -869,42 +878,12 @@ export default function ReturnsPage() {
     }
   }
 
-  const exportReturnTable = (
-    format: ExportFormat,
-    entries: ApiBorrowing[],
-    columnKeys: string[],
-    title: string,
-    filePrefix: string
-  ) => {
-    const columns = returnExportColumnDefinitions.filter((column) => columnKeys.includes(column.key))
-    if (!columns.length) return false
-    const rows = buildTableExportRows(columns, entries)
-    void exportTableData(format, {
-      title,
-      columns: columns.map((column) => column.label),
-      rows,
-      filePrefix,
-    })
-    return true
-  }
-
   const exportSingleReturnNarrative = async (
     format: ExportFormat,
     borrowing: ApiBorrowing,
     sectionLabel: string
   ) => {
     const slug = sectionLabel.toLowerCase().replace(/\s+/g, "-")
-    if (format === "excel") {
-      exportReturnTable(
-        format,
-        [borrowing],
-        returnExportColumnDefinitions.map((column) => column.key),
-        sectionLabel,
-        `${slug}-${borrowing.id}`
-      )
-      return
-    }
-
     const columnKeys = returnExportColumnDefinitions.map((column) => column.key)
     void exportNarrativeReport(format, {
       title: sectionLabel,
@@ -944,16 +923,6 @@ export default function ReturnsPage() {
 
   const handleActiveExport = (format: ExportFormat) => {
     if (!activeReturnRowsToExport.length) return
-    if (format === "excel") {
-      exportReturnTable(
-        format,
-        activeReturnRowsToExport,
-        activeSelectedReturnColumns,
-        "Daftar Pengembalian Alat (Aktif)",
-        "pengembalian-aktif"
-      )
-      return
-    }
     void exportNarrativeReport(format, {
       title: "Daftar Pengembalian Alat (Aktif)",
       subtitle: "LAPORAN PENGEMBALIAN AKTIF",
@@ -966,16 +935,6 @@ export default function ReturnsPage() {
 
   const handleHistoryExport = (format: ExportFormat) => {
     if (!historyReturnRowsToExport.length) return
-    if (format === "excel") {
-      exportReturnTable(
-        format,
-        historyReturnRowsToExport,
-        historySelectedReturnColumns,
-        "Riwayat Pengembalian Alat",
-        "riwayat-pengembalian"
-      )
-      return
-    }
     void exportNarrativeReport(format, {
       title: "Riwayat Pengembalian Alat",
       subtitle: "LAPORAN PENGEMBALIAN",
