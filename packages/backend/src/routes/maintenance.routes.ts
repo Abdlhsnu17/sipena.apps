@@ -13,6 +13,7 @@ router.get(
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1 }).toInt(),
+    query('view').optional().isIn(['active', 'history']),
     query('status').optional().isIn(MAINTENANCE_STATUSES),
     query('assetId').optional().isInt({ min: 1 }).toInt(),
     query('assetType').optional().isIn(['medical', 'non_medical']),

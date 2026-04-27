@@ -37,6 +37,10 @@ export class MaintenanceService {
   private assetService: AssetService;
   private readonly activeStatuses = ['scheduled', 'in_progress', 'completed'];
   private readonly releasableStatuses = ['validated', 'cancelled'];
+  private readonly listViewStatuses: Record<'active' | 'history', string[]> = {
+    active: ['requested', 'scheduled', 'in_progress', 'completed'],
+    history: ['validated', 'cancelled']
+  };
   private readonly activeBorrowingStatuses = ['pending', 'approved', 'borrowed', 'overdue'];
   private readonly allowedStatusTransitions: Record<string, string[]> = {
     requested: ['scheduled', 'cancelled'],
@@ -435,7 +439,7 @@ export class MaintenanceService {
   }
 
   async getAll(filters: MaintenanceFilters): Promise<PaginatedResponse<Maintenance>> {
-    const { page, limit, status, assetId, assetType, type } = filters;
+    const { page, limit, status, view, assetId, assetType, type } = filters;
     const offset = (page - 1) * limit;
 
     let query = `
@@ -462,6 +466,14 @@ export class MaintenanceService {
       query += ' AND m.status = ?';
       countQuery += ' AND status = ?';
       params.push(status);
+    } else if (view) {
+      const statuses = this.listViewStatuses[view];
+      if (statuses?.length) {
+        const placeholders = statuses.map(() => '?').join(', ');
+        query += ` AND m.status IN (${placeholders})`;
+        countQuery += ` AND status IN (${placeholders})`;
+        params.push(...statuses);
+      }
     }
 
     if (assetId) {

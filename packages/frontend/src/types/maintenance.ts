@@ -31,10 +31,13 @@ export type MaintenanceStatus =
   | 'validated'
   | 'cancelled';
 
+export type MaintenanceView = 'active' | 'history';
+
 // Maintenance filters
 export interface MaintenanceFilters {
   page?: number;
   limit?: number;
+  view?: MaintenanceView;
   status?: MaintenanceStatus;
   assetId?: number | string;
   type?: MaintenanceType;

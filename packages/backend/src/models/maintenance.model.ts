@@ -41,6 +41,8 @@ export type MaintenanceStatus =
   | 'validated'
   | 'cancelled';
 
+export type MaintenanceView = 'active' | 'history';
+
 export interface CreateMaintenanceDTO {
   assetId: number;
   assetType?: AssetType;
@@ -85,6 +87,7 @@ export interface MaintenanceFilters {
   page: number;
   limit: number;
   status?: string;
+  view?: MaintenanceView;
   assetId?: string;
   assetType?: AssetType;
   type?: string;

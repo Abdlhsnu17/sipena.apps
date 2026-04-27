@@ -8,11 +8,6 @@ import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
-type DiagramLink = {
-  id: string
-  label: string
-}
-
 type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
 
 type ActivityStep = {
@@ -593,6 +588,7 @@ function FeatureCard({
   buttonLabel,
   icon,
   iconContainerClass,
+  items,
 }: {
   title: string
   description: string
@@ -600,6 +596,7 @@ function FeatureCard({
   buttonLabel: string
   icon: ReactNode
   iconContainerClass: string
+  items?: string[]
 }) {
   return (
     <Card className="border-slate-200/70 bg-white/90 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/70">
@@ -613,6 +610,15 @@ function FeatureCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {items && items.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {items.map((item) => (
+              <Badge key={`${title}-${item}`} variant="secondary" className="rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {item}
+              </Badge>
+            ))}
+          </div>
+        )}
         <Link
           href={href}
           className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"

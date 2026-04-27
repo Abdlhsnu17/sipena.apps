@@ -34,6 +34,7 @@ export class MaintenanceController {
       const {
         page = 1,
         limit = 10,
+        view,
         status,
         assetId,
         assetType,
@@ -43,6 +44,7 @@ export class MaintenanceController {
       const result = await this.maintenanceService.getAll({
         page: Number(page),
         limit: Number(limit),
+        view: view as 'active' | 'history' | undefined,
         status: status as string,
         assetId: assetId as string,
         assetType: normalizeAssetType(assetType),

@@ -35,6 +35,7 @@ export interface Maintenance {
 export interface MaintenanceFilters {
   page?: number;
   limit?: number;
+  view?: 'active' | 'history';
   status?: string;
   assetId?: string;
   assetType?: 'medical' | 'non_medical';

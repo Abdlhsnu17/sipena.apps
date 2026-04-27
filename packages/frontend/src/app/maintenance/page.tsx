@@ -135,6 +135,7 @@ export default function MaintenancePage() {
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [maintenance, setMaintenance] = useState<Maintenance[]>([])
+  const [maintenanceHistory, setMaintenanceHistory] = useState<Maintenance[]>([])
   const [assets, setAssets] = useState<DetailInventoryItem[]>([])
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set())
   const [showForm, setShowForm] = useState(false)
@@ -161,8 +162,18 @@ export default function MaintenancePage() {
 
   const loadMaintenance = async () => {
     try {
-      const response = await maintenanceService.getAll({ page: 1, limit: 1000 })
-      if (response.success) setMaintenance(response.data)
+      const [activeResponse, historyResponse] = await Promise.all([
+        maintenanceService.getAll({ page: 1, limit: 1000, view: "active" }),
+        maintenanceService.getAll({ page: 1, limit: 1000, view: "history" }),
+      ])
+
+      if (activeResponse.success) {
+        setMaintenance(activeResponse.data)
+      }
+
+      if (historyResponse.success) {
+        setMaintenanceHistory(historyResponse.data)
+      }
     } catch (error) {
       console.error("Error loading maintenance:", error)
     }
@@ -718,13 +729,35 @@ export default function MaintenancePage() {
     () => maintenance.filter((m) => m.status === "completed").length,
     [maintenance]
   )
+  const allMaintenanceForMetrics = useMemo(
+    () => [...maintenance, ...maintenanceHistory],
+    [maintenance, maintenanceHistory]
+  )
   const completedCount = useMemo(
-    () => maintenance.filter((m) => m.status === "validated").length,
-    [maintenance]
+    () => allMaintenanceForMetrics.filter((m) => m.status === "validated").length,
+    [allMaintenanceForMetrics]
   )
   const cancelledCount = useMemo(
-    () => maintenance.filter((m) => m.status === "cancelled").length,
-    [maintenance]
+    () => allMaintenanceForMetrics.filter((m) => m.status === "cancelled").length,
+    [allMaintenanceForMetrics]
+  )
+  const maintenanceForHistory = useMemo(
+    () => {
+      const byId = new Map<number, Maintenance>()
+
+      maintenance
+        .filter((item) => item.status === "completed")
+        .forEach((item) => {
+          byId.set(item.id, item)
+        })
+
+      maintenanceHistory.forEach((item) => {
+        byId.set(item.id, item)
+      })
+
+      return Array.from(byId.values())
+    },
+    [maintenance, maintenanceHistory]
   )
   const getMaintenanceNoId = (item: Maintenance) => formatNoId("JDW", item.id, item.maintenanceCode)
 
@@ -1429,7 +1462,7 @@ export default function MaintenancePage() {
                   <MaintenanceHistoryList
                     user={currentUser}
                     assets={assets}
-                    maintenance={maintenance}
+                    maintenance={maintenanceForHistory}
                     onRefresh={loadMaintenance}
                     disableWrapper={true}
                   />
