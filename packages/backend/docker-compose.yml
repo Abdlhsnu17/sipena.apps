@@ -69,6 +69,7 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      DB_AUTO_INIT_FROM_SCHEMA: "true"
     ports:
       - "4000:4000"
     volumes:
