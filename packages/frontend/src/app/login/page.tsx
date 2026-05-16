@@ -72,8 +72,12 @@ export default function LoginPage() {
         <div className="w-full max-w-md" data-auth-card>
           <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:p-8">
             <div className="mb-6">
-              <AuthHeader
+              {/* <AuthHeader
                 title="Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana"
+                description="SiPeNa"
+              /> */}
+              <AuthHeader
+                title="Tes Fikri"
                 description="SiPeNa"
               />
             </div>
