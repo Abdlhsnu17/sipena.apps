@@ -21,6 +21,8 @@ jobs:
 
             git pull origin main
 
+            cd ~/sipena-rsup/packages/backend
+
             docker compose down
 
             docker compose up -d --build
