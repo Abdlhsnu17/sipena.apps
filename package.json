@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
     "build": "npm run build --workspace=inventory-frontend",
-    "start": "npm ru n start --workspace=inventory-frontend",
+    "start": "npm run start --workspace=inventory-frontend",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
     "start:backend": "npm run start --workspace=inventory-backend",
