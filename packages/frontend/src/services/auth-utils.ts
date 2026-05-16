@@ -126,14 +126,15 @@ export function setCurrentUser(user: User | null): void {
 
 export function login(credentials: LoginCredentials): { success: boolean; message: string; user?: User } {
   const users = getUsers()
-  const user = users.find((u) => u.nip === credentials.nip)
+  const identifier = credentials.nip.trim().toLowerCase()
+  const user = users.find((u) => u.nip === credentials.nip.trim() || u.email?.toLowerCase() === identifier)
 
   if (!user) {
-    return { success: false, message: "NIP tidak ditemukan" }
+    return { success: false, message: "Akun tidak ditemukan" }
   }
 
   if (!user.password || !verifyPassword(credentials.password, user.password)) {
-    return { success: false, message: "Password salah" }
+    return { success: false, message: "Password yang Anda masukkan salah" }
   }
 
   const updatedUser = { ...user, lastLogin: new Date().toISOString() }

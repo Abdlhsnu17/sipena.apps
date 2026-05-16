@@ -16,6 +16,10 @@ const API_HEALTH_URL = `${API_BASE_URL}/health`;
 const ENABLE_LOCAL_FALLBACK =
   process.env.NODE_ENV === 'development' &&
   process.env.NEXT_PUBLIC_ENABLE_LOCAL_FALLBACK === 'true';
+const LOGIN_SUCCESS_MESSAGE = 'Login berhasil';
+const LOGIN_IDENTIFIER_REQUIRED_MESSAGE = 'Username atau email wajib diisi';
+const LOGIN_PASSWORD_REQUIRED_MESSAGE = 'Password wajib diisi';
+const LOGIN_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
 
 export interface LoginCredentials {
   nip: string;
@@ -103,6 +107,31 @@ async function isBackendAvailable(): Promise<boolean> {
   }
 }
 
+function normalizeLoginError(error: any): string {
+  const responseBody = error?.response?.body;
+  const validationErrors = Array.isArray(responseBody?.errors) ? responseBody.errors : [];
+  const validationMessage = validationErrors.find((item: any) => typeof item?.msg === 'string')?.msg;
+
+  if (validationMessage) {
+    return validationMessage;
+  }
+
+  const serverMessage =
+    responseBody?.message ||
+    (typeof responseBody === 'string' ? responseBody : undefined);
+
+  if (
+    serverMessage === LOGIN_IDENTIFIER_REQUIRED_MESSAGE ||
+    serverMessage === LOGIN_PASSWORD_REQUIRED_MESSAGE ||
+    serverMessage === 'Akun tidak ditemukan' ||
+    serverMessage === 'Password yang Anda masukkan salah'
+  ) {
+    return serverMessage;
+  }
+
+  return LOGIN_SERVER_ISSUE_MESSAGE;
+}
+
 class AuthService {
   private useLocalStorage: boolean = false;
 
@@ -114,40 +143,60 @@ class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const identifier = credentials.nip.trim();
+    const password = credentials.password.trim();
+
+    if (!identifier) {
+      return { success: false, message: LOGIN_IDENTIFIER_REQUIRED_MESSAGE };
+    }
+
+    if (!password) {
+      return { success: false, message: LOGIN_PASSWORD_REQUIRED_MESSAGE };
+    }
+
+    const normalizedCredentials = {
+      ...credentials,
+      nip: identifier,
+      password
+    };
+
     // Try backend first
     try {
       const backendAvailable = await isBackendAvailable();
       
       if (backendAvailable) {
-        const response = await apiService.post<AuthResponse>('/auth/login', credentials);
+        const response = await apiService.post<AuthResponse>('/auth/login', normalizedCredentials);
         
         if (response.success && response.data?.token) {
           persistAuthSession(response.data.user, response.data.token, credentials.rememberMe);
           this.useLocalStorage = false;
         }
         
-        return response;
+        return {
+          ...response,
+          message: response.success ? LOGIN_SUCCESS_MESSAGE : response.message
+        };
       }
       if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: 'Backend tidak tersedia. Pastikan server API berjalan.' };
+        return { success: false, message: LOGIN_SERVER_ISSUE_MESSAGE };
       }
-    } catch {
+    } catch (error: any) {
       if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: 'Backend tidak tersedia. Pastikan server API berjalan.' };
+        return { success: false, message: normalizeLoginError(error) };
       }
       console.log('Backend not available, using localStorage fallback');
     }
 
     // Fallback to localStorage
     this.useLocalStorage = true;
-    const result = localLogin(credentials);
+    const result = localLogin(normalizedCredentials);
     
     if (result.success && result.user) {
       const fallbackToken = `local_token_${Date.now()}`;
       persistAuthSession(result.user as unknown as User, fallbackToken, credentials.rememberMe);
       return {
         success: true,
-        message: result.message,
+        message: LOGIN_SUCCESS_MESSAGE,
         data: {
           user: result.user as unknown as User,
           token: fallbackToken

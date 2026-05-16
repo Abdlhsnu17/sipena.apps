@@ -43,8 +43,8 @@ const profileUpload = multer({
 router.post(
   '/login',
   [
-    body('nip').trim().notEmpty(),
-    body('password').notEmpty()
+    body('nip').trim().notEmpty().withMessage('Username atau email wajib diisi'),
+    body('password').notEmpty().withMessage('Password wajib diisi')
   ],
   authController.login
 );

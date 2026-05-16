@@ -33,10 +33,11 @@ export class AuthController {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        const validationErrors = errors.array();
         res.status(400).json({
           success: false,
-          message: 'Validation failed',
-          errors: errors.array()
+          message: String(validationErrors[0]?.msg || 'Validation failed'),
+          errors: validationErrors
         });
         return;
       }
@@ -45,7 +46,8 @@ export class AuthController {
       const result = await this.authService.login(credentials);
 
       if (!result.success) {
-        res.status(401).json(result);
+        const statusCode = result.message === 'Akun tidak ditemukan' ? 404 : 401;
+        res.status(statusCode).json(result);
         return;
       }
 

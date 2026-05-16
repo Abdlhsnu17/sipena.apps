@@ -74,6 +74,16 @@ services:
       - "4000:4000"
     volumes:
       - backend_uploads:/app/packages/backend/uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
     depends_on:
       mysql:
         condition: service_healthy
@@ -91,9 +101,19 @@ services:
       API_PROXY_TARGET: ${API_PROXY_TARGET:-http://backend:4000}
     ports:
       - "3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   mysql_data:

@@ -4,8 +4,8 @@ import { body, param, query } from 'express-validator';
  * Validation rules for authentication
  */
 export const loginValidation = [
-  body('nip').notEmpty().withMessage('NIP is required'),
-  body('password').notEmpty().withMessage('Password is required')
+  body('nip').notEmpty().withMessage('Username atau email wajib diisi'),
+  body('password').notEmpty().withMessage('Password wajib diisi')
 ];
 
 export const registerValidation = [

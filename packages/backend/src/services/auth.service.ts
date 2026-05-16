@@ -80,16 +80,17 @@ export class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const { nip, password } = credentials;
+    const identifier = nip.trim();
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE nip = ?',
-      [nip]
+      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
+      [identifier, identifier]
     );
 
     if (rows.length === 0) {
       return {
         success: false,
-        message: 'Invalid credentials'
+        message: 'Akun tidak ditemukan'
       };
     }
 
@@ -99,7 +100,7 @@ export class AuthService {
     if (!isValidPassword) {
       return {
         success: false,
-        message: 'Invalid credentials'
+        message: 'Password yang Anda masukkan salah'
       };
     }
 
@@ -110,7 +111,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Login successful',
+      message: 'Login berhasil',
       data: { user: userData, token }
     };
   }

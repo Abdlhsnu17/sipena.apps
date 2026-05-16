@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
+import { useToast } from "@/hooks/use-toast"
 import { resolveSafeRedirectPath } from "@/services/auth-utils"
 import authService from "@/services/auth.service"
 import { AlertCircle, Eye, EyeOff, IdCard, KeyRound, Lock } from "lucide-react"
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const { handleFocusCapture } = useMobileFocusScroll()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
@@ -40,6 +42,9 @@ export default function LoginPage() {
       const result = await authService.login({ nip, password, rememberMe })
 
       if (result.success) {
+        toast({
+          title: "Login berhasil",
+        })
         router.replace(redirectTo)
       } else {
         setError(result.message)
@@ -81,23 +86,22 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="nip" className="mb-2 block text-sm font-medium text-foreground">
-                  NIP
+                  Username atau Email
                 </label>
                 <div className="relative">
                   <IdCard className="absolute left-3 top-3 h-5 w-5 text-teal-600" />
                   <Input
                     id="nip"
                     type="text"
-                    placeholder="Masukkan NIP (maks. 20 digit)"
+                    placeholder="Masukkan NIP atau email"
                     value={nip}
-                    onChange={(e) => setNip(e.target.value.replace(/\D/g, "").slice(0, 20))}
-                    maxLength={20}
+                    onChange={(e) => setNip(e.target.value)}
                     disabled={isLoading}
+                    autoComplete="username"
                     className="border-gray-200 pl-10 transition-colors focus:border-teal-500 focus:ring-teal-500"
-                    required
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{nip.length}/20 digit</p>
+                <p className="mt-1 text-xs text-muted-foreground">Gunakan NIP atau email yang terdaftar.</p>
               </div>
 
               <div>
@@ -113,8 +117,8 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
+                    autoComplete="current-password"
                     className="border-gray-200 pl-10 pr-10 transition-colors focus:border-teal-500 focus:ring-teal-500"
-                    required
                   />
                   <button
                     type="button"
@@ -187,4 +191,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
