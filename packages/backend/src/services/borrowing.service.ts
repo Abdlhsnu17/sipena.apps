@@ -1406,7 +1406,7 @@ export class BorrowingService {
     return {
       success: true,
       message: `Found ${rows.length} blocking borrowing(s)`,
-      data: rows.map(row => normalizeBorrowingDateFields(this.normalizeRow(row as any)))
+      data: rows.map(row => normalizeBorrowingDateFields(row as any))
     };
   }
 
