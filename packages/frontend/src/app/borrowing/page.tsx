@@ -195,6 +195,9 @@ const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnV
   ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
   (borrowing.status === "returned" && !borrowing.returnValidatedAt)
 
+const resolveOwnerWorkUnitForAsset = (asset?: BorrowableAsset | null) =>
+  asset?.roomName || asset?.assetLocation || asset?.assetName || ""
+
 const getDefaultFormData = (currentUser?: User | null) => ({
   assetId: "",
   assetType: "medical" as "medical" | "non_medical",
@@ -729,7 +732,7 @@ export default function BorrowingPage() {
             borrowerWorkUnit: formData.borrowerWorkUnit.trim(),
             ownerName: formData.ownerName.trim(),
             ownerPosition: formData.ownerPosition.trim(),
-            ownerWorkUnit: formData.ownerWorkUnit.trim(),
+            ownerWorkUnit: resolveOwnerWorkUnitForAsset(selectedAsset) || formData.ownerWorkUnit.trim(),
             purposeType: formData.purposeType,
             destinationRoom: formData.destinationRoom.trim(),
             purpose: formData.purpose.trim(),
@@ -1393,6 +1396,30 @@ export default function BorrowingPage() {
     selectedBorrowableAssetIds.includes(asset.detailId)
   )
 
+  const derivedOwnerWorkUnitLabel = useMemo(() => {
+    if (selectedBorrowableAssets.length === 0) {
+      return formData.ownerWorkUnit
+    }
+
+    const labels = Array.from(
+      new Set(
+        selectedBorrowableAssets
+          .map((asset) => resolveOwnerWorkUnitForAsset(asset))
+          .filter(Boolean)
+      )
+    )
+
+    if (labels.length === 0) {
+      return formData.ownerWorkUnit
+    }
+
+    if (labels.length === 1) {
+      return labels[0]
+    }
+
+    return "Mengikuti ruangan masing-masing inventaris terpilih"
+  }, [formData.ownerWorkUnit, selectedBorrowableAssets])
+
   const handleToggleBorrowableAsset = (asset: BorrowableAsset) => {
     const isSelectingAsset = !selectedBorrowableAssetIds.includes(asset.detailId)
 
@@ -1404,7 +1431,7 @@ export default function BorrowingPage() {
 
     setFormData((prev) => ({
       ...prev,
-      ownerWorkUnit: prev.ownerWorkUnit || asset.roomName || asset.assetLocation || "",
+      ownerWorkUnit: resolveOwnerWorkUnitForAsset(asset) || prev.ownerWorkUnit,
     }))
 
     if (!isSelectingAsset) {
@@ -1775,11 +1802,17 @@ export default function BorrowingPage() {
                   <div className="md:col-span-2">
                     <label className="block text-[14px] font-medium mb-1">Unit Kerja Pemilik Alat</label>
                     <Input
-                      value={formData.ownerWorkUnit}
+                      value={derivedOwnerWorkUnitLabel}
                       onChange={(e) => setFormData({ ...formData, ownerWorkUnit: e.target.value })}
                       className="rounded-2xl"
-                      placeholder="Contoh: Unit Alat / Instalasi"
+                      placeholder="Otomatis mengikuti ruangan inventaris"
+                      readOnly={selectedBorrowableAssets.length > 0}
                     />
+                    <p className="mt-1 text-[12px] text-muted-foreground">
+                      {selectedBorrowableAssets.length > 0
+                        ? "Nilai ini otomatis mengikuti ruangan/lokasi inventaris yang dipilih agar data peminjaman tetap sinkron."
+                        : "Pilih inventaris terlebih dahulu agar unit kerja pemilik alat terisi otomatis."}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Jenis Keperluan</label>
