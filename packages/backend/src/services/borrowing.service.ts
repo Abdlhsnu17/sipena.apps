@@ -10,10 +10,10 @@ import {
     UpdateBorrowingDTO
 } from '../models';
 import {
-  buildOverdueSanctionNote,
-  formatDateTimeForMySQL,
-  generateBorrowingCode,
-  getOverdueDays
+    buildOverdueSanctionNote,
+    formatDateTimeForMySQL,
+    generateBorrowingCode,
+    getOverdueDays
 } from '../utils/helpers';
 import { AssetService } from './asset.service';
 
@@ -92,6 +92,18 @@ interface BorrowingRow extends RowDataPacket, Borrowing {
   asset_image?: string; // Opsional jika ada
   returned_by_name?: string;
   returned_by_nip?: string;
+}
+
+interface BlockingBorrowingRow extends RowDataPacket {
+  id: number;
+  borrowing_code?: string | null;
+  asset_name?: string | null;
+  asset_detail_name?: string | null;
+  due_date?: Date | string | null;
+  status?: string | null;
+  sanction_status?: string | null;
+  extension_count?: number | null;
+  is_extension_blocked?: boolean | null;
 }
 
 interface CountRow extends RowDataPacket {
@@ -286,6 +298,66 @@ export class BorrowingService {
       sanctionNotes: buildOverdueSanctionNote(overdueDays),
       sanctionAppliedAt: referenceDate
     };
+  }
+
+  private async getBlockingBorrowing(userId: number): Promise<BlockingBorrowingRow | null> {
+    const [rows] = await pool.query<BlockingBorrowingRow[]>(
+      `SELECT b.id,
+              b.borrowing_code,
+              b.asset_detail_name,
+              b.due_date,
+              b.status,
+              b.sanction_status,
+              b.extension_count,
+              b.is_extension_blocked,
+              COALESCE(b.asset_detail_name, ma.name, na.name) as asset_name
+       FROM borrowing_records b
+       LEFT JOIN medical_assets ma
+         ON b.asset_id = ma.id
+         AND (b.asset_type = 'medical' OR b.asset_type IS NULL)
+       LEFT JOIN non_medical_assets na
+         ON b.asset_id = na.id
+         AND b.asset_type = 'non_medical'
+       WHERE b.user_id = ?
+         AND b.status = 'overdue'
+         AND b.sanction_status = 'active'
+         AND (b.is_extension_blocked = TRUE OR COALESCE(b.extension_count, 0) = 0)
+       ORDER BY b.due_date ASC, b.created_at ASC
+       LIMIT 1`,
+      [userId]
+    );
+
+    return rows[0] ?? null;
+  }
+
+  private buildBorrowingLockMessage(blockingBorrowing: BlockingBorrowingRow): string {
+    const borrowingCode = blockingBorrowing.borrowing_code?.trim();
+    const assetName =
+      blockingBorrowing.asset_detail_name?.trim() ||
+      blockingBorrowing.asset_name?.trim() ||
+      'alat yang belum dikembalikan';
+    const dueDateLabel = formatDateTimeForMySQL(blockingBorrowing.due_date ?? null);
+    const reference = borrowingCode ? ` (${borrowingCode})` : '';
+    const dueDateSegment = dueDateLabel ? ` sejak ${dueDateLabel}` : '';
+    const status = String(blockingBorrowing.status || '').toLowerCase();
+    
+    const extensionCount = blockingBorrowing.extension_count || 0;
+    const isBlocked = blockingBorrowing.is_extension_blocked;
+    
+    let message = '';
+    if (status === 'overdue') {
+      if (isBlocked) {
+        message = `Peminjaman baru ditolak karena perpanjangan waktu peminjaman Anda telah dikunci oleh sistem. Alat ${assetName}${reference}${dueDateSegment} harus dikembalikan terlebih dahulu.`;
+      } else if (extensionCount === 0) {
+        message = `Peminjaman baru ditolak karena Anda masih memiliki alat yang melewati batas waktu: ${assetName}${reference}${dueDateSegment}. Silakan perbarui/perpanjang waktu peminjamannya atau kembalikan alat tersebut.`;
+      } else {
+        message = `Peminjaman baru ditolak karena alat ${assetName}${reference} masih dalam proses pengembalian. Silakan menyelesaikan pengembalian alat tersebut terlebih dahulu.`;
+      }
+    } else {
+      message = `Peminjaman baru ditolak karena Anda masih memiliki alat yang belum dikembalikan: ${assetName}${reference}${dueDateSegment}. Silakan kembalikan alat tersebut terlebih dahulu sebelum meminjam alat lain.`;
+    }
+
+    return message;
   }
 
   private async syncAssetMasterAfterValidatedReturn(
@@ -592,6 +664,16 @@ export class BorrowingService {
   }
 
   async create(data: CreateBorrowingDTO): Promise<ApiResponse<Borrowing>> {
+    await this.syncOverdueBorrowings();
+
+    const blockingBorrowing = await this.getBlockingBorrowing(data.userId);
+    if (blockingBorrowing) {
+      return {
+        success: false,
+        message: this.buildBorrowingLockMessage(blockingBorrowing)
+      };
+    }
+
     const borrowingCode = generateBorrowingCode();
     // Default ke 'medical' jika tidak diset, untuk backward compatibility
     const assetType = data.assetType || 'medical'; 
@@ -1043,7 +1125,7 @@ export class BorrowingService {
       return { success: false, message: 'Borrowing not found' };
     }
 
-    const editableStatuses = ['pending', 'approved'];
+    const editableStatuses = ['pending', 'approved', 'borrowed', 'overdue'];
     const returnStatus = 'returned';
     const rowsToUpdate: { field: string; value: any }[] = [];
 
@@ -1066,8 +1148,19 @@ export class BorrowingService {
 
     if (hasBorrowFields) {
       if (!editableStatuses.includes(borrowing.data.status)) {
-        return { success: false, message: 'Hanya peminjaman dengan status pending/approved yang bisa diubah' };
+        return { success: false, message: 'Hanya peminjaman aktif yang belum selesai yang bisa diubah' };
       }
+      const effectiveBorrowDate = data.borrowDate !== undefined
+        ? normalizeDateInput(data.borrowDate)
+        : normalizeDateInput(borrowing.data.borrowDate);
+      const effectiveDueDate = data.dueDate !== undefined
+        ? normalizeDateInput(data.dueDate)
+        : normalizeDateInput(borrowing.data.dueDate);
+
+      if (effectiveBorrowDate && effectiveDueDate && effectiveDueDate.getTime() < effectiveBorrowDate.getTime()) {
+        return { success: false, message: 'Tanggal kembali harus lebih besar atau sama dengan tanggal pinjam' };
+      }
+
       if (data.borrowDate !== undefined) {
         const borrowDateParsed = normalizeDateInput(data.borrowDate);
         if (borrowDateParsed) {
@@ -1115,6 +1208,28 @@ export class BorrowingService {
       }
       if (data.notes !== undefined) {
         rowsToUpdate.push({ field: 'notes', value: normalizeOptionalText(data.notes) });
+      }
+
+      if (data.dueDate !== undefined && effectiveDueDate && ['approved', 'borrowed', 'overdue'].includes(borrowing.data.status)) {
+        const hasSanctionColumns = await this.hasSanctionColumns();
+        const overdueInfo = this.getOverdueBorrowingInfo(effectiveDueDate, new Date());
+
+        if (overdueInfo.overdueDays > 0) {
+          rowsToUpdate.push({ field: 'status', value: 'overdue' });
+          if (hasSanctionColumns) {
+            rowsToUpdate.push({ field: 'overdue_days', value: overdueInfo.overdueDays });
+            rowsToUpdate.push({ field: 'sanction_status', value: overdueInfo.sanctionStatus });
+            rowsToUpdate.push({ field: 'sanction_notes', value: overdueInfo.sanctionNotes });
+            rowsToUpdate.push({ field: 'sanction_applied_at', value: overdueInfo.sanctionAppliedAt });
+          }
+        } else if (borrowing.data.status === 'overdue') {
+          rowsToUpdate.push({ field: 'status', value: 'borrowed' });
+          if (hasSanctionColumns) {
+            rowsToUpdate.push({ field: 'overdue_days', value: 0 });
+            rowsToUpdate.push({ field: 'sanction_status', value: 'resolved' });
+            rowsToUpdate.push({ field: 'sanction_notes', value: 'Batas waktu peminjaman diperpanjang' });
+          }
+        }
       }
     }
 
@@ -1242,6 +1357,127 @@ export class BorrowingService {
     });
 
     return { success: true, message: 'Borrowing deleted successfully' };
+  }
+
+  /**
+   * Check if user has blocking borrowings (overdue + sanction active + not extended)
+   * Returns true jika user TIDAK boleh meminjam (ada blocking borrowing)
+   */
+  async hasBlockingBorrowings(userId: number): Promise<boolean> {
+    const query = `
+      SELECT COUNT(*) as count FROM borrowing_records
+      WHERE user_id = ?
+        AND status = 'overdue'
+        AND sanction_status = 'active'
+        AND (is_extension_blocked = TRUE OR COALESCE(extension_count, 0) = 0)
+      LIMIT 1
+    `;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, [userId]);
+
+    if (rows.length === 0) return false;
+    const countRow = rows[0] as any;
+    return countRow.count > 0;
+  }
+
+  /**
+   * Get all blocking borrowings for a user
+   */
+  async getBlockingBorrowings(userId: number): Promise<ApiResponse<Borrowing[]>> {
+    const query = `
+      SELECT * FROM borrowing_records
+      WHERE user_id = ?
+        AND status = 'overdue'
+        AND sanction_status = 'active'
+        AND (is_extension_blocked = TRUE OR COALESCE(extension_count, 0) = 0)
+      ORDER BY due_date ASC
+    `;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, [userId]);
+
+    if (rows.length === 0) {
+      return {
+        success: true,
+        message: 'No blocking borrowings found',
+        data: []
+      };
+    }
+
+    return {
+      success: true,
+      message: `Found ${rows.length} blocking borrowing(s)`,
+      data: rows.map(row => normalizeBorrowingDateFields(this.normalizeRow(row as any)))
+    };
+  }
+
+  /**
+   * Extend borrowing due date (perpanjangan peminjaman)
+   */
+  async extend(id: string, data: any): Promise<ApiResponse<Borrowing>> {
+    const borrowing = await this.getById(id);
+
+    if (!borrowing.success || !borrowing.data) {
+      return { success: false, message: 'Peminjaman tidak ditemukan' };
+    }
+
+    const borrowData = borrowing.data;
+
+    // Hanya status overdue yang bisa diperpanjang
+    if (borrowData.status !== 'overdue') {
+      return {
+        success: false,
+        message: `Hanya peminjaman yang tertunda (overdue) yang dapat diperpanjang. Status saat ini: ${borrowData.status}`
+      };
+    }
+
+    const newDueDate = normalizeDateInput(data.newDueDate);
+    if (!newDueDate) {
+      return { success: false, message: 'Tanggal jatuh tempo baru tidak valid' };
+    }
+
+    // Validasi: tanggal baru harus lebih dari sekarang
+    if (newDueDate <= new Date()) {
+      return {
+        success: false,
+        message: 'Tanggal jatuh tempo baru harus lebih besar dari tanggal saat ini'
+      };
+    }
+
+    const extensionNotes = normalizeOptionalText(data.extensionNotes) || 'Perpanjangan waktu peminjaman';
+    const maxExtensions = 3; // Maksimal 3 kali perpanjangan
+    const currentExtensions = (borrowData.extensionCount || 0);
+
+    if (currentExtensions >= maxExtensions) {
+      return {
+        success: false,
+        message: `Jumlah perpanjangan telah mencapai batas maksimal (${maxExtensions}x). Harap mengembalikan alat terlebih dahulu.`
+      };
+    }
+
+    const updateFields = [
+      { field: 'due_date', value: formatDateTimeForMySQL(newDueDate) },
+      { field: 'extension_count', value: currentExtensions + 1 },
+      { field: 'last_extended_date', value: formatDateTimeForMySQL(new Date()) },
+      { field: 'extension_notes', value: extensionNotes },
+      { field: 'status', value: 'borrowed' }, // Ubah status kembali ke borrowed setelah perpanjangan
+      { field: 'sanction_status', value: 'resolved' }, // Lepas sanction jika extension diterima
+      { field: 'overdue_days', value: 0 }
+    ];
+
+    const setClause = updateFields.map(f => `${f.field} = ?`).join(', ');
+    const values = updateFields.map(f => f.value);
+    values.push(id);
+
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE borrowing_records SET ${setClause}, updated_at = NOW() WHERE id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return { success: false, message: 'Gagal memperbarui perpanjangan' };
+    }
+
+    return await this.getById(id);
   }
 }
 

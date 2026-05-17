@@ -1,4 +1,12 @@
-import { normalizeBorrowingDateFields } from '../services/borrowing.service';
+import pool from '../config/database';
+import { BorrowingService, normalizeBorrowingDateFields } from '../services/borrowing.service';
+
+jest.mock('../config/database', () => ({
+  __esModule: true,
+  default: {
+    query: jest.fn(),
+  },
+}));
 
 describe('normalizeBorrowingDateFields', () => {
   it('converts borrowing datetime fields into stable local datetime strings', () => {
@@ -28,5 +36,102 @@ describe('normalizeBorrowingDateFields', () => {
     };
 
     expect(normalizeBorrowingDateFields(row)).toEqual(row);
+  });
+});
+
+describe('BorrowingService borrowing lock rules', () => {
+  const mockedQuery = pool.query as jest.Mock;
+  let service: BorrowingService;
+
+  beforeEach(() => {
+    mockedQuery.mockReset();
+    service = new BorrowingService();
+  });
+
+  it('rejects a new borrowing when the user still has an overdue borrowing', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 17,
+            borrowing_code: 'PMJ-20260517-001',
+            asset_name: 'Infusion Pump',
+            due_date: new Date(2026, 4, 10, 9, 0, 0),
+            status: 'overdue',
+          },
+        ],
+        [],
+      ]);
+
+    const assetGetByIdSpy = jest.spyOn((service as any).assetService, 'getById');
+
+    const result = await service.create({
+      assetId: 12,
+      assetType: 'medical',
+      userId: 5,
+      borrowDate: new Date(2026, 4, 17, 10, 0, 0),
+      dueDate: new Date(2026, 4, 18, 10, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Peminjaman baru ditolak');
+    expect(result.message).toContain('melewati batas waktu');
+    expect(result.message).toContain('Infusion Pump');
+    expect(result.message).toContain('PMJ-20260517-001');
+    expect(assetGetByIdSpy).not.toHaveBeenCalled();
+  });
+
+  it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 18,
+            status: 'overdue',
+            borrow_date: '2026-05-10 09:00:00',
+            due_date: '2026-05-12 09:00:00',
+            asset_id: 4,
+            asset_type: 'medical',
+            user_id: 8,
+            purpose: 'Operasional',
+          },
+        ],
+        [],
+      ])
+      .mockResolvedValueOnce([{ affectedRows: 1 }, []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 18,
+            status: 'borrowed',
+            borrow_date: '2026-05-10 09:00:00',
+            due_date: '2026-05-20 09:00:00',
+            asset_id: 4,
+            asset_type: 'medical',
+            user_id: 8,
+            purpose: 'Operasional',
+          },
+        ],
+        [],
+      ]);
+
+    const result = await service.update('18', {
+      dueDate: new Date(2026, 4, 20, 9, 0, 0),
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.status).toBe('borrowed');
+
+    const [updateQuery, updateParams] = mockedQuery.mock.calls[4];
+    expect(String(updateQuery)).toContain('status = ?');
+    expect(updateParams).toContain('borrowed');
+    expect(updateParams).toContain('resolved');
   });
 });

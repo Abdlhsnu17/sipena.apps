@@ -1,5 +1,6 @@
 "use client"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -64,7 +65,7 @@ import {
     type DocumentSection,
     type SectionLine,
 } from "@/utils/export-table"
-import { CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react"
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
@@ -643,6 +644,15 @@ export default function BorrowingPage() {
   }
 
   const handleSaveBorrowing = async () => {
+    if (hasBorrowingOverdueBlock) {
+      toast({
+        title: "Peminjaman diblokir sementara",
+        description: overdueBorrowingBlockMessage,
+        variant: "destructive",
+      })
+      return
+    }
+
     if (
       selectedBorrowableAssets.length === 0 ||
       !formData.borrowDate ||
@@ -1135,6 +1145,22 @@ export default function BorrowingPage() {
     return true
   })
 
+  const currentUserOverdueBorrowings = useMemo(() => {
+    const currentUserId = Number(currentUser?.id)
+    if (!Number.isFinite(currentUserId) || currentUserId <= 0) return []
+
+    return borrowings.filter(
+      (borrowing) =>
+        Number(borrowing.userId) === currentUserId &&
+        borrowing.status === "overdue"
+    )
+  }, [borrowings, currentUser?.id])
+
+  const hasBorrowingOverdueBlock = currentUserOverdueBorrowings.length > 0
+  const overdueBorrowingBlockMessage = hasBorrowingOverdueBlock
+    ? `Anda masih memiliki peminjaman yang sudah melewati batas waktu. Kembalikan alat tersebut terlebih dahulu, atau perbarui batas waktu peminjaman bila alat masih digunakan.`
+    : ""
+
   const pendingCount = visibleBorrowings.filter((b) => b.status === "pending").length
   const pendingValidationCount = visibleBorrowings.filter(
     (b) => b.status === "returned" && !b.returnValidatedAt
@@ -1335,6 +1361,12 @@ export default function BorrowingPage() {
     )
   }, [borrowableAssets, searchTerm])
 
+  const blockedBorrowingLabels = currentUserOverdueBorrowings.slice(0, 3).map((borrowing) => {
+    const noId = getBorrowingNoId(borrowing)
+    const itemName = borrowing.assetDetailName || borrowing.assetName || "Inventaris"
+    return `${noId} - ${itemName}`
+  })
+
   return (
     <main
       className="min-h-full bg-white"
@@ -1364,7 +1396,16 @@ export default function BorrowingPage() {
                 <Button
                   size="sm"
                   className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
+                  disabled={hasBorrowingOverdueBlock}
                   onClick={() => {
+                    if (hasBorrowingOverdueBlock) {
+                      toast({
+                        title: "Peminjaman diblokir sementara",
+                        description: overdueBorrowingBlockMessage,
+                        variant: "destructive",
+                      })
+                      return
+                    }
                     setFormData(getDefaultFormData(currentUser))
                     setSelectedBorrowableAssetIds([])
                     setShowForm(true)
@@ -1376,6 +1417,19 @@ export default function BorrowingPage() {
               </div>
             </div>
           </section>
+
+          {hasBorrowingOverdueBlock ? (
+            <Alert variant="destructive" className="rounded-2xl border-red-200 bg-red-50/90">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Peminjaman baru dikunci sementara</AlertTitle>
+              <AlertDescription>
+                <p>{overdueBorrowingBlockMessage}</p>
+                {blockedBorrowingLabels.length > 0 ? (
+                  <p>{`Data terlambat: ${blockedBorrowingLabels.join(", ")}`}</p>
+                ) : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
             <CardContent className="p-4">
@@ -1434,9 +1488,12 @@ export default function BorrowingPage() {
                     noResultsLabel="Tidak ada inventaris tersedia"
                     selectedSummaryLabel={(assets) => `${assets.length} inventaris dipilih`}
                     renderItemMeta={(asset) => getEffectiveAvailabilityLabel(asset)}
+                    disabled={hasBorrowingOverdueBlock}
                   />
                   <p className="mt-2 text-[12px] text-muted-foreground">
-                    Anda bisa memilih beberapa inventaris sekaligus dalam satu form peminjaman.
+                    {hasBorrowingOverdueBlock
+                      ? "Pemilihan inventaris dikunci karena Anda masih memiliki peminjaman terlambat."
+                      : "Anda bisa memilih beberapa inventaris sekaligus dalam satu form peminjaman."}
                   </p>
                   {selectedBorrowableAssets.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -1629,8 +1686,20 @@ export default function BorrowingPage() {
                     />
                   </div>
                 </div>
+                {hasBorrowingOverdueBlock ? (
+                  <Alert variant="destructive" className="mt-4 rounded-2xl border-red-200 bg-red-50/90">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Peminjaman belum bisa diproses</AlertTitle>
+                    <AlertDescription>{overdueBorrowingBlockMessage}</AlertDescription>
+                  </Alert>
+                ) : null}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  <Button onClick={handleSaveBorrowing} size="sm" className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto">
+                  <Button
+                    onClick={handleSaveBorrowing}
+                    size="sm"
+                    disabled={hasBorrowingOverdueBlock}
+                    className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
+                  >
                     Simpan
                   </Button>
                   <Button
@@ -1841,6 +1910,11 @@ export default function BorrowingPage() {
                                     <Badge variant="outline" className="text-[10px]">
                                       {b.destinationRoom || roomNameLabel}
                                     </Badge>
+                                    {b.status === "overdue" ? (
+                                      <Badge className="border-red-200 bg-red-50 text-[10px] text-red-700 hover:bg-red-50">
+                                        Diblokir Meminjam
+                                      </Badge>
+                                    ) : null}
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
@@ -1899,13 +1973,13 @@ export default function BorrowingPage() {
                             <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-600">
                               {hasFullAccess ? (
                                 <div className="flex flex-wrap gap-1">
-                                  {['pending', 'approved'].includes(b.status) && (
+                                  {['pending', 'approved', 'borrowed', 'overdue'].includes(b.status) && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 w-6 rounded-lg p-0 text-emerald-600 hover:bg-emerald-50"
                                       onClick={() => openEditDialog(b)}
-                                      title="Edit"
+                                      title={['borrowed', 'overdue'].includes(b.status) ? "Perbarui batas waktu" : "Edit"}
                                     >
                                       <Pencil className="w-3 h-3" />
                                     </Button>

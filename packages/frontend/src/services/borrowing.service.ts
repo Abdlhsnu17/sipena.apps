@@ -48,6 +48,10 @@ export interface Borrowing {
   sanctionStatus?: 'none' | 'active' | 'resolved';
   sanctionNotes?: string | null;
   sanctionAppliedAt?: string;
+  extensionCount?: number;
+  lastExtendedDate?: string;
+  extensionNotes?: string;
+  isExtensionBlocked?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -127,6 +131,10 @@ const normalizeBorrowing = (borrowing: any): Borrowing => ({
   sanctionStatus: borrowing.sanctionStatus ?? borrowing.sanction_status,
   sanctionNotes: borrowing.sanctionNotes ?? borrowing.sanction_notes,
   sanctionAppliedAt: borrowing.sanctionAppliedAt ?? borrowing.sanction_applied_at,
+  extensionCount: borrowing.extensionCount ?? borrowing.extension_count,
+  lastExtendedDate: borrowing.lastExtendedDate ?? borrowing.last_extended_date,
+  extensionNotes: borrowing.extensionNotes ?? borrowing.extension_notes,
+  isExtensionBlocked: borrowing.isExtensionBlocked ?? borrowing.is_extension_blocked,
   createdAt: borrowing.createdAt ?? borrowing.created_at,
   updatedAt: borrowing.updatedAt ?? borrowing.updated_at,
 });
@@ -225,6 +233,22 @@ class BorrowingService {
   async validateReturn(id: number | string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/validate-return`, {});
     return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+  }
+
+  async extend(id: number | string, newDueDate: string, extensionNotes?: string): Promise<SingleBorrowingResponse> {
+    const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/extend`, { 
+      newDueDate, 
+      extensionNotes 
+    });
+    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+  }
+
+  async getBlockingBorrowings(userId: number | string): Promise<BorrowingResponse> {
+    const response = await apiService.get<BorrowingResponse>(`/borrowing/user/${userId}/blocking`);
+    return {
+      ...response,
+      data: Array.isArray(response.data) ? response.data.map(normalizeBorrowing) : [],
+    };
   }
 
   async delete(id: number | string): Promise<{ success: boolean; message: string }> {

@@ -137,6 +137,24 @@ router.patch(
   borrowingController.validateReturn
 );
 
+router.patch(
+  '/:id/extend',
+  authMiddleware,
+  [
+    param('id').isInt({ min: 1 }),
+    body('newDueDate').isISO8601().withMessage('Tanggal jatuh tempo baru harus format ISO 8601'),
+    body('extensionNotes').optional().trim()
+  ],
+  borrowingController.extend
+);
+
+router.get(
+  '/user/:userId/blocking',
+  authMiddleware,
+  [param('userId').isInt({ min: 1 })],
+  borrowingController.getBlockingBorrowings
+);
+
 router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), borrowingController.delete);
 
 export default router;

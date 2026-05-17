@@ -967,6 +967,16 @@ export default function ReturnsPage() {
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
 
+  const getBorrowingRestrictionBadge = (status: string) => {
+    if (status !== "overdue") return null
+
+    return (
+      <Badge className="border border-red-200 bg-red-50 text-red-700 hover:bg-red-50">
+        Diblokir meminjam
+      </Badge>
+    )
+  }
+
   const isDamagedReturnCondition = (condition?: string | null) => {
     const normalized = String(condition || "").trim().toLowerCase()
     return normalized.includes("rusak") || normalized.includes("damaged") || normalized.includes("broken")
@@ -993,7 +1003,7 @@ export default function ReturnsPage() {
                       variant="outline"
                       className="bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]"
                     >
-                      
+                      Prioritaskan alat yang terlambat untuk membuka blokir peminjaman user
                     </Badge>
                   </div>
                 </div>
@@ -1165,12 +1175,15 @@ export default function ReturnsPage() {
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="text-[10px] font-semibold uppercase text-muted-foreground">Batas Pengembalian</span>
-                                  <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
+                                <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Batas Pengembalian</span>
+                                    <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
+                                  </div>
+                                <div className="flex flex-col items-start gap-1 sm:items-end">
+                                  {getStatusBadge(b.status)}
+                                  {getBorrowingRestrictionBadge(b.status)}
                                 </div>
-                                <div>{getStatusBadge(b.status)}</div>
                               </div>
                             </div>
                           </div>
@@ -1184,6 +1197,7 @@ export default function ReturnsPage() {
                               <Badge variant="outline" className="text-[11px]">
                                 {b.destinationRoom || roomLabel}
                               </Badge>
+                              {getBorrowingRestrictionBadge(b.status)}
                             </div>
                             {activeSections.length ? (
                               <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">

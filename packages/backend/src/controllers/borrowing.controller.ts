@@ -530,6 +530,90 @@ export class BorrowingController {
       });
     }
   };
+
+  /**
+   * Get blocking borrowings for a user (peminjaman yang menghalangi peminjaman baru)
+   * GET /api/borrowing/user/:userId/blocking
+   */
+  getBlockingBorrowings = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      const userIdNum = Number(userId);
+
+      if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
+        res.status(400).json({
+          success: false,
+          message: 'User ID tidak valid'
+        });
+        return;
+      }
+
+      const result = await this.borrowingService.getBlockingBorrowings(userIdNum);
+      res.json(result);
+    } catch (error) {
+      console.error('Get blocking borrowings error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
+  /**
+   * Extend borrowing due date (perpanjangan peminjaman)
+   * PATCH /api/borrowing/:id/extend
+   */
+  extend = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const result = await this.borrowingService.extend(id, req.body);
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      const actorId = getActorUserId(req);
+      if (actorId) {
+        const borrowingCode = getBorrowingCode(result.data);
+        await recordUserActivity({
+          userId: actorId,
+          feature: 'peminjaman_alat',
+          action: 'extend',
+          description: `Perpanjang waktu peminjaman ${borrowingCode ?? `#${id}`}`,
+          metadata: {
+            transactionId: borrowingCode ?? result.data?.id ?? Number(id),
+            transaction_id: borrowingCode ?? result.data?.id ?? Number(id),
+            borrowingCode: borrowingCode ?? undefined,
+            borrowing_code: borrowingCode ?? undefined,
+            borrowingId: result.data?.id ? Number(result.data.id) : Number(id),
+            newDueDate: result.data?.dueDate,
+            extensionCount: result.data?.extensionCount,
+            assetCode: result.data?.assetCode,
+            assetName: result.data?.assetName,
+          },
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Extend borrowing error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
 }
 
 export default new BorrowingController();

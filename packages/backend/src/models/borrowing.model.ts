@@ -48,6 +48,10 @@ export interface Borrowing {
   sanctionStatus?: BorrowingSanctionStatus;
   sanctionNotes?: string;
   sanctionAppliedAt?: Date;
+  extensionCount?: number;
+  lastExtendedDate?: Date;
+  extensionNotes?: string;
+  isExtensionBlocked?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -103,6 +107,12 @@ export interface ReturnBorrowingDTO {
   condition: string;
   notes?: string;
   returnedBy?: number;
+}
+
+export interface ExtendBorrowingDTO {
+  newDueDate: Date;
+  extensionNotes?: string;
+  extendedBy?: number;
 }
 
 export interface BorrowingFilters {
