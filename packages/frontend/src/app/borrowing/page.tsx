@@ -119,6 +119,18 @@ const parseLocalDateTimeInput = (value?: string | null): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+const getRecommendedExtensionDateValue = (borrowing?: Pick<ApiBorrowing, "dueDate"> | null) => {
+  const now = new Date()
+  const currentDueDate = parseServerDateTimeValue(borrowing?.dueDate)
+  const base = currentDueDate && currentDueDate > now ? currentDueDate : now
+  const recommended = new Date(base)
+
+  recommended.setDate(recommended.getDate() + 1)
+  recommended.setSeconds(0, 0)
+
+  return toDateTimeLocalInputValue(recommended)
+}
+
 const formatDurationDiff = (diffMs: number): string => {
   if (!Number.isFinite(diffMs) || diffMs <= 0) return "0 menit"
 
@@ -412,6 +424,13 @@ export default function BorrowingPage() {
     notes: "",
   })
   const [editSubmitting, setEditSubmitting] = useState(false)
+  const [extendModalOpen, setExtendModalOpen] = useState(false)
+  const [extendingBorrowing, setExtendingBorrowing] = useState<ApiBorrowing | null>(null)
+  const [extensionForm, setExtensionForm] = useState({
+    newDueDate: "",
+    extensionNotes: "",
+  })
+  const [extendSubmitting, setExtendSubmitting] = useState(false)
   const [countdownTime, setCountdownTime] = useState<string>("")
   const [selectedDurationPreview, setSelectedDurationPreview] = useState<string>("")
 
@@ -500,6 +519,29 @@ export default function BorrowingPage() {
 
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
+  const currentUserId = Number(currentUser?.id)
+
+  const isBorrowingOwner = (borrowing: ApiBorrowing) =>
+    Number.isFinite(currentUserId) && currentUserId > 0 && Number(borrowing.userId) === currentUserId
+
+  const canManageBorrowingExtension = (borrowing: ApiBorrowing) => {
+    if (borrowing.status !== "overdue") return false
+    if (borrowing.isExtensionBlocked) return false
+    if ((borrowing.extensionCount || 0) >= 3) return false
+    return hasFullAccess || isBorrowingOwner(borrowing)
+  }
+
+  const getBorrowingExtensionLimitMessage = (borrowing: ApiBorrowing) => {
+    if (borrowing.isExtensionBlocked) {
+      return "Perpanjangan telah dikunci. Alat harus segera dikembalikan."
+    }
+
+    if ((borrowing.extensionCount || 0) >= 3) {
+      return "Batas maksimal perpanjangan 3 kali sudah tercapai."
+    }
+
+    return ""
+  }
 
   const loadAssets = async () => {
     try {
@@ -862,6 +904,94 @@ export default function BorrowingPage() {
     }
   }
 
+  const openExtendDialog = (borrowing: ApiBorrowing) => {
+    setExtendingBorrowing(borrowing)
+    setExtensionForm({
+      newDueDate: getRecommendedExtensionDateValue(borrowing),
+      extensionNotes: borrowing.extensionNotes || "",
+    })
+    setExtendModalOpen(true)
+  }
+
+  const handleExtendDialogClose = () => {
+    setExtendModalOpen(false)
+    setExtendingBorrowing(null)
+    setExtensionForm({
+      newDueDate: "",
+      extensionNotes: "",
+    })
+  }
+
+  const handleSaveExtension = async () => {
+    if (!extendingBorrowing) return
+
+    if (!canManageBorrowingExtension(extendingBorrowing)) {
+      toast({
+        title: "Perpanjangan tidak tersedia",
+        description: getBorrowingExtensionLimitMessage(extendingBorrowing) || "Anda tidak memiliki akses untuk memperpanjang peminjaman ini.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const parsedNewDueDate = parseLocalDateTimeInput(extensionForm.newDueDate)
+    if (!parsedNewDueDate) {
+      toast({
+        title: "Tanggal belum valid",
+        description: "Pilih tanggal jatuh tempo baru yang valid.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (parsedNewDueDate.getTime() <= Date.now()) {
+      toast({
+        title: "Tanggal belum valid",
+        description: "Tanggal jatuh tempo baru harus lebih besar dari waktu saat ini.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setExtendSubmitting(true)
+    try {
+      const result = await borrowingService.extend(
+        extendingBorrowing.id,
+        toLocalInputValue(extensionForm.newDueDate),
+        extensionForm.extensionNotes.trim() || undefined
+      )
+
+      if (!result.success) {
+        toast({
+          title: "Perpanjangan gagal",
+          description: result.message || "Gagal memperpanjang waktu peminjaman.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      await Promise.all([
+        loadBorrowings(),
+        loadAssets(),
+        loadActiveMaintenanceLocks(),
+      ])
+
+      handleExtendDialogClose()
+      toast({
+        title: "Perpanjangan berhasil",
+        description: "Batas waktu peminjaman sudah diperbarui.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Perpanjangan gagal",
+        description: error.message || "Gagal memperpanjang waktu peminjaman.",
+        variant: "destructive",
+      })
+    } finally {
+      setExtendSubmitting(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     if (status === "overdue") {
       return <Badge variant="destructive">Terlambat</Badge>
@@ -1146,7 +1276,6 @@ export default function BorrowingPage() {
   })
 
   const currentUserOverdueBorrowings = useMemo(() => {
-    const currentUserId = Number(currentUser?.id)
     if (!Number.isFinite(currentUserId) || currentUserId <= 0) return []
 
     return borrowings.filter(
@@ -1427,6 +1556,24 @@ export default function BorrowingPage() {
                 {blockedBorrowingLabels.length > 0 ? (
                   <p>{`Data terlambat: ${blockedBorrowingLabels.join(", ")}`}</p>
                 ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {currentUserOverdueBorrowings.map((borrowing) => {
+                    const canExtend = canManageBorrowingExtension(borrowing)
+                    return (
+                      <Button
+                        key={borrowing.id}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-full border-red-300 bg-white px-3 text-red-700 hover:bg-red-100"
+                        disabled={!canExtend}
+                        onClick={() => openExtendDialog(borrowing)}
+                        title={canExtend ? "Perpanjang waktu peminjaman" : getBorrowingExtensionLimitMessage(borrowing)}
+                      >
+                        {canExtend ? `Perpanjang ${getBorrowingNoId(borrowing)}` : `${getBorrowingNoId(borrowing)} terkunci`}
+                      </Button>
+                    )
+                  })}
+                </div>
               </AlertDescription>
             </Alert>
           ) : null}
@@ -1690,7 +1837,27 @@ export default function BorrowingPage() {
                   <Alert variant="destructive" className="mt-4 rounded-2xl border-red-200 bg-red-50/90">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Peminjaman belum bisa diproses</AlertTitle>
-                    <AlertDescription>{overdueBorrowingBlockMessage}</AlertDescription>
+                    <AlertDescription>
+                      <p>{overdueBorrowingBlockMessage}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {currentUserOverdueBorrowings.map((borrowing) => {
+                          const canExtend = canManageBorrowingExtension(borrowing)
+                          return (
+                            <Button
+                              key={`form-${borrowing.id}`}
+                              size="sm"
+                              variant="outline"
+                              className="h-8 rounded-full border-red-300 bg-white px-3 text-red-700 hover:bg-red-100"
+                              disabled={!canExtend}
+                              onClick={() => openExtendDialog(borrowing)}
+                              title={canExtend ? "Perpanjang waktu peminjaman" : getBorrowingExtensionLimitMessage(borrowing)}
+                            >
+                              {canExtend ? `Perpanjang ${getBorrowingNoId(borrowing)}` : `${getBorrowingNoId(borrowing)} terkunci`}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </AlertDescription>
                   </Alert>
                 ) : null}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -1868,6 +2035,9 @@ export default function BorrowingPage() {
                       const dueDateLabel = b.dueDate
                         ? formatDayTimeLabel(b.dueDate, { showWeekday: false })
                         : "Belum dijadwalkan"
+                      const canExtendBorrowing = canManageBorrowingExtension(b)
+                      const extensionCountLabel = `${b.extensionCount || 0}/3`
+                      const extensionBlockedMessage = getBorrowingExtensionLimitMessage(b)
                       const isExpanded = expandedBorrowingIds.has(b.id)
                       const borrowingSections = buildBorrowingNarrativeSections(selectedBorrowingExportColumns)(b)
                       return (
@@ -1913,6 +2083,11 @@ export default function BorrowingPage() {
                                     {b.status === "overdue" ? (
                                       <Badge className="border-red-200 bg-red-50 text-[10px] text-red-700 hover:bg-red-50">
                                         Diblokir Meminjam
+                                      </Badge>
+                                    ) : null}
+                                    {b.status === "overdue" ? (
+                                      <Badge variant="outline" className="text-[10px]">
+                                        Perpanjangan {extensionCountLabel}
                                       </Badge>
                                     ) : null}
                                   </div>
@@ -1971,6 +2146,18 @@ export default function BorrowingPage() {
                               Pilih kartu
                             </label>
                             <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-600">
+                              {(b.status === "overdue" && (hasFullAccess || isBorrowingOwner(b))) ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-[12px] text-amber-700 border-amber-500 hover:bg-amber-50"
+                                  disabled={!canExtendBorrowing}
+                                  onClick={() => openExtendDialog(b)}
+                                  title={canExtendBorrowing ? "Perpanjang waktu peminjaman" : extensionBlockedMessage}
+                                >
+                                  Perpanjang
+                                </Button>
+                              ) : null}
                               {hasFullAccess ? (
                                 <div className="flex flex-wrap gap-1">
                                   {['pending', 'approved', 'borrowed', 'overdue'].includes(b.status) && (
@@ -2192,6 +2379,64 @@ export default function BorrowingPage() {
                   disabled={editSubmitting || !editForm.purpose.trim() || !editForm.destinationRoom.trim()}
                 >
                   {editSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={extendModalOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                setExtendModalOpen(true)
+                return
+              }
+              handleExtendDialogClose()
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Perpanjang Waktu Peminjaman</DialogTitle>
+                <DialogDescription>
+                  Atur batas waktu baru untuk peminjaman yang sudah terlambat agar peminjaman aktif kembali.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+                  <p className="font-medium">{extendingBorrowing?.assetDetailName || extendingBorrowing?.assetName || "-"}</p>
+                  <p>No ID: {extendingBorrowing ? getBorrowingNoId(extendingBorrowing) : "-"}</p>
+                  <p>Perpanjangan terpakai: {extendingBorrowing?.extensionCount || 0}/3</p>
+                  {extendingBorrowing?.sanctionNotes ? <p>{extendingBorrowing.sanctionNotes}</p> : null}
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-muted-foreground">Batas Waktu Baru</label>
+                  <Input
+                    type="datetime-local"
+                    value={extensionForm.newDueDate}
+                    onChange={(event) => setExtensionForm((prev) => ({ ...prev, newDueDate: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-muted-foreground">Catatan Perpanjangan</label>
+                  <Textarea
+                    rows={3}
+                    value={extensionForm.extensionNotes}
+                    onChange={(event) => setExtensionForm((prev) => ({ ...prev, extensionNotes: event.target.value }))}
+                    placeholder="Contoh: Alat masih digunakan untuk operasional ruangan."
+                  />
+                </div>
+              </div>
+              <DialogFooter className="mt-4 flex gap-2">
+                <Button variant="outline" onClick={handleExtendDialogClose} type="button">
+                  Batal
+                </Button>
+                <Button
+                  onClick={handleSaveExtension}
+                  type="button"
+                  disabled={extendSubmitting || !extensionForm.newDueDate}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                >
+                  {extendSubmitting ? "Memperpanjang..." : "Simpan Perpanjangan"}
                 </Button>
               </DialogFooter>
             </DialogContent>

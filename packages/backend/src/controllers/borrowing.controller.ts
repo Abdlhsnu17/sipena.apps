@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user_activity.service';
+import { hasAnyRole } from '../utils/role';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -580,6 +581,26 @@ export class BorrowingController {
       }
 
       const { id } = req.params;
+      const actorId = getActorUserId(req);
+      const isPrivilegedActor = hasAnyRole(req.user?.role, ['admin', 'leader']);
+      const borrowing = await this.borrowingService.getById(id);
+
+      if (!borrowing.success || !borrowing.data) {
+        res.status(404).json({
+          success: false,
+          message: 'Peminjaman tidak ditemukan'
+        });
+        return;
+      }
+
+      if (!isPrivilegedActor && (!actorId || Number(borrowing.data.userId) !== actorId)) {
+        res.status(403).json({
+          success: false,
+          message: 'Anda hanya dapat memperpanjang peminjaman milik sendiri'
+        });
+        return;
+      }
+
       const result = await this.borrowingService.extend(id, req.body);
 
       if (!result.success) {
@@ -587,26 +608,29 @@ export class BorrowingController {
         return;
       }
 
-      const actorId = getActorUserId(req);
       if (actorId) {
         const borrowingCode = getBorrowingCode(result.data);
-        await recordUserActivity({
-          userId: actorId,
-          feature: 'peminjaman_alat',
-          action: 'extend',
-          description: `Perpanjang waktu peminjaman ${borrowingCode ?? `#${id}`}`,
-          metadata: {
-            transactionId: borrowingCode ?? result.data?.id ?? Number(id),
-            transaction_id: borrowingCode ?? result.data?.id ?? Number(id),
-            borrowingCode: borrowingCode ?? undefined,
-            borrowing_code: borrowingCode ?? undefined,
-            borrowingId: result.data?.id ? Number(result.data.id) : Number(id),
-            newDueDate: result.data?.dueDate,
-            extensionCount: result.data?.extensionCount,
-            assetCode: result.data?.assetCode,
-            assetName: result.data?.assetName,
-          },
-        });
+        try {
+          await recordUserActivity({
+            userId: actorId,
+            feature: 'peminjaman_alat',
+            action: 'extend',
+            description: `Perpanjang waktu peminjaman ${borrowingCode ?? `#${id}`}`,
+            metadata: {
+              transactionId: borrowingCode ?? result.data?.id ?? Number(id),
+              transaction_id: borrowingCode ?? result.data?.id ?? Number(id),
+              borrowingCode: borrowingCode ?? undefined,
+              borrowing_code: borrowingCode ?? undefined,
+              borrowingId: result.data?.id ? Number(result.data.id) : Number(id),
+              newDueDate: result.data?.dueDate,
+              extensionCount: result.data?.extensionCount,
+              assetCode: result.data?.assetCode,
+              assetName: result.data?.assetName,
+            },
+          });
+        } catch (activityError) {
+          console.error('Record borrowing extension activity error:', activityError);
+        }
       }
 
       res.json(result);
