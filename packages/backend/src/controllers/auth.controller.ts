@@ -115,7 +115,13 @@ export class AuthController {
       const result = await this.authService.requestPasswordResetCode(payload.nip);
 
       if (!result.success) {
-        res.status(400).json(result);
+        const serviceUnavailableMessages = [
+          'Redis wajib aktif untuk reset password di production',
+          'Layanan OTP WhatsApp/SMS belum dikonfigurasi di server.',
+          'Pengiriman kode verifikasi gagal di semua channel WhatsApp/SMS. Periksa webhook OTP.',
+        ];
+        const statusCode = serviceUnavailableMessages.includes(result.message) ? 503 : 400;
+        res.status(statusCode).json(result);
         return;
       }
 

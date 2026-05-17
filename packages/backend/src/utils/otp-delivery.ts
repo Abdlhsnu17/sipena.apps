@@ -104,11 +104,24 @@ export const sendPasswordResetOtp = async ({
     { channel: 'sms', url: smsWebhookUrl, token: smsWebhookToken },
   ];
 
-  for (const attempt of attempts) {
-    if (!attempt.url) {
-      continue;
+  const configuredAttempts = attempts.filter(
+    (attempt): attempt is { channel: 'whatsapp' | 'sms'; url: string; token?: string } => Boolean(attempt.url)
+  );
+
+  if (configuredAttempts.length === 0) {
+    if (!isProduction) {
+      console.log(`[DEV][RESET OTP] kode verifikasi untuk ${normalizedPhoneNumber}: ${code}`);
+      return {
+        channel: 'local_preview',
+        preview: true,
+        deliveryTarget,
+      };
     }
 
+    throw new Error('Layanan OTP WhatsApp/SMS belum dikonfigurasi di server.');
+  }
+
+  for (const attempt of configuredAttempts) {
     try {
       await postWebhook(attempt.url, attempt.token, { ...basePayload, channel: attempt.channel });
       return {
@@ -130,5 +143,5 @@ export const sendPasswordResetOtp = async ({
     };
   }
 
-  throw new Error('Pengiriman kode verifikasi gagal di semua channel');
+  throw new Error('Pengiriman kode verifikasi gagal di semua channel WhatsApp/SMS. Periksa webhook OTP.');
 };

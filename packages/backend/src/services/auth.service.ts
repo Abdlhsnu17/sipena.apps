@@ -206,21 +206,43 @@ export class AuthService {
     const expiresAt = Date.now() + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
     const codeHash = await bcrypt.hash(verificationCode, 10);
 
-    await savePasswordResetSession({
-      userId: user.id,
-      nip: user.nip,
-      email: user.email,
-      codeHash,
-      expiresAt,
-      attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS
-    });
+    try {
+      await savePasswordResetSession({
+        userId: user.id,
+        nip: user.nip,
+        email: user.email,
+        codeHash,
+        expiresAt,
+        attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS
+      });
+    } catch (error) {
+      console.error('Save password reset session error:', error);
+      return {
+        success: false,
+        message: error instanceof Error
+          ? error.message
+          : 'Sesi reset password gagal disiapkan. Coba lagi beberapa saat.'
+      };
+    }
 
-    const deliveryResult = await sendPasswordResetOtp({
-      phoneNumber: user.phone_number,
-      userName: user.name,
-      code: verificationCode,
-      expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-    });
+    let deliveryResult;
+    try {
+      deliveryResult = await sendPasswordResetOtp({
+        phoneNumber: user.phone_number,
+        userName: user.name,
+        code: verificationCode,
+        expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+      });
+    } catch (error) {
+      console.error('Send password reset OTP error:', error);
+      await deletePasswordResetSession(user.nip).catch(() => undefined);
+      return {
+        success: false,
+        message: error instanceof Error
+          ? error.message
+          : 'Pengiriman kode verifikasi gagal. Coba lagi beberapa saat.'
+      };
+    }
 
     return {
       success: true,
