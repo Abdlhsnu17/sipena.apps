@@ -20,6 +20,8 @@ const LOGIN_SUCCESS_MESSAGE = 'Login berhasil';
 const LOGIN_IDENTIFIER_REQUIRED_MESSAGE = 'Username atau email wajib diisi';
 const LOGIN_PASSWORD_REQUIRED_MESSAGE = 'Password wajib diisi';
 const LOGIN_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
+const REGISTER_DUPLICATE_ACCOUNT_MESSAGE = 'Akun dengan NIP atau email ini sudah terdaftar';
+const REGISTER_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
 
 export interface LoginCredentials {
   nip: string;
@@ -132,6 +134,29 @@ function normalizeLoginError(error: any): string {
   return LOGIN_SERVER_ISSUE_MESSAGE;
 }
 
+function normalizeRegisterError(error: any): string {
+  const responseBody = error?.response?.body;
+  const validationErrors = Array.isArray(responseBody?.errors) ? responseBody.errors : [];
+  const validationMessage = validationErrors.find((item: any) => typeof item?.msg === 'string')?.msg;
+
+  if (validationMessage) {
+    return validationMessage;
+  }
+
+  const serverMessage =
+    responseBody?.message ||
+    (typeof responseBody === 'string' ? responseBody : undefined);
+
+  if (
+    serverMessage === REGISTER_DUPLICATE_ACCOUNT_MESSAGE ||
+    serverMessage === 'User with this NIP or email already exists'
+  ) {
+    return REGISTER_DUPLICATE_ACCOUNT_MESSAGE;
+  }
+
+  return REGISTER_SERVER_ISSUE_MESSAGE;
+}
+
 class AuthService {
   private useLocalStorage: boolean = false;
 
@@ -215,15 +240,19 @@ class AuthService {
       const backendAvailable = await isBackendAvailable();
 
       if (backendAvailable) {
-        return await apiService.post<AuthResponse>('/auth/register', credentials);
+        const response = await apiService.post<AuthResponse>('/auth/register', credentials);
+        return {
+          ...response,
+          message: response.success ? 'Pendaftaran berhasil' : response.message
+        };
       }
 
       if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: 'Backend tidak tersedia. Pastikan server API berjalan.' };
+        return { success: false, message: REGISTER_SERVER_ISSUE_MESSAGE };
       }
-    } catch {
+    } catch (error: any) {
       if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: 'Backend tidak tersedia. Pastikan server API berjalan.' };
+        return { success: false, message: normalizeRegisterError(error) };
       }
     }
 

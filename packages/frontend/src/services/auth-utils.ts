@@ -160,8 +160,9 @@ export function register(credentials: RegisterCredentials): { success: boolean; 
   }
 
   const users = getUsers()
-  if (users.some((u) => u.nip === credentials.nip)) {
-    return { success: false, message: "NIP sudah terdaftar" }
+  const normalizedEmail = credentials.email.trim().toLowerCase()
+  if (users.some((u) => u.nip === credentials.nip || u.email?.trim().toLowerCase() === normalizedEmail)) {
+    return { success: false, message: "Akun dengan NIP atau email ini sudah terdaftar" }
   }
 
   // Generate email from NIP for backward compatibility

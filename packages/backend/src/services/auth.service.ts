@@ -128,7 +128,7 @@ export class AuthService {
     if (existingRows.length > 0) {
       return {
         success: false,
-        message: 'User with this NIP or email already exists'
+        message: 'Akun dengan NIP atau email ini sudah terdaftar'
       };
     }
 
@@ -148,7 +148,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Registration successful',
+      message: 'Pendaftaran berhasil',
       data: {
         user: this.mapRowToUser(newUser),
         token: ''
