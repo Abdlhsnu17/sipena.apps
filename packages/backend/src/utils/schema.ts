@@ -15,6 +15,7 @@ let ensuredUserPhoneNumberColumn = false;
 let ensuredNonMedicalAssetsTable = false;
 let ensuredScheduleAssetFkRemoved = false;
 let ensuredUserActivityLogsTable = false;
+let ensuredBorrowingWorkflowColumns = false;
 let attemptedCoreSchemaBootstrap = false;
 
 const tableExists = async (tableName: string): Promise<boolean> => {
@@ -24,10 +25,10 @@ const tableExists = async (tableName: string): Promise<boolean> => {
 
 const resolveSchemaFilePath = (): string => {
   const candidates = [
-    path.resolve(process.cwd(), '../db/seeds/schema.sql'),
-    path.resolve(process.cwd(), '../../packages/db/seeds/schema.sql'),
-    path.resolve(__dirname, '../../../db/seeds/schema.sql'),
-    path.resolve(__dirname, '../../../../packages/db/seeds/schema.sql'),
+    path.resolve(process.cwd(), '../database/seeds/schema.sql'),
+    path.resolve(process.cwd(), '../../packages/database/seeds/schema.sql'),
+    path.resolve(__dirname, '../../../database/seeds/schema.sql'),
+    path.resolve(__dirname, '../../../../packages/database/seeds/schema.sql'),
   ];
 
   const matchedPath = candidates.find((candidate) => fs.existsSync(candidate));
@@ -61,7 +62,7 @@ export async function ensureCoreSchemaInitialized(): Promise<void> {
   const shouldBootstrap = (process.env.DB_AUTO_INIT_FROM_SCHEMA || '').trim().toLowerCase() === 'true';
   if (!shouldBootstrap) {
     throw new Error(
-      'Core database schema is missing. Set DB_AUTO_INIT_FROM_SCHEMA=true to initialize from packages/db/seeds/schema.sql, or import the schema manually before starting the backend.'
+      'Core database schema is missing. Set DB_AUTO_INIT_FROM_SCHEMA=true to initialize from packages/database/seeds/schema.sql, or import the schema manually before starting the backend.'
     );
   }
 
@@ -493,4 +494,154 @@ export async function ensureUserActivityLogsTable(): Promise<void> {
   }
 
   ensuredUserActivityLogsTable = true;
+}
+
+const hasIndex = async (tableName: string, indexName: string): Promise<boolean> => {
+  const [rows] = await pool.query<RowDataPacket[]>('SHOW INDEX FROM ?? WHERE Key_name = ?', [tableName, indexName]);
+  return rows.length > 0;
+};
+
+const getExistingColumns = async (tableName: string, columnNames: string[]): Promise<Set<string>> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME IN (?)
+    `,
+    [tableName, columnNames]
+  );
+
+  return new Set(rows.map((row) => String(row.COLUMN_NAME)));
+};
+
+export async function ensureBorrowingWorkflowColumns(): Promise<void> {
+  if (ensuredBorrowingWorkflowColumns) return;
+
+  if (!(await tableExists('borrowing_records'))) return;
+
+  const columnDefinitions = [
+    {
+      name: 'asset_type',
+      sql: "ALTER TABLE borrowing_records ADD COLUMN asset_type VARCHAR(20) NOT NULL DEFAULT 'medical' AFTER asset_id",
+    },
+    {
+      name: 'asset_detail_id',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN asset_detail_id VARCHAR(100) DEFAULT NULL AFTER asset_type',
+    },
+    {
+      name: 'asset_detail_name',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN asset_detail_name VARCHAR(255) DEFAULT NULL AFTER asset_detail_id',
+    },
+    {
+      name: 'asset_detail_code',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN asset_detail_code VARCHAR(100) DEFAULT NULL AFTER asset_detail_name',
+    },
+    {
+      name: 'borrower_position',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN borrower_position VARCHAR(100) DEFAULT NULL AFTER user_id',
+    },
+    {
+      name: 'borrower_work_unit',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN borrower_work_unit VARCHAR(150) DEFAULT NULL AFTER borrower_position',
+    },
+    {
+      name: 'owner_name',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_name VARCHAR(150) DEFAULT NULL AFTER borrower_work_unit',
+    },
+    {
+      name: 'owner_position',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_position VARCHAR(100) DEFAULT NULL AFTER owner_name',
+    },
+    {
+      name: 'owner_work_unit',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_work_unit VARCHAR(150) DEFAULT NULL AFTER owner_position',
+    },
+    {
+      name: 'purpose_type',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN purpose_type VARCHAR(30) DEFAULT NULL AFTER purpose',
+    },
+    {
+      name: 'destination_room',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN destination_room VARCHAR(255) DEFAULT NULL AFTER purpose_type',
+    },
+    {
+      name: 'loan_duration_value',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN loan_duration_value INT(11) DEFAULT NULL AFTER destination_room',
+    },
+    {
+      name: 'loan_duration_unit',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN loan_duration_unit VARCHAR(20) DEFAULT NULL AFTER loan_duration_value',
+    },
+    {
+      name: 'quantity',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN quantity INT(11) NOT NULL DEFAULT 1 AFTER loan_duration_unit',
+    },
+    {
+      name: 'return_validated_by',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN return_validated_by INT(11) DEFAULT NULL AFTER return_notes',
+    },
+    {
+      name: 'return_validated_at',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN return_validated_at DATETIME DEFAULT NULL AFTER return_validated_by',
+    },
+    {
+      name: 'returned_by',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN returned_by INT(11) DEFAULT NULL AFTER return_validated_at',
+    },
+    {
+      name: 'overdue_days',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN overdue_days INT(11) NOT NULL DEFAULT 0 AFTER returned_by',
+    },
+    {
+      name: 'sanction_status',
+      sql: "ALTER TABLE borrowing_records ADD COLUMN sanction_status VARCHAR(20) NOT NULL DEFAULT 'none' AFTER overdue_days",
+    },
+    {
+      name: 'sanction_notes',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN sanction_notes TEXT DEFAULT NULL AFTER sanction_status',
+    },
+    {
+      name: 'sanction_applied_at',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN sanction_applied_at DATETIME DEFAULT NULL AFTER sanction_notes',
+    },
+    {
+      name: 'extension_count',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN extension_count INT(11) NOT NULL DEFAULT 0 AFTER sanction_applied_at',
+    },
+    {
+      name: 'last_extended_date',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN last_extended_date DATETIME DEFAULT NULL AFTER extension_count',
+    },
+    {
+      name: 'extension_notes',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN extension_notes TEXT DEFAULT NULL AFTER last_extended_date',
+    },
+    {
+      name: 'is_extension_blocked',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN is_extension_blocked BOOLEAN NOT NULL DEFAULT FALSE AFTER extension_notes',
+    },
+  ] as const;
+
+  const existingColumns = await getExistingColumns(
+    'borrowing_records',
+    columnDefinitions.map((definition) => definition.name)
+  );
+
+  for (const definition of columnDefinitions) {
+    if (!existingColumns.has(definition.name)) {
+      await pool.query(definition.sql);
+    }
+  }
+
+  if (!(await hasIndex('borrowing_records', 'idx_user_overdue_status'))) {
+    await pool.query('CREATE INDEX idx_user_overdue_status ON borrowing_records (user_id, status, sanction_status)');
+  }
+
+  if (!(await hasIndex('borrowing_records', 'idx_user_extension_status'))) {
+    await pool.query('CREATE INDEX idx_user_extension_status ON borrowing_records (user_id, sanction_status, is_extension_blocked)');
+  }
+
+  ensuredBorrowingWorkflowColumns = true;
 }

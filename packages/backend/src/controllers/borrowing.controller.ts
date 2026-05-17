@@ -131,23 +131,27 @@ export class BorrowingController {
       const actorId = getActorUserId(req);
       if (actorId && result.success && result.data) {
         const borrowingCode = getBorrowingCode(result.data)
-        await recordUserActivity({
-          userId: actorId,
-          feature: 'peminjaman_alat',
-          action: 'create',
-          description: `Membuat peminjaman alat ${borrowingCode ?? `#${result.data.id}`}`,
-          metadata: {
-            transactionId: borrowingCode ?? result.data.id,
-            transaction_id: borrowingCode ?? result.data.id,
-            borrowingCode: borrowingCode ?? undefined,
-            borrowing_code: borrowingCode ?? undefined,
-            borrowingId: result.data.id,
-            assetId: result.data.assetId,
-            assetCode: result.data.assetCode,
-            assetName: result.data.assetName,
-            status: result.data.status,
-          },
-        });
+        try {
+          await recordUserActivity({
+            userId: actorId,
+            feature: 'peminjaman_alat',
+            action: 'create',
+            description: `Membuat peminjaman alat ${borrowingCode ?? `#${result.data.id}`}`,
+            metadata: {
+              transactionId: borrowingCode ?? result.data.id,
+              transaction_id: borrowingCode ?? result.data.id,
+              borrowingCode: borrowingCode ?? undefined,
+              borrowing_code: borrowingCode ?? undefined,
+              borrowingId: result.data.id,
+              assetId: result.data.assetId,
+              assetCode: result.data.assetCode,
+              assetName: result.data.assetName,
+              status: result.data.status,
+            },
+          });
+        } catch (activityError) {
+          console.error('Record borrowing activity error:', activityError);
+        }
       }
 
       res.status(201).json(result);

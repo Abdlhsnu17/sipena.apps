@@ -11,6 +11,7 @@ import { authMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import {
+    ensureBorrowingWorkflowColumns,
     ensureCoreSchemaInitialized,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
@@ -200,6 +201,7 @@ const startServer = async () => {
     console.log('✅ Database connected successfully');
     await withSchemaLock(async () => {
       await ensureCoreSchemaInitialized();
+      await ensureBorrowingWorkflowColumns();
       await ensureMaintenanceAssetTypeColumn();
       await ensureMaintenanceDetailColumns();
       await ensureMaintenanceCancellationReasonColumn();
