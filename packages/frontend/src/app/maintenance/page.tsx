@@ -1022,16 +1022,16 @@ export default function MaintenancePage() {
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
       data-maintenance-page
     >
-      <div className="p-6 lg:p-8">
+      <div className="page-gutter">
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-5 items-center">
+              <div className="flex items-start gap-3 sm:items-center sm:gap-5">
                 <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg">
                   <ShieldCheck className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Pemeliharaan Sarana</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pemeliharaan Sarana</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Monitoring pengajuan, jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
@@ -1046,7 +1046,7 @@ export default function MaintenancePage() {
                 {canCreateMaintenance && (
                   <Button
                     size="sm"
-                    className="rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700"
+                    className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
                     onClick={() => {
                       setEditingMaintenance(null)
                       setShowForm(true)
@@ -1116,19 +1116,19 @@ export default function MaintenancePage() {
 
         <Card className="rounded-3xl border border-slate-200 bg-white/70 shadow-xl dark:border-slate-700 dark:bg-slate-900/70" data-maintenance-list>
           <CardHeader className="space-y-3 pb-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-lg">Daftar Pemeliharaan Sarana</CardTitle>
-                <CardDescription className="text-[13px] text-muted-foreground">
-                  Total: {filteredMaintenance.length} jadwal
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="text-lg">Daftar Pemeliharaan Sarana</CardTitle>
+                  <CardDescription className="text-[13px] text-muted-foreground">
+                    Total: {filteredMaintenance.length} jadwal
+                  </CardDescription>
+                </div>
+              <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsMaintenanceMinimized((prev) => !prev)}
-                  className="rounded-2xl px-3"
+                  className="w-full rounded-2xl px-3 sm:w-auto"
                 >
                   {isMaintenanceMinimized ? (
                     <>
@@ -1144,7 +1144,7 @@ export default function MaintenancePage() {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-2xl px-3">
+                    <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
                       <Download className="mr-2 h-4 w-4" />
                       Ekspor
                     </Button>
@@ -1173,12 +1173,12 @@ export default function MaintenancePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="rounded-2xl px-3 text-[14px] font-semibold"
+                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
                   onClick={handleSelectAllMaintenance}
                 >
                   {allMaintenanceSelected ? "Batal pilih semua" : "Pilih semua"}
                 </Button>
-                <span className="text-[13px] text-muted-foreground">
+                <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedMaintenanceRows.length
                     ? `${selectedMaintenanceRows.length} baris dipilih`
                     : `Semua ${filteredMaintenance.length} baris siap cetak`}
@@ -1193,7 +1193,7 @@ export default function MaintenancePage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px] px-6 pb-3">
+                <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:px-6">
                   <div>
                     <label className="sr-only">Cari jadwal pemeliharaan</label>
                     <div className="relative">

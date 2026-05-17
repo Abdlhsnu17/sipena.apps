@@ -250,17 +250,17 @@ export default function ReportsPage() {
       className="bg-white dark:bg-slate-950"
       data-main-scroll
     >
-      <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-8 page-gutter">
 
-        <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3 sm:items-center">
                 <div className="rounded-2xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-lg">
                   <BookOpen className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold leading-tight text-foreground lg:text-3xl">
+                  <h1 className="text-xl font-bold leading-tight text-foreground sm:text-2xl lg:text-3xl">
                     Laporan & Analitik
                   </h1>
                   <p className="text-sm text-muted-foreground">
@@ -275,7 +275,7 @@ export default function ReportsPage() {
                 </Badge>
               </div>
             </div>
-            <Button onClick={exportReport} className="rounded-2xl bg-slate-700 px-5 text-white shadow-lg hover:bg-slate-800">
+            <Button onClick={exportReport} className="w-full rounded-2xl bg-slate-700 px-5 text-white shadow-lg hover:bg-slate-800 sm:w-auto">
               Unduh Laporan
             </Button>
           </div>
@@ -296,14 +296,14 @@ export default function ReportsPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md hover:shadow-lg transition-shadow">
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md transition-shadow hover:shadow-lg">
             <CardHeader className="pb-1 border-0">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-cyan-700">
                 Total Keseluruhan Ruangan Yang Aktif 
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-4xl font-semibold text-cyan-900">{totalAssets.toLocaleString("id-ID")}</p>
+              <p className="text-3xl font-semibold text-cyan-900 sm:text-4xl">{totalAssets.toLocaleString("id-ID")}</p>
               <p className="text-xs text-cyan-600 mt-1">Gabungan Ruangan Medis & Non-Medis</p>
             </CardContent>
           </Card>
@@ -315,7 +315,7 @@ export default function ReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-4xl font-semibold text-teal-900">
+              <p className="text-3xl font-semibold text-teal-900 sm:text-4xl">
                 {totalNonMedicalAssets.toLocaleString("id-ID")}
               </p>
               <p className="text-xs text-teal-600 mt-1">Ruangan Aktif Dengan Unit Non-Medis Yang Berbeda</p>
@@ -329,7 +329,7 @@ export default function ReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-4xl font-semibold text-blue-900">
+              <p className="text-3xl font-semibold text-blue-900 sm:text-4xl">
                 {totalMedicalAssets.toLocaleString("id-ID")}
               </p>
               <p className="text-xs text-blue-600 mt-1">Ruangan Aktif Dengan Unit Medis Yang Berbeda</p>
@@ -343,7 +343,7 @@ export default function ReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-4xl font-semibold text-rose-900">
+              <p className="text-3xl font-semibold text-rose-900 sm:text-4xl">
                 {maintenance.length.toLocaleString("id-ID")}
               </p>
               <p className="text-xs text-rose-600 mt-1">Jadwal tersimpan</p>
@@ -357,7 +357,7 @@ export default function ReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-4xl font-semibold text-orange-900">
+              <p className="text-3xl font-semibold text-orange-900 sm:text-4xl">
                 {borrowings.length.toLocaleString("id-ID")}
               </p>
               <p className="text-xs text-orange-600 mt-1">Sesi perizinan</p>
@@ -393,7 +393,7 @@ export default function ReportsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-border/40 bg-white/80 p-3 space-y-1">
                   <p className="text-xs text-muted-foreground">Total maintenance</p>
                   <p className="text-lg font-semibold">{maintenance.length}</p>
@@ -454,10 +454,10 @@ export default function ReportsPage() {
                   ]
                   const colorClass = colors[idx % colors.length]
                   return (
-                    <div key={item.name} className={`flex items-center justify-between p-2 border rounded ${colorClass}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.name}</span>
-                      </div>
+                      <div key={item.name} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{item.name}</span>
+                        </div>
                       <Badge className="bg-current/20 text-current border-0">{item.value}</Badge>
                     </div>
                   )
@@ -489,7 +489,7 @@ export default function ReportsPage() {
                       return typeof val === "number" ? sum + val : sum
                     }, 0)
                     return (
-                      <div key={item.location} className={`flex items-center justify-between p-2 border rounded ${colorClass}`}>
+                      <div key={item.location} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{item.location}</span>
                         </div>
@@ -530,7 +530,7 @@ export default function ReportsPage() {
                       ]
                       const colorClass = colors[idx % colors.length]
                       return (
-                        <div key={idx} className={`flex justify-between items-center p-2 border rounded ${colorClass}`}>
+                        <div key={idx} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
                           <span className="font-medium">{item.name}</span>
                           <Badge className="bg-current/20 text-current border-0">{item.count}x</Badge>
                         </div>
@@ -547,23 +547,23 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex justify-between items-center p-2 border border-blue-200 bg-blue-50/50 rounded">
+                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-blue-200 bg-blue-50/50 rounded">
                   <span className="text-foreground font-medium">Total Peminjaman</span>
                   <Badge className="bg-blue-100 text-blue-700 border-0">{borrowings.length}</Badge>
                 </div>
-                <div className="flex justify-between items-center p-2 border border-emerald-200 bg-emerald-50/50 rounded">
+                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-emerald-200 bg-emerald-50/50 rounded">
                   <span className="text-foreground font-medium">Sedang Dipinjam</span>
                   <Badge className="bg-emerald-100 text-emerald-700 border-0">
                     {borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-2 border border-cyan-200 bg-cyan-50/50 rounded">
+                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-cyan-200 bg-cyan-50/50 rounded">
                   <span className="text-foreground font-medium">Dikembalikan</span>
                   <Badge className="bg-cyan-100 text-cyan-700 border-0">
                     {borrowings.filter((b) => b.status === "returned").length}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center p-2 border border-red-200 bg-red-50/50 rounded">
+                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-red-200 bg-red-50/50 rounded">
                   <span className="text-foreground font-medium">Terlambat</span>
                   <Badge className="bg-red-100 text-red-700 border-0">
                     {borrowings.filter((b) => b.status === "overdue").length}

@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { buildLoginRedirectUrl } from "@/services/auth-utils"
+import { buildLoginRedirectUrl, isLocalAuthSession } from "@/services/auth-utils"
 import type { User } from "@/services/auth.service"
 import authService from "@/services/auth.service"
 import userActivityService, { type UserActivity } from "@/services/user-activity.service"
@@ -292,6 +292,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const loadActivities = useCallback(async () => {
     if (!currentUser?.id) {
+      setRecentActivities([])
+      return
+    }
+    if (isLocalAuthSession()) {
       setRecentActivities([])
       return
     }
@@ -816,7 +820,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "xl:hidden fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg shadow-md hover:bg-muted transition-colors",
+          "xl:hidden fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-md transition-colors hover:bg-muted",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Open menu"
@@ -854,7 +858,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         >
           <button
             onClick={closeMobileMenu}
-            className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors z-40"
+            className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-40 rounded-lg p-2 transition-colors hover:bg-muted"
             aria-label="Close menu"
           >
             <X className="w-5 h-5 text-foreground" />

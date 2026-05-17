@@ -974,17 +974,17 @@ export default function ReturnsPage() {
 
   return (
     <div
-      className="mx-auto w-full max-w-7xl min-h-full space-y-4 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40"
+      className="mx-auto min-h-full w-full max-w-7xl space-y-4 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40 page-gutter"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
     >
-          <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
+          <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-5 items-center">
+              <div className="flex items-start gap-3 sm:items-center sm:gap-5">
                 <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg">
                   <RotateCcw className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Pengembalian Alat</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengembalian Alat</h1>
                   <p className="mt-1 text-[12px] text-muted-foreground">
                     Validasi dan pengecekan kondisi alat dapat dilihat oleh admin/leader.
                   </p>
@@ -1040,7 +1040,7 @@ export default function ReturnsPage() {
                     Total: {filteredActiveBorrowings.length} peminjaman aktif
                   </CardDescription>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                   <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
                     <input
                       type="checkbox"
@@ -1053,7 +1053,7 @@ export default function ReturnsPage() {
                   </label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-2xl px-3">
+                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Ekspor
                       </Button>
@@ -1079,7 +1079,7 @@ export default function ReturnsPage() {
                       <DropdownMenuItem onClick={() => void handleActiveExport("excel")}>Excel</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <span className="text-[13px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                     {activeReturnSelectedRows.length
                       ? `${activeReturnSelectedRows.length} baris dipilih`
                       : `Semua ${filteredActiveBorrowings.length} baris`}
@@ -1271,7 +1271,7 @@ export default function ReturnsPage() {
                   Total: {filteredReturnedBorrowings.length} riwayat
                 </CardDescription>
               </div>
-              <div className="flex flex-col items-end gap-2 text-[13px] text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex w-full flex-col items-stretch gap-2 text-[13px] text-muted-foreground sm:w-auto sm:flex-row sm:items-center sm:gap-4">
                 <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
                   <input
                     type="checkbox"
@@ -1282,10 +1282,10 @@ export default function ReturnsPage() {
                   />
                   Pilih semua
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-2xl px-3">
+                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Ekspor
                       </Button>
@@ -1311,7 +1311,7 @@ export default function ReturnsPage() {
                       <DropdownMenuItem onClick={() => void handleHistoryExport("excel")}>Excel</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <span className="text-[13px] text-muted-foreground">
+                <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {historyReturnSelectedRows.length
                     ? `${historyReturnSelectedRows.length} baris dipilih`
                     : `Semua ${filteredReturnedBorrowings.length} baris`}
@@ -1592,7 +1592,7 @@ export default function ReturnsPage() {
 
           {showReturnModal && selectedBorrowing && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-linear-to-br from-black/50 to-black/80 px-4">
-              <Card className="w-full max-w-md rounded-3xl border border-black/10 bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
+              <Card className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-black/10 bg-white/95 dark:border-slate-800 dark:bg-slate-900/90">
                 <CardHeader>
                   <CardTitle className="text-lg">Konfirmasi Pengembalian</CardTitle>
                   <CardDescription>

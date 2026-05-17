@@ -225,28 +225,19 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   {
     key: "namaAlat",
     label: "Nama Alat",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailInventoryName || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
-        },
+    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
     defaultSelected: true,
   },
   {
     key: "kode",
     label: "Kode",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailCode || borrowing.assetDetailCode || borrowing.assetCode || "-"
-        },
+    getValue: (borrowing) => borrowing.assetDetailCode || borrowing.assetCode || "-",
     defaultSelected: true,
   },
   {
     key: "merek",
     label: "Merek / Model",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailBrandModel || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
-        },
+    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
     defaultSelected: true,
   },
   {
@@ -1349,16 +1340,16 @@ export default function BorrowingPage() {
       className="min-h-full bg-white"
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
     >
-      <div className="p-6 lg:p-8">
+      <div className="page-gutter">
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-5 items-center">
+              <div className="flex items-start gap-3 sm:items-center sm:gap-5">
                 <div className="p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg">
                   <HandHelping className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Peminjaman Alat</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman Alat</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Audit, validasi, dan monitoring status alat dalam satu halaman.
                   </p>
@@ -1372,7 +1363,7 @@ export default function BorrowingPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
-                  className="rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700"
+                  className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
                   onClick={() => {
                     setFormData(getDefaultFormData(currentUser))
                     setSelectedBorrowableAssetIds([])
@@ -1482,7 +1473,7 @@ export default function BorrowingPage() {
 
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Durasi Peminjaman</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         type="number"
                         min="1"
@@ -1494,7 +1485,7 @@ export default function BorrowingPage() {
                       <select
                         value={formData.durationType}
                         onChange={(e) => setFormData({ ...formData, durationType: e.target.value as "day" | "month" | "year" })}
-                        className="rounded-2xl border border-border/80 bg-background px-3 py-2 text-[14px] text-foreground transition focus:border-teal-500"
+                        className="w-full rounded-2xl border border-border/80 bg-background px-3 py-2 text-[14px] text-foreground transition focus:border-teal-500 sm:w-auto"
                       >
                         <option value="day">Hari</option>
                         <option value="month">Bulan</option>
@@ -1638,14 +1629,14 @@ export default function BorrowingPage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3 mt-4">
-                  <Button onClick={handleSaveBorrowing} size="sm" className="rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Button onClick={handleSaveBorrowing} size="sm" className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto">
                     Simpan
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-2xl px-4 text-[14px]"
+                    className="w-full rounded-2xl px-4 text-[14px] sm:w-auto"
                     onClick={() => {
                       setShowForm(false)
                       setFormData(getDefaultFormData(currentUser))
@@ -1668,10 +1659,10 @@ export default function BorrowingPage() {
                   Total: {filteredBorrowings.length} peminjaman
                 </CardDescription>
               </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-2xl px-3">
+                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Export
                       </Button>
@@ -1700,12 +1691,12 @@ export default function BorrowingPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="rounded-2xl px-3 text-[14px] font-semibold "
+                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
                   onClick={handleSelectAllBorrowings}
                 >
                   {allBorrowingsSelected ? "Batal pilih semua" : "Pilih semua"}
                 </Button>
-                <span className="text-[13px] text-muted-foreground">
+                <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedBorrowings.length
                     ? `${selectedBorrowings.length} baris dipilih`
                     : `Semua ${filteredBorrowings.length} baris siap cetak`}

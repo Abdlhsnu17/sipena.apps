@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { getAuthToken } from "@/services/auth-utils"
+import { getAuthToken, isLocalAuthSession } from "@/services/auth-utils"
 
 type NotificationItem = {
   id: string
@@ -96,6 +96,15 @@ export default function Topbar() {
     })
   }, [])
 
+  const compactDateFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    })
+  }, [])
+
   const timeFormatter = useMemo(() => {
     return new Intl.DateTimeFormat("id-ID", {
       timeZone: "Asia/Jakarta",
@@ -107,6 +116,7 @@ export default function Topbar() {
   }, [])
 
   const formattedDate = mounted ? dateFormatter.format(now) : "Memuat tanggal…"
+  const formattedCompactDate = mounted ? compactDateFormatter.format(now) : "Memuat…"
   const formattedTime = mounted ? timeFormatter.format(now) : "--:--:--"
 
   const filteredNotifications = useMemo(() => {
@@ -141,6 +151,14 @@ export default function Topbar() {
 
     const loadNotifications = async () => {
       if (!getAuthToken()) {
+        if (isMounted) {
+          setNotifications([])
+          setIsCheckingNotifications(false)
+        }
+        return
+      }
+
+      if (isLocalAuthSession()) {
         if (isMounted) {
           setNotifications([])
           setIsCheckingNotifications(false)
@@ -342,9 +360,12 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-4 px-3 py-3 sm:px-4 lg:px-6 xl:px-8">
-        <p className="min-w-0 truncate font-bold" style={{ fontSize: 16 }}>{formattedDate}</p>
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 lg:pr-6 xl:px-8">
+        <div className="min-w-0">
+          <p className="min-w-0 truncate text-[14px] font-bold sm:hidden">{formattedCompactDate}</p>
+          <p className="hidden min-w-0 truncate font-bold sm:block" style={{ fontSize: 16 }}>{formattedDate}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:h-9 sm:w-9 md:h-10 md:w-10"
@@ -442,11 +463,11 @@ export default function Topbar() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono tabular-nums text-sm font-semibold tracking-[0.18em] text-foreground">
+          <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+            <span className="font-mono tabular-nums text-[13px] font-semibold tracking-[0.14em] text-foreground sm:text-sm sm:tracking-[0.18em]">
               {formattedTime}
             </span>
-            <span className="text-xs text-muted-foreground">WIB</span>
+            <span className="text-[11px] text-muted-foreground sm:text-xs">WIB</span>
           </div>
         </div>
       </div>

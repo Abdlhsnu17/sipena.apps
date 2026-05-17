@@ -294,7 +294,7 @@ export default function UsersPage() {
   if (!currentUser || !canViewUsers) {
     return (
       <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
-        <div className="max-w-4xl mx-auto p-6 space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4 page-gutter">
 
           <div className="flex flex-col gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
             <div className="flex items-center gap-2">
@@ -310,17 +310,17 @@ export default function UsersPage() {
 
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
-      <div className="w-full max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-6 page-gutter">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3 sm:items-center">
                   <div className="rounded-2xl bg-linear-to-br from-teal-500 to-cyan-500 p-3 shadow-lg">
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-foreground">Manajemen Pengguna</h1>
+                    <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Manajemen Pengguna</h1>
                     <p className="text-sm text-muted-foreground">
                       Pengaturan akun, akses role, dan kontrol perubahan data pengguna.
                     </p>
@@ -336,15 +336,15 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                 {canCreateUsers && (
-                  <Button onClick={handleAddUser} size="sm" className="rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
+                  <Button onClick={handleAddUser} size="sm" className="w-full rounded-2xl bg-teal-600 text-white hover:bg-teal-700 sm:w-auto">
                     <Plus className="mr-1 h-4 w-4" />
                     Tambah Pengguna
                   </Button>
                 )}
                 {currentUser?.role === "admin" && (
-                  <Button variant="destructive" size="sm" className="rounded-2xl" onClick={handleDeleteAllUsers}>
+                  <Button variant="destructive" size="sm" className="w-full rounded-2xl sm:w-auto" onClick={handleDeleteAllUsers}>
                     <Trash2 className="mr-1 h-4 w-4" />
                     Hapus Semua
                   </Button>
@@ -353,7 +353,7 @@ export default function UsersPage() {
             </div>
           </section>
 
-          <div className="rounded-2xl border border-teal-200/70 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-teal-900/50 dark:bg-slate-900/50">
+          <div className="rounded-2xl border border-teal-200/70 bg-white/80 panel-gutter shadow-sm backdrop-blur-sm dark:border-teal-900/50 dark:bg-slate-900/50">
             <div className="flex flex-col gap-2">
               <p className="text-sm text-teal-700/90 dark:text-teal-200/90">
                 Dashboard ini menampilkan alur pengelolaan pengguna yang mengikuti kaidah mulai dari otentikasi hingga pemberian akses untuk inventaris medis dan non-medis.
@@ -384,7 +384,7 @@ export default function UsersPage() {
         {/* Form Modal */}
         {isFormOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="mx-4 max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-lg bg-card p-6 shadow-xl">
               <h2 className="text-lg font-bold text-foreground mb-4">
                 {editingId ? "Edit Pengguna" : "Tambah Pengguna Baru"}
               </h2>
@@ -470,7 +470,7 @@ export default function UsersPage() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-3">
+              <div className="flex flex-col gap-2 pt-3 sm:flex-row">
                 <Button type="button" onClick={() => setIsFormOpen(false)} variant="outline" className="flex-1">
                   Batal
                 </Button>
@@ -565,8 +565,8 @@ export default function UsersPage() {
       </div>
 
         {/* Information Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-teal-100/80 bg-white/70 p-6 shadow">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-teal-100/80 bg-white/70 panel-gutter shadow">
             <h3 className="text-lg font-semibold text-teal-800 mb-3">ℹ️ Cara Kerja Sistem</h3>
             <ul className="text-sm text-teal-700 space-y-2">
               <li>• Admin memetakan peran dan akses ke dalam diagram UML.</li>
@@ -577,7 +577,7 @@ export default function UsersPage() {
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-orange-100/80 bg-white/80 p-6 shadow">
+          <div className="rounded-2xl border border-orange-100/80 bg-white/80 panel-gutter shadow">
             <h3 className="text-lg font-semibold text-orange-800 mb-3">⚠️ Catatan Penting</h3>
             <ul className="text-sm text-orange-700 space-y-2">
               <li>• Gunakan NIP valid agar diagram referensi mudah ditelusuri.</li>

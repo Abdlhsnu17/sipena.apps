@@ -165,6 +165,14 @@
     bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
+  .page-gutter {
+    padding: 0.75rem;
+  }
+
+  .panel-gutter {
+    padding: 1rem;
+  }
+
   .mobile-table-scroll {
     width: 100%;
     overflow-x: auto;
@@ -190,6 +198,14 @@
   }
 
   @media screen and (min-width: 640px) {
+    .page-gutter {
+      padding: 1rem;
+    }
+
+    .panel-gutter {
+      padding: 1.25rem;
+    }
+
     .detail-labeled-row {
       grid-template-columns: minmax(9rem, 11.5rem) minmax(0, 1fr);
       align-items: start;
@@ -200,6 +216,16 @@
   @media screen and (min-width: 768px) {
     .mobile-form-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .page-gutter {
+      padding: 1.5rem;
+    }
+
+    .panel-gutter {
+      padding: 1.5rem;
     }
   }
 

@@ -258,14 +258,14 @@ export default function SettingsPage() {
 
   return (
     <div className="bg-slate-50/60 dark:bg-slate-950/80">
-      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
-        <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+      <div className="mx-auto w-full max-w-6xl space-y-6 page-gutter">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-sm">
               <Settings className="h-5 w-5 text-white" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-foreground">Pengaturan</h1>
+              <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengaturan</h1>
               <p className="text-sm text-muted-foreground">
                 Kelola data profil, keamanan akun, dan tampilan aplikasi dari satu halaman yang ringkas.
               </p>
@@ -392,6 +392,7 @@ export default function SettingsPage() {
                         type="button"
                         onClick={handleProfileSubmit}
                         disabled={profileLoading || isUpdatingProfile}
+                        className="w-full sm:w-auto"
                       >
                         {isUpdatingProfile ? "Menyimpan..." : photoFile ? "Simpan Profil & Foto" : "Simpan Profil"}
                       </Button>
@@ -476,7 +477,7 @@ export default function SettingsPage() {
                 <Button
                   onClick={handleChangePassword}
                   disabled={isChangingPassword}
-                  className="bg-teal-600 hover:bg-teal-700"
+                  className="w-full bg-teal-600 hover:bg-teal-700 sm:w-auto"
                 >
                   {isChangingPassword ? "Menyimpan..." : "Ubah Password"}
                 </Button>

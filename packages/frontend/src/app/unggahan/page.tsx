@@ -432,16 +432,16 @@ export default function UnggahanPage() {
   return (
     <div className="flex-1 bg-background">
       <main className="flex flex-col bg-linear-to-br from-slate-50 via-white to-teal-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 page-gutter md:gap-8">
           <section className="overflow-hidden rounded-4xl border border-white/60 bg-white/85 shadow-[0_30px_80px_rgba(14,165,233,0.14)] backdrop-blur-sm">
-            <div className="bg-linear-to-r from-slate-900 via-cyan-800 to-teal-600 p-6 text-white md:p-8">
+            <div className="bg-linear-to-r from-slate-900 via-cyan-800 to-teal-600 panel-gutter text-white">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-3xl space-y-3">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/14 ring-1 ring-white/20 backdrop-blur">
                     <UploadCloud className="h-6 w-6" />
                   </div>
                   <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Unggahan</h1>
+                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">Unggahan</h1>
                     <p className="max-w-2xl text-sm leading-6 text-cyan-50/90">
                       Pusat arsip file dengan alur unggah yang lebih bersih, cepat, dan mudah dipantau.
                     </p>
@@ -461,7 +461,7 @@ export default function UnggahanPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 p-6 md:grid-cols-[minmax(0,1fr)_220px] md:p-8">
+            <div className="grid gap-4 panel-gutter md:grid-cols-[minmax(0,1fr)_220px]">
               <Card className="rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
                 <CardContent className="space-y-5 p-5">
                   <div className="space-y-1">
@@ -493,7 +493,7 @@ export default function UnggahanPage() {
                   </div>
 
                   {uploadedReportName && (
-                    <Button variant="ghost" size="sm" className="self-end text-muted-foreground" onClick={clearUploadSelection}>
+                    <Button variant="ghost" size="sm" className="w-full text-muted-foreground sm:w-auto sm:self-end" onClick={clearUploadSelection}>
                       Batal pilihan
                     </Button>
                   )}
@@ -566,14 +566,15 @@ export default function UnggahanPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setPreviewReport(report)}>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setPreviewReport(report)}>
                           Lihat
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="w-full sm:w-auto"
                           disabled={downloadingId === report.id}
                           onClick={() => handleDownload(report)}
                         >
@@ -584,7 +585,7 @@ export default function UnggahanPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-red-600 hover:text-red-700"
+                          className="self-end text-red-600 hover:text-red-700 sm:self-auto"
                           onClick={() => handleDeleteUpload(report.id)}
                           disabled={deletingId === report.id}
                           aria-label="Hapus unggahan"
@@ -601,7 +602,7 @@ export default function UnggahanPage() {
         </Card>
 
         <Dialog open={!!previewReport} onOpenChange={(open) => setPreviewReport(open ? previewReport : null)}>
-          <DialogContent className="max-w-5xl">
+          <DialogContent className="max-w-[calc(100%-1rem)] sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle>{previewReport?.filename ?? "Pratinjau laporan"}</DialogTitle>
               <DialogDescription>Lihat unggahan langsung tanpa harus mengunduh terlebih dahulu.</DialogDescription>
@@ -688,12 +689,13 @@ export default function UnggahanPage() {
                   )
                 })()}
 
-                <DialogFooter className="justify-between">
-                  <Button variant="ghost" onClick={() => setPreviewReport(null)}>
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                  <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setPreviewReport(null)}>
                     Tutup
                   </Button>
                   {previewReport.downloadPath && (
                     <Button
+                      className="w-full sm:w-auto"
                       onClick={() => handleDownload(previewReport)}
                       disabled={downloadingId === previewReport.id}
                     >

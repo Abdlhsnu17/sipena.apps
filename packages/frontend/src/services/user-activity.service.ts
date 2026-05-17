@@ -1,4 +1,5 @@
 import apiService from "./api.service"
+import { isLocalAuthSession } from "./auth-utils"
 
 export interface UserActivity {
   id: number
@@ -29,6 +30,13 @@ const normalizeUserActivity = (activity: any): UserActivity => ({
 class UserActivityService {
   async getMyActivities(limit: number = 8): Promise<UserActivityResponse> {
     const safeLimit = Math.max(1, Math.min(limit, 30))
+    if (isLocalAuthSession()) {
+      return {
+        success: true,
+        message: "Aktivitas lokal tidak tersedia",
+        data: [],
+      }
+    }
     const response = await apiService.get<UserActivityResponse>(`/user-activities/me?limit=${safeLimit}`)
     return {
       ...response,

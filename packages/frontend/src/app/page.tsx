@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { assetService, type Asset } from "@/services/asset.service"
-import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser } from "@/services/auth-utils"
+import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils"
 import { borrowingService } from "@/services/borrowing.service"
 import { maintenanceService } from "@/services/maintenance.service"
 import type { User } from "@/types/auth-types"
@@ -159,6 +159,25 @@ export default function DashboardPage() {
   }, [currentUser])
 
   const loadStats = async () => {
+    if (isLocalAuthSession()) {
+      setStats({
+        totalNonMedicalAssets: 0,
+        activeNonMedicalAssets: 0,
+        totalMedicalAssets: 0,
+        activeMedicalAssets: 0,
+        maintenanceDue: 0,
+        completedMaintenance: 0,
+        activeBorrowings: 0,
+        returnedBorrowings: 0,
+        nonMedicalDetailsCount: 0,
+        medicalDetailsCount: 0,
+        nonMedicalRoomCount: 0,
+        medicalRoomCount: 0,
+        totalRoomCount: 0,
+      })
+      return
+    }
+
     try {
       const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse] = await Promise.all([
         assetService.getMedicalAssets({ page: 1, limit: 1000 }),
@@ -245,9 +264,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-auto bg-background">
-      <div className="p-6 space-y-6">
+      <div className="space-y-6 page-gutter">
         <div className="flex flex-col gap-1 rounded-2xl border border-slate-200/60 bg-white/90 p-4 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Dashboard</h1>
           <p className="text-sm text-slate-500">Ringkasan inventaris, peminjaman, dan pemeliharaan secara singkat.</p>
         </div>
 
@@ -304,7 +323,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <div className="text-4xl font-semibold text-muted-foreground tracking-tight">
+                <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">
                   {stats.activeNonMedicalAssets.toLocaleString("id-ID")}
                 </div>
                 <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-teal-600 border-teal-300 bg-teal-50/70">
@@ -334,7 +353,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="space-y-2">
-                <div className="text-4xl font-semibold text-muted-foreground tracking-tight">
+                <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">
                   {stats.activeMedicalAssets.toLocaleString("id-ID")}
                 </div>
                 <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-cyan-600 border-cyan-300 bg-cyan-50/70">
@@ -364,7 +383,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap items-end gap-2">
-                <div className="text-4xl font-semibold text-muted-foreground tracking-tight">{stats.activeBorrowings}</div>
+                <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">{stats.activeBorrowings}</div>
                 <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-amber-600 border-amber-300 bg-amber-50/70">
                   Aktif
                 </Badge>
@@ -388,7 +407,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap items-end gap-2">
-                <div className="text-4xl font-semibold text-muted-foreground tracking-tight">{stats.maintenanceDue}</div>
+                <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">{stats.maintenanceDue}</div>
                 <Badge variant="outline" className="max-w-full whitespace-normal wrap-break-word text-[10px] leading-4 uppercase tracking-[0.24em] text-rose-600 border-rose-300 bg-rose-50/70">
                   Perlu Tindak Lanjut
                 </Badge>

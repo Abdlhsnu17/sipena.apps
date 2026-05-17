@@ -8,6 +8,8 @@ dist/
 build/
 out/
 .next/
+playwright-report/
+test-results/
 
 # TypeScript cache
 *.tsbuildinfo

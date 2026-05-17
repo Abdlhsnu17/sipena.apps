@@ -466,7 +466,7 @@ export default function UMLPage() {
 
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
-      <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-8 page-gutter">
           <section className="grid gap-4 xl:grid-cols-2">
           <FeatureCard
             title="Dokumentasi UML"
@@ -522,7 +522,7 @@ export default function UMLPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="panel-gutter">
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {activityFlows.map((flow) => (
                   <ActivityFlow key={flow.title} title={flow.title} color={flow.color} steps={flow.steps} />
@@ -547,13 +547,13 @@ export default function UMLPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6 p-6">
+            <CardContent className="space-y-6 panel-gutter">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {classItems.map((item) => (
                   <ClassCard key={item.name} {...item} />
                 ))}
               </div>
-              <div className="rounded-2xl bg-linear-to-r from-purple-50 to-indigo-50 p-6 dark:from-purple-950/30 dark:to-indigo-950/30">
+              <div className="rounded-2xl bg-linear-to-r from-purple-50 to-indigo-50 panel-gutter dark:from-purple-950/30 dark:to-indigo-950/30">
                 <h4 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Relasi Antar Kelas</h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {[
@@ -562,7 +562,7 @@ export default function UMLPage() {
                     { from: "User", to: "Borrowing", rel: "1 : N" },
                     { from: "User", to: "Maintenance", rel: "1 : N" },
                   ].map((relation) => (
-                    <div key={`${relation.from}-${relation.to}`} className="flex items-center gap-4 rounded-xl bg-white/70 p-3 dark:bg-slate-800/60">
+                    <div key={`${relation.from}-${relation.to}`} className="flex flex-col gap-3 rounded-xl bg-white/70 p-3 sm:flex-row sm:items-center dark:bg-slate-800/60">
                       <Badge variant="outline" className="bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-200">
                         {relation.from}
                       </Badge>
@@ -600,7 +600,7 @@ export default function UMLPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="panel-gutter">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {erdTables.map((table) => (
                   <TableCard key={table.name} {...table} />
@@ -625,7 +625,7 @@ export default function UMLPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="panel-gutter">
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 {useCaseActors.map((actor) => (
                   <UseCaseActorCard key={actor.actor} {...actor} />

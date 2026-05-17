@@ -410,17 +410,17 @@ export default function NonMedicalAssetsPage() {
 
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/30">
-      <div className="w-full max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-6 page-gutter">
         <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <CardContent className="p-0">
-            <div className="border-b border-slate-100 bg-slate-50 p-6 lg:p-8">
+            <div className="border-b border-slate-100 bg-slate-50 panel-gutter">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-3xl space-y-3">
                   <div className="inline-flex p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg">
                     <Building className="w-5 h-5 text-white" />
                   </div>
                   <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold tracking-tight text-slate-900 lg:text-3xl">Inventaris Non-Medis</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">Inventaris Non-Medis</h1>
                     <p className="max-w-2xl text-sm leading-6 text-slate-600">
                       Kelola aset penunjang operasional dengan tampilan inventaris yang lebih rapi dan mudah dipantau.
                     </p>
@@ -429,7 +429,7 @@ export default function NonMedicalAssetsPage() {
                 {canManageInventory && (
                   <Button
                     onClick={startRoomCreation}
-                    className="rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700"
+                    className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Tambah Inventaris
@@ -438,7 +438,7 @@ export default function NonMedicalAssetsPage() {
               </div>
             </div>
 
-            <div className="space-y-5 p-6 lg:p-8">
+            <div className="space-y-5 panel-gutter">
               <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,1.4fr)]">
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-2.5">
                   <div className="min-w-0">
@@ -806,7 +806,7 @@ export default function NonMedicalAssetsPage() {
       {/* Asset Form Modal */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-[calc(100%-1rem)] rounded-lg bg-background max-h-[90vh] overflow-y-auto sm:max-w-xl">
             <NonMedicalAssetForm
               asset={editingAsset}
               onSave={handleSaveAsset}

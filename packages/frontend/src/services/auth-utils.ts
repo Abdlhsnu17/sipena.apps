@@ -4,6 +4,7 @@ const USERS_STORAGE_KEY = "hospital_users"
 const CURRENT_USER_KEY = "hospital_current_user"
 const TOKEN_STORAGE_KEY = "token"
 const USER_STORAGE_KEY = "user"
+const LOCAL_AUTH_TOKEN_PREFIX = "local_token_"
 
 type AuthStorageKind = "local" | "session"
 
@@ -65,6 +66,14 @@ export function getUsers(): User[] {
 export function getAuthToken(): string | null {
   const storage = getActiveAuthStorage()
   return storage?.getItem(TOKEN_STORAGE_KEY) ?? null
+}
+
+export function isLocalAuthToken(token: string | null | undefined): boolean {
+  return typeof token === "string" && token.startsWith(LOCAL_AUTH_TOKEN_PREFIX)
+}
+
+export function isLocalAuthSession(): boolean {
+  return isLocalAuthToken(getAuthToken())
 }
 
 export function getCurrentUser(): User | null {

@@ -5,6 +5,7 @@ import {
   getAuthToken,
   getCurrentUser as getLocalUser,
   initializeDefaultAdmin,
+  isLocalAuthSession,
   login as localLogin,
   logout as localLogout,
   persistAuthSession,
@@ -286,7 +287,7 @@ class AuthService {
 
   async logout(): Promise<void> {
     try {
-      if (!this.useLocalStorage) {
+      if (!this.useLocalStorage && !isLocalAuthSession()) {
         await apiService.post('/auth/logout', {});
       }
     } catch {
@@ -297,7 +298,8 @@ class AuthService {
   }
 
   async getProfile(): Promise<AuthResponse> {
-    if (this.useLocalStorage) {
+    if (this.useLocalStorage || isLocalAuthSession()) {
+      this.useLocalStorage = true
       const user = getLocalUser();
       if (user) {
         return {
@@ -341,7 +343,8 @@ class AuthService {
   }
 
   async updateProfile(payload: ProfileUpdatePayload): Promise<AuthResponse> {
-    if (this.useLocalStorage) {
+    if (this.useLocalStorage || isLocalAuthSession()) {
+      this.useLocalStorage = true
       const user = getLocalUser();
       if (!user) {
         return { success: false, message: 'Not authenticated' };

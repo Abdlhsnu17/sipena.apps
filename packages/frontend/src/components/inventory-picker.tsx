@@ -50,7 +50,7 @@ export function InventoryPicker<T>({
   placeholder = 'Cari inventaris...',
   buttonLabel = 'Pilih inventaris',
   buttonClassName,
-  popoverClassName = 'w-[var(--radix-popover-trigger-width)] min-w-[320px] max-w-[min(92vw,680px)] p-0',
+  popoverClassName = 'w-[min(92vw,680px)] p-0 sm:w-[var(--radix-popover-trigger-width)] sm:min-w-[320px] sm:max-w-[min(92vw,680px)]',
   listClassName,
   noResultsLabel = 'Tidak ada inventaris tersedia',
   searchValue,
@@ -210,7 +210,7 @@ export function InventoryPicker<T>({
             onValueChange={setQuery}
           />
           {showCategoryFilter && (
-            <div className="flex items-center gap-2 border-b px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
               <button
                 type="button"
                 onClick={() => setCategoryFilter('all')}
