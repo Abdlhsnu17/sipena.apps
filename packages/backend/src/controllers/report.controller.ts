@@ -11,7 +11,9 @@ const getActorUserId = (req: Request): number | null => {
 const canManageAllUploads = (req: Request): boolean => hasAnyRole(req.user?.role, ['admin', 'leader']);
 const isLeaderRole = (req: Request): boolean => normalizeRole(req.user?.role) === 'leader';
 
-const canAccessUpload = (req: Request, ownerId?: number | null): boolean => {
+const canViewUpload = (req: Request): boolean => getActorUserId(req) !== null;
+
+const canDeleteUpload = (req: Request, ownerId?: number | null): boolean => {
   if (canManageAllUploads(req)) {
     return true;
   }
@@ -232,10 +234,6 @@ export class ReportController {
         return;
       }
 
-      if (!canManageAllUploads(req)) {
-        const actorId = getActorUserId(req);
-        result.data = result.data.filter((upload) => actorId !== null && upload.userId === actorId);
-      }
       res.json(result);
     } catch (error) {
       console.error('Get uploads error:', error);
@@ -263,7 +261,7 @@ export class ReportController {
         return;
       }
 
-      if (!canAccessUpload(req, record.data.userId)) {
+      if (!canViewUpload(req)) {
         res.status(403).json({
           success: false,
           message: 'Anda tidak memiliki akses ke file ini'
@@ -309,7 +307,7 @@ export class ReportController {
         return;
       }
 
-      if (!canAccessUpload(req, record.data.userId)) {
+      if (!canViewUpload(req)) {
         res.status(403).json({
           success: false,
           message: 'Anda tidak memiliki akses ke file ini'
@@ -366,7 +364,7 @@ export class ReportController {
         return;
       }
 
-      if (!canAccessUpload(req, existing.data.userId)) {
+      if (!canDeleteUpload(req, existing.data.userId)) {
         res.status(403).json({
           success: false,
           message: 'Anda tidak memiliki akses untuk menghapus file ini'
