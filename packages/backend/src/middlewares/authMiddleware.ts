@@ -1,7 +1,25 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../types/auth';
+import { RowDataPacket } from 'mysql2';
+import pool from '../config/database';
+import { TokenPayload, User } from '../types/auth';
 import { hasAnyRole } from '../utils/role';
+
+interface AuthUserRow extends RowDataPacket {
+  id: number;
+  nip: string;
+  name: string;
+  email: string;
+  role: string;
+  staff_access_type: string | null;
+  gender: string | null;
+  work_unit: string | null;
+  home_address: string | null;
+  phone_number: string | null;
+  photo_path: string | null;
+  session_version: number;
+  uml_access: boolean;
+}
 
 export const authMiddleware = async (
   req: Request,
@@ -30,8 +48,47 @@ export const authMiddleware = async (
       return;
     }
     
-    const decoded = jwt.verify(token, jwtSecret) as User;
-    req.user = decoded;
+    const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
+    const [rows] = await pool.query<AuthUserRow[]>(
+      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, session_version, uml_access
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [decoded.id],
+    );
+
+    const user = rows[0];
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+      return;
+    }
+
+    if ((decoded.sessionVersion ?? 0) !== (Number(user.session_version) || 0)) {
+      res.status(401).json({
+        success: false,
+        message: 'Session has been invalidated'
+      });
+      return;
+    }
+
+    req.user = {
+      id: user.id,
+      nip: user.nip,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      staffAccessType: user.staff_access_type,
+      gender: user.gender ?? undefined,
+      workUnit: user.work_unit ?? undefined,
+      homeAddress: user.home_address ?? undefined,
+      phoneNumber: user.phone_number ?? undefined,
+      photoPath: user.photo_path ?? undefined,
+      sessionVersion: Number(user.session_version) || 0,
+      umlAccess: user.uml_access,
+    } as User;
     
     next();
   } catch {

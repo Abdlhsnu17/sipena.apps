@@ -26,7 +26,8 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error">("success")
   const [deliveryTarget, setDeliveryTarget] = useState("")
-  const [localVerificationCode, setLocalVerificationCode] = useState("")
+  const [previewVerificationCode, setPreviewVerificationCode] = useState("")
+  const [deliveryMethod, setDeliveryMethod] = useState<"whatsapp" | "sms" | "local_preview" | "">("")
   const [expiresInMinutes, setExpiresInMinutes] = useState<number | null>(null)
   const { handleFocusCapture } = useMobileFocusScroll()
 
@@ -42,9 +43,10 @@ export default function ResetPasswordPage() {
 
       if (result.success) {
         setDeliveryTarget(result.data?.deliveryTarget || "")
-        setLocalVerificationCode(result.data?.verificationCode || "")
+        setPreviewVerificationCode(result.data?.previewCode || "")
+        setDeliveryMethod(result.data?.deliveryMethod || "")
         setExpiresInMinutes(result.data?.expiresInMinutes ?? null)
-        setVerificationCode(result.data?.verificationCode || "")
+        setVerificationCode("")
         setStep("confirm")
       }
     } catch (error: any) {
@@ -114,7 +116,7 @@ export default function ResetPasswordPage() {
         <CardHeader className="pb-4 text-center">
           <AuthHeader
             title="Lupa Password"
-            description="Verifikasi dilakukan dengan kode angka 6 digit yang dibuat langsung di aplikasi ini tanpa pengiriman email."
+            description="Masukkan NIP untuk meminta kode verifikasi reset password. Di production, kode akan dikirim ke WhatsApp dan otomatis fallback ke SMS bila diperlukan."
             showRecoveryIcon
           />
         </CardHeader>
@@ -140,7 +142,7 @@ export default function ResetPasswordPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Setelah NIP diverifikasi, kode reset akan langsung muncul di halaman ini.
+                  Kode verifikasi akan dikirim ke WhatsApp terdaftar. Jika gagal, sistem akan mencoba SMS. Pada mode development, kode bisa muncul sebagai preview lokal.
                 </p>
               </div>
 
@@ -166,9 +168,14 @@ export default function ResetPasswordPage() {
                 {expiresInMinutes ? ` Berlaku selama ${expiresInMinutes} menit.` : ""}
               </div>
 
-              <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm text-cyan-800">
-                Kode reset Anda: <span className="font-mono text-base font-bold tracking-[0.35em]">{localVerificationCode || "------"}</span>
-              </div>
+              {deliveryMethod === "local_preview" && (
+                <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm text-cyan-800">
+                  Kode reset preview:{" "}
+                  <span className="font-mono text-base font-bold tracking-[0.35em]">
+                    {previewVerificationCode || "------"}
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Kode Verifikasi</label>
@@ -251,7 +258,8 @@ export default function ResetPasswordPage() {
                   onClick={() => {
                     setStep("request")
                     setVerificationCode("")
-                    setLocalVerificationCode("")
+                    setPreviewVerificationCode("")
+                    setDeliveryMethod("")
                     setExpiresInMinutes(null)
                     setNewPassword("")
                     setConfirmPassword("")

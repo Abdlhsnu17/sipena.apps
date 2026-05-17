@@ -20,9 +20,22 @@ const ENABLE_LOCAL_FALLBACK =
 const LOGIN_SUCCESS_MESSAGE = 'Login berhasil';
 const LOGIN_IDENTIFIER_REQUIRED_MESSAGE = 'Username atau email wajib diisi';
 const LOGIN_PASSWORD_REQUIRED_MESSAGE = 'Password wajib diisi';
+const LOGIN_RATE_LIMIT_MESSAGE = 'Terlalu banyak percobaan login. Silakan coba lagi beberapa menit.';
 const LOGIN_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
 const REGISTER_DUPLICATE_ACCOUNT_MESSAGE = 'Akun dengan NIP atau email ini sudah terdaftar';
 const REGISTER_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
+const AUTH_SESSION_INVALID_MESSAGE = 'Sesi Anda tidak valid atau sudah berakhir. Silakan login kembali.';
+const AUTH_FORBIDDEN_MESSAGE = 'Anda tidak memiliki izin untuk melakukan tindakan ini.';
+const AUTH_NOT_FOUND_MESSAGE = 'Data yang diminta tidak ditemukan.';
+const PASSWORD_RESET_REQUEST_SERVER_ISSUE_MESSAGE = 'Gagal mengirim kode verifikasi. Silakan coba lagi nanti.';
+const PASSWORD_RESET_CONFIRM_SERVER_ISSUE_MESSAGE = 'Gagal mengubah password. Silakan coba lagi nanti.';
+
+type ApiErrorDetails = {
+  responseBody: any;
+  serverMessage?: string;
+  status?: number;
+  validationMessage?: string;
+};
 
 export interface LoginCredentials {
   nip: string;
@@ -34,6 +47,7 @@ export interface RegisterCredentials {
   nip: string;
   name: string;
   email: string;
+  phoneNumber: string;
   password: string;
   confirmPassword: string;
   role?: UserRole;
@@ -50,6 +64,7 @@ export interface User {
   gender?: string;
   workUnit?: string;
   homeAddress?: string;
+  phoneNumber?: string;
   photoPath?: string;
   createdAt?: string;
   lastLogin?: string;
@@ -70,8 +85,8 @@ export interface PasswordResetRequestResponse {
   data?: {
     deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: "local";
-    verificationCode: string;
+    deliveryMethod: "whatsapp" | "sms" | "local_preview";
+    previewCode?: string;
   };
 }
 
@@ -89,6 +104,7 @@ export interface ProfileUpdatePayload {
   gender?: string;
   workUnit?: string;
   homeAddress?: string;
+  phoneNumber?: string;
   photo?: File | null;
 }
 
@@ -111,17 +127,11 @@ async function isBackendAvailable(): Promise<boolean> {
 }
 
 function normalizeLoginError(error: any): string {
-  const responseBody = error?.response?.body;
-  const validationErrors = Array.isArray(responseBody?.errors) ? responseBody.errors : [];
-  const validationMessage = validationErrors.find((item: any) => typeof item?.msg === 'string')?.msg;
+  const { serverMessage, validationMessage } = extractApiErrorDetails(error);
 
   if (validationMessage) {
     return validationMessage;
   }
-
-  const serverMessage =
-    responseBody?.message ||
-    (typeof responseBody === 'string' ? responseBody : undefined);
 
   if (
     serverMessage === LOGIN_IDENTIFIER_REQUIRED_MESSAGE ||
@@ -132,21 +142,15 @@ function normalizeLoginError(error: any): string {
     return serverMessage;
   }
 
-  return LOGIN_SERVER_ISSUE_MESSAGE;
+  return normalizeCommonAuthError(error, LOGIN_SERVER_ISSUE_MESSAGE);
 }
 
 function normalizeRegisterError(error: any): string {
-  const responseBody = error?.response?.body;
-  const validationErrors = Array.isArray(responseBody?.errors) ? responseBody.errors : [];
-  const validationMessage = validationErrors.find((item: any) => typeof item?.msg === 'string')?.msg;
+  const { serverMessage, validationMessage } = extractApiErrorDetails(error);
 
   if (validationMessage) {
     return validationMessage;
   }
-
-  const serverMessage =
-    responseBody?.message ||
-    (typeof responseBody === 'string' ? responseBody : undefined);
 
   if (
     serverMessage === REGISTER_DUPLICATE_ACCOUNT_MESSAGE ||
@@ -155,7 +159,118 @@ function normalizeRegisterError(error: any): string {
     return REGISTER_DUPLICATE_ACCOUNT_MESSAGE;
   }
 
-  return REGISTER_SERVER_ISSUE_MESSAGE;
+  return normalizeCommonAuthError(error, REGISTER_SERVER_ISSUE_MESSAGE);
+}
+
+function normalizePasswordResetRequestError(error: any): string {
+  return normalizeCommonAuthError(error, PASSWORD_RESET_REQUEST_SERVER_ISSUE_MESSAGE);
+}
+
+function normalizePasswordResetConfirmError(error: any): string {
+  return normalizeCommonAuthError(error, PASSWORD_RESET_CONFIRM_SERVER_ISSUE_MESSAGE);
+}
+
+function extractApiErrorDetails(error: any): ApiErrorDetails {
+  const status = error?.response?.status;
+  const responseBody = error?.response?.body;
+  const validationErrors = Array.isArray(responseBody?.errors) ? responseBody.errors : [];
+  const validationMessage = validationErrors.find((item: any) => typeof item?.msg === 'string')?.msg;
+  const serverMessage =
+    responseBody?.message ||
+    (typeof responseBody === 'string' ? responseBody : undefined);
+
+  return {
+    status,
+    responseBody,
+    serverMessage,
+    validationMessage,
+  };
+}
+
+function isRateLimitMessage(message?: string): boolean {
+  return (
+    message === 'Too many requests' ||
+    message === 'Too many requests from this IP, please try again later.' ||
+    (typeof message === 'string' && message.toLowerCase().includes('too many requests'))
+  );
+}
+
+function normalizeCommonAuthError(error: any, fallbackMessage: string): string {
+  const { status, serverMessage, validationMessage } = extractApiErrorDetails(error);
+
+  if (validationMessage) {
+    return validationMessage;
+  }
+
+  if (status === 429 || isRateLimitMessage(serverMessage)) {
+    return LOGIN_RATE_LIMIT_MESSAGE;
+  }
+
+  if (serverMessage === 'Unauthorized') {
+    return AUTH_SESSION_INVALID_MESSAGE;
+  }
+
+  if (serverMessage === 'Not authenticated') {
+    return AUTH_SESSION_INVALID_MESSAGE;
+  }
+
+  if (serverMessage === 'Session has been invalidated') {
+    return AUTH_SESSION_INVALID_MESSAGE;
+  }
+
+  if (serverMessage === 'Forbidden') {
+    return AUTH_FORBIDDEN_MESSAGE;
+  }
+
+  if (
+    serverMessage === 'User not found' ||
+    serverMessage === 'Referenced record not found' ||
+    serverMessage === 'Route not found' ||
+    (typeof serverMessage === 'string' && /^Route .* not found$/i.test(serverMessage))
+  ) {
+    return AUTH_NOT_FOUND_MESSAGE;
+  }
+
+  if (
+    serverMessage === 'Internal server error' ||
+    serverMessage === 'API proxy request failed' ||
+    serverMessage === 'Validation failed'
+  ) {
+    return fallbackMessage;
+  }
+
+  if (serverMessage) {
+    return serverMessage;
+  }
+
+  if (status === 401) {
+    return AUTH_SESSION_INVALID_MESSAGE;
+  }
+
+  if (status === 403) {
+    return AUTH_FORBIDDEN_MESSAGE;
+  }
+
+  if (status === 404) {
+    return AUTH_NOT_FOUND_MESSAGE;
+  }
+
+  if (status === 500 || status === 502 || status === 503 || status === 504) {
+    return fallbackMessage;
+  }
+
+  return fallbackMessage;
+}
+
+function createNormalizedAuthError(message: string, originalError: any): Error {
+  const error = new Error(message);
+  const response = originalError?.response;
+
+  if (response) {
+    (error as Error & { response?: unknown }).response = response;
+  }
+
+  return error;
 }
 
 class AuthService {
@@ -278,11 +393,19 @@ class AuthService {
   }
 
   async requestPasswordResetCode(nip: string): Promise<PasswordResetRequestResponse> {
-    return apiService.post<PasswordResetRequestResponse>('/auth/reset-password/verify', { nip });
+    try {
+      return await apiService.post<PasswordResetRequestResponse>('/auth/reset-password/verify', { nip });
+    } catch (error: any) {
+      throw createNormalizedAuthError(normalizePasswordResetRequestError(error), error);
+    }
   }
 
   async resetPasswordWithCode(payload: PasswordResetPayload): Promise<AuthResponse> {
-    return apiService.post<AuthResponse>('/auth/reset-password', payload);
+    try {
+      return await apiService.post<AuthResponse>('/auth/reset-password', payload);
+    } catch (error: any) {
+      throw createNormalizedAuthError(normalizePasswordResetConfirmError(error), error);
+    }
   }
 
   async logout(): Promise<void> {
@@ -358,7 +481,8 @@ class AuthService {
           email: payload.email ?? user.email,
           gender: payload.gender ?? (user as User).gender,
           workUnit: payload.workUnit ?? (user as User).workUnit,
-          homeAddress: payload.homeAddress ?? (user as User).homeAddress
+          homeAddress: payload.homeAddress ?? (user as User).homeAddress,
+          phoneNumber: payload.phoneNumber ?? (user as User).phoneNumber
         }
       };
 
@@ -382,6 +506,7 @@ class AuthService {
     if (payload.gender !== undefined) formData.append('gender', payload.gender);
     if (payload.workUnit !== undefined) formData.append('workUnit', payload.workUnit);
     if (payload.homeAddress !== undefined) formData.append('homeAddress', payload.homeAddress);
+    if (payload.phoneNumber !== undefined) formData.append('phoneNumber', payload.phoneNumber);
     if (payload.photo) formData.append('photo', payload.photo);
 
     const response = await apiService.patch<AuthResponse>('/auth/me', formData);

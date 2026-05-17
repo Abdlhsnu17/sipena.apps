@@ -14,6 +14,7 @@ export interface User {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
   createdAt?: string
   lastLogin?: string
@@ -30,6 +31,7 @@ export interface RegisterCredentials {
   nip: string
   name: string
   email: string
+  phoneNumber: string
   password: string
   confirmPassword: string
   role?: UserRole

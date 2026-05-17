@@ -168,6 +168,11 @@ export class AuthController {
    * POST /api/auth/logout
    */
   logout = async (req: Request, res: Response): Promise<void> => {
+    const userId = getAuthenticatedUserId(req);
+    if (userId) {
+      await this.authService.invalidateUserSessions(userId);
+    }
+
     res.json({
       success: true,
       message: 'Logout successful'
@@ -219,7 +224,7 @@ export class AuthController {
         return;
       }
 
-      const { name, email, nip, gender, workUnit, homeAddress } = req.body;
+      const { name, email, nip, gender, workUnit, homeAddress, phoneNumber } = req.body;
       const file = (req.file as Express.Multer.File | undefined);
       
       if (file) {
@@ -234,7 +239,8 @@ export class AuthController {
         nip,
         gender,
         workUnit,
-        homeAddress
+        homeAddress,
+        phoneNumber
       }, photoPath);
 
       if (result.success) {

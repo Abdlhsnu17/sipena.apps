@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { applyProxyForwardHeaders } from "../request-utils"
 
 const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:4000").replace(/\/$/, "")
 export const dynamic = "force-dynamic"
@@ -9,6 +10,7 @@ const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
 
   const headers = new Headers(req.headers)
   headers.delete("host")
+  applyProxyForwardHeaders(req, headers)
 
   let body: BodyInit | undefined
   if (req.method !== "GET" && req.method !== "HEAD") {

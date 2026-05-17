@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { query } from 'express-validator';
-import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import reportController from '../controllers/report.controller';
+import { getReportUploadsDir } from '../utils/storage-paths';
 
 const router = Router();
-const uploadDir = path.join(process.cwd(), 'uploads', 'reports');
-fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = getReportUploadsDir();
 const ALLOWED_REPORT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.webp']);
 const ALLOWED_REPORT_MIME_TYPES_BY_EXTENSION: Record<string, Set<string>> = {
   '.pdf': new Set(['application/pdf']),

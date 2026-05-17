@@ -61,9 +61,7 @@ jobs:
 
             cd ~/sipena-rsup/packages/backend
 
-            docker compose down
-
-            docker compose up -d --build
+            docker compose up -d --build backend frontend
 
             wait_for_health backend
             wait_for_health frontend

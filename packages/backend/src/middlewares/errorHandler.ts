@@ -5,6 +5,7 @@ interface ErrorResponse {
   message: string;
   error?: any;
   stack?: string;
+  requestId?: string;
 }
 
 export const errorHandler = (
@@ -13,7 +14,13 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  console.error('Error:', err);
+  console.error('Error:', {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.originalUrl,
+    userId: req.user?.id,
+    error: err,
+  });
 
   // Default error
   let error: ErrorResponse = {
@@ -60,6 +67,10 @@ export const errorHandler = (
   // Add stack trace in development
   if (process.env.NODE_ENV === 'development') {
     error.stack = err.stack;
+  }
+
+  if (req.requestId) {
+    error.requestId = req.requestId;
   }
 
   res.json(error);

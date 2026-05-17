@@ -14,7 +14,7 @@ import { authService } from "@/services/auth.service"
 import { userService } from "@/services/user.service"
 import { toPublicPhotoUrl } from "@/utils/photoUrl"
 // ...existing code...
-import { Eye, EyeOff, Monitor, Moon, Settings, Sun } from "lucide-react"
+import { Eye, EyeOff, Monitor, Moon, Settings, Smartphone, Sun } from "lucide-react"
 import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react"
 
 export default function SettingsPage() {
@@ -28,6 +28,7 @@ export default function SettingsPage() {
     gender: "",
     workUnit: "",
     homeAddress: "",
+    phoneNumber: "",
   })
   const [profileLoading, setProfileLoading] = useState(true)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -78,6 +79,7 @@ export default function SettingsPage() {
             gender: user.gender ?? "",
             workUnit: user.workUnit ?? "",
             homeAddress: user.homeAddress ?? "",
+            phoneNumber: user.phoneNumber ?? "",
           })
           updateRemotePhotoState(user.photoPath ?? null, getPhotoVersion(user))
         }
@@ -204,6 +206,7 @@ export default function SettingsPage() {
         gender: profileForm.gender || undefined,
         workUnit: profileForm.workUnit || undefined,
         homeAddress: profileForm.homeAddress || undefined,
+        phoneNumber: profileForm.phoneNumber || undefined,
         photo: photoFile || undefined,
       })
 
@@ -217,6 +220,7 @@ export default function SettingsPage() {
           gender: updated.gender ?? "",
           workUnit: updated.workUnit ?? "",
           homeAddress: updated.homeAddress ?? "",
+          phoneNumber: updated.phoneNumber ?? "",
         })
         // 1) update preview url (cache-busting) while reusing previous path when backend omits it
         const nextPhotoPath = updated.photoPath ?? photoPath
@@ -365,6 +369,26 @@ export default function SettingsPage() {
                             <SelectItem value="other">Lainnya</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Nomor WhatsApp / SMS</Label>
+                      <div className="relative">
+                        <Smartphone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phoneNumber"
+                          type="tel"
+                          placeholder="+628xxxxxxxxxx"
+                          value={profileForm.phoneNumber}
+                          onChange={(event) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
+                            }))
+                          }
+                          className="pl-10"
+                        />
                       </div>
                     </div>
 

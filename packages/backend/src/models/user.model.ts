@@ -9,6 +9,7 @@ export interface User {
   gender?: string;
   workUnit?: string | null;
   homeAddress?: string | null;
+  phoneNumber?: string | null;
   photoPath?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -30,6 +31,7 @@ export interface CreateUserDTO {
   gender?: string;
   workUnit?: string;
   homeAddress?: string;
+  phoneNumber?: string;
   photoPath?: string;
 }
 
@@ -42,6 +44,7 @@ export interface UpdateUserDTO {
   gender?: string;
   workUnit?: string;
   homeAddress?: string;
+  phoneNumber?: string;
   photoPath?: string;
 }
 

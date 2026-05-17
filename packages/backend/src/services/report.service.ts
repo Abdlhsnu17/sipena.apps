@@ -3,6 +3,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
+import { getReportUploadsDir } from '../utils/storage-paths';
 
 interface ReportFilters {
   startDate?: string;
@@ -77,7 +78,7 @@ export class ReportService {
   private borrowingSanctionColumnAvailable: boolean | null = null;
 
   constructor() {
-    this.uploadDir = path.join(process.cwd(), 'uploads', 'reports');
+    this.uploadDir = getReportUploadsDir();
   }
 
   private async ensureUploadDir(): Promise<void> {

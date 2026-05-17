@@ -11,6 +11,10 @@ export interface MailDeliveryResult {
   preview: boolean;
 }
 
+export const isPasswordResetPreviewMode = (): boolean => {
+  return (process.env.NODE_ENV || 'development') !== 'production';
+};
+
 let cachedTransporter: nodemailer.Transporter | null = null;
 
 const getTransporter = (): nodemailer.Transporter | null => {
@@ -50,7 +54,7 @@ export const sendPasswordResetCodeEmail = async ({
   const from = process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim();
 
   if (!transporter || !from) {
-    if ((process.env.NODE_ENV || 'development') !== 'production') {
+    if (isPasswordResetPreviewMode()) {
       console.log(`[DEV][RESET PASSWORD] kode verifikasi untuk ${to}: ${code}`);
       return { preview: true };
     }

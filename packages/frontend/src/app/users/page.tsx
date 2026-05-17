@@ -13,7 +13,7 @@ import { userService } from "@/services/user.service"
 import type { User as AuthUser, StaffAccessType } from "@/types/auth-types"
 import { normalizeUserRole } from "@/utils/role"
 
-import { AlertCircle, Check, Edit, Plus, Trash2, Users } from "lucide-react"
+import { AlertCircle, Check, Edit, Plus, Smartphone, Trash2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function UsersPage() {
@@ -28,6 +28,7 @@ export default function UsersPage() {
     nip: "",
     name: "",
     email: "",
+    phoneNumber: "",
     role: "staff" as ManagedRole,
     staffAccessType: "all" as StaffAccessType,
     password: "",
@@ -61,7 +62,7 @@ export default function UsersPage() {
   const handleAddUser = () => {
     if (!canCreateUsers) return
     setEditingId(null)
-    setFormData({ nip: "", name: "", email: "", role: "user", staffAccessType: "all", password: "" })
+    setFormData({ nip: "", name: "", email: "", phoneNumber: "", role: "user", staffAccessType: "all", password: "" })
     setIsFormOpen(true)
   }
 
@@ -77,6 +78,7 @@ export default function UsersPage() {
       nip: user.nip,
       name: user.name,
       email: user.email,
+      phoneNumber: user.phoneNumber || "",
       role: user.role,
       staffAccessType: user.staffAccessType || "all",
       password: "",
@@ -88,7 +90,7 @@ export default function UsersPage() {
     e.preventDefault()
     setMessage("")
 
-    if (!formData.nip || !formData.name || !formData.email || !formData.role) {
+    if (!formData.nip || !formData.name || !formData.email || !formData.phoneNumber || !formData.role) {
       setMessage("Semua field harus diisi")
       setMessageType("error")
       return
@@ -99,6 +101,7 @@ export default function UsersPage() {
         const updateData = {
           name: formData.name,
           email: formData.email,
+          phoneNumber: formData.phoneNumber,
           role: formData.role,
           staffAccessType:
             formData.role === "staff" || formData.role === "staff_pj" ? formData.staffAccessType : undefined,
@@ -123,6 +126,7 @@ export default function UsersPage() {
           nip: formData.nip,
           name: formData.name,
           email: formData.email,
+          phoneNumber: formData.phoneNumber,
           password: formData.password,
           role: formData.role,
           staffAccessType:
@@ -422,6 +426,20 @@ export default function UsersPage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Nomor WhatsApp / SMS</label>
+                <div className="relative">
+                  <Smartphone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    placeholder="+628xxxxxxxxxx"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value.replace(/[^\d+]/g, "") })}
+                    className="pl-10 text-sm"
+                  />
+                </div>
               </div>
 
               <div>

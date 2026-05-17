@@ -11,9 +11,11 @@ export interface User {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
   createdAt: Date | string
   lastLogin?: Date | string
+  sessionVersion?: number
   umlAccess?: boolean | {
     isApproved: boolean
     approvedBy?: string
@@ -38,6 +40,7 @@ export interface RegisterCredentials {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
 }
 
 export interface PasswordResetRequestPayload {
@@ -70,7 +73,9 @@ export interface TokenPayload {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
+  sessionVersion?: number
   iat?: number
   exp?: number
 }

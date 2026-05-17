@@ -182,6 +182,7 @@ export function register(credentials: RegisterCredentials): { success: boolean; 
     nip: credentials.nip,
     name: credentials.name,
     email: credentials.email || generatedEmail,
+    phoneNumber: credentials.phoneNumber,
     password: hashPassword(credentials.password),
     role: credentials.role ?? "user",
     staffAccessType: undefined,

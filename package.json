@@ -16,8 +16,10 @@
     "start": "npm run start --workspace=inventory-frontend",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
+    "migrate:user-security-columns": "npm run migrate:user-security-columns --workspace=inventory-backend",
     "start:backend": "npm run start --workspace=inventory-backend",
-    "dev:all": "npm run dev --workspaces"
+    "dev:all": "npm run dev --workspaces",
+    "load-test:login": "node scripts/load-test-login.mjs"
   },
   "overrides": {
     "@types/node": "20.19.27",

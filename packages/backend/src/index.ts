@@ -9,6 +9,7 @@ import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
 import { connectRedis } from './config/redis';
 import { authMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
+import { requestContextMiddleware } from './middlewares/requestContext';
 import {
     ensureCoreSchemaInitialized,
     ensureMaintenanceAssetTypeColumn,
@@ -18,8 +19,10 @@ import {
     ensureReportUploadsTable,
     ensureScheduleAssetForeignKeyRemoved,
     ensureUserActivityLogsTable,
-    ensureUserProfileColumns
+    ensureUserProfileColumns,
+    withSchemaLock
 } from './utils/schema';
+import { getProfileUploadsDir } from './utils/storage-paths';
 
 // Routes
 import assetRoutes from './routes/asset.routes';
@@ -62,19 +65,44 @@ validateEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const resolveTrustProxy = (value: string | undefined): boolean | number => {
+  if (!value) {
+    return 1;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue === 'true') {
+    return true;
+  }
+
+  if (normalizedValue === 'false') {
+    return false;
+  }
+
+  const parsedValue = Number.parseInt(normalizedValue, 10);
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : 1;
+};
+const trustProxySetting = resolveTrustProxy(process.env.TRUST_PROXY_HOPS);
 
 // Trust proxy - important for rate limiting behind reverse proxy (e.g., Railway)
-app.set('trust proxy', 1);
+app.set('trust proxy', trustProxySetting);
 
 // Security middleware
 app.use(helmet());
 app.use(compression());
+app.use(requestContextMiddleware);
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+const parseRateLimitMax = (value: string | undefined, fallback: number): number => {
+  const parsedValue = Number.parseInt(value || '', 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+};
+const generalRateLimitMax = parseRateLimitMax(process.env.GENERAL_RATE_LIMIT_MAX, isDev ? 10000 : 1000);
+const loginRateLimitMax = parseRateLimitMax(process.env.LOGIN_RATE_LIMIT_MAX, isDev ? 1000 : 20);
 
 // CORS configuration
 app.use(cors({
@@ -95,24 +123,38 @@ app.use(cors({
 }));
 
 // Rate limiting
-const limiter = rateLimit({
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDev ? 10000 : 100, // allow higher throughput in development
+  max: generalRateLimitMax,
+  skip: (req) => req.path === '/auth/login' || req.path === '/health',
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later.'
+    message: 'Terlalu banyak permintaan. Silakan coba lagi beberapa saat.'
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use(limiter);
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: loginRateLimitMax,
+  skipSuccessfulRequests: true,
+  message: {
+    success: false,
+    message: 'Terlalu banyak percobaan login. Silakan coba lagi beberapa menit.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth/login', loginLimiter);
+app.use('/api', generalLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Only profile photos remain directly reachable; report files must go through protected routes.
-app.use('/uploads/profiles', express.static(path.join(process.cwd(), 'uploads', 'profiles')));
+app.use('/uploads/profiles', express.static(getProfileUploadsDir()));
 
 const healthHandler = (req: express.Request, res: express.Response) => {
   res.status(200).json({
@@ -156,15 +198,17 @@ const startServer = async () => {
     // Connect to database
     await connectDatabase();
     console.log('✅ Database connected successfully');
-    await ensureCoreSchemaInitialized();
-    await ensureMaintenanceAssetTypeColumn();
-    await ensureMaintenanceDetailColumns();
-    await ensureMaintenanceCancellationReasonColumn();
-    await ensureNonMedicalSpecificationsColumn();
-    await ensureReportUploadsTable();
-    await ensureScheduleAssetForeignKeyRemoved();
-    await ensureUserProfileColumns();
-    await ensureUserActivityLogsTable();
+    await withSchemaLock(async () => {
+      await ensureCoreSchemaInitialized();
+      await ensureMaintenanceAssetTypeColumn();
+      await ensureMaintenanceDetailColumns();
+      await ensureMaintenanceCancellationReasonColumn();
+      await ensureNonMedicalSpecificationsColumn();
+      await ensureReportUploadsTable();
+      await ensureScheduleAssetForeignKeyRemoved();
+      await ensureUserProfileColumns();
+      await ensureUserActivityLogsTable();
+    });
     
     // Connect to Redis (optional)
     const redisConnected = await connectRedis();

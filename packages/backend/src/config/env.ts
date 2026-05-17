@@ -62,7 +62,7 @@ export const applyDevelopmentEnvDefaults = (): void => {
   process.env.JWT_SECRET ||= DEVELOPMENT_JWT_SECRET;
 
   if (process.env.JWT_SECRET === DEVELOPMENT_JWT_SECRET && !hasWarnedAboutDevJwtSecret) {
-    console.warn('');
+    console.warn('⚠️ Menggunakan JWT secret development default. Jangan gunakan nilai ini di production.');
     hasWarnedAboutDevJwtSecret = true;
   }
 };

@@ -160,6 +160,16 @@ Variabel environment yang umum dipakai backend:
 - `NODE_ENV`
 - `PORT`
 - `FRONTEND_URL`
+- `TRUST_PROXY_HOPS`
+- `GENERAL_RATE_LIMIT_MAX`
+- `LOGIN_RATE_LIMIT_MAX`
+- `UPLOADS_ROOT`
+- `DB_CONNECTION_LIMIT`
+- `DB_QUEUE_LIMIT`
+- `DB_CONNECT_TIMEOUT_MS`
+- `DB_IDLE_TIMEOUT_MS`
+- `DB_KEEP_ALIVE_INITIAL_DELAY_MS`
+- `ALLOW_IN_MEMORY_PASSWORD_RESET_STORE`
 - `DB_HOST`
 - `DB_PORT`
 - `DB_NAME`
@@ -168,8 +178,29 @@ Variabel environment yang umum dipakai backend:
 - `JWT_SECRET`
 - `REDIS_HOST`
 - `REDIS_PORT`
+- `OTP_BRAND_NAME`
+- `WHATSAPP_OTP_WEBHOOK_URL`
+- `WHATSAPP_OTP_WEBHOOK_TOKEN`
+- `SMS_OTP_WEBHOOK_URL`
+- `SMS_OTP_WEBHOOK_TOKEN`
 
 Di mode development, backend bisa memakai default lokal seperti `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_NAME=sipena_db_local`, dan `DB_USER=root`.
+
+Untuk production di balik reverse proxy, set minimal:
+
+- `TRUST_PROXY_HOPS=1` untuk arsitektur `Nginx -> Next.js -> Backend`
+- `GENERAL_RATE_LIMIT_MAX=1000`
+- `LOGIN_RATE_LIMIT_MAX=20`
+- `DB_CONNECTION_LIMIT=30`
+- `ALLOW_IN_MEMORY_PASSWORD_RESET_STORE=false`
+
+Catatan:
+
+- `GENERAL_RATE_LIMIT_MAX` dipakai untuk traffic API umum.
+- `LOGIN_RATE_LIMIT_MAX` dipakai khusus percobaan login.
+- Jika ada lebih dari satu proxy tepercaya di depan backend, sesuaikan `TRUST_PROXY_HOPS`.
+- Untuk production, reset password sebaiknya memakai webhook WhatsApp aktif, SMS fallback aktif, dan Redis aktif.
+- `UPLOADS_ROOT` bisa diarahkan ke mounted shared storage jika backend dijalankan lebih dari satu instance.
 
 ## Menjalankan Aplikasi
 
@@ -188,6 +219,7 @@ Di mode development, backend bisa memakai default lokal seperti `DB_HOST=127.0.0
 1. Jalankan `npm run dev:backend` untuk mode development.
 2. Jalankan `npm run build:backend` untuk build TypeScript backend.
 3. Jalankan `npm run start:backend` untuk menjalankan hasil build backend.
+4. Jalankan `npm run migrate:user-security-columns` jika ingin menambahkan kolom `phone_number` dan `session_version` ke database aktif secara manual.
 
 ### Jalankan Keduanya
 
@@ -217,6 +249,27 @@ Catatan:
 - Jika sebelumnya sudah pernah membuat volume MySQL dan ingin mengulang inisialisasi dari nol, jalankan `docker compose -f packages/backend/docker-compose.yml down -v` lalu `up` lagi.
 - Frontend Docker memakai proxy internal Next.js ke `backend`, jadi `NEXT_PUBLIC_API_URL` bisa dibiarkan kosong.
 - Jika hanya ingin menyalakan service infrastruktur, jalankan `docker compose -f packages/backend/docker-compose.yml up mysql redis phpmyadmin -d`.
+
+## Kesiapan Production
+
+Untuk deploy di Hostinger VPS, Railway, AWS, atau platform serupa:
+
+- pastikan reverse proxy meneruskan `X-Real-IP`, `X-Forwarded-For`, dan `X-Forwarded-Proto`
+- sesuaikan `TRUST_PROXY_HOPS` dengan jumlah hop proxy yang dipercaya
+- atur `GENERAL_RATE_LIMIT_MAX` dan `LOGIN_RATE_LIMIT_MAX` sesuai beban
+
+Checklist ringkas tersedia di [docs/production-checklist.md](/Users/abdillah/sipena-rsup/docs/production-checklist.md).
+
+Untuk simulasi login serentak, jalankan:
+
+```bash
+LOAD_TEST_URL=http://127.0.0.1:3000/api/auth/login \
+LOAD_TEST_CONCURRENCY=20 \
+LOAD_TEST_TOTAL=100 \
+LOAD_TEST_NIP=user-uji \
+LOAD_TEST_PASSWORD=password-salah \
+npm run load-test:login
+```
 
 ## Catatan Dokumentasi
 

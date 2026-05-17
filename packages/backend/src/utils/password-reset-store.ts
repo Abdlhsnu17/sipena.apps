@@ -11,6 +11,9 @@ export interface PasswordResetSession {
 
 const PASSWORD_RESET_PREFIX = 'password_reset:';
 const memoryStore = new Map<string, PasswordResetSession>();
+const allowInMemoryStore =
+  (process.env.NODE_ENV || 'development') !== 'production' ||
+  process.env.ALLOW_IN_MEMORY_PASSWORD_RESET_STORE === 'true';
 
 const buildKey = (nip: string): string => `${PASSWORD_RESET_PREFIX}${nip}`;
 
@@ -43,6 +46,10 @@ export const savePasswordResetSession = async (session: PasswordResetSession): P
     return;
   }
 
+  if (!allowInMemoryStore) {
+    throw new Error('Redis wajib aktif untuk reset password di production');
+  }
+
   pruneExpiredMemoryEntries();
   memoryStore.set(key, session);
 };
@@ -65,6 +72,10 @@ export const getPasswordResetSession = async (nip: string): Promise<PasswordRese
     return session;
   }
 
+  if (!allowInMemoryStore) {
+    return null;
+  }
+
   pruneExpiredMemoryEntries();
   const session = memoryStore.get(key);
   if (!session) {
@@ -84,6 +95,10 @@ export const deletePasswordResetSession = async (nip: string): Promise<void> => 
 
   if (redisClient.isReady) {
     await redisClient.del(key);
+    return;
+  }
+
+  if (!allowInMemoryStore) {
     return;
   }
 

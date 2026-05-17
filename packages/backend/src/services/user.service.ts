@@ -9,6 +9,7 @@ import {
   User,
   UserFilters
 } from '../models';
+import { isValidPhoneNumber, normalizePhoneNumberForStorage } from '../utils/otp-delivery';
 import { normalizeRole } from '../utils/role';
 
 interface UserRow extends RowDataPacket {
@@ -25,6 +26,7 @@ interface UserRow extends RowDataPacket {
   gender: string | null;
   work_unit: string | null;
   home_address: string | null;
+  phone_number: string | null;
   photo_path: string | null;
 }
 
@@ -37,7 +39,7 @@ export class UserService {
     const { page, limit, search, role } = filters;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE 1=1';
+    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE 1=1';
     let countQuery = 'SELECT COUNT(*) as count FROM users WHERE 1=1';
     const params: any[] = [];
 
@@ -73,7 +75,7 @@ export class UserService {
 
   async getById(id: string): Promise<ApiResponse<User>> {
     const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
+        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
       [id]
     );
 
@@ -85,9 +87,14 @@ export class UserService {
   }
 
   async create(data: CreateUserDTO): Promise<ApiResponse<User>> {
+    const normalizedPhoneNumber = data.phoneNumber ? normalizePhoneNumberForStorage(data.phoneNumber) : '';
+    if (!normalizedPhoneNumber || !isValidPhoneNumber(normalizedPhoneNumber)) {
+      return { success: false, message: 'Nomor WhatsApp/SMS tidak valid' };
+    }
+
     const [existingRows] = await pool.query<UserRow[]>(
-      'SELECT id FROM users WHERE nip = ? OR email = ?',
-      [data.nip, data.email]
+      'SELECT id FROM users WHERE nip = ? OR email = ? OR phone_number = ?',
+      [data.nip, data.email, normalizedPhoneNumber]
     );
 
     if (existingRows.length > 0) {
@@ -96,12 +103,12 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
-    const { gender, workUnit, homeAddress, photoPath } = data;
+    const { gender, workUnit, homeAddress, phoneNumber, photoPath } = data;
 
     const normalizedRole = data.role ? normalizeRole(data.role) : 'user';
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, photo_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         data.nip,
         data.name,
@@ -112,12 +119,13 @@ export class UserService {
         gender || null,
         workUnit || null,
         homeAddress || null,
+        normalizedPhoneNumber,
         photoPath || null
       ]
     );
 
     const [newRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, created_at FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, phone_number, created_at FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -128,6 +136,22 @@ export class UserService {
     const existing = await this.getById(id);
     if (!existing.success) return existing;
 
+    if (data.phoneNumber !== undefined) {
+      if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
+        return { success: false, message: 'Nomor WhatsApp/SMS tidak valid' };
+      }
+
+      const normalizedPhoneNumber = data.phoneNumber ? normalizePhoneNumberForStorage(data.phoneNumber) : null;
+      const [duplicateRows] = await pool.query<UserRow[]>(
+        'SELECT id FROM users WHERE phone_number = ? AND id <> ? LIMIT 1',
+        [normalizedPhoneNumber, id],
+      );
+
+      if (duplicateRows.length > 0) {
+        return { success: false, message: 'Nomor WhatsApp/SMS sudah digunakan' };
+      }
+    }
+
     const fields: string[] = [];
     const values: any[] = [];
 
@@ -136,6 +160,8 @@ export class UserService {
         const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         const normalizedValue = key === 'role' && typeof value === 'string'
           ? normalizeRole(value)
+          : key === 'phoneNumber' && typeof value === 'string'
+            ? normalizePhoneNumberForStorage(value)
           : value;
         fields.push(`${snakeKey} = ?`);
         values.push(normalizedValue);
@@ -152,7 +178,7 @@ export class UserService {
     await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, created_at, last_login, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
       [id]
     );
 
@@ -183,7 +209,10 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    await pool.query('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?', [hashedPassword, id]);
+    await pool.query(
+      'UPDATE users SET password = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      [hashedPassword, id],
+    );
 
     return { success: true, message: 'Password changed successfully' };
   }

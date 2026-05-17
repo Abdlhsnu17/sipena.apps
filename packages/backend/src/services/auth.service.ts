@@ -15,6 +15,11 @@ import {
     getPasswordResetSession,
     savePasswordResetSession
 } from '../utils/password-reset-store';
+import {
+  isValidPhoneNumber,
+  normalizePhoneNumberForStorage,
+  sendPasswordResetOtp,
+} from '../utils/otp-delivery';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -27,9 +32,11 @@ interface UserRow extends RowDataPacket {
   gender: string | null;
   work_unit: string | null;
   home_address: string | null;
+  phone_number: string | null;
   photo_path: string | null;
   created_at: Date;
   last_login: Date;
+  session_version: number;
   uml_access: boolean;
 }
 
@@ -40,6 +47,7 @@ interface ProfileUpdatePayload {
   gender?: string;
   workUnit?: string;
   homeAddress?: string;
+  phoneNumber?: string;
 }
 
 interface PasswordResetRequestResponse {
@@ -48,8 +56,8 @@ interface PasswordResetRequestResponse {
   data?: {
     deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: 'local';
-    verificationCode: string;
+    deliveryMethod: 'whatsapp' | 'sms' | 'local_preview';
+    previewCode?: string;
   };
 }
 
@@ -68,11 +76,24 @@ export class AuthService {
       gender: row.gender ?? undefined,
       workUnit: row.work_unit ?? undefined,
       homeAddress: row.home_address ?? undefined,
+      phoneNumber: row.phone_number ?? undefined,
       photoPath: row.photo_path ?? undefined,
       createdAt: row.created_at,
       lastLogin: row.last_login,
+      sessionVersion: Number(row.session_version) || 0,
       umlAccess: row.uml_access
     };
+  }
+
+  private maskEmail(email: string): string {
+    const [localPart, domain = ''] = email.split('@');
+    if (!localPart || !domain) {
+      return 'email terdaftar';
+    }
+
+    const visiblePrefix = localPart.slice(0, Math.min(2, localPart.length));
+    const maskedLocalPart = `${visiblePrefix}${'*'.repeat(Math.max(localPart.length - visiblePrefix.length, 2))}`;
+    return `${maskedLocalPart}@${domain}`;
   }
 
   /**
@@ -83,7 +104,7 @@ export class AuthService {
     const identifier = nip.trim();
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
+      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
       [identifier, identifier]
     );
 
@@ -117,12 +138,20 @@ export class AuthService {
   }
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const { nip, name, email, password } = credentials;
+    const { nip, name, email, password, phoneNumber } = credentials;
     const normalizedRole = 'user';
+    const normalizedPhoneNumber = normalizePhoneNumberForStorage(phoneNumber || '');
+
+    if (!isValidPhoneNumber(normalizedPhoneNumber)) {
+      return {
+        success: false,
+        message: 'Nomor WhatsApp/SMS tidak valid'
+      };
+    }
 
     const [existingRows] = await pool.query<UserRow[]>(
-      'SELECT id FROM users WHERE nip = ? OR email = ?',
-      [nip, email]
+      'SELECT id FROM users WHERE nip = ? OR email = ? OR phone_number = ?',
+      [nip, email, normalizedPhoneNumber]
     );
 
     if (existingRows.length > 0) {
@@ -135,12 +164,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (nip, name, email, password, role, staff_access_type) VALUES (?, ?, ?, ?, ?, ?)',
-      [nip, name, email, hashedPassword, normalizedRole, null]
+      'INSERT INTO users (nip, name, email, password, role, staff_access_type, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nip, name, email, hashedPassword, normalizedRole, null, normalizedPhoneNumber]
     );
 
     const [newUserRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -158,7 +187,7 @@ export class AuthService {
 
   async requestPasswordResetCode(nip: string): Promise<PasswordResetRequestResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email FROM users WHERE nip = ?',
+      'SELECT id, nip, name, email, phone_number FROM users WHERE nip = ?',
       [nip]
     );
 
@@ -167,6 +196,12 @@ export class AuthService {
     }
 
     const user = rows[0];
+    if (!user.phone_number || !isValidPhoneNumber(user.phone_number)) {
+      return {
+        success: false,
+        message: 'Nomor WhatsApp/SMS pengguna belum tersedia atau tidak valid. Hubungi admin.'
+      };
+    }
     const verificationCode = this.generateVerificationCode();
     const expiresAt = Date.now() + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
     const codeHash = await bcrypt.hash(verificationCode, 10);
@@ -180,14 +215,25 @@ export class AuthService {
       attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS
     });
 
+    const deliveryResult = await sendPasswordResetOtp({
+      phoneNumber: user.phone_number,
+      userName: user.name,
+      code: verificationCode,
+      expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+    });
+
     return {
       success: true,
-      message: 'Kode verifikasi berhasil dibuat dan ditampilkan langsung di aplikasi ini.',
+      message: deliveryResult.preview
+        ? 'Kode verifikasi berhasil dibuat. Karena mode pengembangan aktif, kode ditampilkan sebagai preview lokal.'
+        : deliveryResult.channel === 'whatsapp'
+          ? 'Kode verifikasi berhasil dikirim ke WhatsApp terdaftar.'
+          : 'WhatsApp tidak tersedia. Kode verifikasi dikirim melalui SMS.',
       data: {
-        deliveryTarget: 'Aplikasi lokal',
+        deliveryTarget: deliveryResult.preview ? 'Preview lokal aplikasi' : deliveryResult.deliveryTarget,
         expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-        deliveryMethod: 'local',
-        verificationCode
+        deliveryMethod: deliveryResult.preview ? 'local_preview' : deliveryResult.channel,
+        previewCode: deliveryResult.preview ? verificationCode : undefined,
       }
     };
   }
@@ -236,7 +282,10 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await pool.query('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?', [hashedPassword, user.id]);
+    await pool.query(
+      'UPDATE users SET password = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      [hashedPassword, user.id],
+    );
     await deletePasswordResetSession(nip);
 
     return { success: true, message: 'Password berhasil diubah. Silakan login dengan password baru.' };
@@ -244,7 +293,7 @@ export class AuthService {
 
   async getProfile(userId: number): Promise<AuthResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -298,6 +347,14 @@ export class AuthService {
       values.push(payload.homeAddress);
     }
 
+    if (payload.phoneNumber !== undefined) {
+      if (payload.phoneNumber && !isValidPhoneNumber(payload.phoneNumber)) {
+        return { success: false, message: 'Nomor WhatsApp/SMS tidak valid' };
+      }
+      fields.push('phone_number = ?');
+      values.push(payload.phoneNumber ? normalizePhoneNumberForStorage(payload.phoneNumber) : null);
+    }
+
     if (photoPath) {
       fields.push('photo_path = ?');
       values.push(photoPath);
@@ -323,7 +380,7 @@ export class AuthService {
     }
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -344,6 +401,13 @@ export class AuthService {
     };
   }
 
+  async invalidateUserSessions(userId: number): Promise<void> {
+    await pool.query(
+      'UPDATE users SET session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      [userId],
+    );
+  }
+
   private generateToken(user: UserRow): string {
     const payload = {
       id: user.id,
@@ -355,7 +419,9 @@ export class AuthService {
       gender: user.gender,
       workUnit: user.work_unit,
       homeAddress: user.home_address,
-      photoPath: user.photo_path
+      phoneNumber: user.phone_number,
+      photoPath: user.photo_path,
+      sessionVersion: Number(user.session_version) || 0,
     };
 
     const secret = process.env.JWT_SECRET;

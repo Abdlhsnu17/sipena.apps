@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
 import authService from "@/services/auth.service"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, Mail, User2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, Mail, Smartphone, User2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type React from "react"
 import { useState } from "react"
@@ -18,6 +18,7 @@ export default function RegisterPage() {
     nip: "",
     name: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
   })
@@ -151,6 +152,31 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-foreground mb-2">
+                Nomor WhatsApp / SMS
+              </label>
+              <div className="relative">
+                <Smartphone className="absolute left-3 top-3 h-5 w-5 text-teal-600" />
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="+628xxxxxxxxxx"
+                  value={formData.phoneNumber}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
+                    }))
+                  }
+                  className="pl-10"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Dipakai untuk OTP WhatsApp utama dan SMS cadangan.</p>
             </div>
 
             <div>

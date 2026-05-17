@@ -28,6 +28,7 @@ router.post(
     body('nip').trim().notEmpty(),
     body('name').trim().notEmpty(),
     body('email').isEmail(),
+    body('phoneNumber').trim().notEmpty(),
     body('password').isLength({ min: 6 }),
     body('role').isIn(USER_ROLES),
     body('staffAccessType').optional().isIn(STAFF_ACCESS_TYPES)
@@ -42,6 +43,7 @@ router.put(
     param('id').isInt({ min: 1 }),
     body('name').optional().trim(),
     body('email').optional().isEmail(),
+    body('phoneNumber').optional().trim(),
     body('role').optional().isIn(USER_ROLES),
     body('staffAccessType').optional().isIn(STAFF_ACCESS_TYPES),
     body('umlAccess').optional().isBoolean()

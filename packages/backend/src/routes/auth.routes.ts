@@ -1,14 +1,13 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import authController from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { getProfileUploadsDir } from '../utils/storage-paths';
 
 const router = Router();
-const profileUploadDir = path.join(process.cwd(), 'uploads', 'profiles');
-fs.mkdirSync(profileUploadDir, { recursive: true });
+const profileUploadDir = getProfileUploadsDir();
 const ALLOWED_PROFILE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const ALLOWED_PROFILE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -55,6 +54,7 @@ router.post(
     body('nip').trim().notEmpty().isLength({ min: 8, max: 20 }),
     body('name').trim().notEmpty(),
     body('email').trim().isEmail(),
+    body('phoneNumber').trim().notEmpty().withMessage('Nomor WhatsApp/SMS wajib diisi'),
     body('password').isLength({ min: 6 }),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.password) {
@@ -88,7 +88,7 @@ router.post(
   authController.resetPassword
 );
 
-router.post('/logout', authController.logout);
+router.post('/logout', authMiddleware, authController.logout);
 
 router.get('/me', authMiddleware, authController.getProfile);
 

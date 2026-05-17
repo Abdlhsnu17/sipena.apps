@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { applyProxyForwardHeaders } from "../../request-utils"
 
 const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:4000").replace(/\/$/, "")
 export const dynamic = "force-dynamic"
@@ -30,6 +31,7 @@ const proxyRequest = async (request: NextRequest, context: ReportsRouteContext) 
     // Forward original headers so multipart/form-data uploads keep their boundary.
     const headers = new Headers(request.headers)
     headers.delete("host")
+    applyProxyForwardHeaders(request, headers)
 
     let body: BodyInit | undefined
     if (!["GET", "HEAD"].includes(request.method)) {

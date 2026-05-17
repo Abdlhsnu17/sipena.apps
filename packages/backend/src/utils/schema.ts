@@ -10,6 +10,8 @@ let ensuredMaintenanceAssetTypeColumn = false;
 let ensuredMaintenanceDetailColumns = false;
 let ensuredMaintenanceCancellationReasonColumn = false;
 let ensuredUserProfileColumns = false;
+let ensuredUserSessionVersionColumn = false;
+let ensuredUserPhoneNumberColumn = false;
 let ensuredNonMedicalAssetsTable = false;
 let ensuredScheduleAssetFkRemoved = false;
 let ensuredUserActivityLogsTable = false;
@@ -221,17 +223,70 @@ export async function ensureReportUploadsTable(): Promise<void> {
   ensuredReportUploadsTable = true;
 }
 
+export async function ensureUserSessionVersionColumn(): Promise<void> {
+  if (ensuredUserSessionVersionColumn) return;
+
+  if (!(await tableExists('users'))) return;
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'session_version'
+    `
+  );
+
+  if (rows.length === 0) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN session_version INT NOT NULL DEFAULT 0 AFTER last_login
+    `);
+  }
+
+  ensuredUserSessionVersionColumn = true;
+}
+
+export async function ensureUserPhoneNumberColumn(): Promise<void> {
+  if (ensuredUserPhoneNumberColumn) return;
+
+  if (!(await tableExists('users'))) return;
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'phone_number'
+    `
+  );
+
+  if (rows.length === 0) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN phone_number VARCHAR(25) DEFAULT NULL AFTER home_address
+    `);
+  }
+
+  ensuredUserPhoneNumberColumn = true;
+}
+
 export async function ensureUserProfileColumns(): Promise<void> {
   if (ensuredUserProfileColumns) return;
 
   if (!(await tableExists('users'))) return;
+
+  await ensureUserSessionVersionColumn();
+  await ensureUserPhoneNumberColumn();
 
   const columnCheckQuery = `
     SELECT COLUMN_NAME
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
       AND TABLE_NAME = 'users'
-      AND COLUMN_NAME IN ('gender', 'work_unit', 'home_address', 'photo_path')
+      AND COLUMN_NAME IN ('gender', 'work_unit', 'home_address', 'phone_number', 'photo_path', 'session_version')
   `;
 
   const [rows] = await pool.query<RowDataPacket[]>(columnCheckQuery);
@@ -258,14 +313,37 @@ export async function ensureUserProfileColumns(): Promise<void> {
     `);
   }
 
+  if (!existingColumns.has('phone_number')) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN phone_number VARCHAR(25) DEFAULT NULL AFTER home_address
+    `);
+  }
+
   if (!existingColumns.has('photo_path')) {
     await pool.query(`
       ALTER TABLE users
-      ADD COLUMN photo_path VARCHAR(255) DEFAULT NULL AFTER home_address
+      ADD COLUMN photo_path VARCHAR(255) DEFAULT NULL AFTER phone_number
     `);
   }
 
   ensuredUserProfileColumns = true;
+}
+
+export async function withSchemaLock<T>(task: () => Promise<T>): Promise<T> {
+  const lockName = 'sipena_schema_ensure_lock';
+  const [rows] = await pool.query<RowDataPacket[]>('SELECT GET_LOCK(?, 30) AS lock_status', [lockName]);
+  const lockStatus = Number(rows[0]?.lock_status || 0);
+
+  if (lockStatus !== 1) {
+    throw new Error('Gagal memperoleh schema lock untuk startup');
+  }
+
+  try {
+    return await task();
+  } finally {
+    await pool.query('DO RELEASE_LOCK(?)', [lockName]).catch(() => undefined);
+  }
 }
 
 export async function ensureMaintenanceAssetTypeColumn(): Promise<void> {

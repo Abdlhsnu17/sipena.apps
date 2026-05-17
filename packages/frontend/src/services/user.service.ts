@@ -14,6 +14,7 @@ export interface User {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
 }
 
@@ -41,6 +42,7 @@ const normalizeUser = (user: any): User => ({
   gender: user.gender,
   workUnit: user.workUnit ?? user.work_unit,
   homeAddress: user.homeAddress ?? user.home_address,
+  phoneNumber: user.phoneNumber ?? user.phone_number,
   photoPath: user.photoPath ?? user.photo_path,
   createdAt: user.createdAt ?? user.created_at,
   lastLogin: user.lastLogin ?? user.last_login,
@@ -57,6 +59,7 @@ export interface CreateUserPayload {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
 }
 
@@ -69,6 +72,7 @@ export interface UpdateUserPayload {
   gender?: string
   workUnit?: string
   homeAddress?: string
+  phoneNumber?: string
   photoPath?: string
 }
 
