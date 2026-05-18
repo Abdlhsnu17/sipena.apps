@@ -436,11 +436,10 @@
   [data-main-scroll] {
     height: auto;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: clip;
+    overflow-y: visible;
     overscroll-behavior-x: none;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 

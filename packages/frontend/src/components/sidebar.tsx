@@ -15,13 +15,14 @@ import {
     Building,
     Calendar,
     ChevronDown,
-    ChevronLeft,
     Clock3,
     FileText,
     HandHelping,
     LayoutDashboard,
     LogOut,
     Menu,
+    PanelLeftClose,
+    PanelLeftOpen,
     RotateCcw,
     Settings,
     Sparkles,
@@ -548,11 +549,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             />
             <button
               onClick={toggleSidebar}
-              className="p-2 hover:bg-muted rounded-lg"
+              className="rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted"
               aria-label="Buka sidebar"
               title="Buka sidebar"
             >
-              <Menu className="w-5 h-5 text-foreground" />
+              <PanelLeftOpen className="h-5 w-5 text-foreground" />
             </button>
           </div>
         ) : (
@@ -570,11 +571,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden rounded-lg p-2 hover:bg-muted xl:block"
+              className="hidden rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <PanelLeftClose className="h-5 w-5" />
             </button>
           </div>
         )}
@@ -820,21 +821,23 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "xl:hidden fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-md transition-colors hover:bg-muted",
+          "xl:hidden fixed left-[max(0.875rem,env(safe-area-inset-left))] top-[max(0.875rem,env(safe-area-inset-top))] z-50 flex items-center gap-3 rounded-2xl border border-teal-200 bg-white/95 px-3.5 py-2.5 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.18)] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:bg-teal-50 active:translate-y-0",
           isMobileMenuOpen && "hidden",
         )}
-        aria-label="Open menu"
+        aria-label="Buka menu navigasi"
+        title="Buka menu navigasi"
       >
-        <Menu className="w-6 h-6 text-foreground" />
-        <Image
-          src="/images/logo-RS.png"
-          alt="Logo Kemenkes RS Persahabatan"
-          width={90}
-          height={24}
-          className="object-contain"
-          style={{ width: "auto", height: "auto" }}
-          priority
-        />
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm">
+          <Menu className="h-5 w-5" />
+        </span>
+        <span className="flex flex-col items-start leading-none">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700">
+            Navigasi
+          </span>
+          <span className="text-sm font-semibold text-slate-900">
+            Menu
+          </span>
+        </span>
       </button>
 
       <div className={cn("xl:hidden fixed inset-0 z-40 flex", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
