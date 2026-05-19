@@ -1,20 +1,20 @@
 "use client"
 
 
-import type React from "react"
+import type React from "react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useConfirm } from "@/hooks/use-confirm"
-import { getCurrentUser } from "@/services/auth-utils"
-import type { User as ApiUser } from "@/services/user.service"
-import { userService } from "@/services/user.service"
-import type { User as AuthUser, StaffAccessType } from "@/types/auth-types"
-import { normalizeUserRole } from "@/utils/role"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useConfirm } from "@/hooks/use-confirm";
+import { getCurrentUser } from "@/services/auth-utils";
+import type { User as ApiUser } from "@/services/user.service";
+import { userService } from "@/services/user.service";
+import type { User as AuthUser, StaffAccessType } from "@/types/auth-types";
+import { normalizeUserRole } from "@/utils/role";
 
-import { AlertCircle, Check, Edit, Plus, Smartphone, Trash2, Users } from "lucide-react"
-import { useEffect, useState } from "react"
+import { AlertCircle, Check, Edit, Plus, Smartphone, Trash2, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function UsersPage() {
   type ManagedRole = "admin" | "leader" | "staff" | "staff_pj" | "teknisi" | "user"
@@ -331,11 +331,11 @@ export default function UsersPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200">
-                    Akses admin
+                  <Badge variant="outline" className="rounded-full bg-teal-50 text-transparent border-teal-200">
+                    <span className="opacity-0">Akses admin</span>
                   </Badge>
-                  <Badge variant="outline" className="rounded-full bg-blue-50 text-blue-700 border-blue-200">
-                    Audit pengguna
+                  <Badge variant="outline" className="rounded-full bg-blue-50 text-transparent border-blue-200">
+                    <span className="opacity-0">Audit pengguna</span>
                   </Badge>
                 </div>
               </div>

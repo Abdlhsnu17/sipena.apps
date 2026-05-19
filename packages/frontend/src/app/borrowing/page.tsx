@@ -1,39 +1,39 @@
 "use client"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card"
-import { assetService } from "@/services/asset.service"
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
-import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service"
-import { maintenanceService } from "@/services/maintenance.service"
-import type { User } from "@/types/auth-types"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
+} from "@/components/ui/card";
+import { assetService } from "@/services/asset.service";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
+import { maintenanceService } from "@/services/maintenance.service";
+import type { User } from "@/types/auth-types";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
 import {
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
     type AssetSourceKey,
-} from "@/utils/api-mappers"
-import { flattenDetailInventories } from "@/utils/detail-inventory"
+} from "@/utils/api-mappers";
+import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
     formatDayTimeLabel,
     parseServerDateTimeValue,
     toLocalDateTimeString,
-} from "@/utils/format"
-import { buildInventorySearchKey } from "@/utils/inventory-search"
-import { formatNoId } from "@/utils/record-id"
-import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
+} from "@/utils/format";
+import { buildInventorySearchKey } from "@/utils/inventory-search";
+import { formatNoId } from "@/utils/record-id";
+import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
 
-import InventoryPicker from "@/components/inventory-picker"
+import InventoryPicker from "@/components/inventory-picker";
 import {
     Dialog,
     DialogContent,
@@ -41,7 +41,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -50,12 +50,12 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
 import {
     appendLine,
     ExportFormat,
@@ -64,10 +64,10 @@ import {
     TableExportColumn,
     type DocumentSection,
     type SectionLine,
-} from "@/utils/export-table"
-import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+} from "@/utils/export-table";
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type BorrowableAsset = DetailInventoryItem
 
@@ -1542,8 +1542,8 @@ export default function BorrowingPage() {
                     Audit, validasi, dan monitoring status alat dalam satu halaman.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="rounded-full bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-200 text-[11px]">
-                      Peminjaman aktif
+                    <Badge variant="outline" className="rounded-full bg-amber-50 text-transparent border-amber-200 dark:bg-amber-950 dark:text-transparent text-[11px]">
+                      <span className="opacity-0">Peminjaman aktif</span>
                     </Badge>
                   </div>
                 </div>

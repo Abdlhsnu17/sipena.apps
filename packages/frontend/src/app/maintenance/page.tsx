@@ -1,6 +1,6 @@
 'use client'
 
-import { buildLoginRedirectUrl } from "@/services/auth-utils"
+import { buildLoginRedirectUrl } from "@/services/auth-utils";
 import {
     AlertCircle,
     ChevronDown,
@@ -14,16 +14,16 @@ import {
     UserCheck,
     Wrench,
     XCircle
-} from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import MaintenanceForm from "@/components/maintenance-form"
-import MaintenanceHistoryList from "@/components/maintenance-history-list"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import MaintenanceForm from "@/components/maintenance-form";
+import MaintenanceHistoryList from "@/components/maintenance-history-list";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -32,8 +32,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
     appendLine,
     DocumentSection,
@@ -42,22 +42,22 @@ import {
     SectionBuilder,
     SectionLine,
     TableExportColumn,
-} from "@/utils/export-table"
+} from "@/utils/export-table";
 
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
-import { assetService } from "@/services/asset.service"
-import { getCurrentUser } from "@/services/auth-utils"
-import { borrowingService } from "@/services/borrowing.service"
-import { maintenanceService, type Maintenance } from "@/services/maintenance.service"
-import type { User } from "@/types/auth-types"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers"
-import { flattenDetailInventories } from "@/utils/detail-inventory"
-import { formatCostLabel, formatDayTimeLabel } from "@/utils/format"
-import { formatNoId } from "@/utils/record-id"
-import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole, isUserRole } from "@/utils/role"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
+import { assetService } from "@/services/asset.service";
+import { getCurrentUser } from "@/services/auth-utils";
+import { borrowingService } from "@/services/borrowing.service";
+import { maintenanceService, type Maintenance } from "@/services/maintenance.service";
+import type { User } from "@/types/auth-types";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers";
+import { flattenDetailInventories } from "@/utils/detail-inventory";
+import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
+import { formatNoId } from "@/utils/record-id";
+import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole, isUserRole } from "@/utils/role";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
   defaultSelected?: boolean
@@ -1036,8 +1036,8 @@ export default function MaintenancePage() {
                     Monitoring pengajuan, jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="rounded-full bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]">
-                      Pemeliharaan aktif
+                    <Badge variant="outline" className="rounded-full bg-teal-50 text-transparent border-teal-200 dark:bg-teal-950 dark:text-transparent text-[11px]">
+                      <span className="opacity-0">Pemeliharaan aktif</span>
                     </Badge>
                   </div>
                 </div>

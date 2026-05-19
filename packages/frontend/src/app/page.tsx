@@ -1,17 +1,17 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { assetService, type Asset } from "@/services/asset.service"
-import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils"
-import { borrowingService } from "@/services/borrowing.service"
-import { maintenanceService } from "@/services/maintenance.service"
-import type { User } from "@/types/auth-types"
-import { getSpecificationDetails } from "@/utils/api-mappers"
-import { canAccessRoute, normalizeUserRole } from "@/utils/role"
-import { ArrowRight, BarChart3, Building2, FileText, HandHelping, Home, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState, type ComponentType } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetService, type Asset } from "@/services/asset.service";
+import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
+import { borrowingService } from "@/services/borrowing.service";
+import { maintenanceService } from "@/services/maintenance.service";
+import type { User } from "@/types/auth-types";
+import { getSpecificationDetails } from "@/utils/api-mappers";
+import { canAccessRoute, normalizeUserRole } from "@/utils/role";
+import { ArrowRight, BarChart3, Building2, FileText, HandHelping, Home, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 
 type IconComponent = ComponentType<{ className?: string }>
 
@@ -265,19 +265,8 @@ export default function DashboardPage() {
   return (
     <div className="flex-1 overflow-auto bg-background">
       <div className="space-y-6 page-gutter">
-        <div className="flex flex-col gap-1 rounded-2xl border border-slate-200/60 bg-white/90 p-4 shadow-sm">
-          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Dashboard</h1>
-          <p className="text-sm text-slate-500">Ringkasan inventaris, peminjaman, dan pemeliharaan secara singkat.</p>
-        </div>
-
         {/* Quick Actions */}
         <Card className="rounded-[28px] border-0 bg-linear-to-br from-teal-50/80 via-white/80 to-cyan-50/80 shadow-[0_30px_60px_rgba(14,165,233,0.15)]">
-          <CardHeader>
-            <CardTitle className="text-base">Menu Cepat</CardTitle>
-            <CardDescription>
-              Menu ini menggabungkan tanda visual agar di setiap alur akses terlihat konsisten.
-            </CardDescription>
-          </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {quickActions.map((action) => {

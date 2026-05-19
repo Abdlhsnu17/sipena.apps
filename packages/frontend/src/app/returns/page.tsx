@@ -1,19 +1,19 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
-import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service"
-import type { User } from "@/types/auth-types"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
+import type { User } from "@/types/auth-types";
 import {
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
     type AssetSourceKey,
-} from "@/utils/api-mappers"
-import { formatDayTimeLabel } from "@/utils/format"
-import { isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
+} from "@/utils/api-mappers";
+import { formatDayTimeLabel } from "@/utils/format";
+import { isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 
 import {
     Dialog,
@@ -22,7 +22,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -31,13 +31,13 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Textarea } from "@/components/ui/textarea"
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
-import { assetService } from "@/services/asset.service"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { flattenDetailInventories } from "@/utils/detail-inventory"
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
+import { assetService } from "@/services/asset.service";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
     appendLine,
     ExportFormat,
@@ -46,9 +46,9 @@ import {
     type DocumentSection,
     type SectionLine,
     type TableExportColumn,
-} from "@/utils/export-table"
-import { formatNoId } from "@/utils/record-id"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
+} from "@/utils/export-table";
+import { formatNoId } from "@/utils/record-id";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
 import {
     AlertCircle,
     ChevronDown,
@@ -58,9 +58,9 @@ import {
     RotateCcw,
     Search,
     Trash2,
-} from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type ReturnExportColumn = TableExportColumn<ApiBorrowing>
 
@@ -1001,9 +1001,9 @@ export default function ReturnsPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Badge
                       variant="outline"
-                      className="bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-200 text-[11px]"
+                      className="bg-teal-50 text-transparent border-teal-200 dark:bg-teal-950 dark:text-transparent text-[11px]"
                     >
-                      Prioritaskan alat yang terlambat untuk membuka blokir peminjaman user
+                      <span className="opacity-0">Prioritaskan alat yang terlambat untuk membuka blokir peminjaman user</span>
                     </Badge>
                   </div>
                 </div>

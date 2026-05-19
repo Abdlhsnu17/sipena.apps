@@ -1,12 +1,12 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getCurrentUser } from "@/services/auth-utils"
-import { normalizeUserRole } from "@/utils/role"
-import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react"
-import Link from "next/link"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUser } from "@/services/auth-utils";
+import { normalizeUserRole } from "@/utils/role";
+import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
 
@@ -494,6 +494,7 @@ export default function UMLPage() {
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
+                aria-label={section.label}
                 className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
                   activeSection === section.id
                     ? "border-teal-600 bg-teal-600 text-white dark:border-teal-500 dark:bg-teal-500"
@@ -501,7 +502,7 @@ export default function UMLPage() {
                 }`}
                 aria-pressed={activeSection === section.id}
               >
-                {section.label}
+                <span className="opacity-0">{section.label}</span>
               </button>
             ))}
           </div>
@@ -677,8 +678,8 @@ function FeatureCard({
         {items && items.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {items.map((item) => (
-              <Badge key={`${title}-${item}`} variant="secondary" className="rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                {item}
+              <Badge key={`${title}-${item}`} variant="secondary" className="rounded-full bg-slate-100 text-transparent dark:bg-slate-800 dark:text-transparent">
+                <span className="opacity-0">{item}</span>
               </Badge>
             ))}
           </div>

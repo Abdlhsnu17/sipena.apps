@@ -1,29 +1,29 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { assetService, type Asset } from "@/services/asset.service"
-import { borrowingService } from "@/services/borrowing.service"
-import { maintenanceService } from "@/services/maintenance.service"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { flattenDetailInventories } from "@/utils/detail-inventory"
-import { parseDateValue } from "@/utils/format"
-import ExcelJS from "exceljs"
-import { BookOpen, ChartBar } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetService, type Asset } from "@/services/asset.service";
+import { borrowingService } from "@/services/borrowing.service";
+import { maintenanceService } from "@/services/maintenance.service";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { flattenDetailInventories } from "@/utils/detail-inventory";
+import { parseDateValue } from "@/utils/format";
+import ExcelJS from "exceljs";
+import { BookOpen, ChartBar } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
 /**
  * Komponen Halaman Laporan & Analitik.
@@ -269,9 +269,9 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700 border-slate-300">
+                <Badge variant="outline" className="rounded-full bg-slate-100 text-transparent border-slate-300">
                   <ChartBar className="mr-1 h-3 w-3" />
-                  Laporan Terintegrasi
+                  <span className="opacity-0">Laporan Terintegrasi</span>
                 </Badge>
               </div>
             </div>
