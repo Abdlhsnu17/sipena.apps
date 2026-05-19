@@ -9,7 +9,7 @@ import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
-import { ArrowRight, BarChart3, Building2, FileText, HandHelping, Home, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
+import { ArrowRight, BarChart3, Building2, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
@@ -25,14 +25,6 @@ type QuickActionLink = {
 }
 
 const quickActionLinks: QuickActionLink[] = [
-  {
-    key: "dashboard",
-    label: "Dashboard",
-    description: "Kembali ke ringkasan utama.",
-    href: "/",
-    icon: Home,
-    gradient: "from-cyan-500/70 via-blue-500/70 to-indigo-500/60",
-  },
   {
     key: "uml",
     label: "Dokumentasi UML",
@@ -289,9 +281,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <Badge variant="outline" className="rounded-full border-white/60 bg-white/20 px-3 py-1 text-[11px] text-white">
-
-                      </Badge>
                       <ArrowRight className="h-4 w-4 text-white/80" />
                     </div>
                   </button>
