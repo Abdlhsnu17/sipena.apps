@@ -491,7 +491,7 @@ export default function UMLPage() {
           <button
             type="button"
             onClick={() => setActiveSection("use-case")}
-            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-teal-500/70 via-cyan-500/70 to-blue-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-purple-500/70 via-fuchsia-500/70 to-pink-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
             aria-label="Lihat Use Case Diagram"
           >
             <div className="flex items-start gap-3">
