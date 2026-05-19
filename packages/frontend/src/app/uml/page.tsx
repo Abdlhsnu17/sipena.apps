@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/services/auth-utils";
 import { normalizeUserRole } from "@/utils/role";
-import { ArrowRight, Box, Database, Users, Workflow, Zap } from "lucide-react";
+import { ArrowRight, Box, Database, UploadCloud, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -467,67 +467,65 @@ export default function UMLPage() {
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 page-gutter">
-          <section className="grid gap-4 lg:grid-cols-2">
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"
             onClick={() => setActiveSection("activity")}
-            className="group flex h-full flex-col justify-between rounded-3xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-6 text-left shadow-[0_25px_45px_rgba(15,23,42,0.25)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
             aria-label="Lihat Activity Diagram"
           >
-            <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/30 text-white backdrop-blur">
-                <Workflow className="h-6 w-6 text-white" />
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur">
+                <Workflow className="h-5 w-5 text-white" />
               </span>
-              <div className="flex-1 space-y-2">
-                <p className="text-lg font-bold text-white">Activity Diagram</p>
-                <p className="text-sm text-white/90">Alur proses utama termasuk peminjaman, pengembalian, dan pemeliharaan sarana.</p>
+              <div className="flex-1 space-y-1">
+                <p className="text-base font-bold text-white">Activity Diagram</p>
+                <p className="text-xs text-white/90">Alur proses peminjaman, pengembalian, dan pemeliharaan.</p>
               </div>
             </div>
-            <div className="mt-4 flex items-center justify-between">
-              <ArrowRight className="h-5 w-5 text-white/80" />
+            <div className="mt-3 flex items-center">
+              <ArrowRight className="h-4 w-4 text-white/80" />
             </div>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSection("use-case")}
-            className="group flex h-full flex-col justify-between rounded-3xl border border-white/50 bg-linear-to-br from-teal-500/70 via-cyan-500/70 to-blue-500/60 p-6 text-left shadow-[0_25px_45px_rgba(15,23,42,0.25)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-teal-500/70 via-cyan-500/70 to-blue-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
             aria-label="Lihat Use Case Diagram"
           >
-            <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/30 text-white backdrop-blur">
-                <Users className="h-6 w-6 text-white" />
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur">
+                <Users className="h-5 w-5 text-white" />
               </span>
-              <div className="flex-1 space-y-2">
-                <p className="text-lg font-bold text-white">Use Case Diagram</p>
-                <p className="text-sm text-white/90">Interaksi aktor dengan modul inti sistem inventaris beserta batas akses setiap role.</p>
+              <div className="flex-1 space-y-1">
+                <p className="text-base font-bold text-white">Use Case Diagram</p>
+                <p className="text-xs text-white/90">Interaksi aktor dengan modul inti sistem.</p>
               </div>
             </div>
-            <div className="mt-4 flex items-center justify-between">
-              <ArrowRight className="h-5 w-5 text-white/80" />
+            <div className="mt-3 flex items-center">
+              <ArrowRight className="h-4 w-4 text-white/80" />
             </div>
           </button>
-        </section>
 
-        <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
-          <div className="flex flex-wrap gap-3">
-              {visibleSections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setActiveSection(section.id)}
-                className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
-                  activeSection === section.id
-                    ? "border-teal-600 bg-teal-600 text-white dark:border-teal-500 dark:bg-teal-500"
-                    : "border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:border-teal-800/70 dark:bg-teal-950/40 dark:text-teal-200"
-                }`}
-                aria-pressed={activeSection === section.id}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          <Link
+            href="/unggahan"
+            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-sky-500/70 via-cyan-500/70 to-teal-400/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur">
+                <UploadCloud className="h-5 w-5 text-white" />
+              </span>
+              <div className="flex-1 space-y-1">
+                <p className="text-base font-bold text-white">Dokumentasi Unggahan</p>
+                <p className="text-xs text-white/90">Alur arsip dan unggah file pendukung.</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center">
+              <ArrowRight className="h-4 w-4 text-white/80" />
+            </div>
+          </Link>
+        </section>
 
         <div ref={sectionContainerRef}>
         {activeSection === "activity" && (
