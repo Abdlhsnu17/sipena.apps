@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/services/auth-utils";
 import { normalizeUserRole } from "@/utils/role";
-import { ArrowRight, Box, Database, FileCode2, UploadCloud, Users, Workflow, Zap } from "lucide-react";
+import { ArrowRight, Box, Database, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -467,34 +467,55 @@ export default function UMLPage() {
   return (
     <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
       <div className="mx-auto max-w-7xl space-y-8 page-gutter">
-          <section className="grid gap-4 xl:grid-cols-2">
-          <FeatureCard
-            title="Dokumentasi UML"
-              description="Lihat Activity Diagram dan Use Case Diagram sesuai akses Anda."
-            href={`#${visibleSectionIds[0] ?? "activity"}`}
-            buttonLabel="Lihat Dokumentasi UML"
-            icon={<FileCode2 className="h-5 w-5 text-white" />}
-            iconContainerClass="from-teal-500 to-cyan-500"
-            items={visibleSections.map((section) => section.label)}
-          />
-            <FeatureCard
-              title="Dokumentasi Unggahan"
-              description="Buka dokumentasi unggahan file dan alur arsip pendukung."
-              href="/unggahan"
-              buttonLabel="Buka Dokumentasi Unggahan"
-              icon={<UploadCloud className="h-5 w-5 text-white" />}
-              iconContainerClass="from-amber-500 to-orange-500"
-            />
+          <section className="grid gap-4 lg:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setActiveSection("activity")}
+            className="group flex h-full flex-col justify-between rounded-3xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-6 text-left shadow-[0_25px_45px_rgba(15,23,42,0.25)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            aria-label="Lihat Activity Diagram"
+          >
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/30 text-white backdrop-blur">
+                <Workflow className="h-6 w-6 text-white" />
+              </span>
+              <div className="flex-1 space-y-2">
+                <p className="text-lg font-bold text-white">Activity Diagram</p>
+                <p className="text-sm text-white/90">Alur proses utama termasuk peminjaman, pengembalian, dan pemeliharaan sarana.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <ArrowRight className="h-5 w-5 text-white/80" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSection("use-case")}
+            className="group flex h-full flex-col justify-between rounded-3xl border border-white/50 bg-linear-to-br from-teal-500/70 via-cyan-500/70 to-blue-500/60 p-6 text-left shadow-[0_25px_45px_rgba(15,23,42,0.25)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            aria-label="Lihat Use Case Diagram"
+          >
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/30 text-white backdrop-blur">
+                <Users className="h-6 w-6 text-white" />
+              </span>
+              <div className="flex-1 space-y-2">
+                <p className="text-lg font-bold text-white">Use Case Diagram</p>
+                <p className="text-sm text-white/90">Interaksi aktor dengan modul inti sistem inventaris beserta batas akses setiap role.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <ArrowRight className="h-5 w-5 text-white/80" />
+            </div>
+          </button>
         </section>
 
-        <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+        <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex flex-wrap gap-3">
               {visibleSections.map((section) => (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
-                aria-label={section.label}
                 className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
                   activeSection === section.id
                     ? "border-teal-600 bg-teal-600 text-white dark:border-teal-500 dark:bg-teal-500"
@@ -502,7 +523,7 @@ export default function UMLPage() {
                 }`}
                 aria-pressed={activeSection === section.id}
               >
-                <span className="opacity-0">{section.label}</span>
+                {section.label}
               </button>
             ))}
           </div>
@@ -675,15 +696,7 @@ function FeatureCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {items && items.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {items.map((item) => (
-              <Badge key={`${title}-${item}`} variant="secondary" className="rounded-full bg-slate-100 text-transparent dark:bg-slate-800 dark:text-transparent">
-                <span className="opacity-0">{item}</span>
-              </Badge>
-            ))}
-          </div>
-        )}
+
         <Link
           href={href}
           className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"

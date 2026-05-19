@@ -3,7 +3,6 @@
 
 import type React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -330,14 +329,7 @@ export default function UsersPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full bg-teal-50 text-transparent border-teal-200">
-                    <span className="opacity-0">Akses admin</span>
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full bg-blue-50 text-transparent border-blue-200">
-                    <span className="opacity-0">Audit pengguna</span>
-                  </Badge>
-                </div>
+
               </div>
 
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">

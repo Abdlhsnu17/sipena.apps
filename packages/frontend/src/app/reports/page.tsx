@@ -10,7 +10,7 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { parseDateValue } from "@/utils/format";
 import ExcelJS from "exceljs";
-import { BookOpen, ChartBar } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
     Bar,
@@ -268,12 +268,7 @@ export default function ReportsPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="rounded-full bg-slate-100 text-transparent border-slate-300">
-                  <ChartBar className="mr-1 h-3 w-3" />
-                  <span className="opacity-0">Laporan Terintegrasi</span>
-                </Badge>
-              </div>
+
             </div>
             <Button onClick={exportReport} className="w-full rounded-2xl bg-slate-700 px-5 text-white shadow-lg hover:bg-slate-800 sm:w-auto">
               Unduh Laporan

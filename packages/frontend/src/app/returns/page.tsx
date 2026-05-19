@@ -998,14 +998,7 @@ export default function ReturnsPage() {
                   <p className="mt-1 text-[12px] text-muted-foreground">
                     Validasi dan pengecekan kondisi alat dapat dilihat oleh admin/leader.
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge
-                      variant="outline"
-                      className="bg-teal-50 text-transparent border-teal-200 dark:bg-teal-950 dark:text-transparent text-[11px]"
-                    >
-                      <span className="opacity-0">Prioritaskan alat yang terlambat untuk membuka blokir peminjaman user</span>
-                    </Badge>
-                  </div>
+
                 </div>
               </div>
             </div>

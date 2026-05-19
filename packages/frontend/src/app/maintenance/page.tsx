@@ -1035,11 +1035,7 @@ export default function MaintenancePage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Monitoring pengajuan, jadwal, proses perbaikan, dan validasi pemeliharaan.
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="rounded-full bg-teal-50 text-transparent border-teal-200 dark:bg-teal-950 dark:text-transparent text-[11px]">
-                      <span className="opacity-0">Pemeliharaan aktif</span>
-                    </Badge>
-                  </div>
+
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">

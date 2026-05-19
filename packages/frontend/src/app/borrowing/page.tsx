@@ -1541,11 +1541,7 @@ export default function BorrowingPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Audit, validasi, dan monitoring status alat dalam satu halaman.
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="rounded-full bg-amber-50 text-transparent border-amber-200 dark:bg-amber-950 dark:text-transparent text-[11px]">
-                      <span className="opacity-0">Peminjaman aktif</span>
-                    </Badge>
-                  </div>
+
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
