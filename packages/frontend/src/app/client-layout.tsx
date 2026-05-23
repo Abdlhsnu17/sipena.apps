@@ -1,22 +1,22 @@
 
 "use client"
 
-import type React from "react"
+import type React from "react";
 
-import ConfirmProvider from "@/components/confirm-provider"
-import Sidebar from "@/components/sidebar"
-import { ThemeProvider } from "@/components/theme-provider"
-import Topbar from "@/components/topbar"
-import { Toaster } from "@/components/ui/toaster"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { useToast } from "@/hooks/use-toast"
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
-import type { User } from "@/types/auth-types"
-import { cn } from "@/utils"
-import { canAccessRoute, getDefaultRouteForRole } from "@/utils/role"
-import { Analytics } from "@vercel/analytics/next"
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import ConfirmProvider from "@/components/confirm-provider";
+import Sidebar from "@/components/sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
+import Topbar from "@/components/topbar";
+import { Toaster } from "@/components/ui/toaster";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import type { User } from "@/types/auth-types";
+import { cn } from "@/utils";
+import { canAccessRoute, getDefaultRouteForRole } from "@/utils/role";
+import { Analytics } from "@vercel/analytics/next";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ClientLayout({
   children,
@@ -64,6 +64,16 @@ export default function ClientLayout({
       router.replace(getDefaultRouteForRole(user.role))
     }
   }, [isAllowedPath, loading, pathname, router, showLayout, user])
+
+  useEffect(() => {
+    if (!showLayout) return
+    if (typeof document === "undefined") return
+
+    const scrollContainer = document.querySelector("[data-main-scroll]") as HTMLElement | null
+    if (!scrollContainer) return
+
+    scrollContainer.scrollTo({ top: 0, left: 0, behavior: "auto" })
+  }, [pathname, showLayout])
 
   useEffect(() => {
     if (typeof window === "undefined") return
