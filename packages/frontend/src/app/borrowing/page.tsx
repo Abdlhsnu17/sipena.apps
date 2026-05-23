@@ -687,6 +687,7 @@ export default function BorrowingPage() {
       void Promise.all([
         loadAssets(),
         loadBorrowings(),
+        loadActiveUsageLocks(),
         loadActiveMaintenanceLocks(),
       ])
     }

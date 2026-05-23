@@ -293,6 +293,20 @@ export default function MaintenancePage() {
     }
   }, [])
 
+  useEffect(() => {
+    const handleInventoryRefresh = () => {
+      void Promise.all([
+        loadMaintenance(),
+        loadAssets(),
+        loadActiveUsageLocks(),
+        loadActiveBorrowingLocks(),
+      ])
+    }
+
+    window.addEventListener("inventory-refresh", handleInventoryRefresh)
+    return () => window.removeEventListener("inventory-refresh", handleInventoryRefresh)
+  }, [])
+
   // Cek hak akses peran
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteMaintenance = isAdminRole(currentUser?.role)
