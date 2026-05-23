@@ -228,6 +228,16 @@ export class BorrowingService {
     return normalized.includes('perbaikan') || normalized.includes('maintenance');
   }
 
+  private isInUseAssetStatus(status?: string | null): boolean {
+    const normalized = String(status || '').toLowerCase();
+    return [
+      'sedang digunakan',
+      'dalam penggunaan',
+      'in_use',
+      'in use'
+    ].some((value) => normalized.includes(value));
+  }
+
   private isDamagedReturnCondition(condition?: string | null): boolean {
     const normalized = String(condition || '').toLowerCase();
     return normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken');
@@ -743,6 +753,29 @@ export class BorrowingService {
       };
     }
 
+    if (this.isInUseAssetStatus(asset.data?.status)) {
+      return {
+        success: false,
+        message: 'Alat sedang digunakan sehingga belum dapat ditambahkan peminjaman'
+      };
+    }
+
+    const assetDetails = this.getAssetDetails(asset.data?.specifications);
+    if (detailId && !isAssetFallbackDetail) {
+      const selectedDetail = this.findDetailById(assetDetails, detailId);
+      if (this.isInUseAssetStatus(selectedDetail?.status)) {
+        return {
+          success: false,
+          message: 'Alat sedang digunakan sehingga belum dapat ditambahkan peminjaman'
+        };
+      }
+    } else if (assetDetails.some((detail) => this.isInUseAssetStatus(detail?.status))) {
+      return {
+        success: false,
+        message: 'Alat sedang digunakan sehingga belum dapat ditambahkan peminjaman'
+      };
+    }
+
     // Hard lock from maintenance workflow: while status is requested/scheduled/in_progress,
     // asset cannot be borrowed until maintenance is completed/cancelled.
     if (detailId && !isAssetFallbackDetail) {
@@ -784,8 +817,7 @@ export class BorrowingService {
     
     // Cek 1: Jika meminjam Detail Item spesifik
     if (detailId && !isAssetFallbackDetail) {
-      const details = this.getAssetDetails(asset.data?.specifications);
-      const selectedDetail = this.findDetailById(details, detailId);
+      const selectedDetail = this.findDetailById(assetDetails, detailId);
       const detailStatus = String(selectedDetail?.status || '').toLowerCase();
       const detailCondition = String(selectedDetail?.condition || '').toLowerCase();
       const isDetailBlocked = [

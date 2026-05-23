@@ -393,6 +393,7 @@ export default function BorrowingPage() {
   const { toast } = useToast()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [borrowings, setBorrowings] = useState<ApiBorrowing[]>([])
+  const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set())
   const [activeMaintenanceLocks, setActiveMaintenanceLocks] = useState<Set<string>>(new Set())
   const [availableAssets, setAvailableAssets] = useState<BorrowableAsset[]>([])
   const [inventoryDetails, setInventoryDetails] = useState<DetailInventoryItem[]>([])
@@ -576,6 +577,40 @@ export default function BorrowingPage() {
     }
   }
 
+  const loadActiveUsageLocks = async () => {
+    try {
+      const response = await assetUsageService.getAll({ page: 1, limit: 1000 })
+      if (!response.success) {
+        setActiveUsageLocks(new Set())
+        return
+      }
+
+      const nextLocks = new Set<string>()
+      response.data.forEach((record) => {
+        if (record.endedAt) return
+
+        const assetType = record.assetType === "non_medical" ? "non_medical" : "medical"
+        const assetId = Number(record.assetId)
+        if (!Number.isFinite(assetId) || assetId <= 0) return
+
+        const baseKey = `${assetType}|${assetId}`
+        const detailId = normalizeDetailIdentifier(record.assetDetailId)
+
+        if (detailId && !isAssetFallbackDetailId(detailId, assetId, assetType)) {
+          nextLocks.add(`${baseKey}|${detailId}`)
+          return
+        }
+
+        nextLocks.add(baseKey)
+      })
+
+      setActiveUsageLocks(nextLocks)
+    } catch (error) {
+      console.error("Error loading active usage locks:", error)
+      setActiveUsageLocks(new Set())
+    }
+  }
+
   const loadBorrowings = async () => {
     try {
       const response = await borrowingService.getAll({ page: 1, limit: 1000 })
@@ -634,6 +669,7 @@ export default function BorrowingPage() {
         await Promise.all([
           loadAssets(),
           loadBorrowings(),
+          loadActiveUsageLocks(),
           loadActiveMaintenanceLocks()
         ])
       }
@@ -1361,17 +1397,24 @@ export default function BorrowingPage() {
 
   const getEffectiveAvailability = (asset: BorrowableAsset) => {
     const isFallbackAssetItem = isAssetFallbackDetailId(asset.detailId, asset.assetId, asset.assetType)
+    const baseLockKey = `${asset.assetType}|${asset.assetId}`
+    const detailLockKey = `${baseLockKey}|${asset.detailId}`
 
     if (asset.availability === "disposed") return "disposed"
+    if (activeUsageLocks.has(baseLockKey) || activeUsageLocks.has(detailLockKey)) {
+      return "in_use"
+    }
     if (asset.availability === "maintenance" || isMaintenanceLockedAsset(asset)) {
       return "maintenance"
     }
+    if (asset.availability === "in_use") return "in_use"
     if (isBorrowingLockedAsset(asset)) {
       return "borrowed"
     }
     if (isFallbackAssetItem) {
       if (asset.assetStatus === "disposed") return "disposed"
       if (asset.assetStatus === "maintenance") return "maintenance"
+      if (asset.assetStatus === "in_use") return "in_use"
       if (asset.assetStatus === "borrowed") return "borrowed"
     }
     return "available"
@@ -1380,6 +1423,7 @@ export default function BorrowingPage() {
   const getEffectiveAvailabilityLabel = (asset: BorrowableAsset) => {
     const effectiveAvailability = getEffectiveAvailability(asset)
     if (effectiveAvailability === "maintenance") return "Dalam Perbaikan"
+    if (effectiveAvailability === "in_use") return "Sedang Digunakan"
     if (effectiveAvailability === "borrowed") return "Dipinjam"
     if (effectiveAvailability === "disposed") return "Non-Aktif"
     return "Aktif"

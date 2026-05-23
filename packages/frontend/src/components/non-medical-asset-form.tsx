@@ -18,7 +18,7 @@ import type React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
-type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan"
+type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan"
 
 function toDateInputValue(value?: string | null) {
   if (!value) return ""
@@ -181,7 +181,7 @@ export default function NonMedicalAssetForm({
       lastMaintenance: formData.lastMaintenance,
       nextMaintenance: formData.nextMaintenance,
       condition: formData.condition as "Baik" | "Cukup" | "Rusak",
-      status: formData.status as "Aktif" | "Non-Aktif" | "Dalam Perbaikan",
+      status: formData.status as StatusType,
       usagePurpose: normalizeUsagePurpose(formData.usagePurpose, USAGE_OPTIONS),
     }
     
@@ -534,6 +534,7 @@ export default function NonMedicalAssetForm({
                 <option>Aktif</option>
                 <option>Non-Aktif</option>
                 <option>Dalam Perbaikan</option>
+                <option>Sedang Digunakan</option>
               </select>
             </div>
             <div>

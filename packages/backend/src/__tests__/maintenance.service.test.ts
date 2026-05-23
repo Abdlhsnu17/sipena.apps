@@ -120,4 +120,41 @@ describe('MaintenanceService active usage lock', () => {
     expect(result.message).toContain('pemeliharaan');
     expect(mockedQuery).toHaveBeenCalledTimes(1);
   });
+
+  it('rejects creating maintenance when the selected detail is marked as in use', async () => {
+    jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 42,
+        status: 'available',
+        specifications: {
+          details: [
+            {
+              id: 'detail-1',
+              name: 'Infusion Pump',
+              status: 'Sedang Digunakan',
+              condition: 'Baik',
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await service.create({
+      assetId: 42,
+      assetType: 'medical',
+      assetDetailId: 'detail-1',
+      assetDetailName: 'Infusion Pump',
+      type: 'preventive',
+      status: 'requested',
+      scheduledDate: '2026-05-23 10:00:00',
+      description: 'Pemeriksaan rutin',
+      createdBy: 7,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Alat sedang digunakan');
+    expect(result.message).toContain('pemeliharaan');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
 });

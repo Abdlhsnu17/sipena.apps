@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 // Only show functional usage categories to avoid confusion between location vs function
 const usageContextLabels: Record<AssetUsageContext, string> = {
   own_room: "Ruangan",
+  same_unit_cross_room: "Antar Sub Ruangan",
+  cross_room: "Antar Instalasi",
   emergency: "Emergency",
   procedure: "Antar Sub Ruangan",
   rounding: "Antar Instalasi",

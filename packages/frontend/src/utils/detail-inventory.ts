@@ -7,6 +7,13 @@ import { getSpecificationDetails } from "./api-mappers"
 const normalizeAvailability = (status?: string): DetailAvailability => {
   const normalized = (status || "").toLowerCase()
   if (normalized.includes("perbaikan") || normalized.includes("maintenance")) return "maintenance"
+  if (
+    normalized.includes("sedang digunakan") ||
+    normalized.includes("dalam penggunaan") ||
+    normalized.includes("in use")
+  ) {
+    return "in_use"
+  }
   if (normalized.includes("dipinjam") || normalized.includes("borrowed")) return "borrowed"
   if (normalized.includes("non-aktif") || normalized.includes("non aktif") || normalized.includes("disposed")) {
     return "disposed"
@@ -143,6 +150,8 @@ export const getDetailInventoryStatusLabel = (item: Pick<DetailInventoryItem, "s
       return "Non-Aktif"
     case "borrowed":
       return "Dipinjam"
+    case "in_use":
+      return "Sedang Digunakan"
     case "available":
     default:
       return "Aktif"

@@ -91,6 +91,11 @@ const getInventoryLockKey = (assetType: string | undefined, assetId: number, det
   return normalizedDetailId ? `${baseKey}|${normalizedDetailId}` : baseKey
 }
 
+const normalizeDetailIdentifier = (value?: string | number | null) => {
+  if (value === undefined || value === null) return ""
+  return String(value).trim()
+}
+
 const isAssetFallbackDetailId = (
   detailId: string | undefined | null,
   assetId: number,
@@ -136,6 +141,7 @@ export default function MaintenancePage() {
   const [maintenance, setMaintenance] = useState<Maintenance[]>([])
   const [maintenanceHistory, setMaintenanceHistory] = useState<Maintenance[]>([])
   const [assets, setAssets] = useState<DetailInventoryItem[]>([])
+  const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set())
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set())
   const [showForm, setShowForm] = useState(false)
   const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null)
@@ -197,6 +203,40 @@ export default function MaintenancePage() {
     }
   }
 
+  const loadActiveUsageLocks = async () => {
+    try {
+      const response = await assetUsageService.getAll({ page: 1, limit: 1000 })
+      if (!response.success) {
+        setActiveUsageLocks(new Set())
+        return
+      }
+
+      const nextLocks = new Set<string>()
+      response.data.forEach((record) => {
+        if (record.endedAt) return
+
+        const assetType = record.assetType === "non_medical" ? "non_medical" : "medical"
+        const assetId = Number(record.assetId)
+        if (!Number.isFinite(assetId) || assetId <= 0) return
+
+        const baseKey = `${assetType}|${assetId}`
+        const detailId = normalizeDetailIdentifier(record.assetDetailId)
+
+        if (detailId && !isAssetFallbackDetailId(detailId, assetId, assetType)) {
+          nextLocks.add(`${baseKey}|${detailId}`)
+          return
+        }
+
+        nextLocks.add(baseKey)
+      })
+
+      setActiveUsageLocks(nextLocks)
+    } catch (error) {
+      console.error("Error loading active usage locks:", error)
+      setActiveUsageLocks(new Set())
+    }
+  }
+
   const loadActiveBorrowingLocks = async () => {
     try {
       const response = await borrowingService.getAll({ page: 1, limit: 1000 })
@@ -241,6 +281,7 @@ export default function MaintenancePage() {
       await Promise.all([
         loadMaintenance(),
         loadAssets(),
+        loadActiveUsageLocks(),
         loadActiveBorrowingLocks()
       ])
     }
@@ -590,10 +631,12 @@ export default function MaintenancePage() {
       const baseKey = `${item.assetType}|${item.assetId}`
       if (lockedAssetKeys.has(baseKey)) return false
       if (lockedDetailKeys.has(`${baseKey}|${String(item.detailId)}`)) return false
+      if (activeUsageLocks.has(baseKey)) return false
+      if (activeUsageLocks.has(`${baseKey}|${String(item.detailId)}`)) return false
       if (activeBorrowingLocks.has(baseKey)) return false
       return !activeBorrowingLocks.has(`${baseKey}|${String(item.detailId)}`)
     })
-  }, [activeBorrowingLocks, activeMaintenanceStatuses, assets, maintenance])
+  }, [activeBorrowingLocks, activeMaintenanceStatuses, activeUsageLocks, assets, maintenance])
 
   const resolveDetailForMaintenance = useCallback(
     (m: Maintenance) => {

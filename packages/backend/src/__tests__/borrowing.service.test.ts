@@ -115,6 +115,47 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(mockedQuery).toHaveBeenCalledTimes(4);
   });
 
+  it('rejects borrowing when the selected detail is marked as in use', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([[{ count: 0 }], []]);
+
+    jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 12,
+        status: 'available',
+        specifications: {
+          details: [
+            {
+              id: 'detail-1',
+              name: 'Infusion Pump Unit 1',
+              status: 'Sedang Digunakan',
+              condition: 'Baik',
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await service.create({
+      assetId: 12,
+      assetType: 'medical',
+      assetDetailId: 'detail-1',
+      userId: 5,
+      borrowDate: new Date(2026, 4, 17, 10, 0, 0),
+      dueDate: new Date(2026, 4, 18, 10, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Alat sedang digunakan');
+    expect(result.message).toContain('peminjaman');
+    expect(mockedQuery).toHaveBeenCalledTimes(4);
+  });
+
   it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])

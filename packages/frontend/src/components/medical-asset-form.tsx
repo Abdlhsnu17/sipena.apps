@@ -10,7 +10,7 @@ import { X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
-type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan"
+type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan"
 
 function toDateInputValue(value?: string | null) {
   if (!value) return ""
@@ -434,6 +434,7 @@ export default function MedicalAssetForm({
                 <option>Aktif</option>
                 <option>Non-Aktif</option>
                 <option>Dalam Perbaikan</option>
+                <option>Sedang Digunakan</option>
               </select>
             </div>
             <div>

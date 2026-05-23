@@ -1,6 +1,6 @@
 export type DetailSource = "medis" | "non_medis"
 
-export type DetailAvailability = "available" | "borrowed" | "maintenance" | "disposed"
+export type DetailAvailability = "available" | "borrowed" | "in_use" | "maintenance" | "disposed"
 export type DetailCondition = "good" | "fair" | "poor" | "damaged"
 
 export interface DetailInventoryItem {

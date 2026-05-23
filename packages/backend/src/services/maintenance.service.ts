@@ -172,6 +172,16 @@ export class MaintenanceService {
     return {};
   }
 
+  private isInUseAssetStatus(status?: string | null): boolean {
+    const normalized = String(status || '').toLowerCase();
+    return [
+      'sedang digunakan',
+      'dalam penggunaan',
+      'in_use',
+      'in use'
+    ].some((value) => normalized.includes(value));
+  }
+
   private normalizeDetailIdentifier(value?: string | number | null): string {
     if (value === undefined || value === null) return '';
     return String(value).trim();
@@ -438,6 +448,41 @@ export class MaintenanceService {
     };
   }
 
+  private validateStatusUsageLockForMaintenance(
+    asset: Asset,
+    detailId?: string | null,
+    detailCode?: string | null
+  ): ApiResponse | null {
+    if (this.isInUseAssetStatus(asset.status)) {
+      return {
+        success: false,
+        message: 'Alat sedang digunakan sehingga belum dapat ditambahkan pemeliharaan'
+      };
+    }
+
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(detailCode);
+    const specifications = this.parseAssetSpecifications(asset.specifications);
+    const details = Array.isArray(specifications.details) ? specifications.details : [];
+
+    const hasInUseDetail = details.some((rawDetail: any) => {
+      const detail = rawDetail && typeof rawDetail === 'object' ? rawDetail : {};
+      const isTarget = normalizedDetailId || normalizedDetailCode
+        ? this.matchesAssetDetail(detail, normalizedDetailId, normalizedDetailCode)
+        : true;
+      return isTarget && this.isInUseAssetStatus(detail.status);
+    });
+
+    if (!hasInUseDetail) {
+      return null;
+    }
+
+    return {
+      success: false,
+      message: 'Alat sedang digunakan sehingga belum dapat ditambahkan pemeliharaan'
+    };
+  }
+
   private async syncAssetAvailability(
     assetId: number,
     assetType: AssetType,
@@ -615,7 +660,16 @@ export class MaintenanceService {
     if (!resolvedAsset) {
       return { success: false, message: 'Asset not found for maintenance' };
     }
-    const { type: resolvedType } = resolvedAsset;
+    const { asset, type: resolvedType } = resolvedAsset;
+
+    const statusUsageLockError = this.validateStatusUsageLockForMaintenance(
+      asset.data as Asset,
+      data.assetDetailId || null,
+      data.assetDetailCode || null
+    );
+    if (statusUsageLockError) {
+      return statusUsageLockError;
+    }
 
     const usageLockError = await this.validateUsageLockForMaintenance(
       data.assetId,

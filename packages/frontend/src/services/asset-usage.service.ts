@@ -77,6 +77,8 @@ export interface CreateAssetUsageData {
   notes?: string;
 }
 
+export type UpdateAssetUsageData = Partial<Omit<CreateAssetUsageData, "assetId" | "assetType">>;
+
 const normalizeUsage = (usage: any): AssetUsageLog => ({
   id: usage.id,
   assetId: usage.assetId ?? usage.asset_id,
@@ -120,6 +122,11 @@ class AssetUsageService {
 
   async create(data: CreateAssetUsageData): Promise<SingleAssetUsageResponse> {
     const response = await apiService.post<SingleAssetUsageResponse>("/asset-usage", data);
+    return response.data ? { ...response, data: normalizeUsage(response.data) } : response;
+  }
+
+  async update(id: number | string, data: UpdateAssetUsageData): Promise<SingleAssetUsageResponse> {
+    const response = await apiService.patch<SingleAssetUsageResponse>(`/asset-usage/${id}`, data);
     return response.data ? { ...response, data: normalizeUsage(response.data) } : response;
   }
 
