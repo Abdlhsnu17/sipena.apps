@@ -115,6 +115,10 @@ interface ColumnCountRow extends RowDataPacket {
   count: number;
 }
 
+interface ActiveUsageRow extends RowDataPacket {
+  id: number;
+}
+
 export class BorrowingService {
   private assetService: AssetService;
   private readonly activeBorrowingStatuses = ['pending', 'approved', 'borrowed', 'overdue'] as const;
@@ -152,6 +156,115 @@ export class BorrowingService {
       [assetId, assetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
     );
     return (rows[0]?.count || 0) > 0;
+  }
+
+  private buildUsageDetailWhere(
+    assetId: number,
+    assetType: string,
+    detailId?: string | null
+  ): { clause: string; params: any[] } {
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallback = this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
+
+    if (!normalizedDetailId || isFallback) {
+      return {
+        clause: '',
+        params: []
+      };
+    }
+
+    return {
+      clause: 'AND asset_detail_id = ?',
+      params: [normalizedDetailId]
+    };
+  }
+
+  private async ensureUsageLogForBorrowing(data: {
+    assetId: number;
+    assetType: string;
+    assetDetailId?: string | null;
+    assetDetailName?: string | null;
+    assetDetailCode?: string | null;
+    assetLocation?: string | null;
+    roomName?: string | null;
+    operatorUserId?: number | null;
+    startedAt?: string | Date | null;
+    usageCount?: number | null;
+    notes?: string | null;
+    createdBy?: number | null;
+  }): Promise<void> {
+    const assetId = Number(data.assetId);
+    const assetType = data.assetType || 'medical';
+    const detailId = this.normalizeDetailIdentifier(data.assetDetailId);
+
+    if (await this.hasActiveUsage(assetId, assetType, detailId || null)) {
+      return;
+    }
+
+    const startedAt = normalizeDateInput(data.startedAt as any) || new Date();
+    const roomName = normalizeOptionalText(data.roomName) || normalizeOptionalText(data.assetLocation) || '-';
+    const actorId = Number(data.createdBy || data.operatorUserId || 0);
+
+    if (!actorId) return;
+
+    await this.assetUsageService.create({
+      assetId,
+      assetType: assetType as any,
+      assetDetailId: detailId || undefined,
+      assetDetailName: data.assetDetailName || undefined,
+      assetDetailCode: data.assetDetailCode || undefined,
+      assetLocation: data.assetLocation || undefined,
+      roomName,
+      operatorUserId: data.operatorUserId || undefined,
+      usageContext: 'other',
+      startedAt,
+      usageCount: data.usageCount && data.usageCount > 0 ? data.usageCount : 1,
+      notes: data.notes || undefined,
+      createdBy: actorId
+    });
+  }
+
+  private async completeUsageLogForBorrowing(data: {
+    assetId: number;
+    assetType: string;
+    assetDetailId?: string | null;
+    operatorUserId?: number | null;
+    conditionAfter?: string | null;
+    notes?: string | null;
+  }): Promise<void> {
+    const assetId = Number(data.assetId);
+    const assetType = data.assetType || 'medical';
+    const detailWhere = this.buildUsageDetailWhere(assetId, assetType, data.assetDetailId);
+    const operatorId = data.operatorUserId ? Number(data.operatorUserId) : null;
+    const operatorClause = operatorId ? 'AND operator_user_id = ?' : '';
+    const params = [
+      assetId,
+      assetType,
+      ...detailWhere.params,
+      ...(operatorId ? [operatorId] : [])
+    ];
+
+    const [rows] = await pool.query<ActiveUsageRow[]>(
+      `SELECT id
+       FROM asset_usage_logs
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND ended_at IS NULL
+         ${detailWhere.clause}
+         ${operatorClause}
+       ORDER BY started_at DESC, created_at DESC
+       LIMIT 1`,
+      params
+    );
+
+    const usageId = rows[0]?.id;
+    if (!usageId) return;
+
+    await this.assetUsageService.update(String(usageId), {
+      endedAt: new Date(),
+      conditionAfter: data.conditionAfter || 'Baik',
+      notes: data.notes || undefined
+    });
   }
 
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
@@ -949,19 +1062,18 @@ export class BorrowingService {
     // Create an asset usage log immediately when borrowing is created.
     // Non-blocking: do not fail the borrowing creation if logging fails.
     try {
-      await this.assetUsageService.create({
+      await this.ensureUsageLogForBorrowing({
         assetId: Number(data.assetId),
-        assetType: assetType as any,
-        assetDetailId: detailId || undefined,
-        assetDetailName: data.assetDetailName || undefined,
-        assetDetailCode: data.assetDetailCode || undefined,
-        assetLocation: asset.data?.location || undefined,
+        assetType,
+        assetDetailId: detailId || null,
+        assetDetailName: data.assetDetailName || null,
+        assetDetailCode: data.assetDetailCode || null,
+        assetLocation: asset.data?.location || null,
         roomName: data.destinationRoom || asset.data?.location || '',
         operatorUserId: data.userId,
-        usageContext: 'other',
         startedAt: borrowDateParsed,
         usageCount: quantity,
-        notes: data.notes || undefined,
+        notes: data.notes || null,
         createdBy: data.userId
       });
     } catch (err) {
@@ -1050,25 +1162,25 @@ export class BorrowingService {
       detailCode: borrowing.data.assetDetailCode || null
     });
 
-    // Create asset usage log on approve if the borrowing should be considered started
+    // Create asset usage log on approve if the borrowing should be considered started.
+    // Existing active usage is reused to avoid duplicate rows.
     try {
       const assetId = Number(borrowing.data.assetId);
       const assetType = borrowing.data.assetType || 'medical';
       const startedAt = normalizeDateInput(borrowing.data.borrowDate) || new Date();
 
-      await this.assetUsageService.create({
+      await this.ensureUsageLogForBorrowing({
         assetId,
-        assetType: assetType as any,
-        assetDetailId: borrowing.data.assetDetailId || undefined,
-        assetDetailName: borrowing.data.assetDetailName || undefined,
-        assetDetailCode: borrowing.data.assetDetailCode || undefined,
+        assetType,
+        assetDetailId: borrowing.data.assetDetailId || null,
+        assetDetailName: borrowing.data.assetDetailName || null,
+        assetDetailCode: borrowing.data.assetDetailCode || null,
         assetLocation: borrowing.data.assetLocation || '',
         roomName: borrowing.data.destinationRoom || '',
         operatorUserId: borrowing.data.userId,
-        usageContext: 'other',
         startedAt: startedAt,
         usageCount: borrowing.data.quantity || 1,
-        notes: borrowing.data.notes || undefined,
+        notes: borrowing.data.notes || null,
         createdBy: approvedBy
       });
     } catch (err) {
@@ -1231,6 +1343,19 @@ export class BorrowingService {
       returnCondition: data.condition || null
     });
 
+    try {
+      await this.completeUsageLogForBorrowing({
+        assetId,
+        assetType,
+        assetDetailId,
+        operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
+        conditionAfter: data.condition || null,
+        notes: data.notes || null
+      });
+    } catch (err) {
+      // ignore logging errors to avoid breaking return flow
+    }
+
     return await this.getById(id);
   }
 
@@ -1391,19 +1516,18 @@ export class BorrowingService {
           ? normalizeDateInput(data.borrowDate) || new Date()
           : normalizeDateInput(borrowingRow.borrowDate) || new Date();
 
-        await this.assetUsageService.create({
+        await this.ensureUsageLogForBorrowing({
           assetId,
-          assetType: assetType as any,
-          assetDetailId: borrowingRow.assetDetailId || borrowingRow.asset_detail_id || undefined,
-          assetDetailName: borrowingRow.assetDetailName || borrowingRow.asset_detail_name || undefined,
-          assetDetailCode: borrowingRow.assetDetailCode || borrowingRow.asset_detail_code || undefined,
+          assetType,
+          assetDetailId: borrowingRow.assetDetailId || borrowingRow.asset_detail_id || null,
+          assetDetailName: borrowingRow.assetDetailName || borrowingRow.asset_detail_name || null,
+          assetDetailCode: borrowingRow.assetDetailCode || borrowingRow.asset_detail_code || null,
           assetLocation: borrowingRow.assetLocation || '',
           roomName: data.destinationRoom || borrowingRow.destinationRoom || borrowingRow.destination_room || '',
-          operatorUserId: borrowingRow.userId,
-          usageContext: 'other',
+          operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
           startedAt: startedAt,
           usageCount: data.quantity !== undefined ? (data.quantity && data.quantity > 0 ? data.quantity : 1) : (borrowingRow.quantity || 1),
-          notes: data.notes || borrowingRow.notes || undefined,
+          notes: data.notes || borrowingRow.notes || null,
           createdBy: (borrowingRow.userId || borrowingRow.user_id) as number
         });
       } catch (err) {

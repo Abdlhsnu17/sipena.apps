@@ -9,13 +9,13 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
 import { isAdminOrLeaderRole } from "@/utils/role";
-import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Search, Trash2 } from "lucide-react";
+import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,6 +74,17 @@ type FormState = {
   endedAt: string;
   usageCount: number;
   conditionBefore: string;
+  notes: string;
+};
+
+type EditFormState = {
+  id: number | string;
+  roomName: string;
+  startedAt: string;
+  endedAt: string;
+  usageCount: number;
+  conditionBefore: string;
+  conditionAfter: string;
   notes: string;
 };
 
@@ -157,13 +168,7 @@ export default function AssetUsagePage() {
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
-  const [completingLog, setCompletingLog] = useState<AssetUsageLog | null>(null);
-  const [completeForm, setCompleteForm] = useState({
-    endedAt: toDateTimeLocalInputValue(),
-    conditionAfter: "Baik",
-    notes: "",
-  });
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const sortedFunctionalUsageKeys = useMemo(
     () => [...functionalUsageKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
@@ -368,52 +373,88 @@ export default function AssetUsagePage() {
     await loadData();
   };
 
-  const openCompleteDialog = (log: AssetUsageLog) => {
-    setCompletingLog(log);
-    setCompleteForm({
-      endedAt: toDateTimeLocalInputValue(log.endedAt ? new Date(log.endedAt) : new Date()),
-      conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
+  const openEditDialog = (log: AssetUsageLog) => {
+    setEditForm({
+      id: log.id,
+      roomName: log.roomName || "",
+      startedAt: toDateTimeLocalInputValue(log.startedAt ? new Date(log.startedAt) : new Date()),
+      endedAt: log.endedAt ? toDateTimeLocalInputValue(new Date(log.endedAt)) : "",
+      usageCount: log.usageCount || 1,
+      conditionBefore: log.conditionBefore || "Baik",
+      conditionAfter: log.conditionAfter || "",
       notes: log.notes || "",
     });
-    setIsCompleteDialogOpen(true);
   };
 
-  const handleStatusChange = (log: AssetUsageLog, status: string) => {
-    if (status === "completed" && !log.endedAt) {
-      openCompleteDialog(log);
+  const handleEditUsage = async () => {
+    if (!editForm) return;
+
+    setIsSaving(true);
+    try {
+      const response = await assetUsageService.update(editForm.id, {
+        roomName: editForm.roomName.trim(),
+        startedAt: editForm.startedAt,
+        endedAt: editForm.endedAt || undefined,
+        usageCount: editForm.usageCount,
+        conditionBefore: editForm.conditionBefore.trim(),
+        conditionAfter: editForm.conditionAfter.trim() || undefined,
+        notes: editForm.notes.trim(),
+      });
+
+      if (response.success) {
+        toast({
+          title: "Pemakaian diperbarui",
+          description: "Data riwayat pemakaian berhasil disimpan.",
+        });
+        setEditForm(null);
+        await loadData();
+      } else {
+        toast({
+          title: "Gagal menyimpan edit",
+          description: response.message || "Tidak dapat memperbarui data pemakaian.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error editing asset usage:", error);
+      toast({
+        title: "Gagal menyimpan edit",
+        description: "Terjadi kesalahan saat menyimpan data pemakaian.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleCompleteUsage = async () => {
-    if (!completingLog) return;
+  const handleStatusChange = async (log: AssetUsageLog, status: string) => {
+    if (status !== "completed" || log.endedAt) return;
+
     setIsSaving(true);
     try {
-      const response = await assetUsageService.update(completingLog.id, {
-        endedAt: completeForm.endedAt,
-        conditionAfter: completeForm.conditionAfter.trim(),
-        notes: completeForm.notes.trim(),
+      const response = await assetUsageService.update(log.id, {
+        endedAt: toDateTimeLocalInputValue(),
+        conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
       });
 
       if (response.success) {
         toast({
           title: "Penggunaan alat diselesaikan",
-          description: "Kondisi akhir alat sudah tersimpan dan status aset diperbarui.",
+          description: "Status pemakaian sudah diperbarui menjadi selesai.",
         });
-        setIsCompleteDialogOpen(false);
-        setCompletingLog(null);
         await loadData();
       } else {
         toast({
-          title: "Gagal menyelesaikan penggunaan",
+          title: "Gagal memperbarui status",
           description: response.message || "Tidak dapat memperbarui log penggunaan.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error completing asset usage:", error);
+      console.error("Error updating asset usage status:", error);
       toast({
-        title: "Gagal menyelesaikan penggunaan",
-        description: "Terjadi kesalahan saat menyimpan penyelesaian penggunaan alat.",
+        title: "Gagal memperbarui status",
+        description: "Terjadi kesalahan saat mengubah status pemakaian alat.",
         variant: "destructive",
       });
     } finally {
@@ -706,7 +747,7 @@ export default function AssetUsagePage() {
                       <TableHead className="w-20 border-b border-slate-200 bg-white text-center text-slate-800">Jumlah</TableHead>
                       <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Kondisi</TableHead>
                       <TableHead className="w-44 border-b border-slate-200 bg-white text-slate-800">Status</TableHead>
-                      <TableHead className="w-14 border-b border-slate-200 bg-white text-right text-slate-800">Aksi</TableHead>
+                      <TableHead className="w-24 border-b border-slate-200 bg-white text-right text-slate-800">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -746,13 +787,22 @@ export default function AssetUsagePage() {
                               </select>
                             )}
                           </TableCell>
-                          <TableCell className="w-20 border-b border-slate-100 bg-white text-right align-bottom">
-                            <div className="flex h-full flex-col items-end justify-end gap-1">
+                          <TableCell className="w-24 border-b border-slate-100 bg-white text-right align-bottom">
+                            <div className="flex h-full items-end justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(log)}
+                                aria-label="Edit log penggunaan"
+                                title="Edit"
+                              >
+                                <Pencil className="h-4 w-4 text-slate-600" />
+                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
-                          </div>
-                        </TableCell>
+                            </div>
+                          </TableCell>
                       </TableRow>
                       );
                     })}
@@ -772,47 +822,74 @@ export default function AssetUsagePage() {
         </Card>
       </div>
 
-      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+      <Dialog open={Boolean(editForm)} onOpenChange={(open) => !open && setEditForm(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Selesaikan Penggunaan Alat</DialogTitle>
-            <DialogDescription>
-              Isi waktu selesai dan kondisi akhir alat. Setelah disimpan, status alat akan diperbarui agar siap dipinjam atau masuk pemeliharaan.
-            </DialogDescription>
+            <DialogTitle>Edit Pemakaian</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-sm font-medium">Waktu Selesai</label>
+          <div className="grid gap-4 py-2 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="text-sm font-medium">Ruangan Penggunaan</label>
               <Input
-                type="datetime-local"
-                value={completeForm.endedAt}
-                onChange={(event) => setCompleteForm((prev) => ({ ...prev, endedAt: event.target.value }))}
+                value={editForm?.roomName ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, roomName: event.target.value } : prev)}
               />
             </div>
             <div>
+              <label className="text-sm font-medium">Mulai</label>
+              <Input
+                type="datetime-local"
+                value={editForm?.startedAt ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, startedAt: event.target.value } : prev)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Selesai</label>
+              <Input
+                type="datetime-local"
+                value={editForm?.endedAt ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, endedAt: event.target.value } : prev)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Jumlah</label>
+              <Input
+                type="number"
+                min={1}
+                value={editForm?.usageCount ?? 1}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, usageCount: Math.max(1, Number(event.target.value) || 1) } : prev)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Kondisi Awal</label>
+              <Input
+                value={editForm?.conditionBefore ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, conditionBefore: event.target.value } : prev)}
+              />
+            </div>
+            <div className="sm:col-span-2">
               <label className="text-sm font-medium">Kondisi Akhir</label>
               <Input
-                value={completeForm.conditionAfter}
-                onChange={(event) => setCompleteForm((prev) => ({ ...prev, conditionAfter: event.target.value }))}
+                value={editForm?.conditionAfter ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, conditionAfter: event.target.value } : prev)}
                 placeholder="Baik / Cukup / Rusak"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-sm font-medium">Catatan</label>
               <Textarea
-                value={completeForm.notes}
-                onChange={(event) => setCompleteForm((prev) => ({ ...prev, notes: event.target.value }))}
-                placeholder="Opsional"
+                value={editForm?.notes ?? ""}
+                onChange={(event) => setEditForm((prev) => prev ? { ...prev, notes: event.target.value } : prev)}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditForm(null)}>
               Batal
             </Button>
-            <Button onClick={handleCompleteUsage} disabled={isSaving}>
-              {isSaving ? "Menyimpan..." : "Simpan Penyelesaian"}
+            <Button onClick={handleEditUsage} disabled={isSaving}>
+              {isSaving ? "Menyimpan..." : "Simpan Edit"}
             </Button>
           </DialogFooter>
         </DialogContent>
