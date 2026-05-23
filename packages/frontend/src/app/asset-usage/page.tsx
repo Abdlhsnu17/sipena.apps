@@ -7,6 +7,7 @@ import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
+import { isAdminOrLeaderRole } from "@/utils/role";
 import { Activity, Check, ChevronDown, ClipboardPlus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -107,7 +108,7 @@ const deriveUsageContextFromProfile = (
 };
 
 const isOwnRoomAsset = (item: DetailInventoryItem, user: User | null) =>
-  deriveUsageContextFromProfile(item, user) === "own_room";
+  isAdminOrLeaderRole(user?.role) || deriveUsageContextFromProfile(item, user) === "own_room";
 
 export default function AssetUsagePage() {
   const router = useRouter();

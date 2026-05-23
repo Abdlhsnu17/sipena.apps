@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService, type Asset } from "@/services/asset.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
@@ -22,8 +23,18 @@ import {
     ResponsiveContainer,
     Tooltip,
     XAxis,
-    YAxis,
+    YAxis
 } from "recharts";
+
+const usageContextLabels: Record<string, string> = {
+  own_room: "Ruangan sendiri",
+  same_unit_cross_room: "Antar sub ruangan",
+  cross_room: "Antar instalasi",
+  emergency: "Emergency",
+  procedure: "Tindakan",
+  rounding: "Visit/rounding",
+  other: "Lainnya",
+};
 
 /**
  * Komponen Halaman Laporan & Analitik.
@@ -34,8 +45,13 @@ export default function ReportsPage() {
   const [medicalRooms, setMedicalRooms] = useState<any[]>([])
   const [maintenance, setMaintenance] = useState<any[]>([])
   const [borrowings, setBorrowings] = useState<any[]>([])
+  const [assetUsageLogs, setAssetUsageLogs] = useState<AssetUsageLog[]>([])
   const [monthlyData, setMonthlyData] = useState<any[]>([])
   const [monthlyDataByLocation, setMonthlyDataByLocation] = useState<any[]>([])
+  const [usageMonthlyData, setUsageMonthlyData] = useState<any[]>([])
+  const [usageRoomData, setUsageRoomData] = useState<any[]>([])
+  const [usageYearData, setUsageYearData] = useState<any[]>([])
+  const [usageContextData, setUsageContextData] = useState<any[]>([])
   const [assetDetails, setAssetDetails] = useState<DetailInventoryItem[]>([])
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
@@ -87,6 +103,60 @@ export default function ReportsPage() {
     setMonthlyDataByLocation(monthlyByLocation)
   }, [])
 
+  const generateUsageData = useCallback((logs: AssetUsageLog[]) => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    const monthlyStats = months.map((month, index) => ({
+      month,
+      total: logs.reduce((sum, log) => {
+        const monthIndex = parseDateValue(log.startedAt)?.getMonth()
+        return monthIndex === index ? sum + (log.usageCount || 1) : sum
+      }, 0),
+    }))
+
+    setUsageMonthlyData(monthlyStats)
+
+    const roomTotals = logs.reduce<Record<string, number>>((acc, log) => {
+      const roomName = (log.roomName || log.assetLocation || "Tidak Ditentukan").trim() || "Tidak Ditentukan"
+      acc[roomName] = (acc[roomName] || 0) + (log.usageCount || 1)
+      return acc
+    }, {})
+
+    setUsageRoomData(
+      Object.entries(roomTotals)
+        .map(([room, total]) => ({ room, total }))
+        .sort((a, b) => b.total - a.total)
+    )
+
+    const yearTotals = logs.reduce<Record<string, number>>((acc, log) => {
+      const startedAt = parseDateValue(log.startedAt)
+      const year = startedAt ? String(startedAt.getFullYear()) : "Tidak Ditentukan"
+      acc[year] = (acc[year] || 0) + (log.usageCount || 1)
+      return acc
+    }, {})
+
+    setUsageYearData(
+      Object.entries(yearTotals)
+        .map(([year, total]) => ({ year, total }))
+        .sort((a, b) => a.year.localeCompare(b.year, "id", { numeric: true }))
+    )
+
+    const contextMap = logs.reduce<Record<string, number>>((acc, log) => {
+      const key = log.usageContext || "other"
+      acc[key] = (acc[key] || 0) + (log.usageCount || 1)
+      return acc
+    }, {})
+
+    setUsageContextData(
+      Object.entries(contextMap)
+        .map(([key, total]) => ({
+          context: usageContextLabels[key] || key,
+          total,
+        }))
+        .sort((a, b) => b.total - a.total)
+    )
+  }, [])
+
   useEffect(() => {
     const loadReportData = async () => {
       try {
@@ -95,9 +165,10 @@ export default function ReportsPage() {
           assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
           maintenanceService.getAll({ page: 1, limit: 1000 }),
           borrowingService.getAll({ page: 1, limit: 1000 }),
+          assetUsageService.getAll({ page: 1, limit: 1000 }),
         ])
 
-        const [medicalResult, nonMedicalResult, maintenanceResult, borrowingResult] = results
+        const [medicalResult, nonMedicalResult, maintenanceResult, borrowingResult, usageResult] = results
         let medicalAssets: Asset[] = []
         let nonMedicalAssets: Asset[] = []
 
@@ -137,6 +208,14 @@ export default function ReportsPage() {
         } else if (borrowingResult.status === "rejected") {
           console.error("Failed to load borrowing data:", borrowingResult.reason)
         }
+
+        if (usageResult.status === "fulfilled" && usageResult.value.success) {
+          const usageData = toArray(usageResult.value.data)
+          setAssetUsageLogs(usageData)
+          generateUsageData(usageData)
+        } else if (usageResult.status === "rejected") {
+          console.error("Failed to load asset usage data:", usageResult.reason)
+        }
       } catch (error) {
         console.error("An unexpected error occurred in loadReportData:", error)
       }
@@ -164,6 +243,17 @@ export default function ReportsPage() {
   const distributionData = getDistributionByLocation()
 
   const totalCost = maintenance.reduce((sum, m) => sum + (Number.parseInt(m.cost) || 0), 0)
+  const totalUsageCount = assetUsageLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0)
+  const usageRoomTop = usageRoomData[0]
+  const usageYearTop = usageYearData[0]
+  const topUsedAsset = Object.values(
+    assetUsageLogs.reduce<Record<string, { label: string; count: number }>>((acc, log) => {
+      const key = log.assetDetailName || log.assetName || `Aset ${log.assetId}`
+      acc[key] = { label: key, count: (acc[key]?.count || 0) + (log.usageCount || 1) }
+      return acc
+    }, {})
+  ).sort((a, b) => b.count - a.count)[0]
+  const topUsageContext = usageContextData[0]
 
   const exportReport = async () => {
     const createdAt = new Date()
@@ -175,6 +265,7 @@ export default function ReportsPage() {
       ["Total inventaris", totalAssets.toLocaleString("id-ID")],
       ["Total pemeliharaan tersimpan", maintenance.length.toString()],
       ["Total peminjaman", borrowings.length.toString()],
+      ["Total penggunaan alat", totalUsageCount.toLocaleString("id-ID")],
       ["Total biaya", `Rp ${totalCost.toLocaleString("id-ID")}`],
     ]
 
@@ -229,6 +320,10 @@ export default function ReportsPage() {
     buildSheet("Pemeliharaan", maintenance)
     buildSheet("Peminjaman", borrowings)
     buildSheet("Statistik Bulanan", monthlyData)
+    buildSheet("Penggunaan Alat", assetUsageLogs)
+    buildSheet("Penggunaan Per Ruangan", usageRoomData)
+    buildSheet("Penggunaan Per Tahun", usageYearData)
+    buildSheet("Statistik Penggunaan", usageMonthlyData)
 
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], {
@@ -284,7 +379,7 @@ export default function ReportsPage() {
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">Ringkasan Terpadu</h3>
               <p className="mt-1 text-sm text-slate-700/80 dark:text-slate-300/80">
-                Laporan ini menyatukan titik data penting dari inventaris, pemeliharaan, dan peminjaman untuk mendukung keputusan operasional.
+                Laporan ini menyatukan titik data penting dari inventaris, pemeliharaan, peminjaman, dan penggunaan alat untuk mendukung keputusan operasional.
               </p>
             </div>
           </div>
@@ -374,8 +469,8 @@ export default function ReportsPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-slate-50/80 via-gray-100/60 to-zinc-50/80 shadow-md">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-slate-50/80 via-gray-100/60 to-zinc-50/80 shadow-md lg:col-span-2">
             <CardHeader className="border-0 p-4 border-b border-slate-200/50">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-lg font-semibold leading-tight">Status Ringkas</CardTitle>
@@ -402,66 +497,50 @@ export default function ReportsPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
           <Card className="rounded-3xl border-0 bg-linear-to-br from-emerald-50/80 via-green-100/60 to-teal-50/80 shadow-md">
             <CardHeader className="border-b border-emerald-200/50">
-              <CardTitle>Pemeliharaan Per Bulan</CardTitle>
+              <CardTitle>Penggunaan Alat Per Bulan</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
+                <LineChart data={usageMonthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
                   <XAxis dataKey="month" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} name="Selesai" />
-                  <Line type="monotone" dataKey="pending" stroke="#f59e0b" strokeWidth={2} name="Tertunda" />
+                  <Line type="monotone" dataKey="total" stroke="#059669" strokeWidth={2} name="Total Pemakaian" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-amber-50/80 via-yellow-100/60 to-orange-50/80 shadow-md">
-            <CardHeader className="border-b border-amber-200/50">
-              <CardTitle>Distribusi Inventaris</CardTitle>
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-teal-50/80 via-cyan-100/60 to-blue-50/80 shadow-md">
+            <CardHeader className="border-b border-teal-200/50">
+              <CardTitle>Ringkasan Penggunaan Alat</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={distributionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" />
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#0ea5e9" name="Jumlah Item" />
-                </BarChart>
-              </ResponsiveContainer>
-
-              <div className="mt-4 space-y-2">
-                {distributionData.map((item, idx) => {
-                  const colors = [
-                    "bg-cyan-50 border-cyan-200 text-cyan-700",
-                    "bg-teal-50 border-teal-200 text-teal-700",
-                    "bg-emerald-50 border-emerald-200 text-emerald-700",
-                    "bg-blue-50 border-blue-200 text-blue-700",
-                    "bg-indigo-50 border-indigo-200 text-indigo-700",
-                    "bg-violet-50 border-violet-200 text-violet-700",
-                  ]
-                  const colorClass = colors[idx % colors.length]
-                  return (
-                      <div key={item.name} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                      <Badge className="bg-current/20 text-current border-0">{item.value}</Badge>
-                    </div>
-                  )
-                })}
+            <CardContent className="space-y-3">
+              <div className="flex flex-col gap-2 rounded-2xl border border-teal-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-foreground">Total penggunaan</span>
+                <Badge className="bg-teal-100 text-teal-700 border-0">{totalUsageCount.toLocaleString("id-ID")}</Badge>
+              </div>
+              <div className="flex flex-col gap-2 rounded-2xl border border-cyan-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-foreground">Alat terpakai</span>
+                <Badge className="bg-cyan-100 text-cyan-700 border-0">{assetUsageLogs.length > 0 ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size : 0}</Badge>
+              </div>
+              <div className="flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-foreground">Konteks terbanyak</span>
+                <Badge className="bg-emerald-100 text-emerald-700 border-0">{topUsageContext ? `${topUsageContext.context} (${topUsageContext.total})` : "Belum ada data"}</Badge>
+              </div>
+              <div className="flex flex-col gap-2 rounded-2xl border border-blue-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-foreground">Aset paling sering dipakai</span>
+                <Badge className="bg-blue-100 text-blue-700 border-0">{topUsedAsset ? `${topUsedAsset.label} (${topUsedAsset.count})` : "Belum ada data"}</Badge>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-teal-100/60 to-green-50/80 shadow-md">
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-teal-100/60 to-green-50/80 shadow-md lg:col-span-2">
             <CardHeader className="border-b border-cyan-200/50">
               <CardTitle>Pemeliharaan Per Ruangan</CardTitle>
             </CardHeader>
@@ -491,14 +570,63 @@ export default function ReportsPage() {
                         <Badge className="bg-current/20 text-current border-0 text-xs">{totalMaintenance} kali</Badge>
                       </div>
                     )
-                  })
-                )}
+                  }))}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-emerald-50/80 via-green-100/60 to-teal-50/80 shadow-md lg:col-span-2">
+            <CardHeader className="border-b border-emerald-200/50">
+              <CardTitle>Penggunaan Alat Per Ruangan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ left: 16, right: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis dataKey="room" type="category" width={150} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#059669" name="Total Pemakaian" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md">
+            <CardHeader className="border-b border-violet-200/50">
+              <CardTitle>Akumulasi Tahunan</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={usageYearData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
+                  <XAxis dataKey="year" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#7c3aed" name="Total Tahunan" />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-violet-200 bg-white/80 p-3">
+                  <p className="text-xs text-muted-foreground">Ruangan terdata</p>
+                  <p className="text-lg font-semibold">{usageRoomData.length}</p>
+                </div>
+                <div className="rounded-2xl border border-fuchsia-200 bg-white/80 p-3">
+                  <p className="text-xs text-muted-foreground">Tahun tertinggi</p>
+                  <p className="text-lg font-semibold">{usageYearTop ? `${usageYearTop.year} (${usageYearTop.total})` : "Belum ada data"}</p>
+                </div>
+                <div className="rounded-2xl border border-pink-200 bg-white/80 p-3">
+                  <p className="text-xs text-muted-foreground">Ruangan terpadat</p>
+                  <p className="text-lg font-semibold">{usageRoomTop ? `${usageRoomTop.room} (${usageRoomTop.total})` : "Belum ada data"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
           <Card className="rounded-3xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md">
             <CardHeader className="border-b border-blue-200/50">
               <CardTitle>Inventaris Paling Sering Dipelihara</CardTitle>

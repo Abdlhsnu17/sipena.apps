@@ -9,7 +9,7 @@ import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
-import { ArrowRight, BarChart3, Building2, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
+import { ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
@@ -34,6 +34,14 @@ const quickActionLinks: QuickActionLink[] = [
     gradient: "from-emerald-500/70 via-teal-500/70 to-blue-500/60",
   },
   {
+    key: "settings",
+    label: "Edit Profil",
+    description: "Perbarui data akun, foto profil, dan sandi.",
+    href: "/settings",
+    icon: Settings,
+    gradient: "from-slate-500/70 via-slate-400/70 to-slate-300/60",
+  },
+  {
     key: "medical-assets",
     label: "Inventaris Medis",
     description: "Lihat dan kelola data inventaris medis.",
@@ -50,6 +58,14 @@ const quickActionLinks: QuickActionLink[] = [
     gradient: "from-teal-500/80 via-cyan-500/70 to-cyan-400/60",
   },
   {
+    key: "reports",
+    label: "Laporan",
+    description: "Analitik & unggahan PDF/Excel/Word.",
+    href: "/reports",
+    icon: BarChart3,
+    gradient: "from-fuchsia-500/70 via-purple-500/70 to-indigo-500/60",
+  },
+  {
     key: "maintenance-schedule",
     label: "Pemeliharaan Sarana",
     description: "Buat dan kelola proses pemelirahaan sarana aset.",
@@ -58,20 +74,12 @@ const quickActionLinks: QuickActionLink[] = [
     gradient: "from-amber-400/70 via-orange-500/70 to-rose-500/50",
   },
   {
-    key: "unggahan",
-    label: "Unggah Folder",
-    description: "Pilih banyak file sekaligus dari satu folder.",
-    href: "/unggahan",
-    icon: UploadCloud,
-    gradient: "from-sky-500/70 via-cyan-500/70 to-teal-400/60",
-  },
-  {
-    key: "reports",
-    label: "Laporan",
-    description: "Analitik & unggahan PDF/Excel/Word.",
-    href: "/reports",
-    icon: BarChart3,
-    gradient: "from-fuchsia-500/70 via-purple-500/70 to-indigo-500/60",
+    key: "asset-usage",
+    label: "Penggunaan Alat",
+    description: "Catat dan pantau pemakaian alat di tiap ruangan.",
+    href: "/asset-usage",
+    icon: ClipboardList,
+    gradient: "from-emerald-500/80 via-teal-500/70 to-cyan-500/60",
   },
   {
     key: "borrowing",
@@ -82,20 +90,20 @@ const quickActionLinks: QuickActionLink[] = [
     gradient: "from-orange-400/70 via-amber-500/70 to-yellow-400/60",
   },
   {
-    key: "settings",
-    label: "Edit Profil",
-    description: "Perbarui data akun, foto profil, dan sandi.",
-    href: "/settings",
-    icon: Settings,
-    gradient: "from-slate-500/70 via-slate-400/70 to-slate-300/60",
-  },
-  {
     key: "returns",
     label: "Pengembalian",
     description: "Konfirmasi kondisi aset yang kembali.",
     href: "/returns",
     icon: RotateCcw,
     gradient: "from-emerald-500/70 via-lime-500/60 to-emerald-400/50",
+  },
+  {
+    key: "unggahan",
+    label: "Unggah Folder",
+    description: "Pilih banyak file sekaligus dari satu folder.",
+    href: "/unggahan",
+    icon: UploadCloud,
+    gradient: "from-sky-500/70 via-cyan-500/70 to-teal-400/60",
   },
 ]
 
