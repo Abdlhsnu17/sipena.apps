@@ -117,6 +117,7 @@ interface ColumnCountRow extends RowDataPacket {
 
 interface ActiveUsageRow extends RowDataPacket {
   id: number;
+  ended_at?: Date | string | null;
 }
 
 export class BorrowingService {
@@ -244,8 +245,8 @@ export class BorrowingService {
       ...(operatorId ? [operatorId] : [])
     ];
 
-    const [rows] = await pool.query<ActiveUsageRow[]>(
-      `SELECT id
+    let [rows] = await pool.query<ActiveUsageRow[]>(
+      `SELECT id, ended_at
        FROM asset_usage_logs
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
@@ -257,14 +258,33 @@ export class BorrowingService {
       params
     );
 
-    const usageId = rows[0]?.id;
-    if (!usageId) return;
+    if (rows.length === 0) {
+      [rows] = await pool.query<ActiveUsageRow[]>(
+        `SELECT id, ended_at
+         FROM asset_usage_logs
+         WHERE asset_id = ?
+           AND COALESCE(asset_type, 'medical') = ?
+           ${detailWhere.clause}
+           ${operatorClause}
+         ORDER BY COALESCE(ended_at, started_at) DESC, created_at DESC
+         LIMIT 1`,
+        params
+      );
+    }
 
-    await this.assetUsageService.update(String(usageId), {
-      endedAt: new Date(),
+    const usageLog = rows[0];
+    if (!usageLog?.id) return;
+
+    const updateData: any = {
       conditionAfter: data.conditionAfter || 'Baik',
       notes: data.notes || undefined
-    });
+    };
+
+    if (!usageLog.ended_at) {
+      updateData.endedAt = new Date();
+    }
+
+    await this.assetUsageService.update(String(usageLog.id), updateData);
   }
 
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
@@ -1555,6 +1575,19 @@ export class BorrowingService {
           returnCondition
         }
       );
+
+      try {
+        await this.completeUsageLogForBorrowing({
+          assetId,
+          assetType,
+          assetDetailId,
+          operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
+          conditionAfter: returnCondition,
+          notes: data.returnNotes ?? borrowingRow.returnNotes ?? borrowingRow.return_notes ?? null
+        });
+      } catch (err) {
+        // ignore logging errors to avoid breaking borrowing update flow
+      }
 
       const returnValidatedBy = borrowingRow.returnValidatedBy
         ?? borrowingRow.return_validated_by

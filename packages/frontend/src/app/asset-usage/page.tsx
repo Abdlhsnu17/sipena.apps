@@ -496,6 +496,14 @@ export default function AssetUsagePage() {
     }
   };
 
+  const getUsageConditionLabel = (log: AssetUsageLog) => {
+    if (log.endedAt) {
+      return log.conditionAfter || log.conditionBefore || "-";
+    }
+
+    return log.conditionBefore || log.conditionAfter || "-";
+  };
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -802,7 +810,7 @@ export default function AssetUsagePage() {
                           </TableCell>
                           <TableCell className="w-48 border-b border-slate-100 bg-white align-top">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
                           <TableCell className="w-20 border-b border-slate-100 bg-white text-center align-top font-semibold text-slate-900">{log.usageCount}</TableCell>
-                          <TableCell className="min-w-0 w-48 truncate border-b border-slate-100 bg-white align-top">{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
+                          <TableCell className="min-w-0 w-48 truncate border-b border-slate-100 bg-white align-top">{getUsageConditionLabel(log)}</TableCell>
                           <TableCell className="w-44 border-b border-slate-100 bg-white align-top">
                             {log.endedAt ? (
                               <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
