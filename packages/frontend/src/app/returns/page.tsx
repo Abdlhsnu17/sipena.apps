@@ -176,6 +176,8 @@ export default function ReturnsPage() {
   )
   const [expandedActiveReturnIds, setExpandedActiveReturnIds] = useState<Set<number>>(() => new Set())
   const [expandedHistoryReturnIds, setExpandedHistoryReturnIds] = useState<Set<number>>(() => new Set())
+  const [isActiveSectionMinimized, setIsActiveSectionMinimized] = useState(false)
+  const [isHistorySectionMinimized, setIsHistorySectionMinimized] = useState(false)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -1054,6 +1056,24 @@ export default function ReturnsPage() {
                     />
                     Pilih semua
                   </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsActiveSectionMinimized((prev) => !prev)}
+                    className="w-full rounded-2xl px-3 sm:w-auto"
+                  >
+                    {isActiveSectionMinimized ? (
+                      <>
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                        Tampilkan
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp className="mr-2 h-4 w-4" />
+                        Sembunyikan
+                      </>
+                    )}
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
@@ -1115,7 +1135,11 @@ export default function ReturnsPage() {
               </div>
             </CardHeader>
             <CardContent className="px-0">
-              {filteredActiveBorrowings.length === 0 ? (
+              {isActiveSectionMinimized ? (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-sm text-teal-900">
+                  Section alat yang perlu dikembalikan disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+                </div>
+              ) : filteredActiveBorrowings.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-[13px]">Tidak ada alat yang perlu dikembalikan</p>
               ) : (
                 <div className="overflow-visible px-3 pb-4 pr-2 sm:px-4 sm:pb-6 lg:max-h-180 lg:overflow-y-scroll lg:[scrollbar-gutter:stable]">
@@ -1318,6 +1342,24 @@ export default function ReturnsPage() {
                       <DropdownMenuItem onClick={() => void handleHistoryExport("excel")}>Excel</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsHistorySectionMinimized((prev) => !prev)}
+                  className="w-full rounded-2xl px-3 sm:w-auto"
+                >
+                  {isHistorySectionMinimized ? (
+                    <>
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                      Tampilkan
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="mr-2 h-4 w-4" />
+                      Sembunyikan
+                    </>
+                  )}
+                </Button>
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {historyReturnSelectedRows.length
                     ? `${historyReturnSelectedRows.length} baris dipilih`
@@ -1616,15 +1658,6 @@ export default function ReturnsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2 rounded-2xl border border-border/70 bg-muted/50 p-4 text-[14px] dark:bg-slate-800">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Peminjam:</span>
-                      <span className="font-medium">{selectedBorrowing.userName || "-"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">NIP:</span>
-                      <span className="font-medium">{selectedBorrowing.userNip || "-"}</span>
-                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tanggal Pinjam:</span>
                       <span className="font-medium">
@@ -1652,8 +1685,7 @@ export default function ReturnsPage() {
                         Dicatat saat konfirmasi (termasuk jam & tanggal)
                       </span>
                     </div>
-                  </div>
-
+                  
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Kondisi Saat Dikembalikan</label>
                     <select

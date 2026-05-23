@@ -221,7 +221,10 @@ export default function AssetUsagePage() {
         setAssets(items);
       }
 
-      if (usageResponse.success) setLogs(usageResponse.data);
+      if (usageResponse.success) {
+        setLogs(usageResponse.data);
+        setExpandedUsageHistoryIds(usageResponse.data.map((log) => log.id));
+      }
     } catch (error) {
       console.error("Error loading asset usage:", error);
       toast({ title: "Gagal memuat data", description: "Data penggunaan alat belum dapat dimuat.", variant: "destructive" });
@@ -521,36 +524,52 @@ export default function AssetUsagePage() {
     const usageContextLabel = usageContextLabels[log.usageContext] || log.usageContext || "-";
 
     sections.push({
-      title: "Informasi Dasar Inventaris",
+      title: "Informasi Dasar Alat",
       lines: [
         { label: "No ID Pemakaian", value: String(log.id) },
         { label: "Jenis Inventaris", value: log.assetType === "medical" ? "Medis" : "Non-Medis" },
         { label: "Nama Alat", value: log.assetDetailName || log.assetName || "-" },
         { label: "Kode Alat", value: log.assetDetailCode || log.assetCode || "-" },
-        { label: "Lokasi Alat", value: log.assetLocation || "-" },
+        { label: "Nama Ruangan Alat", value: log.assetLocation || "-" },
       ],
     });
 
     sections.push({
       title: "Detail Pemakaian",
       lines: [
-        { label: "Nama Operator", value: log.operatorName || "-" },
-        { label: "NIP Operator", value: log.operatorNip || "-" },
         { label: "Ruangan Pemakaian", value: getUsageRoomDisplay(log).primary },
         { label: "Keterangan Ruangan", value: getUsageRoomDisplay(log).secondary || "-" },
         { label: "Jenis Pemakaian", value: usageContextLabel },
         { label: "Waktu Mulai", value: formatDayTimeLabel(log.startedAt) || "-" },
-        { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
         { label: "Jumlah", value: String(log.usageCount || 1) },
-        { label: "Kondisi", value: getUsageConditionLabel(log) },
+        { label: "Kondisi Awal", value: log.conditionBefore || "-" },
       ],
     });
 
     sections.push({
-      title: "Catatan dan Status",
+      title: "Operator / Pencatat",
       lines: [
-        { label: "Catatan", value: log.notes?.trim() || "-" },
+        { label: "Nama Operator", value: log.operatorName || log.createdByName || "-" },
+        { label: "NIP Operator", value: log.operatorNip || "-" },
+        { label: "Dicatat Oleh", value: log.createdByName || "-" },
+        { label: "Waktu Pencatatan", value: formatDayTimeLabel(log.createdAt) || "-" },
+      ],
+    });
+
+    sections.push({
+      title: "Penyelesaian Pemakaian",
+      lines: [
+        { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
+        { label: "Kondisi Akhir", value: log.conditionAfter || "-" },
+        { label: "Catatan Penyelesaian", value: log.notes?.trim() || "-" },
+      ],
+    });
+
+    sections.push({
+      title: "Status Akhir Alat",
+      lines: [
         { label: "Status Akhir", value: getUsageStatusLabel(log) },
+        { label: "Kondisi Ditampilkan", value: getUsageConditionLabel(log) },
       ],
     });
 
@@ -847,11 +866,14 @@ export default function AssetUsagePage() {
                     filteredLogs.map((log) => {
                       const roomDisplay = getUsageRoomDisplay(log);
                       const isExpanded = expandedUsageHistoryIds.includes(log.id);
+                      const detailSections = getUsageDetailSections(log);
+                      const leftSections = detailSections.slice(0, 2);
+                      const rightSections = detailSections.slice(2);
 
                       return (
                         <div key={log.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>{isExpanded ? "Detail Pemakaian" : "Informasi Dasar Inventaris"}</span>
+                            <span>Informasi Dasar Pemakaian</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -898,110 +920,26 @@ export default function AssetUsagePage() {
 
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="flex flex-wrap items-center gap-1">
-                                <Badge variant="outline" className="text-[11px]">
-                                  {log.assetType === "medical" ? "Medis" : "Non-Medis"}
-                                </Badge>
-                                <Badge variant="outline" className="text-[11px]">
-                                  {roomDisplay.primary}
-                                </Badge>
-                                <Badge variant="outline" className="text-[11px]">
-                                  {getUsageStatusLabel(log)}
-                                </Badge>
-                              </div>
-
-                              <div className="grid gap-3 border-t border-slate-200 pt-3 lg:grid-cols-3">
-                                <div className="lg:col-span-2 space-y-3">
-                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">Informasi Dasar Inventaris</div>
-                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Jenis Inventaris</span>
-                                      <span className="font-medium text-slate-900">{log.assetType === 'medical' ? 'Medis' : 'Non-Medis'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Tipe Layanan</span>
-                                      <span className="font-medium text-slate-900">{usageContextLabels[log.usageContext] || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">No ID Jadwal</span>
-                                      <span className="font-medium text-slate-900">{String(log.id)}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Nama Alat</span>
-                                      <span className="font-medium text-slate-900">{log.assetDetailName || log.assetName || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Kode Alat</span>
-                                      <span className="font-medium text-slate-900">{log.assetDetailCode || log.assetCode || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Nama Ruangan Alat</span>
-                                      <span className="font-medium text-slate-900">{log.assetLocation || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row">
-                                      <span className="font-medium text-slate-600">Merek / Model</span>
-                                      <span className="font-medium text-slate-900">-</span>
-                                    </div>
+                              <div className="grid gap-3 lg:grid-cols-2">
+                                {[leftSections, rightSections].map((columnSections, columnIndex) => (
+                                  <div key={columnIndex} className="space-y-3">
+                                    {columnSections.map((section) => (
+                                      <div key={section.title} className="space-y-2">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700">
+                                          {section.title}
+                                        </div>
+                                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                          {section.lines.map((line) => (
+                                            <div key={`${section.title}-${line.label}`} className="detail-labeled-row border-b border-slate-200 last:border-b-0">
+                                              <span className="font-medium text-slate-600">{line.label}</span>
+                                              <span className="font-medium text-slate-900">{line.value}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-
-                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">Detail Administrasi</div>
-                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Nama Pengirim</span>
-                                      <span className="font-medium text-slate-900">{log.operatorName || log.createdByName || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">NIP Pengirim</span>
-                                      <span className="font-medium text-slate-900">{log.operatorNip || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Jadwal Pemeliharaan Sarana</span>
-                                      <span className="font-medium text-slate-900">{formatDayTimeLabel(log.startedAt) || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row">
-                                      <span className="font-medium text-slate-600">Catatan Pendaftaran</span>
-                                      <span className="font-medium text-slate-900">{log.notes?.trim() || '-'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">Pelaksanaan & Biaya</div>
-                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Teknisi Pelaksana</span>
-                                      <span className="font-medium text-slate-900">{log.operatorName || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Waktu Selesai</span>
-                                      <span className="font-medium text-slate-900">{formatDayTimeLabel(log.endedAt) || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Biaya Pemeliharaan</span>
-                                      <span className="font-medium text-slate-900">-</span>
-                                    </div>
-                                    <div className="detail-labeled-row">
-                                      <span className="font-medium text-slate-600">Catatan (After)</span>
-                                      <span className="font-medium text-slate-900">{log.conditionAfter?.trim() || log.notes?.trim() || '-'}</span>
-                                    </div>
-                                  </div>
-
-                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">Validasi</div>
-                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Validator</span>
-                                      <span className="font-medium text-slate-900">{log.createdByName || '-'}</span>
-                                    </div>
-                                    <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">NIP Validator</span>
-                                      <span className="font-medium text-slate-900">-</span>
-                                    </div>
-                                    <div className="detail-labeled-row">
-                                      <span className="font-medium text-slate-600">Waktu Validasi</span>
-                                      <span className="font-medium text-slate-900">{formatDayTimeLabel(log.createdAt) || '-'}</span>
-                                    </div>
-                                  </div>
-                                </div>
+                                ))}
                               </div>
                             </div>
                           )}
