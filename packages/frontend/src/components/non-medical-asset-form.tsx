@@ -18,7 +18,7 @@ import type React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
-type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan"
+type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
 
 function toDateInputValue(value?: string | null) {
   if (!value) return ""
@@ -535,6 +535,7 @@ export default function NonMedicalAssetForm({
                 <option>Non-Aktif</option>
                 <option>Dalam Perbaikan</option>
                 <option>Sedang Digunakan</option>
+                <option>Dipinjam</option>
               </select>
             </div>
             <div>

@@ -688,6 +688,8 @@ export default function NonMedicalAssetsPage() {
                                           ? "bg-emerald-100 border-emerald-300 text-emerald-800"
                                           : asset.status === "Dalam Perbaikan"
                                             ? "bg-amber-100 border-amber-300 text-amber-900"
+                                            : asset.status === "Dipinjam"
+                                              ? "bg-sky-100 border-sky-300 text-sky-800"
                                             : asset.status === "Sedang Digunakan"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"
                                               : "bg-rose-100 border-rose-300 text-rose-800"
