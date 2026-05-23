@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
@@ -94,6 +93,16 @@ type CompleteFormState = {
   endedAt: string;
   conditionAfter: string;
   notes: string;
+};
+
+type UsageDetailLine = {
+  label: string;
+  value: string;
+};
+
+type UsageDetailSection = {
+  title: string;
+  lines: UsageDetailLine[];
 };
 
 const initialForm: FormState = {
@@ -174,6 +183,7 @@ export default function AssetUsagePage() {
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
+  const [expandedUsageHistoryIds, setExpandedUsageHistoryIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
@@ -504,6 +514,55 @@ export default function AssetUsagePage() {
     return log.conditionBefore || log.conditionAfter || "-";
   };
 
+  const getUsageStatusLabel = (log: AssetUsageLog) => (log.endedAt ? "Selesai" : "Sedang Digunakan");
+
+  const getUsageDetailSections = (log: AssetUsageLog): UsageDetailSection[] => {
+    const sections: UsageDetailSection[] = [];
+    const usageContextLabel = usageContextLabels[log.usageContext] || log.usageContext || "-";
+
+    sections.push({
+      title: "Informasi Dasar Inventaris",
+      lines: [
+        { label: "No ID Pemakaian", value: String(log.id) },
+        { label: "Jenis Inventaris", value: log.assetType === "medical" ? "Medis" : "Non-Medis" },
+        { label: "Nama Alat", value: log.assetDetailName || log.assetName || "-" },
+        { label: "Kode Alat", value: log.assetDetailCode || log.assetCode || "-" },
+        { label: "Lokasi Alat", value: log.assetLocation || "-" },
+      ],
+    });
+
+    sections.push({
+      title: "Detail Pemakaian",
+      lines: [
+        { label: "Nama Operator", value: log.operatorName || "-" },
+        { label: "NIP Operator", value: log.operatorNip || "-" },
+        { label: "Ruangan Pemakaian", value: getUsageRoomDisplay(log).primary },
+        { label: "Keterangan Ruangan", value: getUsageRoomDisplay(log).secondary || "-" },
+        { label: "Jenis Pemakaian", value: usageContextLabel },
+        { label: "Waktu Mulai", value: formatDayTimeLabel(log.startedAt) || "-" },
+        { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
+        { label: "Jumlah", value: String(log.usageCount || 1) },
+        { label: "Kondisi", value: getUsageConditionLabel(log) },
+      ],
+    });
+
+    sections.push({
+      title: "Catatan dan Status",
+      lines: [
+        { label: "Catatan", value: log.notes?.trim() || "-" },
+        { label: "Status Akhir", value: getUsageStatusLabel(log) },
+      ],
+    });
+
+    return sections;
+  };
+
+  const toggleUsageHistoryCard = (id: number) => {
+    setExpandedUsageHistoryIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -779,84 +838,129 @@ export default function AssetUsagePage() {
                   </div>
                   <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
                 </div>
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <Table className="w-full min-w-0 border-separate border-spacing-0">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="max-w-64 border-b border-slate-200 bg-white text-slate-800">Alat</TableHead>
-                      <TableHead className="w-40 max-w-40 border-b border-slate-200 bg-white text-slate-800">Ruangan</TableHead>
-                      <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Waktu</TableHead>
-                      <TableHead className="w-20 border-b border-slate-200 bg-white text-center text-slate-800">Jumlah</TableHead>
-                      <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Kondisi</TableHead>
-                      <TableHead className="w-44 border-b border-slate-200 bg-white text-slate-800">Status</TableHead>
-                      <TableHead className="w-24 border-b border-slate-200 bg-white text-right text-slate-800">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.map((log) => {
+                <div className="space-y-4">
+                  {filteredLogs.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
+                      {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
+                    </div>
+                  ) : (
+                    filteredLogs.map((log) => {
                       const roomDisplay = getUsageRoomDisplay(log);
+                      const isExpanded = expandedUsageHistoryIds.includes(log.id);
 
                       return (
-                        <TableRow key={log.id} className="odd:bg-white even:bg-slate-50/30 hover:bg-slate-50">
-                          <TableCell className="min-w-0 max-w-64 border-b border-slate-100 bg-white align-top">
-                            <p className="font-medium truncate">{log.assetDetailName || log.assetName || "-"}</p>
-                            <p className="text-xs text-slate-600 truncate">{log.assetDetailCode || log.assetCode || "-"}</p>
-                          </TableCell>
-                          <TableCell className="min-w-0 w-40 max-w-40 border-b border-slate-100 bg-white align-top">
-                            <p className="truncate">{roomDisplay.primary}</p>
-                            {roomDisplay.secondary ? (
-                              <p className="text-xs text-slate-600 truncate">{roomDisplay.secondary}</p>
-                            ) : null}
-                          </TableCell>
-                          <TableCell className="w-48 border-b border-slate-100 bg-white align-top">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
-                          <TableCell className="w-20 border-b border-slate-100 bg-white text-center align-top font-semibold text-slate-900">{log.usageCount}</TableCell>
-                          <TableCell className="min-w-0 w-48 truncate border-b border-slate-100 bg-white align-top">{getUsageConditionLabel(log)}</TableCell>
-                          <TableCell className="w-44 border-b border-slate-100 bg-white align-top">
-                            {log.endedAt ? (
-                              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                                Selesai
-                              </Badge>
-                            ) : (
-                              <select
-                                className="h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
-                                value="in_use"
-                                onChange={(event) => handleStatusChange(log, event.target.value)}
-                                disabled={isSaving}
-                                aria-label="Ubah status penggunaan"
-                              >
-                                <option value="in_use">Sedang Digunakan</option>
-                                <option value="completed">Selesai</option>
-                              </select>
-                            )}
-                          </TableCell>
-                          <TableCell className="w-24 border-b border-slate-100 bg-white text-right align-bottom">
-                            <div className="flex h-full items-end justify-end gap-1">
+                        <div key={log.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                            <span>{isExpanded ? "Detail Pemakaian" : "Informasi Dasar Inventaris"}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                              onClick={() => toggleUsageHistoryCard(log.id)}
+                              aria-label={isExpanded ? "Sembunyikan detail pemakaian" : "Tampilkan detail pemakaian"}
+                            >
+                              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                            </Button>
+                          </div>
+
+                          {!isExpanded && (
+                            <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[13px] font-semibold text-slate-900">{log.assetDetailName || log.assetName || "-"}</p>
+                                  <p className="text-[12px] font-medium text-slate-700">{log.assetDetailCode || log.assetCode || "-"}</p>
+                                  <div className="mt-1.5 space-y-1.5">
+                                    <p className="text-[11px] text-muted-foreground">No ID: {log.id}</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Ruangan: <span className="font-medium text-slate-700">{roomDisplay.primary}</span>
+                                      {roomDisplay.secondary ? ` · ${roomDisplay.secondary}` : ""}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Kondisi: <span className="font-medium text-slate-700">{getUsageConditionLabel(log)}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu</span>
+                                    <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(log.startedAt) || "-"}</span>
+                                  </div>
+                                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                                    <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Jumlah {log.usageCount}</Badge>
+                                    <Badge className={log.endedAt ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}>
+                                      {getUsageStatusLabel(log)}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {isExpanded && (
+                            <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                              <div className="flex flex-wrap items-center gap-1">
+                                <Badge variant="outline" className="text-[11px]">
+                                  {log.assetType === "medical" ? "Medis" : "Non-Medis"}
+                                </Badge>
+                                <Badge variant="outline" className="text-[11px]">
+                                  {roomDisplay.primary}
+                                </Badge>
+                                <Badge variant="outline" className="text-[11px]">
+                                  {getUsageStatusLabel(log)}
+                                </Badge>
+                              </div>
+                              <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">
+                                {getUsageDetailSections(log).map((section) => (
+                                  <div key={section.title} className="mb-3 break-inside-avoid space-y-1.5">
+                                    <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                      {section.title}
+                                    </div>
+                                    <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                      {section.lines.map((line) => (
+                                        <div key={`${section.title}-${line.label}`} className="detail-labeled-row">
+                                          <span className="font-medium text-slate-600">{line.label}</span>
+                                          <span className="font-medium text-slate-900">{line.value}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
+                            <div className="text-[12px] text-muted-foreground">{log.assetDetailCode || log.assetCode || "-"}</div>
+                            <div className="flex flex-wrap items-center gap-1">
+                              {!log.endedAt && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleStatusChange(log, "completed")}
+                                  className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
+                                >
+                                  Selesaikan
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
-                                size="icon"
+                                size="sm"
+                                className="h-6 w-6 rounded-lg p-0"
                                 onClick={() => openEditDialog(log)}
                                 aria-label="Edit log penggunaan"
                                 title="Edit"
                               >
-                                <Pencil className="h-4 w-4 text-slate-600" />
+                                <Pencil className="h-3 w-3 text-slate-700" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                                <Trash2 className="h-4 w-4 text-red-600" />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                <Trash2 className="h-3 w-3 text-red-600" />
                               </Button>
                             </div>
-                          </TableCell>
-                      </TableRow>
+                          </div>
+                        </div>
                       );
-                    })}
-                    {filteredLogs.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="py-8 text-center text-slate-600">
-                          {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    })
+                  )}
+                </div>
                 </div>
               </>
             )}
