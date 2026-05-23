@@ -1,8 +1,8 @@
 "use client";
 
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
-import { assetService } from "@/services/asset.service";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
+import { assetService } from "@/services/asset.service";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
@@ -450,11 +450,6 @@ export default function AssetUsagePage() {
                   </div>
                 )}
               </div>
-              <p className="mt-1 text-xs text-slate-600">
-                {form.usageContext === "own_room"
-                  ? "Hanya menampilkan alat yang cocok dengan unit kerja dan sub ruangan profil."
-                  : "Menampilkan seluruh alat medis dan non-medis yang terinput di sistem."}
-              </p>
               {form.usageContext === "own_room" && selectableAssets.length === 0 && (
                 <p className="mt-1 text-xs font-medium text-red-600">
                   Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
@@ -464,9 +459,6 @@ export default function AssetUsagePage() {
             <div>
               <label className="text-sm font-medium">Ruangan Penggunaan</label>
               <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
-              <p className="mt-1 text-xs text-slate-600">
-                Otomatis dari profil akun: {currentUser?.workUnit || "unit kerja belum diisi"}{subText(currentUser?.subWorkUnit)}.
-              </p>
             </div>
             <div>
               <label className="text-sm font-medium">Jenis Penggunaan</label>
