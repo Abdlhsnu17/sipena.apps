@@ -26,15 +26,7 @@ import {
     YAxis
 } from "recharts";
 
-const usageContextLabels: Record<string, string> = {
-  own_room: "Ruangan sendiri",
-  same_unit_cross_room: "Antar sub ruangan",
-  cross_room: "Antar instalasi",
-  emergency: "Emergency",
-  procedure: "Tindakan",
-  rounding: "Visit/rounding",
-  other: "Lainnya",
-};
+// usageContextLabels removed — reports now aggregate into broader categories
 
 /**
  * Komponen Halaman Laporan & Analitik.
@@ -141,16 +133,25 @@ export default function ReportsPage() {
         .sort((a, b) => a.year.localeCompare(b.year, "id", { numeric: true }))
     )
 
+    const classifyUsageCategory = (ctx?: string | null) => {
+      const key = (ctx || "other").toString()
+      if (key === "emergency") return "Emergency"
+      if (key === "rounding") return "Antar Instalasi"
+      if (key === "procedure") return "Antar Sub Ruangan"
+      // default to room-related category for other contexts
+      return "Ruangan"
+    }
+
     const contextMap = logs.reduce<Record<string, number>>((acc, log) => {
-      const key = log.usageContext || "other"
-      acc[key] = (acc[key] || 0) + (log.usageCount || 1)
+      const category = classifyUsageCategory(log.usageContext)
+      acc[category] = (acc[category] || 0) + (log.usageCount || 1)
       return acc
     }, {})
 
     setUsageContextData(
       Object.entries(contextMap)
-        .map(([key, total]) => ({
-          context: usageContextLabels[key] || key,
+        .map(([category, total]) => ({
+          context: category,
           total,
         }))
         .sort((a, b) => b.total - a.total)
@@ -240,7 +241,7 @@ export default function ReportsPage() {
     return Array.from(locationMap, ([name, value]) => ({ name, value }))
   }
 
-  const distributionData = getDistributionByLocation()
+  // distributionData not currently used in the UI; remove to avoid unused var
 
   const totalCost = maintenance.reduce((sum, m) => sum + (Number.parseInt(m.cost) || 0), 0)
   const totalUsageCount = assetUsageLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0)

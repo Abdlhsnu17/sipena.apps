@@ -20,14 +20,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 
+// Only show functional usage categories to avoid confusion between location vs function
 const usageContextLabels: Record<AssetUsageContext, string> = {
-  own_room: "Ruangan sendiri",
-  same_unit_cross_room: "Antar sub ruangan",
-  cross_room: "Antar instalasi",
+  own_room: "Ruangan",
   emergency: "Emergency",
-  procedure: "Tindakan",
-  rounding: "Visit/rounding",
+  procedure: "Antar Sub Ruangan",
+  rounding: "Antar Instalasi",
   other: "Lainnya",
+};
+
+const functionalUsageKeys: AssetUsageContext[] = ["own_room", "emergency", "procedure", "rounding", "other"];
+
+const mapToFunctionalUsage = (ctx?: AssetUsageContext | string | null): AssetUsageContext => {
+  const key = (ctx || "other").toString();
+  if (key === "emergency") return "emergency";
+  if (key === "procedure") return "procedure";
+  if (key === "rounding") return "rounding";
+  // treat location-based contexts as 'Ruangan' (functional)
+  if (key === "same_unit_cross_room" || key === "cross_room" || key === "own_room") return "own_room";
+  return "other";
 };
 
 const toDateTimeLocalInputValue = (date = new Date()) => {
@@ -77,7 +88,7 @@ const locationIncludes = (source: string, target?: string | null) => {
 const getUserUsageRoom = (user?: User | null) =>
   [user?.workUnit, user?.subWorkUnit].filter(Boolean).join(" - ");
 
-const subText = (value?: string | null) => value ? ` dan sub ruangan ${value}` : "";
+const _subText = (value?: string | null) => value ? ` dan sub ruangan ${value}` : "";
 
 const deriveUsageContextFromProfile = (
   item: DetailInventoryItem | undefined,
@@ -463,7 +474,9 @@ export default function AssetUsagePage() {
             <div>
               <label className="text-sm font-medium">Jenis Penggunaan</label>
               <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
-                {Object.entries(usageContextLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                {functionalUsageKeys.map((key) => (
+                  <option key={key} value={key}>{usageContextLabels[key]}</option>
+                ))}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -532,7 +545,7 @@ export default function AssetUsagePage() {
                     </TableCell>
                     <TableCell>
                       <p>{log.roomName}</p>
-                      <p className="text-xs text-slate-600">{usageContextLabels[log.usageContext] || log.usageContext}</p>
+                        <p className="text-xs text-slate-600">{usageContextLabels[mapToFunctionalUsage(log.usageContext)]}</p>
                     </TableCell>
                     <TableCell>{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
                     <TableCell>{log.usageCount}</TableCell>
