@@ -1,21 +1,21 @@
 
 import {
-  NON_MEDICAL_ASSET_CATEGORIES,
-  NON_MEDICAL_ASSET_CLASSIFICATIONS,
-} from "@/components/non-medical-asset-categories"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+    NON_MEDICAL_ASSET_CATEGORIES,
+    NON_MEDICAL_ASSET_CLASSIFICATIONS,
+} from "@/components/non-medical-asset-categories";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  NON_MEDICAL_ASSET_TYPE_OPTIONS,
-} from "@/constants/non-medical-asset-types"
-import type { NonMedicalAsset } from "@/types/non-medical-assets-types"
-import { inferNonMedicalUsagePurpose, matchNonMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier"
-import { USAGE_OPTIONS } from "@/utils/asset-usage"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
-import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose"
-import { X } from "lucide-react"
-import type React from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
+    NON_MEDICAL_ASSET_TYPE_OPTIONS,
+} from "@/constants/non-medical-asset-types";
+import type { NonMedicalAsset } from "@/types/non-medical-assets-types";
+import { inferNonMedicalUsagePurpose, matchNonMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier";
+import { USAGE_OPTIONS } from "@/utils/asset-usage";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
+import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose";
+import { X } from "lucide-react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
 type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"

@@ -1,28 +1,28 @@
 "use client"
 
-import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories"
-import MedicalAssetForm from "@/components/medical-asset-form"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { getMedicalAssetTypeColor, getMedicalAssetTypeLabel } from "@/constants/medical-asset-types"
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
-import { assetService, type Asset } from "@/services/asset.service"
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
-import type { User } from "@/types/auth-types"
-import type { MedicalAsset, MedicalRoom } from "@/types/medical-assets-types"
-import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers"
-import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage"
-import { formatNoId } from "@/utils/record-id"
-import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
-import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose"
+import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories";
+import MedicalAssetForm from "@/components/medical-asset-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getMedicalAssetTypeColor, getMedicalAssetTypeLabel } from "@/constants/medical-asset-types";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
+import { assetService, type Asset } from "@/services/asset.service";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import type { User } from "@/types/auth-types";
+import type { MedicalAsset, MedicalRoom } from "@/types/medical-assets-types";
+import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
+import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage";
+import { formatNoId } from "@/utils/record-id";
+import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
+import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
 
 
-import { ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function MedicalAssetsPage() {
   const router = useRouter()

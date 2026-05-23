@@ -1,28 +1,28 @@
 "use client"
 
-import { NON_MEDICAL_ASSET_CATEGORIES } from "@/components/non-medical-asset-categories"
-import NonMedicalAssetForm from "@/components/non-medical-asset-form"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { getNonMedicalAssetTypeColor, getNonMedicalAssetTypeLabel } from "@/constants/non-medical-asset-types"
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
-import { assetService, type Asset } from "@/services/asset.service"
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
-import type { User } from "@/types/auth-types"
-import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers"
-import { formatNoId } from "@/utils/record-id"
-import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role"
-import { matchesSearchKeyword } from "@/utils/search-keyword"
-import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose"
+import { NON_MEDICAL_ASSET_CATEGORIES } from "@/components/non-medical-asset-categories";
+import NonMedicalAssetForm from "@/components/non-medical-asset-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getNonMedicalAssetTypeColor, getNonMedicalAssetTypeLabel } from "@/constants/non-medical-asset-types";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
+import { assetService, type Asset } from "@/services/asset.service";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import type { User } from "@/types/auth-types";
+import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
+import { formatNoId } from "@/utils/record-id";
+import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
+import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
 
-import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets-types"
+import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets-types";
 
-import { USAGE_OPTIONS } from "@/utils/asset-usage"
-import { Building, ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { USAGE_OPTIONS } from "@/utils/asset-usage";
+import { Building, ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const normalizeNonMedicalDetailId = (
   detail: Partial<NonMedicalAsset> & { assetCode?: string; serialNumber?: string },

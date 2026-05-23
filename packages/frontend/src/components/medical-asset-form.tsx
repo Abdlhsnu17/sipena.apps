@@ -1,13 +1,13 @@
-import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MEDICAL_ASSET_TYPE_OPTIONS } from "@/constants/medical-asset-types"
-import type { MedicalAsset } from "@/types/medical-assets-types"
-import { inferMedicalUsagePurpose, matchMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier"
-import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage"
-import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose"
-import { X } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MEDICAL_ASSET_TYPE_OPTIONS } from "@/constants/medical-asset-types";
+import type { MedicalAsset } from "@/types/medical-assets-types";
+import { inferMedicalUsagePurpose, matchMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier";
+import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage";
+import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
 type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
