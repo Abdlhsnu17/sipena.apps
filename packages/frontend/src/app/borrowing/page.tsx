@@ -2132,7 +2132,7 @@ export default function BorrowingPage() {
               {filteredBorrowings.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-2 sm:px-4 sm:pb-6">
+                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
                   <div className="space-y-4">
                     {filteredBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)

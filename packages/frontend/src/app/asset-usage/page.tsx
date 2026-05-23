@@ -223,7 +223,6 @@ export default function AssetUsagePage() {
 
       if (usageResponse.success) {
         setLogs(usageResponse.data);
-        setExpandedUsageHistoryIds(usageResponse.data.map((log) => log.id));
       }
     } catch (error) {
       console.error("Error loading asset usage:", error);

@@ -1142,7 +1142,7 @@ export default function ReturnsPage() {
               ) : filteredActiveBorrowings.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-[13px]">Tidak ada alat yang perlu dikembalikan</p>
               ) : (
-                <div className="overflow-visible px-3 pb-4 pr-2 sm:px-4 sm:pb-6 lg:max-h-180 lg:overflow-y-scroll lg:[scrollbar-gutter:stable]">
+                <div className="overflow-visible px-3 pb-4 pr-0 sm:px-4 sm:pb-4 lg:max-h-180 lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
                   <div className="space-y-4">
                     {filteredActiveBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
@@ -1439,7 +1439,7 @@ export default function ReturnsPage() {
                   Tidak ada riwayat pengembalian yang sesuai pencarian/filter.
                 </p>
               ) : (
-                <div className="overflow-visible px-3 pb-4 pr-2 sm:px-4 sm:pb-6 lg:max-h-180 lg:overflow-y-scroll lg:[scrollbar-gutter:stable]">
+                <div className="overflow-visible px-3 pb-4 pr-0 sm:px-4 sm:pb-4 lg:max-h-180 lg:overflow-y-auto lg:[scrollbar-gutter:stable]">
                   <div className="space-y-4">
                     {filteredReturnedBorrowings.map((b) => {
                     const detailInfo = resolveDetailForBorrowing(b)

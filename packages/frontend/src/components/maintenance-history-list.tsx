@@ -920,7 +920,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
             : "Belum ada riwayat pemeliharaan"}
         </div>
       ) : (
-        <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-2 sm:px-4 sm:pb-6">
+        <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
           <div className="space-y-4 py-3">
             {filteredHistories.map((h) => {
             const meta = getHistoryCardMeta(h);
