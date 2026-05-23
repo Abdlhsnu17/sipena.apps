@@ -432,7 +432,7 @@ export default function AssetUsagePage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+      <div className="flex flex-col gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base"><ClipboardPlus className="h-4 w-4" /> Catat Pemakaian</CardTitle>
