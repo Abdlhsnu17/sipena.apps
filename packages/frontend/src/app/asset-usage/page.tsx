@@ -9,7 +9,7 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
 import { isAdminOrLeaderRole } from "@/utils/role";
-import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
+import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -371,11 +371,17 @@ export default function AssetUsagePage() {
   const openCompleteDialog = (log: AssetUsageLog) => {
     setCompletingLog(log);
     setCompleteForm({
-      endedAt: toDateTimeLocalInputValue(log.startedAt ? new Date(log.startedAt) : new Date()),
+      endedAt: toDateTimeLocalInputValue(log.endedAt ? new Date(log.endedAt) : new Date()),
       conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
       notes: log.notes || "",
     });
     setIsCompleteDialogOpen(true);
+  };
+
+  const handleStatusChange = (log: AssetUsageLog, status: string) => {
+    if (status === "completed" && !log.endedAt) {
+      openCompleteDialog(log);
+    }
   };
 
   const handleCompleteUsage = async () => {
@@ -699,8 +705,8 @@ export default function AssetUsagePage() {
                       <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Waktu</TableHead>
                       <TableHead className="w-20 border-b border-slate-200 bg-white text-center text-slate-800">Jumlah</TableHead>
                       <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Kondisi</TableHead>
-                      <TableHead className="w-28 border-b border-slate-200 bg-white text-slate-800">Status</TableHead>
-                      <TableHead className="w-14 border-b border-slate-200 bg-white" />
+                      <TableHead className="w-44 border-b border-slate-200 bg-white text-slate-800">Status</TableHead>
+                      <TableHead className="w-14 border-b border-slate-200 bg-white text-right text-slate-800">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -722,30 +728,29 @@ export default function AssetUsagePage() {
                           <TableCell className="w-48 border-b border-slate-100 bg-white align-top">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
                           <TableCell className="w-20 border-b border-slate-100 bg-white text-center align-top font-semibold text-slate-900">{log.usageCount}</TableCell>
                           <TableCell className="min-w-0 w-48 truncate border-b border-slate-100 bg-white align-top">{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
-                          <TableCell className="w-28 border-b border-slate-100 bg-white align-top">
-                            <Badge
-                              className={log.endedAt ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-slate-100 text-slate-700 hover:bg-slate-100"}
-                            >
-                              {log.endedAt ? "Selesai" : "Sedang Digunakan"}
-                            </Badge>
+                          <TableCell className="w-44 border-b border-slate-100 bg-white align-top">
+                            {log.endedAt ? (
+                              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                                Selesai
+                              </Badge>
+                            ) : (
+                              <select
+                                className="h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+                                value="in_use"
+                                onChange={(event) => handleStatusChange(log, event.target.value)}
+                                disabled={isSaving}
+                                aria-label="Ubah status penggunaan"
+                              >
+                                <option value="in_use">Sedang Digunakan</option>
+                                <option value="completed">Selesai</option>
+                              </select>
+                            )}
                           </TableCell>
                           <TableCell className="w-20 border-b border-slate-100 bg-white text-right align-bottom">
                             <div className="flex h-full flex-col items-end justify-end gap-1">
                               <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
-                              {isAdminOrLeaderRole(currentUser?.role) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 rounded-lg p-0 text-emerald-600 hover:bg-emerald-50"
-                                  onClick={() => openCompleteDialog(log)}
-                                  aria-label="Edit penggunaan alat"
-                                  title="Edit penggunaan alat"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>
