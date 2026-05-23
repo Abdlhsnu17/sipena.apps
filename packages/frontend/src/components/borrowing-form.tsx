@@ -1,14 +1,15 @@
 "use client"
 
-import InventoryPicker from "@/components/inventory-picker"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { getCurrentLocalDateTimeValue, toDateTimeLocalInputValue } from "@/utils/date-input"
-import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory"
-import { toLocalDateTimeString } from "@/utils/format"
-import { buildInventorySearchKey } from "@/utils/inventory-search"
-import { useEffect, useState } from "react"
+import InventoryPicker from "@/components/inventory-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetUsageService } from "@/services/asset-usage.service";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { getCurrentLocalDateTimeValue, toDateTimeLocalInputValue } from "@/utils/date-input";
+import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
+import { toLocalDateTimeString } from "@/utils/format";
+import { buildInventorySearchKey } from "@/utils/inventory-search";
+import { useEffect, useState } from "react";
 
 type BorrowingFormPayload = {
   selectedAsset: DetailInventoryItem
@@ -43,6 +44,7 @@ export default function BorrowingForm({
   onCancel,
 }: BorrowingFormProps) {
   const [selectedAsset, setSelectedAsset] = useState<DetailInventoryItem | null>(null)
+  const [hasActiveUsage, setHasActiveUsage] = useState(false)
   const [formData, setFormData] = useState(() => ({
     borrowDate: defaultBorrowDate ?? "",
     dueDate: "",
@@ -60,6 +62,25 @@ export default function BorrowingForm({
       borrowDate: defaultBorrowDate,
     }))
   }, [defaultBorrowDate])
+
+  useEffect(() => {
+    let mounted = true
+    const checkUsage = async (asset?: DetailInventoryItem | null) => {
+      if (!asset || !asset.assetId) {
+        if (mounted) setHasActiveUsage(false)
+        return
+      }
+      try {
+        const resp = await assetUsageService.getAll({ page: 1, limit: 50, assetId: String(asset.assetId), assetType: asset.assetType })
+        const active = Array.isArray(resp.data) && resp.data.some((u) => !u.endedAt && ( !u.assetDetailId || u.assetDetailId === asset.detailId ))
+        if (mounted) setHasActiveUsage(Boolean(active))
+      } catch (e) {
+        if (mounted) setHasActiveUsage(false)
+      }
+    }
+    void checkUsage(selectedAsset)
+    return () => { mounted = false }
+  }, [selectedAsset])
 
   const handleBorrowDateFocus = () => {
     if (formData.borrowDate) {
@@ -83,6 +104,11 @@ export default function BorrowingForm({
     }
     if (!formData.purpose.trim()) {
       alert("Ruangan peminjaman wajib diisi")
+      return
+    }
+
+    if (hasActiveUsage) {
+      alert("Aset sedang digunakan — tidak dapat membuat peminjaman sampai penggunaan selesai.")
       return
     }
 
@@ -135,6 +161,9 @@ export default function BorrowingForm({
                 renderItemMeta={(asset) => getDetailInventoryStatusLabel(asset)}
                 noResultsLabel="Tidak ada hasil"
               />
+              {hasActiveUsage && (
+                <div className="mt-2 text-sm text-rose-600">Alat sedang digunakan — tidak dapat dipinjam sampai penggunaan selesai.</div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Tanggal &amp; Waktu Pinjam</label>
@@ -187,7 +216,7 @@ export default function BorrowingForm({
             </div>
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+            <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={hasActiveUsage}>
               Simpan
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>

@@ -10,6 +10,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
@@ -714,6 +715,32 @@ export default function BorrowingPage() {
     }
 
     try {
+      const usageChecks = await Promise.all(
+        selectedBorrowableAssets.map(async (asset) => {
+          const response = await assetUsageService.getAll({
+            page: 1,
+            limit: 50,
+            assetId: String(asset.assetId),
+            assetType: asset.assetType,
+          })
+          const hasActiveUsage = Array.isArray(response.data) && response.data.some((usage) => {
+            const matchesDetail = !asset.detailId || !usage.assetDetailId || usage.assetDetailId === asset.detailId
+            return matchesDetail && !usage.endedAt
+          })
+          return { asset, hasActiveUsage }
+        })
+      )
+
+      const blockedAsset = usageChecks.find((item) => item.hasActiveUsage)
+      if (blockedAsset) {
+        alert(`Aset ${formatInventoryLabel(blockedAsset.asset)} sedang dalam penggunaan aktif dan belum dapat dipinjam.`)
+        return
+      }
+    } catch (usageError) {
+      console.error("Failed to check asset usage before borrowing create:", usageError)
+    }
+
+    try {
       const successLabels: string[] = []
       const failedAssets: BorrowableAsset[] = []
       const failureMessages: string[] = []
@@ -1358,6 +1385,13 @@ export default function BorrowingPage() {
     return "Aktif"
   }
 
+  const getConditionLabel = (asset: BorrowableAsset) => {
+    if (asset.condition === "damaged") return "Rusak"
+    if (asset.condition === "poor") return "Kurang"
+    if (asset.condition === "fair") return "Cukup"
+    return "Baik"
+  }
+
   const borrowableAssets = filteredAvailableAssets.filter((asset) => {
     if (getEffectiveAvailability(asset) !== "available") return false
     if (asset.condition === "damaged") return false
@@ -1657,7 +1691,11 @@ export default function BorrowingPage() {
                     ariaLabel="Pilih satu atau lebih inventaris"
                     noResultsLabel="Tidak ada inventaris tersedia"
                     selectedSummaryLabel={(assets) => `${assets.length} inventaris dipilih`}
-                    renderItemMeta={(asset) => getEffectiveAvailabilityLabel(asset)}
+                    renderItemMeta={(asset) => (
+                      <span>
+                        {getEffectiveAvailabilityLabel(asset)} · Kondisi: {getConditionLabel(asset)}
+                      </span>
+                    )}
                     disabled={hasBorrowingOverdueBlock}
                   />
                   <p className="mt-2 text-[12px] text-muted-foreground">

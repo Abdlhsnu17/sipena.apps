@@ -1,14 +1,16 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import {
-  ApiResponse,
-  AssetUsageFilters,
-  AssetUsageLog,
-  CreateAssetUsageLogDTO,
-  PaginatedResponse,
-  UpdateAssetUsageLogDTO
+    ApiResponse,
+    AssetType,
+    AssetUsageFilters,
+    AssetUsageLog,
+    CreateAssetUsageLogDTO,
+    PaginatedResponse,
+    UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
+import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
   asset_name?: string | null;
@@ -22,6 +24,13 @@ interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
 interface CountRow extends RowDataPacket {
   count: number;
 }
+
+type UsageSyncOptions = {
+  detailId?: string | null;
+  detailCode?: string | null;
+  conditionAfter?: string | null;
+  endedAt?: string | Date | null;
+};
 
 const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
@@ -44,6 +53,208 @@ const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => ({
 });
 
 export class AssetUsageService {
+  private assetService: AssetService;
+
+  constructor() {
+    this.assetService = new AssetService();
+  }
+
+  private normalizeAssetType(value?: string | null): AssetType {
+    return value === 'non_medical' ? 'non_medical' : 'medical';
+  }
+
+  private normalizeDetailIdentifier(value?: string | number | null): string {
+    if (value === undefined || value === null) return '';
+    return String(value).trim();
+  }
+
+  private parseAssetSpecifications(raw: unknown): Record<string, any> {
+    if (!raw) return {};
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    if (typeof raw === 'object') {
+      return raw as Record<string, any>;
+    }
+    return {};
+  }
+
+  private isAssetFallbackDetailId(detailId?: string | null, assetId?: number, assetType?: AssetType): boolean {
+    if (!detailId || !assetId) return false;
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    return normalizedDetailId === `asset-${assetId}` || normalizedDetailId === `asset-${normalizedAssetType}-${assetId}`;
+  }
+
+  private matchesAssetDetail(detail: Record<string, any>, detailId?: string | null, detailCode?: string | null): boolean {
+    const normalizedTargetId = this.normalizeDetailIdentifier(detailId);
+    const normalizedTargetCode = this.normalizeDetailIdentifier(detailCode);
+    const detailCandidates = [
+      this.normalizeDetailIdentifier(detail.id),
+      this.normalizeDetailIdentifier(detail.detailId),
+      this.normalizeDetailIdentifier(detail.assetDetailId),
+      this.normalizeDetailIdentifier(detail.assetCode),
+      this.normalizeDetailIdentifier(detail.detailCode),
+      this.normalizeDetailIdentifier(detail.serialNumber)
+    ].filter(Boolean);
+
+    if (normalizedTargetId && detailCandidates.includes(normalizedTargetId)) {
+      return true;
+    }
+
+    if (normalizedTargetCode && detailCandidates.includes(normalizedTargetCode)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private normalizeUsageConditionLabel(value?: string | null): string | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken')) return 'Rusak';
+    if (normalized.includes('cukup') || normalized.includes('fair')) return 'Cukup';
+    if (normalized.includes('poor') || normalized.includes('buruk') || normalized.includes('kurang')) return 'Cukup';
+    return 'Baik';
+  }
+
+  private normalizeAssetCondition(value?: string | null): 'good' | 'fair' | 'poor' | 'damaged' | null {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken')) return 'damaged';
+    if (normalized.includes('cukup') || normalized.includes('fair')) return 'fair';
+    if (normalized.includes('poor') || normalized.includes('buruk') || normalized.includes('kurang')) return 'poor';
+    return 'good';
+  }
+
+  private isDamagedUsageCondition(value?: string | null): boolean {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken');
+  }
+
+  private async syncAssetStateAfterUsage(assetId: number, assetType: AssetType, options?: UsageSyncOptions): Promise<void> {
+    const endedAt = formatDateTimeForMySQL(options?.endedAt);
+    if (!endedAt) return;
+
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
+    if (!assetResponse.success || !assetResponse.data) return;
+
+    const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
+    const details = Array.isArray(specifications.details) ? specifications.details : [];
+    const detailId = this.normalizeDetailIdentifier(options?.detailId);
+    const detailCode = this.normalizeDetailIdentifier(options?.detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(detailId, assetId, normalizedAssetType);
+    const shouldMatchSpecificDetail = Boolean((detailId && !isFallbackDetail) || detailCode);
+
+    const normalizedDetailCondition = this.normalizeUsageConditionLabel(options?.conditionAfter);
+    const normalizedAssetCondition = this.normalizeAssetCondition(options?.conditionAfter);
+    const damagedUsage = this.isDamagedUsageCondition(options?.conditionAfter);
+
+    if (details.length > 0) {
+      let hasChanges = false;
+      const updatedDetails = details.map((rawDetail: any) => {
+        const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
+        if (!detail || typeof detail !== 'object') return rawDetail;
+
+        const isTarget = shouldMatchSpecificDetail
+          ? this.matchesAssetDetail(detail, detailId, detailCode)
+          : true;
+
+        if (!isTarget) return rawDetail;
+
+        const nextStatus = damagedUsage ? 'Dalam Perbaikan' : 'Aktif';
+        const nextCondition = damagedUsage ? 'Rusak' : (normalizedDetailCondition || detail.condition || 'Baik');
+
+        if (detail.status !== nextStatus) {
+          detail.status = nextStatus;
+          hasChanges = true;
+        }
+
+        if (detail.condition !== nextCondition) {
+          detail.condition = nextCondition;
+          hasChanges = true;
+        }
+
+        return detail;
+      });
+
+      if (hasChanges) {
+        await this.assetService.update(
+          String(assetId),
+          { specifications: { ...specifications, details: updatedDetails } },
+          normalizedAssetType
+        );
+      }
+
+      if (shouldMatchSpecificDetail) {
+        return;
+      }
+    }
+
+    const assetUpdate: Record<string, any> = {
+      status: damagedUsage ? 'maintenance' : 'available'
+    };
+
+    if (normalizedAssetCondition) {
+      assetUpdate.condition = normalizedAssetCondition;
+    }
+
+    await this.assetService.update(String(assetId), assetUpdate, normalizedAssetType);
+  }
+
+  private async markAssetDetailInUse(assetId: number, assetType: AssetType, options?: UsageSyncOptions): Promise<void> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
+    if (!assetResponse.success || !assetResponse.data) return;
+
+    const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
+    const details = Array.isArray(specifications.details) ? specifications.details : [];
+    const detailId = this.normalizeDetailIdentifier(options?.detailId);
+    const detailCode = this.normalizeDetailIdentifier(options?.detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(detailId, assetId, normalizedAssetType);
+    const shouldMatchSpecificDetail = Boolean((detailId && !isFallbackDetail) || detailCode);
+
+    if (details.length > 0) {
+      let hasChanges = false;
+      const updatedDetails = details.map((rawDetail: any) => {
+        const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
+        if (!detail || typeof detail !== 'object') return rawDetail;
+
+        const isTarget = shouldMatchSpecificDetail
+          ? this.matchesAssetDetail(detail, detailId, detailCode)
+          : false;
+
+        if (!isTarget) return rawDetail;
+
+        if (detail.status !== 'Sedang Digunakan' && detail.status !== 'Dalam Penggunaan') {
+          // prefer a readable Indonesian label
+          detail.status = 'Sedang Digunakan';
+          hasChanges = true;
+        }
+
+        return detail;
+      });
+
+      if (hasChanges) {
+        await this.assetService.update(
+          String(assetId),
+          { specifications: { ...specifications, details: updatedDetails } },
+          normalizedAssetType
+        );
+      }
+
+      if (shouldMatchSpecificDetail) return;
+    }
+
+    // If no specific detail matched or no details exist, mark master as borrowed so UI shows it's unavailable
+    await this.assetService.updateStatus(String(assetId), 'borrowed', normalizedAssetType);
+  }
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
     const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
     const offset = (page - 1) * limit;
@@ -179,6 +390,21 @@ export class AssetUsageService {
       ]
     );
 
+    if (data.endedAt) {
+      await this.syncAssetStateAfterUsage(data.assetId, data.assetType || 'medical', {
+        detailId: data.assetDetailId,
+        detailCode: data.assetDetailCode,
+        conditionAfter: data.conditionAfter,
+        endedAt: data.endedAt
+      });
+    } else {
+      // mark the detail/master as in-use so UI shows "Sedang Digunakan"
+      await this.markAssetDetailInUse(data.assetId, data.assetType || 'medical', {
+        detailId: data.assetDetailId,
+        detailCode: data.assetDetailCode
+      });
+    }
+
     return this.getById(String(result.insertId));
   }
 
@@ -207,6 +433,17 @@ export class AssetUsageService {
 
     values.push(id);
     await pool.query(`UPDATE asset_usage_logs SET ${fields.join(', ')} WHERE id = ?`, values);
+
+    const updatedLog = await this.getById(id);
+    if (updatedLog.success && updatedLog.data?.endedAt) {
+      await this.syncAssetStateAfterUsage(updatedLog.data.assetId, updatedLog.data.assetType, {
+        detailId: updatedLog.data.assetDetailId,
+        detailCode: updatedLog.data.assetDetailCode,
+        conditionAfter: updatedLog.data.conditionAfter,
+        endedAt: updatedLog.data.endedAt
+      });
+    }
+
     return this.getById(id);
   }
 

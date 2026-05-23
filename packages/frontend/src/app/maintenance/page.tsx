@@ -46,6 +46,7 @@ import {
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
+import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { getCurrentUser } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
@@ -325,6 +326,25 @@ export default function MaintenancePage() {
     if (!data.assetId || !data.scheduledDate) {
       alert("Mohon lengkapi data pemeliharaan")
       return
+    }
+
+    try {
+      const usageResponse = await assetUsageService.getAll({
+        page: 1,
+        limit: 50,
+        assetId: String(data.assetId),
+        assetType: data.assetType,
+      })
+      const hasActiveUsage = Array.isArray(usageResponse.data) && usageResponse.data.some((usage) => {
+        const matchesDetail = !data.assetDetailId || !usage.assetDetailId || usage.assetDetailId === data.assetDetailId
+        return matchesDetail && !usage.endedAt
+      })
+      if (hasActiveUsage) {
+        alert("Aset sedang dalam penggunaan aktif dan belum dapat ditambahkan ke pemeliharaan")
+        return
+      }
+    } catch (usageError) {
+      console.error("Failed to check asset usage before maintenance create:", usageError)
     }
 
     try {

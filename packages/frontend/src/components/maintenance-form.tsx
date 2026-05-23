@@ -1,16 +1,17 @@
 "use client"
 
-import type React from "react"
+import type React from "react";
 
-import InventoryPicker from "@/components/inventory-picker"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { DetailInventoryItem } from "@/types/detail-inventory"
-import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory"
-import { toLocalDateTimeString } from "@/utils/format"
-import { buildInventorySearchKey } from "@/utils/inventory-search"
-import { X } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import InventoryPicker from "@/components/inventory-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetUsageService } from "@/services/asset-usage.service";
+import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
+import { toLocalDateTimeString } from "@/utils/format";
+import { buildInventorySearchKey } from "@/utils/inventory-search";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface MaintenanceFormProps {
   maintenance: any
@@ -107,6 +108,7 @@ export default function MaintenanceForm({
     cancellationReason: "",
     cost: "",
   }))
+  const [hasActiveUsage, setHasActiveUsage] = useState(false)
 
   const typeOptions = [
     { value: "preventive", label: "Rutin" },
@@ -123,6 +125,13 @@ export default function MaintenanceForm({
     const allowedStatuses = EDITABLE_STATUS_TRANSITIONS[currentStatus] || [currentStatus]
     return STATUS_OPTIONS.filter((option) => allowedStatuses.includes(option.value))
   }, [formData.status, maintenance])
+
+  const getConditionLabel = (asset: DetailInventoryItem) => {
+    if (asset.condition === "damaged") return "Rusak"
+    if (asset.condition === "poor") return "Kurang"
+    if (asset.condition === "fair") return "Cukup"
+    return "Baik"
+  }
 
   const assetsByLabel = useMemo(
     () =>
@@ -259,6 +268,26 @@ export default function MaintenanceForm({
     }, 120)
   }
 
+  useEffect(() => {
+    let mounted = true
+    const checkUsage = async (asset?: DetailInventoryItem | null) => {
+      if (!asset || !asset.assetId) {
+        if (mounted) setHasActiveUsage(false)
+        return
+      }
+      try {
+        const resp = await assetUsageService.getAll({ page: 1, limit: 50, assetId: String(asset.assetId), assetType: asset.assetType })
+        const active = Array.isArray(resp.data) && resp.data.some((u) => !u.endedAt && ( !u.assetDetailId || u.assetDetailId === asset.detailId ))
+        if (mounted) setHasActiveUsage(Boolean(active))
+      } catch {
+        if (mounted) setHasActiveUsage(false)
+      }
+    }
+    // check when selectedAsset or form status changes (we only block for active maintenance statuses)
+    void checkUsage(selectedAsset)
+    return () => { mounted = false }
+  }, [selectedAsset, formData.status])
+
   const findMatchedAsset = () => {
     if (formData.assetDetailId) {
       return assets.find((asset) => asset.detailId === formData.assetDetailId)
@@ -274,6 +303,12 @@ export default function MaintenanceForm({
     e.preventDefault()
     if (formData.status === "cancelled" && !formData.cancellationReason.trim()) {
       alert("Alasan pembatalan wajib diisi jika status Dibatalkan")
+      return
+    }
+    const activeMaintenanceStatuses = ["scheduled", "in_progress", "completed"]
+    const isBlockedByUsage = hasActiveUsage && activeMaintenanceStatuses.includes(formData.status)
+    if (isBlockedByUsage) {
+      alert("Aset sedang digunakan — tidak dapat membuat pemeliharaan aktif sampai penggunaan selesai.")
       return
     }
     const resolvedAsset = selectedAsset ?? findMatchedAsset()
@@ -330,7 +365,11 @@ export default function MaintenanceForm({
                 placeholder="Cari inventaris..."
                 buttonLabel="Pilih inventaris"
                 ariaLabel="Pilih inventaris untuk pemeliharaan"
-                renderItemMeta={(asset) => getDetailInventoryStatusLabel(asset)}
+                renderItemMeta={(asset) => (
+                  <span>
+                    {getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}
+                  </span>
+                )}
                 noResultsLabel="Tidak ada hasil"
               />
             </div>
@@ -451,9 +490,14 @@ export default function MaintenanceForm({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
-              Simpan
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status)}>
+                Simpan
+              </Button>
+              {hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status) && (
+                <p className="text-sm text-red-600">Aset sedang digunakan — hentikan penggunaan terlebih dahulu untuk membuat pemeliharaan aktif.</p>
+              )}
+            </div>
             <Button type="button" variant="outline" onClick={onCancel}>
               Batal
             </Button>

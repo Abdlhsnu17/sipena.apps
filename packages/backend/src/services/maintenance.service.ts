@@ -63,6 +63,32 @@ export class MaintenanceService {
     this.assetService = new AssetService();
   }
 
+  private async hasActiveUsage(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null
+  ): Promise<boolean> {
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallback = this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
+
+    if (!normalizedDetailId || isFallback) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COUNT(*) as count FROM asset_usage_logs WHERE asset_id = ? AND COALESCE(asset_type,'medical') = ? AND ended_at IS NULL`,
+        [assetId, assetType]
+      );
+      return (rows[0]?.count || 0) > 0;
+    }
+
+    const fallbackIds = this.getAssetFallbackDetailIds(assetId, assetType);
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count FROM asset_usage_logs WHERE asset_id = ? AND COALESCE(asset_type,'medical') = ? AND ended_at IS NULL AND (
+         asset_detail_id = ? OR asset_detail_id IS NULL OR asset_detail_id IN (?, ?)
+       )`,
+      [assetId, assetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
+    );
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private normalizeAssetType(value?: string | null): AssetType {
     return value === 'non_medical' ? 'non_medical' : 'medical';
   }
@@ -396,6 +422,22 @@ export class MaintenanceService {
     };
   }
 
+  private async validateUsageLockForMaintenance(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null
+  ): Promise<ApiResponse | null> {
+    const hasActiveUsage = await this.hasActiveUsage(assetId, assetType, detailId);
+    if (!hasActiveUsage) {
+      return null;
+    }
+
+    return {
+      success: false,
+      message: 'Aset sedang dalam penggunaan aktif dan belum dapat ditambahkan ke pemeliharaan'
+    };
+  }
+
   private async syncAssetAvailability(
     assetId: number,
     assetType: AssetType,
@@ -574,6 +616,15 @@ export class MaintenanceService {
       return { success: false, message: 'Asset not found for maintenance' };
     }
     const { type: resolvedType } = resolvedAsset;
+
+    const usageLockError = await this.validateUsageLockForMaintenance(
+      data.assetId,
+      resolvedType,
+      data.assetDetailId || null
+    );
+    if (usageLockError) {
+      return usageLockError;
+    }
 
     if (this.isActiveMaintenanceStatus(statusValue)) {
       const borrowingLockError = await this.validateBorrowingLockForMaintenance(

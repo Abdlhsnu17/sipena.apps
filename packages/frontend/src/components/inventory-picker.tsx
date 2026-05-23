@@ -1,7 +1,7 @@
 'use client'
 
-import * as React from 'react'
-import { Check } from 'lucide-react'
+import { Check } from 'lucide-react';
+import * as React from 'react';
 
 import {
     Command,
@@ -9,9 +9,9 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
-} from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { matchesSearchKeyword } from '@/utils/search-keyword'
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { matchesSearchKeyword } from '@/utils/search-keyword';
 
 type InventoryPickerProps<T> = {
   assets: T[]
@@ -280,8 +280,18 @@ export function InventoryPicker<T>({
                   <div className="flex w-full items-start justify-between gap-3 py-1">
                     <div className="space-y-0.5">
                       <span className="text-sm font-medium text-foreground">{formatLabel(asset)}</span>
-                      {renderItemMeta && (
+                      {renderItemMeta ? (
                         <div className="text-xs text-muted-foreground">{renderItemMeta(asset)}</div>
+                      ) : (
+                        (() => {
+                          const a = asset as any
+                          const availability = a?.availability
+                          const statusLabel = (a?.statusLabel || a?.status || a?.assetStatus || '')
+                          const isInUse = String(statusLabel).toLowerCase().includes('digunakan') || availability === 'borrowed' || String(a?.assetStatus || '').toLowerCase() === 'borrowed'
+                          return isInUse ? (
+                            <div className="text-xs text-rose-600">Sedang Digunakan</div>
+                          ) : null
+                        })()
                       )}
                     </div>
                     {multiSelect && selectedAssetKeySet.has(stableAssetKeys.get(asset) ?? getItemKey(asset, index)) ? (

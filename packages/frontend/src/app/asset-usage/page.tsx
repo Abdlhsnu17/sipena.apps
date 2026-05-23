@@ -15,8 +15,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 
@@ -136,6 +138,13 @@ export default function AssetUsagePage() {
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [completingLog, setCompletingLog] = useState<AssetUsageLog | null>(null);
+  const [completeForm, setCompleteForm] = useState({
+    endedAt: toDateTimeLocalInputValue(),
+    conditionAfter: "Baik",
+    notes: "",
+  });
   const [form, setForm] = useState<FormState>(initialForm);
 
   useEffect(() => {
@@ -344,6 +353,53 @@ export default function AssetUsagePage() {
     await loadData();
   };
 
+  const openCompleteDialog = (log: AssetUsageLog) => {
+    setCompletingLog(log);
+    setCompleteForm({
+      endedAt: toDateTimeLocalInputValue(log.startedAt ? new Date(log.startedAt) : new Date()),
+      conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
+      notes: log.notes || "",
+    });
+    setIsCompleteDialogOpen(true);
+  };
+
+  const handleCompleteUsage = async () => {
+    if (!completingLog) return;
+    setIsSaving(true);
+    try {
+      const response = await assetUsageService.update(completingLog.id, {
+        endedAt: completeForm.endedAt,
+        conditionAfter: completeForm.conditionAfter.trim(),
+        notes: completeForm.notes.trim(),
+      });
+
+      if (response.success) {
+        toast({
+          title: "Penggunaan alat diselesaikan",
+          description: "Kondisi akhir alat sudah tersimpan dan status aset diperbarui.",
+        });
+        setIsCompleteDialogOpen(false);
+        setCompletingLog(null);
+        await loadData();
+      } else {
+        toast({
+          title: "Gagal menyelesaikan penggunaan",
+          description: response.message || "Tidak dapat memperbarui log penggunaan.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error completing asset usage:", error);
+      toast({
+        title: "Gagal menyelesaikan penggunaan",
+        description: "Terjadi kesalahan saat menyimpan penyelesaian penggunaan alat.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -374,7 +430,7 @@ export default function AssetUsagePage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base"><ClipboardPlus className="h-4 w-4" /> Catat Pemakaian</CardTitle>
@@ -525,35 +581,41 @@ export default function AssetUsagePage() {
               </div>
               <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
             </div>
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="w-full min-w-0">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Alat</TableHead>
-                  <TableHead>Ruangan</TableHead>
-                  <TableHead>Waktu</TableHead>
-                  <TableHead>Jumlah</TableHead>
-                  <TableHead>Kondisi</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="max-w-64">Alat</TableHead>
+                  <TableHead className="w-40 max-w-40">Ruangan</TableHead>
+                  <TableHead className="w-48">Waktu</TableHead>
+                  <TableHead className="w-20 text-center">Jumlah</TableHead>
+                  <TableHead className="w-48">Kondisi</TableHead>
+                  <TableHead className="w-28" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>
-                      <p className="font-medium">{log.assetDetailName || log.assetName || "-"}</p>
-                      <p className="text-xs text-slate-600">{log.assetDetailCode || log.assetCode || "-"}</p>
+                    <TableCell className="min-w-0 max-w-64">
+                      <p className="font-medium truncate">{log.assetDetailName || log.assetName || "-"}</p>
+                      <p className="text-xs text-slate-600 truncate">{log.assetDetailCode || log.assetCode || "-"}</p>
                     </TableCell>
-                    <TableCell>
-                      <p>{log.roomName}</p>
-                        <p className="text-xs text-slate-600">{usageContextLabels[mapToFunctionalUsage(log.usageContext)]}</p>
+                    <TableCell className="min-w-0 w-40 max-w-40">
+                      <p className="truncate">{log.roomName || "-"}</p>
+                      <p className="text-xs text-slate-600 truncate">{usageContextLabels[mapToFunctionalUsage(log.usageContext)]}</p>
                     </TableCell>
-                    <TableCell>{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
-                    <TableCell>{log.usageCount}</TableCell>
-                    <TableCell>{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                    <TableCell className="w-48">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
+                    <TableCell className="w-20 text-center">{log.usageCount}</TableCell>
+                    <TableCell className="min-w-0 w-48 truncate">{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
+                    <TableCell className="w-28 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="icon" onClick={() => openCompleteDialog(log)} aria-label={log.endedAt ? "Ubah Penyelesaian" : "Selesaikan"}>
+                          <Check className="h-4 w-4 text-slate-700" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -566,9 +628,56 @@ export default function AssetUsagePage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Selesaikan Penggunaan Alat</DialogTitle>
+            <DialogDescription>
+              Isi waktu selesai dan kondisi akhir alat. Setelah disimpan, status alat akan diperbarui agar siap dipinjam atau masuk pemeliharaan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">Waktu Selesai</label>
+              <Input
+                type="datetime-local"
+                value={completeForm.endedAt}
+                onChange={(event) => setCompleteForm((prev) => ({ ...prev, endedAt: event.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Kondisi Akhir</label>
+              <Input
+                value={completeForm.conditionAfter}
+                onChange={(event) => setCompleteForm((prev) => ({ ...prev, conditionAfter: event.target.value }))}
+                placeholder="Baik / Cukup / Rusak"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Catatan</label>
+              <Textarea
+                value={completeForm.notes}
+                onChange={(event) => setCompleteForm((prev) => ({ ...prev, notes: event.target.value }))}
+                placeholder="Opsional"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleCompleteUsage} disabled={isSaving}>
+              {isSaving ? "Menyimpan..." : "Simpan Penyelesaian"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

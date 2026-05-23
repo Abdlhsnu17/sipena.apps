@@ -124,6 +124,32 @@ export class BorrowingService {
     this.assetService = new AssetService();
   }
 
+  private async hasActiveUsage(
+    assetId: number,
+    assetType: string,
+    detailId?: string | null
+  ): Promise<boolean> {
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallback = this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
+
+    if (!normalizedDetailId || isFallback) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COUNT(*) as count FROM asset_usage_logs WHERE asset_id = ? AND COALESCE(asset_type,'medical') = ? AND ended_at IS NULL`,
+        [assetId, assetType]
+      );
+      return (rows[0]?.count || 0) > 0;
+    }
+
+    const fallbackIds = this.getAssetFallbackDetailIds(assetId, assetType);
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count FROM asset_usage_logs WHERE asset_id = ? AND COALESCE(asset_type,'medical') = ? AND ended_at IS NULL AND (
+         asset_detail_id = ? OR asset_detail_id IS NULL OR asset_detail_id IN (?, ?)
+       )`,
+      [assetId, assetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
+    );
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
     if (!raw) return {};
     if (typeof raw === 'string') {
@@ -708,6 +734,14 @@ export class BorrowingService {
     const assetStatus = (asset.data?.status || '').toLowerCase();
     const detailId = this.normalizeDetailIdentifier(data.assetDetailId);
     const isAssetFallbackDetail = this.isAssetFallbackDetailId(detailId, data.assetId, assetType);
+
+    const hasUsage = await this.hasActiveUsage(Number(data.assetId), assetType, detailId || null);
+    if (hasUsage) {
+      return {
+        success: false,
+        message: 'Aset sedang digunakan (penggunaan belum selesai) sehingga belum dapat dipinjam'
+      };
+    }
 
     // Hard lock from maintenance workflow: while status is requested/scheduled/in_progress,
     // asset cannot be borrowed until maintenance is completed/cancelled.
