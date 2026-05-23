@@ -923,7 +923,7 @@ export default function AssetUsagePage() {
                                       <span className="font-medium text-slate-900">{usageContextLabels[log.usageContext] || '-'}</span>
                                     </div>
                                     <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">No ID Pemakaian</span>
+                                      <span className="font-medium text-slate-600">No ID Jadwal</span>
                                       <span className="font-medium text-slate-900">{String(log.id)}</span>
                                     </div>
                                     <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
@@ -948,14 +948,14 @@ export default function AssetUsagePage() {
                                   <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
                                     <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
                                       <span className="font-medium text-slate-600">Nama Pengirim</span>
-                                      <span className="font-medium text-slate-900">{log.createdByName || '-'}</span>
+                                      <span className="font-medium text-slate-900">{log.operatorName || log.createdByName || '-'}</span>
                                     </div>
                                     <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
                                       <span className="font-medium text-slate-600">NIP Pengirim</span>
-                                      <span className="font-medium text-slate-900">{log.createdBy ? String(log.createdBy) : '-'}</span>
+                                      <span className="font-medium text-slate-900">{log.operatorNip || '-'}</span>
                                     </div>
                                     <div className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                      <span className="font-medium text-slate-600">Jadwal Pemakaian</span>
+                                      <span className="font-medium text-slate-600">Jadwal Pemeliharaan Sarana</span>
                                       <span className="font-medium text-slate-900">{formatDayTimeLabel(log.startedAt) || '-'}</span>
                                     </div>
                                     <div className="detail-labeled-row">
@@ -982,7 +982,7 @@ export default function AssetUsagePage() {
                                     </div>
                                     <div className="detail-labeled-row">
                                       <span className="font-medium text-slate-600">Catatan (After)</span>
-                                      <span className="font-medium text-slate-900">{log.notes?.trim() || '-'}</span>
+                                      <span className="font-medium text-slate-900">{log.conditionAfter?.trim() || log.notes?.trim() || '-'}</span>
                                     </div>
                                   </div>
 
@@ -1037,7 +1037,6 @@ export default function AssetUsagePage() {
                       );
                     })
                   )}
-                </div>
                 </div>
               </>
             )}
