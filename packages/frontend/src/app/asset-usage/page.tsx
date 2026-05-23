@@ -88,6 +88,14 @@ type EditFormState = {
   notes: string;
 };
 
+type CompleteFormState = {
+  id: number | string;
+  assetLabel: string;
+  endedAt: string;
+  conditionAfter: string;
+  notes: string;
+};
+
 const initialForm: FormState = {
   inventoryKey: "",
   roomName: "",
@@ -169,6 +177,7 @@ export default function AssetUsagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
+  const [completeForm, setCompleteForm] = useState<CompleteFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const sortedFunctionalUsageKeys = useMemo(
     () => [...functionalUsageKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
@@ -427,21 +436,46 @@ export default function AssetUsagePage() {
     }
   };
 
-  const handleStatusChange = async (log: AssetUsageLog, status: string) => {
+  const openCompleteDialog = (log: AssetUsageLog) => {
+    setCompleteForm({
+      id: log.id,
+      assetLabel: log.assetDetailName || log.assetName || "Alat",
+      endedAt: toDateTimeLocalInputValue(),
+      conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
+      notes: log.notes || "",
+    });
+  };
+
+  const handleStatusChange = (log: AssetUsageLog, status: string) => {
     if (status !== "completed" || log.endedAt) return;
+    openCompleteDialog(log);
+  };
+
+  const handleCompleteUsage = async () => {
+    if (!completeForm) return;
+    if (!completeForm.endedAt) {
+      toast({ title: "Waktu selesai wajib diisi", description: "Isi waktu selesai sebelum menyimpan status selesai.", variant: "destructive" });
+      return;
+    }
+    if (!completeForm.conditionAfter.trim()) {
+      toast({ title: "Kondisi akhir wajib diisi", description: "Isi kondisi akhir alat sebelum menyimpan status selesai.", variant: "destructive" });
+      return;
+    }
 
     setIsSaving(true);
     try {
-      const response = await assetUsageService.update(log.id, {
-        endedAt: toDateTimeLocalInputValue(),
-        conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
+      const response = await assetUsageService.update(completeForm.id, {
+        endedAt: completeForm.endedAt,
+        conditionAfter: completeForm.conditionAfter.trim(),
+        notes: completeForm.notes.trim(),
       });
 
       if (response.success) {
         toast({
           title: "Penggunaan alat diselesaikan",
-          description: "Status pemakaian sudah diperbarui menjadi selesai.",
+          description: "Kondisi akhir dan catatan penyelesaian sudah tersimpan.",
         });
+        setCompleteForm(null);
         await loadData();
       } else {
         toast({
@@ -821,6 +855,53 @@ export default function AssetUsagePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={Boolean(completeForm)} onOpenChange={(open) => !open && setCompleteForm(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Selesaikan Pemakaian</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-sm font-medium text-slate-900">{completeForm?.assetLabel ?? "Alat"}</p>
+              <p className="text-xs text-slate-600">Periksa kondisi akhir dan catatan sebelum menyelesaikan pemakaian.</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Waktu Selesai</label>
+              <Input
+                type="datetime-local"
+                value={completeForm?.endedAt ?? ""}
+                onChange={(event) => setCompleteForm((prev) => prev ? { ...prev, endedAt: event.target.value } : prev)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Kondisi Akhir</label>
+              <Input
+                value={completeForm?.conditionAfter ?? ""}
+                onChange={(event) => setCompleteForm((prev) => prev ? { ...prev, conditionAfter: event.target.value } : prev)}
+                placeholder="Baik / Cukup / Rusak"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Catatan Penyelesaian</label>
+              <Textarea
+                value={completeForm?.notes ?? ""}
+                onChange={(event) => setCompleteForm((prev) => prev ? { ...prev, notes: event.target.value } : prev)}
+                placeholder="Opsional"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompleteForm(null)}>
+              Batal
+            </Button>
+            <Button onClick={handleCompleteUsage} disabled={isSaving}>
+              {isSaving ? "Menyimpan..." : "Simpan Selesai"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editForm)} onOpenChange={(open) => !open && setEditForm(null)}>
         <DialogContent className="sm:max-w-lg">
