@@ -27,6 +27,7 @@ export default function SettingsPage() {
     email: "",
     gender: "",
     workUnit: "",
+    subWorkUnit: "",
     homeAddress: "",
     phoneNumber: "",
   })
@@ -78,6 +79,7 @@ export default function SettingsPage() {
             email: user.email ?? "",
             gender: user.gender ?? "",
             workUnit: user.workUnit ?? "",
+            subWorkUnit: user.subWorkUnit ?? "",
             homeAddress: user.homeAddress ?? "",
             phoneNumber: user.phoneNumber ?? "",
           })
@@ -205,6 +207,7 @@ export default function SettingsPage() {
         email: profileForm.email || undefined,
         gender: profileForm.gender || undefined,
         workUnit: profileForm.workUnit || undefined,
+        subWorkUnit: profileForm.subWorkUnit || undefined,
         homeAddress: profileForm.homeAddress || undefined,
         phoneNumber: profileForm.phoneNumber || undefined,
         photo: photoFile || undefined,
@@ -219,6 +222,7 @@ export default function SettingsPage() {
           email: updated.email ?? "",
           gender: updated.gender ?? "",
           workUnit: updated.workUnit ?? "",
+          subWorkUnit: updated.subWorkUnit ?? "",
           homeAddress: updated.homeAddress ?? "",
           phoneNumber: updated.phoneNumber ?? "",
         })
@@ -393,11 +397,22 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="workUnit">Unit Kerja</Label>
+                      <Label htmlFor="workUnit">Unit Kerja / Instalasi</Label>
                       <Input
                         id="workUnit"
                         value={profileForm.workUnit}
                         onChange={(event) => setProfileForm((prev) => ({ ...prev, workUnit: event.target.value }))}
+                        placeholder="Contoh: Instalasi Rawat Inap"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="subWorkUnit">Sub Ruangan</Label>
+                      <Input
+                        id="subWorkUnit"
+                        value={profileForm.subWorkUnit}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, subWorkUnit: event.target.value }))}
+                        placeholder="Contoh: Ranap Mawar / ICU / OK 1"
                       />
                     </div>
 

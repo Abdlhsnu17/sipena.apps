@@ -1,4 +1,5 @@
 export * from './asset.model';
+export * from './asset_usage.model';
 export * from './borrowing.model';
 export * from './maintenance.model';
 export * from './user_activity.model';

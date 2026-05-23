@@ -1,4 +1,5 @@
 export { AssetService } from './asset.service';
+export { AssetUsageService } from './asset_usage.service';
 export { AuthService } from './auth.service';
 export { BorrowingService } from './borrowing.service';
 export { MaintenanceService } from './maintenance.service';

@@ -10,6 +10,7 @@ export interface User {
   staffAccessType?: StaffAccessType
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string
@@ -39,6 +40,7 @@ export interface RegisterCredentials {
   staffAccessType?: StaffAccessType
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
 }
@@ -72,6 +74,7 @@ export interface TokenPayload {
   staffAccessType?: StaffAccessType
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string

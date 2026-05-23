@@ -1,4 +1,5 @@
 export { default as assetController } from './asset.controller';
+export { default as assetUsageController } from './asset_usage.controller';
 export { default as authController } from './auth.controller';
 export { default as borrowingController } from './borrowing.controller';
 export { default as maintenanceController } from './maintenance.controller';

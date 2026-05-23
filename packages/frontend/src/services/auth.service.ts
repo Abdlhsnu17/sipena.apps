@@ -63,6 +63,7 @@ export interface User {
   staffAccessType?: StaffAccessType;
   gender?: string;
   workUnit?: string;
+  subWorkUnit?: string;
   homeAddress?: string;
   phoneNumber?: string;
   photoPath?: string;
@@ -103,6 +104,7 @@ export interface ProfileUpdatePayload {
   email?: string;
   gender?: string;
   workUnit?: string;
+  subWorkUnit?: string;
   homeAddress?: string;
   phoneNumber?: string;
   photo?: File | null;
@@ -481,6 +483,7 @@ class AuthService {
           email: payload.email ?? user.email,
           gender: payload.gender ?? (user as User).gender,
           workUnit: payload.workUnit ?? (user as User).workUnit,
+          subWorkUnit: payload.subWorkUnit ?? (user as User).subWorkUnit,
           homeAddress: payload.homeAddress ?? (user as User).homeAddress,
           phoneNumber: payload.phoneNumber ?? (user as User).phoneNumber
         }
@@ -505,6 +508,7 @@ class AuthService {
     if (payload.email !== undefined) formData.append('email', payload.email);
     if (payload.gender !== undefined) formData.append('gender', payload.gender);
     if (payload.workUnit !== undefined) formData.append('workUnit', payload.workUnit);
+    if (payload.subWorkUnit !== undefined) formData.append('subWorkUnit', payload.subWorkUnit);
     if (payload.homeAddress !== undefined) formData.append('homeAddress', payload.homeAddress);
     if (payload.phoneNumber !== undefined) formData.append('phoneNumber', payload.phoneNumber);
     if (payload.photo) formData.append('photo', payload.photo);

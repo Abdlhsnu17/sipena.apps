@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `return_records`, `report_uploads`, `maintenance_history`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -134,6 +134,34 @@ CREATE TABLE `jadwal_pemeliharaan` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   CONSTRAINT `ck_jadwal_asset_type` CHECK (`asset_type` in ('medical','non_medical'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `asset_usage_logs`
+--
+
+CREATE TABLE `asset_usage_logs` (
+  `id` int(11) NOT NULL,
+  `asset_id` int(11) NOT NULL,
+  `asset_type` varchar(20) NOT NULL DEFAULT 'medical',
+  `asset_detail_id` varchar(100) DEFAULT NULL,
+  `asset_detail_name` varchar(255) DEFAULT NULL,
+  `asset_detail_code` varchar(100) DEFAULT NULL,
+  `asset_location` varchar(255) DEFAULT NULL,
+  `room_name` varchar(255) NOT NULL,
+  `operator_user_id` int(11) DEFAULT NULL,
+  `usage_context` varchar(30) NOT NULL DEFAULT 'own_room',
+  `started_at` datetime NOT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `usage_count` int(11) NOT NULL DEFAULT 1,
+  `condition_before` varchar(50) DEFAULT NULL,
+  `condition_after` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -389,6 +417,7 @@ CREATE TABLE `users` (
   `staff_access_type` varchar(20) DEFAULT NULL,
   `gender` varchar(20) DEFAULT NULL,
   `work_unit` varchar(255) DEFAULT NULL,
+  `sub_work_unit` varchar(255) DEFAULT NULL,
   `home_address` varchar(500) DEFAULT NULL,
   `phone_number` varchar(25) DEFAULT NULL,
   `photo_path` varchar(255) DEFAULT NULL,
@@ -404,12 +433,12 @@ CREATE TABLE `users` (
 -- Dumping data untuk tabel `users`
 --
 
-INSERT INTO `users` (`id`, `nip`, `name`, `email`, `password`, `role`, `staff_access_type`, `gender`, `work_unit`, `home_address`, `phone_number`, `photo_path`, `created_at`, `updated_at`, `last_login`, `session_version`, `uml_access`, `is_active`) VALUES
-(1, '199803172025211031', 'Fikri Abdillah', 'fkr@gmail.com', '$2a$12$4c.jNu/cjvcQyUtA0JGDPe5J9qoKwd.kEYKcbkxnrmARwzIDuMIvu', 'admin', NULL, NULL, NULL, NULL, '+628111111111', NULL, '2026-01-17 16:27:41', '2026-04-11 11:56:02', '2026-04-11 11:56:02', 0, 0, 1),
-(2, '200003172025211031', 'Abdlh', 'ab@gmail.com', '$2a$12$YMno6PWX6aW1.wzus5YBs.l89PWNyTWoQ2NwngtjA5PoHZRRhtddK', 'leader', 'all', NULL, NULL, NULL, '+628111111112', NULL, '2026-01-17 23:04:33', '2026-04-11 13:35:25', '2026-04-11 13:35:25', 0, 0, 1),
-(3, '200103172025211031', 'Lilis Zulfah', 'lzh@gmail.com', '$2a$12$uQQiBErPS4LbRgSk3vUSXuQpgXdUiOUQ0oKCeI5XHwOXHrGEQ0bWy', 'staff_pj', 'all', NULL, 'Instalasi Rawat Inap', NULL, '+628111111113', NULL, '2026-04-11 01:40:12', '2026-04-11 12:09:11', '2026-04-11 12:09:11', 0, 0, 1),
-(4, '200203172025211031', 'Denisa', 'denisa@gmail.com', '$2a$12$7urQns.l0lQdbPgksIjIyObxOJ55mR1DLxEASSL2/nHEWglhgVqq2', 'staff', 'all', NULL, NULL, NULL, '+628111111114', NULL, '2026-04-11 01:40:44', '2026-04-11 05:54:51', '2026-04-11 05:54:51', 0, 0, 1),
-(5, '200303172025211031', 'Doni', 'doni@gmail.com', '$2a$12$M69xkT/d/FVBdiXbBx.Lt.f1eLaTvAXkoK2uSD0NqefNRaWg8Mq32', 'teknisi', NULL, NULL, 'Teknisi Medis dan Non Medis', NULL, '+628111111115', NULL, '2026-04-11 01:41:11', '2026-04-11 06:27:06', '2026-04-11 06:27:06', 0, 0, 1);
+INSERT INTO `users` (`id`, `nip`, `name`, `email`, `password`, `role`, `staff_access_type`, `gender`, `work_unit`, `sub_work_unit`, `home_address`, `phone_number`, `photo_path`, `created_at`, `updated_at`, `last_login`, `session_version`, `uml_access`, `is_active`) VALUES
+(1, '199803172025211031', 'Fikri Abdillah', 'fkr@gmail.com', '$2a$12$4c.jNu/cjvcQyUtA0JGDPe5J9qoKwd.kEYKcbkxnrmARwzIDuMIvu', 'admin', NULL, NULL, NULL, NULL, NULL, '+628111111111', NULL, '2026-01-17 16:27:41', '2026-04-11 11:56:02', '2026-04-11 11:56:02', 0, 0, 1),
+(2, '200003172025211031', 'Abdlh', 'ab@gmail.com', '$2a$12$YMno6PWX6aW1.wzus5YBs.l89PWNyTWoQ2NwngtjA5PoHZRRhtddK', 'leader', 'all', NULL, NULL, NULL, NULL, '+628111111112', NULL, '2026-01-17 23:04:33', '2026-04-11 13:35:25', '2026-04-11 13:35:25', 0, 0, 1),
+(3, '200103172025211031', 'Lilis Zulfah', 'lzh@gmail.com', '$2a$12$uQQiBErPS4LbRgSk3vUSXuQpgXdUiOUQ0oKCeI5XHwOXHrGEQ0bWy', 'staff_pj', 'all', NULL, 'Instalasi Rawat Inap', NULL, NULL, '+628111111113', NULL, '2026-04-11 01:40:12', '2026-04-11 12:09:11', '2026-04-11 12:09:11', 0, 0, 1),
+(4, '200203172025211031', 'Denisa', 'denisa@gmail.com', '$2a$12$7urQns.l0lQdbPgksIjIyObxOJ55mR1DLxEASSL2/nHEWglhgVqq2', 'staff', 'all', NULL, NULL, NULL, NULL, '+628111111114', NULL, '2026-04-11 01:40:44', '2026-04-11 05:54:51', '2026-04-11 05:54:51', 0, 0, 1),
+(5, '200303172025211031', 'Doni', 'doni@gmail.com', '$2a$12$M69xkT/d/FVBdiXbBx.Lt.f1eLaTvAXkoK2uSD0NqefNRaWg8Mq32', 'teknisi', NULL, NULL, 'Teknisi Medis dan Non Medis', NULL, NULL, '+628111111115', NULL, '2026-04-11 01:41:11', '2026-04-11 06:27:06', '2026-04-11 06:27:06', 0, 0, 1);
 
 --
 -- --------------------------------------------------------
@@ -466,6 +495,16 @@ ALTER TABLE `borrowing_records`
   ADD KEY `idx_borrowing_rejected_by` (`rejected_by`),
   ADD KEY `idx_borrowing_return_validated_by` (`return_validated_by`),
   ADD KEY `idx_borrowing_returned_by` (`returned_by`);
+
+--
+-- Indeks untuk tabel `asset_usage_logs`
+--
+ALTER TABLE `asset_usage_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_asset_usage_asset` (`asset_type`,`asset_id`,`asset_detail_id`),
+  ADD KEY `idx_asset_usage_room_started` (`room_name`,`started_at`),
+  ADD KEY `idx_asset_usage_operator` (`operator_user_id`),
+  ADD KEY `idx_asset_usage_created_by` (`created_by`);
 
 --
 -- Indeks untuk tabel `jadwal_pemeliharaan`
@@ -559,6 +598,12 @@ ALTER TABLE `borrowing_records`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT untuk tabel `asset_usage_logs`
+--
+ALTER TABLE `asset_usage_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT untuk tabel `jadwal_pemeliharaan`
 --
 ALTER TABLE `jadwal_pemeliharaan`
@@ -631,6 +676,13 @@ ALTER TABLE `borrowing_records`
   ADD CONSTRAINT `fk_borrowing_return_validated_by` FOREIGN KEY (`return_validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_borrowing_returned_by` FOREIGN KEY (`returned_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_borrowing_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `asset_usage_logs`
+--
+ALTER TABLE `asset_usage_logs`
+  ADD CONSTRAINT `fk_asset_usage_operator` FOREIGN KEY (`operator_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_asset_usage_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `maintenance_history`

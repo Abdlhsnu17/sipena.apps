@@ -12,6 +12,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import {
     ensureBorrowingWorkflowColumns,
+    ensureAssetUsageLogsTable,
     ensureCoreSchemaInitialized,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
@@ -27,6 +28,7 @@ import { getProfileUploadsDir } from './utils/storage-paths';
 
 // Routes
 import assetRoutes from './routes/asset.routes';
+import assetUsageRoutes from './routes/asset_usage.routes';
 import authRoutes from './routes/auth.routes';
 import borrowingRoutes from './routes/borrowing.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
@@ -174,6 +176,7 @@ app.get('/api/health', healthHandler);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/assets', authMiddleware, assetRoutes);
+app.use('/api/asset-usage', authMiddleware, assetUsageRoutes);
 app.use('/api/borrowing', authMiddleware, borrowingRoutes);
 app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
 app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
@@ -202,6 +205,7 @@ const startServer = async () => {
     await withSchemaLock(async () => {
       await ensureCoreSchemaInitialized();
       await ensureBorrowingWorkflowColumns();
+      await ensureAssetUsageLogsTable();
       await ensureMaintenanceAssetTypeColumn();
       await ensureMaintenanceDetailColumns();
       await ensureMaintenanceCancellationReasonColumn();

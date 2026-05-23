@@ -230,7 +230,7 @@ export class AuthController {
         return;
       }
 
-      const { name, email, nip, gender, workUnit, homeAddress, phoneNumber } = req.body;
+      const { name, email, nip, gender, workUnit, subWorkUnit, homeAddress, phoneNumber } = req.body;
       const file = (req.file as Express.Multer.File | undefined);
       
       if (file) {
@@ -245,6 +245,7 @@ export class AuthController {
         nip,
         gender,
         workUnit,
+        subWorkUnit,
         homeAddress,
         phoneNumber
       }, photoPath);

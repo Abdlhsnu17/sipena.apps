@@ -6,6 +6,12 @@ export interface User {
   email: string;
   role: UserRole;
   staffAccessType?: StaffAccessType;
+  gender?: string;
+  workUnit?: string;
+  subWorkUnit?: string;
+  homeAddress?: string;
+  phoneNumber?: string;
+  photoPath?: string;
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;

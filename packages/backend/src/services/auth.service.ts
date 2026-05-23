@@ -31,6 +31,7 @@ interface UserRow extends RowDataPacket {
   staff_access_type: string;
   gender: string | null;
   work_unit: string | null;
+  sub_work_unit: string | null;
   home_address: string | null;
   phone_number: string | null;
   photo_path: string | null;
@@ -46,6 +47,7 @@ interface ProfileUpdatePayload {
   nip?: string;
   gender?: string;
   workUnit?: string;
+  subWorkUnit?: string;
   homeAddress?: string;
   phoneNumber?: string;
 }
@@ -75,6 +77,7 @@ export class AuthService {
       staffAccessType: row.staff_access_type,
       gender: row.gender ?? undefined,
       workUnit: row.work_unit ?? undefined,
+      subWorkUnit: row.sub_work_unit ?? undefined,
       homeAddress: row.home_address ?? undefined,
       phoneNumber: row.phone_number ?? undefined,
       photoPath: row.photo_path ?? undefined,
@@ -104,7 +107,7 @@ export class AuthService {
     const identifier = nip.trim();
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
+      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
       [identifier, identifier]
     );
 
@@ -169,7 +172,7 @@ export class AuthService {
     );
 
     const [newUserRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -315,7 +318,7 @@ export class AuthService {
 
   async getProfile(userId: number): Promise<AuthResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -364,6 +367,11 @@ export class AuthService {
       values.push(payload.workUnit);
     }
 
+    if (payload.subWorkUnit !== undefined) {
+      fields.push('sub_work_unit = ?');
+      values.push(payload.subWorkUnit);
+    }
+
     if (payload.homeAddress !== undefined) {
       fields.push('home_address = ?');
       values.push(payload.homeAddress);
@@ -402,7 +410,7 @@ export class AuthService {
     }
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -440,6 +448,7 @@ export class AuthService {
       staffAccessType: user.staff_access_type,
       gender: user.gender,
       workUnit: user.work_unit,
+      subWorkUnit: user.sub_work_unit,
       homeAddress: user.home_address,
       phoneNumber: user.phone_number,
       photoPath: user.photo_path,

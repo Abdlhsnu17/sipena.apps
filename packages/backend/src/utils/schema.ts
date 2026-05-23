@@ -16,6 +16,7 @@ let ensuredNonMedicalAssetsTable = false;
 let ensuredScheduleAssetFkRemoved = false;
 let ensuredUserActivityLogsTable = false;
 let ensuredBorrowingWorkflowColumns = false;
+let ensuredAssetUsageLogsTable = false;
 let attemptedCoreSchemaBootstrap = false;
 
 const tableExists = async (tableName: string): Promise<boolean> => {
@@ -287,7 +288,7 @@ export async function ensureUserProfileColumns(): Promise<void> {
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
       AND TABLE_NAME = 'users'
-      AND COLUMN_NAME IN ('gender', 'work_unit', 'home_address', 'phone_number', 'photo_path', 'session_version')
+      AND COLUMN_NAME IN ('gender', 'work_unit', 'sub_work_unit', 'home_address', 'phone_number', 'photo_path', 'session_version')
   `;
 
   const [rows] = await pool.query<RowDataPacket[]>(columnCheckQuery);
@@ -311,6 +312,13 @@ export async function ensureUserProfileColumns(): Promise<void> {
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN home_address VARCHAR(500) DEFAULT NULL AFTER work_unit
+    `);
+  }
+
+  if (!existingColumns.has('sub_work_unit')) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN sub_work_unit VARCHAR(255) DEFAULT NULL AFTER work_unit
     `);
   }
 
@@ -494,6 +502,46 @@ export async function ensureUserActivityLogsTable(): Promise<void> {
   }
 
   ensuredUserActivityLogsTable = true;
+}
+
+export async function ensureAssetUsageLogsTable(): Promise<void> {
+  if (ensuredAssetUsageLogsTable) return;
+
+  const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES LIKE 'asset_usage_logs'");
+  if (tables.length === 0) {
+    await pool.query(`
+      CREATE TABLE asset_usage_logs (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        asset_id INT(11) NOT NULL,
+        asset_type VARCHAR(20) NOT NULL DEFAULT 'medical',
+        asset_detail_id VARCHAR(100) DEFAULT NULL,
+        asset_detail_name VARCHAR(255) DEFAULT NULL,
+        asset_detail_code VARCHAR(100) DEFAULT NULL,
+        asset_location VARCHAR(255) DEFAULT NULL,
+        room_name VARCHAR(255) NOT NULL,
+        operator_user_id INT(11) DEFAULT NULL,
+        usage_context VARCHAR(30) NOT NULL DEFAULT 'own_room',
+        started_at DATETIME NOT NULL,
+        ended_at DATETIME DEFAULT NULL,
+        usage_count INT(11) NOT NULL DEFAULT 1,
+        condition_before VARCHAR(50) DEFAULT NULL,
+        condition_after VARCHAR(50) DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        created_by INT(11) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+        PRIMARY KEY (id),
+        KEY idx_asset_usage_asset (asset_type, asset_id, asset_detail_id),
+        KEY idx_asset_usage_room_started (room_name, started_at),
+        KEY idx_asset_usage_operator (operator_user_id),
+        KEY idx_asset_usage_created_by (created_by),
+        CONSTRAINT fk_asset_usage_operator FOREIGN KEY (operator_user_id) REFERENCES users(id) ON DELETE SET NULL,
+        CONSTRAINT fk_asset_usage_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+  }
+
+  ensuredAssetUsageLogsTable = true;
 }
 
 const hasIndex = async (tableName: string, indexName: string): Promise<boolean> => {
