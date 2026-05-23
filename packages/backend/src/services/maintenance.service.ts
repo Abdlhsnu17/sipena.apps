@@ -434,7 +434,7 @@ export class MaintenanceService {
 
     return {
       success: false,
-      message: 'Aset sedang dalam penggunaan aktif dan belum dapat ditambahkan ke pemeliharaan'
+      message: 'Alat sedang digunakan sehingga belum dapat ditambahkan pemeliharaan'
     };
   }
 

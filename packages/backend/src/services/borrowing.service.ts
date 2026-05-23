@@ -739,7 +739,7 @@ export class BorrowingService {
     if (hasUsage) {
       return {
         success: false,
-        message: 'Aset sedang digunakan (penggunaan belum selesai) sehingga belum dapat dipinjam'
+        message: 'Alat sedang digunakan sehingga belum dapat ditambahkan peminjaman'
       };
     }
 

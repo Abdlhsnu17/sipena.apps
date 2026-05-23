@@ -81,3 +81,43 @@ describe('MaintenanceService.getAll view filter', () => {
     expect(countParams).toEqual(['validated']);
   });
 });
+
+describe('MaintenanceService active usage lock', () => {
+  const mockedQuery = pool.query as jest.Mock;
+  let service: MaintenanceService;
+
+  beforeEach(() => {
+    mockedQuery.mockReset();
+    service = new MaintenanceService();
+  });
+
+  it('rejects creating maintenance when the asset has an active usage log', async () => {
+    mockedQuery.mockResolvedValueOnce([[{ count: 1 }], []]);
+
+    jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 42,
+        status: 'available',
+        specifications: { details: [] },
+      },
+    });
+
+    const result = await service.create({
+      assetId: 42,
+      assetType: 'medical',
+      assetDetailId: 'detail-1',
+      assetDetailName: 'Infusion Pump',
+      type: 'preventive',
+      status: 'requested',
+      scheduledDate: '2026-05-23 10:00:00',
+      description: 'Pemeriksaan rutin',
+      createdBy: 7,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Alat sedang digunakan');
+    expect(result.message).toContain('pemeliharaan');
+    expect(mockedQuery).toHaveBeenCalledTimes(1);
+  });
+});

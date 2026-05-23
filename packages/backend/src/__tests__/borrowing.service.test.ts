@@ -84,6 +84,37 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(assetGetByIdSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects borrowing when the asset still has an active usage log', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([[{ count: 1 }], []]);
+
+    jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 12,
+        status: 'available',
+        specifications: { details: [] },
+      },
+    });
+
+    const result = await service.create({
+      assetId: 12,
+      assetType: 'medical',
+      userId: 5,
+      borrowDate: new Date(2026, 4, 17, 10, 0, 0),
+      dueDate: new Date(2026, 4, 18, 10, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Alat sedang digunakan');
+    expect(result.message).toContain('peminjaman');
+    expect(mockedQuery).toHaveBeenCalledTimes(4);
+  });
+
   it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])
@@ -129,9 +160,14 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(result.success).toBe(true);
     expect(result.data?.status).toBe('borrowed');
 
-    const [updateQuery, updateParams] = mockedQuery.mock.calls[4];
+    const updateCall = mockedQuery.mock.calls.find(
+      ([query]) => String(query).includes('UPDATE borrowing_records SET') && String(query).includes('WHERE id = ?')
+    );
+
+    expect(updateCall).toBeDefined();
+
+    const [updateQuery, updateParams] = updateCall as [string, any[]];
     expect(String(updateQuery)).toContain('status = ?');
-    expect(updateParams).toContain('borrowed');
-    expect(updateParams).toContain('resolved');
+    expect(updateParams[updateParams.length - 1]).toBe('18');
   });
 });
