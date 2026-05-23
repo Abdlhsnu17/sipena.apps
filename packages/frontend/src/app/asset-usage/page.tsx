@@ -524,21 +524,21 @@ export default function AssetUsagePage() {
     const usageContextLabel = usageContextLabels[log.usageContext] || log.usageContext || "-";
 
     sections.push({
-      title: "Informasi Dasar Alat",
+      title: "Data Alat Digunakan",
       lines: [
         { label: "No ID Pemakaian", value: String(log.id) },
         { label: "Jenis Inventaris", value: log.assetType === "medical" ? "Medis" : "Non-Medis" },
         { label: "Nama Alat", value: log.assetDetailName || log.assetName || "-" },
         { label: "Kode Alat", value: log.assetDetailCode || log.assetCode || "-" },
-        { label: "Nama Ruangan Alat", value: log.assetLocation || "-" },
+        { label: "Lokasi Alat", value: log.assetLocation || "-" },
       ],
     });
 
     sections.push({
-      title: "Detail Pemakaian",
+      title: "Data Pemakaian",
       lines: [
         { label: "Ruangan Pemakaian", value: getUsageRoomDisplay(log).primary },
-        { label: "Keterangan Ruangan", value: getUsageRoomDisplay(log).secondary || "-" },
+        { label: "Lokasi Pembanding", value: getUsageRoomDisplay(log).secondary || "-" },
         { label: "Jenis Pemakaian", value: usageContextLabel },
         { label: "Waktu Mulai", value: formatDayTimeLabel(log.startedAt) || "-" },
         { label: "Jumlah", value: String(log.usageCount || 1) },
@@ -547,29 +547,27 @@ export default function AssetUsagePage() {
     });
 
     sections.push({
-      title: "Operator / Pencatat",
+      title: "Operator Pemakaian",
       lines: [
-        { label: "Nama Operator", value: log.operatorName || log.createdByName || "-" },
+        { label: "Nama Operator", value: log.operatorName || "-" },
         { label: "NIP Operator", value: log.operatorNip || "-" },
-        { label: "Dicatat Oleh", value: log.createdByName || "-" },
-        { label: "Waktu Pencatatan", value: formatDayTimeLabel(log.createdAt) || "-" },
       ],
     });
 
     sections.push({
-      title: "Penyelesaian Pemakaian",
+      title: "Penyelesaian Penggunaan",
       lines: [
         { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
         { label: "Kondisi Akhir", value: log.conditionAfter || "-" },
-        { label: "Catatan Penyelesaian", value: log.notes?.trim() || "-" },
+        { label: "Catatan", value: log.notes?.trim() || "-" },
       ],
     });
 
     sections.push({
-      title: "Status Akhir Alat",
+      title: "Status Pemakaian",
       lines: [
-        { label: "Status Akhir", value: getUsageStatusLabel(log) },
-        { label: "Kondisi Ditampilkan", value: getUsageConditionLabel(log) },
+        { label: "Status", value: getUsageStatusLabel(log) },
+        { label: "Kondisi Saat Ini", value: getUsageConditionLabel(log) },
       ],
     });
 
@@ -944,9 +942,8 @@ export default function AssetUsagePage() {
                             </div>
                           )}
 
-                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                            <div className="text-[12px] text-muted-foreground">{log.assetDetailCode || log.assetCode || "-"}</div>
-                            <div className="flex flex-wrap items-center gap-1">
+                          <div className="flex justify-end border-t border-slate-200 px-3 pb-3 pt-2 sm:px-3 sm:pb-3">
+                            <div className="flex flex-wrap items-center justify-end gap-1">
                               {!log.endedAt && (
                                 <Button
                                   size="sm"
