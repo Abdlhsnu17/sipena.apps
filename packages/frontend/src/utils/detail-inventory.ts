@@ -1,8 +1,8 @@
-import type { Asset } from "@/services/asset.service"
-import type { DetailAvailability, DetailCondition, DetailInventoryItem } from "@/types/detail-inventory"
-import type { MedicalAsset } from "@/types/medical-assets-types"
-import type { NonMedicalAsset } from "@/types/non-medical-assets-types"
-import { getSpecificationDetails } from "./api-mappers"
+import type { Asset } from "@/services/asset.service";
+import type { DetailAvailability, DetailCondition, DetailInventoryItem } from "@/types/detail-inventory";
+import type { MedicalAsset } from "@/types/medical-assets-types";
+import type { NonMedicalAsset } from "@/types/non-medical-assets-types";
+import { getSpecificationDetails } from "./api-mappers";
 
 const normalizeAvailability = (status?: string): DetailAvailability => {
   const normalized = (status || "").toLowerCase()
@@ -138,11 +138,7 @@ export const flattenDetailInventories = (assets: Asset[], options: FlattenOption
 
 export const getDetailInventoryStatusLabel = (item: Pick<DetailInventoryItem, "statusLabel" | "availability" | "assetStatus">): string => {
   const rawStatus = item.statusLabel?.trim()
-  if (rawStatus) {
-    return rawStatus
-  }
-
-  const normalizedStatus = item.availability || item.assetStatus
+  const normalizedStatus = rawStatus ? normalizeAvailability(rawStatus) : (item.availability || item.assetStatus)
   switch (normalizedStatus) {
     case "maintenance":
       return "Dalam Perbaikan"
