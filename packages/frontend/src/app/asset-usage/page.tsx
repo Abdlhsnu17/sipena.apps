@@ -33,7 +33,7 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   other: "Lainnya",
 };
 
-const functionalUsageKeys: AssetUsageContext[] = ["own_room", "emergency", "procedure", "rounding", "other"];
+const functionalUsageKeys: AssetUsageContext[] = ["own_room", "emergency", "procedure", "rounding"];
 
 const getUsageRoomDisplay = (log: AssetUsageLog) => {
   const roomName = (log.roomName || "").trim();
@@ -74,7 +74,6 @@ type FormState = {
   endedAt: string;
   usageCount: number;
   conditionBefore: string;
-  conditionAfter: string;
   notes: string;
 };
 
@@ -86,7 +85,6 @@ const initialForm: FormState = {
   endedAt: "",
   usageCount: 1,
   conditionBefore: "Baik",
-  conditionAfter: "Baik",
   notes: "",
 };
 
@@ -152,6 +150,7 @@ export default function AssetUsagePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [assetSearchTerm, setAssetSearchTerm] = useState("");
+  const [assetSearchInput, setAssetSearchInput] = useState("");
   const [assetSourceFilter, setAssetSourceFilter] = useState<AssetSourceFilter>("all");
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
@@ -166,6 +165,10 @@ export default function AssetUsagePage() {
     notes: "",
   });
   const [form, setForm] = useState<FormState>(initialForm);
+  const sortedFunctionalUsageKeys = useMemo(
+    () => [...functionalUsageKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
+    []
+  );
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -192,16 +195,6 @@ export default function AssetUsagePage() {
         ];
         const items = flattenDetailInventories(combinedAssets, { includeAssetFallback: true });
         setAssets(items);
-        const ownRoomItems = items.filter((item) => isOwnRoomAsset(item, currentUser));
-        const initialItem = ownRoomItems[0] || null;
-        if (!form.inventoryKey && initialItem) {
-          setForm((prev) => ({
-            ...prev,
-            inventoryKey: getInventoryKey(initialItem),
-            roomName: getUserUsageRoom(currentUser) || initialItem.roomName || initialItem.assetLocation || "",
-            usageContext: "own_room",
-          }));
-        }
       }
 
       if (usageResponse.success) setLogs(usageResponse.data);
@@ -223,6 +216,9 @@ export default function AssetUsagePage() {
   );
 
   const selectableAssets = useMemo(() => {
+    if (form.usageContext === "emergency") {
+      return assets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
+    }
     if (form.usageContext !== "own_room") return assets;
     return assets.filter((item) => isOwnRoomAsset(item, currentUser));
   }, [assets, currentUser, form.usageContext]);
@@ -301,10 +297,10 @@ export default function AssetUsagePage() {
   };
 
   const handleUsageContextChange = (usageContext: AssetUsageContext) => {
-    const nextSelectableAssets =
-      usageContext === "own_room"
-        ? assets.filter((item) => isOwnRoomAsset(item, currentUser))
-        : assets;
+    let nextSelectableAssets: DetailInventoryItem[];
+    if (usageContext === "emergency") nextSelectableAssets = assets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
+    else if (usageContext === "own_room") nextSelectableAssets = assets.filter((item) => isOwnRoomAsset(item, currentUser));
+    else nextSelectableAssets = assets;
     const currentStillVisible = nextSelectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey);
     const nextAsset = currentStillVisible
       ? nextSelectableAssets.find((item) => getInventoryKey(item) === form.inventoryKey)
@@ -344,7 +340,6 @@ export default function AssetUsagePage() {
         endedAt: form.endedAt || undefined,
         usageCount: form.usageCount,
         conditionBefore: form.conditionBefore,
-        conditionAfter: form.conditionAfter,
         notes: form.notes,
       });
 
@@ -424,8 +419,8 @@ export default function AssetUsagePage() {
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-sm">
-            <ClipboardList className="h-5 w-5" />
+          <span className="mt-1 inline-flex shrink-0 rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2">
+            <ClipboardList className="h-5 w-5 text-white" />
           </span>
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat Ruangan</h1>
@@ -434,41 +429,43 @@ export default function AssetUsagePage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
-          <CardContent className="flex items-start justify-between gap-3 p-4">
+        <div className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
+          <CardContent className="flex items-start justify-between gap-2 p-2">
             <div>
               <p className="text-[12px] text-muted-foreground">Total Pemakaian</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.totalUsage}</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900">{summary.totalUsage}</p>
             </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <Activity className="h-5 w-5" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Activity className="h-4 w-4" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
-          <CardContent className="flex items-start justify-between gap-3 p-4">
+        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
+          <CardContent className="flex items-start justify-between gap-2 p-2">
             <div>
               <p className="text-[12px] text-muted-foreground">Alat Terpakai</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.uniqueAssets}</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900">{summary.uniqueAssets}</p>
             </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-              <ClipboardPlus className="h-5 w-5" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+              <ClipboardPlus className="h-4 w-4" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
-          <CardContent className="flex items-start justify-between gap-3 p-4">
+        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
+          <CardContent className="flex items-start justify-between gap-2 p-2">
             <div className="min-w-0">
               <p className="text-[12px] text-muted-foreground">Paling Sering</p>
-              <p className="mt-1 truncate text-base font-semibold text-slate-900">{summary.topAsset?.label || "-"}</p>
-              <p className="text-sm text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-900">{summary.topAsset?.label || "-"}</p>
+              <p className="text-xs text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
             </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-              <Check className="h-5 w-5" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+              <Check className="h-4 w-4" />
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -497,112 +494,130 @@ export default function AssetUsagePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {isUsageFormMinimized ? (
+              {isUsageFormMinimized ? (
               <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-sm text-blue-900">
                 Section catat pemakaian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
               </div>
             ) : (
               <>
-                <div>
-                  <label className="text-sm font-medium">Alat</label>
-                  <div className="relative mt-1">
-                    <button
-                      type="button"
-                      className="flex min-h-11 w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-left text-sm"
-                      onClick={() => setIsAssetPickerOpen((open) => !open)}
-                    >
-                      <span className={selectedAsset ? "text-slate-900" : "text-slate-500"}>
-                        {selectedAsset
-                          ? `${selectedAsset.detailInventoryName || selectedAsset.detailName} - ${selectedAsset.detailCode}`
-                          : "Pilih alat"}
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-slate-500" />
-                    </button>
-                    {isAssetPickerOpen && (
-                      <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
-                        <div className="border-b p-3">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input
-                              className="pl-9"
-                              placeholder="Cari inventaris..."
-                              value={assetSearchTerm}
-                              onChange={(event) => setAssetSearchTerm(event.target.value)}
-                            />
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {[
-                              { value: "all" as const, label: `Semua (${assetFilterCounts.all})` },
-                              { value: "medical" as const, label: `Medis (${assetFilterCounts.medical})` },
-                              { value: "non_medical" as const, label: `Non-Medis (${assetFilterCounts.non_medical})` },
-                            ].map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => setAssetSourceFilter(option.value)}
-                                className={`rounded-full border px-3 py-1.5 text-sm ${
-                                  assetSourceFilter === option.value
-                                    ? "border-teal-500 bg-teal-50 text-teal-700"
-                                    : "border-slate-200 bg-white text-slate-700"
-                                }`}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="max-h-72 overflow-y-auto">
-                          {filteredSelectableAssets.map((item) => {
-                            const key = getInventoryKey(item);
-                            const isSelected = key === form.inventoryKey;
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => handleAssetChange(key)}
-                                className="flex w-full items-start gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
-                              >
-                                <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
-                                  {isSelected && <Check className="h-4 w-4 text-teal-600" />}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
-                                  <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
-                                </span>
-                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                                  {item.assetType === "medical" ? "Medis" : "Non-Medis"}
-                                </span>
-                              </button>
-                            );
-                          })}
-                          {filteredSelectableAssets.length === 0 && (
-                            <div className="px-3 py-6 text-center text-sm text-slate-600">
-                              Tidak ada alat yang sesuai filter.
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Alat</label>
+                    <div className="relative mt-1">
+                      <button
+                        type="button"
+                        className="flex min-h-11 w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-left text-sm"
+                        onClick={() => setIsAssetPickerOpen((open) => !open)}
+                      >
+                        <span className={selectedAsset ? "text-slate-900" : "text-slate-500"}>
+                          {selectedAsset
+                            ? `${selectedAsset.detailInventoryName || selectedAsset.detailName} - ${selectedAsset.detailCode}`
+                            : "Pilih alat"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-slate-500" />
+                      </button>
+                      {isAssetPickerOpen && (
+                        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
+                          <div className="border-b p-3">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                  <Input
+                                    className="pl-9 pr-20"
+                                    placeholder="Cari inventaris..."
+                                    value={assetSearchInput}
+                                    onChange={(event) => {
+                                      setAssetSearchInput(event.target.value);
+                                      setAssetSearchTerm(event.target.value.trim());
+                                    }}
+                                  />
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                    setAssetSearchInput("");
+                                    setAssetSearchTerm("");
+                                  }}
+                                  className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
+                                >
+                                  Reset
+                                </button>
+                              </div>
                             </div>
-                          )}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {[
+                                { value: "all" as const, label: `Semua (${assetFilterCounts.all})` },
+                                { value: "medical" as const, label: `Medis (${assetFilterCounts.medical})` },
+                                { value: "non_medical" as const, label: `Non-Medis (${assetFilterCounts.non_medical})` },
+                              ].map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => setAssetSourceFilter(option.value)}
+                                  className={`rounded-full border px-3 py-1.5 text-sm ${
+                                    assetSourceFilter === option.value
+                                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                                      : "border-slate-200 bg-white text-slate-700"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="max-h-72 overflow-y-auto">
+                            {filteredSelectableAssets.map((item) => {
+                              const key = getInventoryKey(item);
+                              const isSelected = key === form.inventoryKey;
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  onClick={() => handleAssetChange(key)}
+                                  className="flex w-full items-start gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
+                                >
+                                  <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
+                                    {isSelected && <Check className="h-4 w-4 text-teal-600" />}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
+                                    <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
+                                  </span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                    {item.assetType === "medical" ? "Medis" : "Non-Medis"}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            {filteredSelectableAssets.length === 0 && (
+                              <div className="px-3 py-6 text-center text-sm text-slate-600">
+                                Tidak ada alat yang sesuai filter.
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
+                    {form.usageContext === "own_room" && selectableAssets.length === 0 && (
+                      <p className="mt-1 text-xs font-medium text-red-600">
+                        Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
+                      </p>
                     )}
                   </div>
-                  {form.usageContext === "own_room" && selectableAssets.length === 0 && (
-                    <p className="mt-1 text-xs font-medium text-red-600">
-                      Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Ruangan Penggunaan</label>
-                  <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Jenis Penggunaan</label>
-                  <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
-                    {functionalUsageKeys.map((key) => (
-                      <option key={key} value={key}>{usageContextLabels[key]}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Ruangan Penggunaan</label>
+                    <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Jenis Penggunaan</label>
+                    <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
+                      {sortedFunctionalUsageKeys.map((key) => (
+                        <option key={key} value={key}>{usageContextLabels[key]}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div>
                     <label className="text-sm font-medium">Mulai</label>
                     <Input type="datetime-local" value={form.startedAt} onChange={(event) => setForm((prev) => ({ ...prev, startedAt: event.target.value }))} />
@@ -611,8 +626,7 @@ export default function AssetUsagePage() {
                     <label className="text-sm font-medium">Selesai</label>
                     <Input type="datetime-local" value={form.endedAt} onChange={(event) => setForm((prev) => ({ ...prev, endedAt: event.target.value }))} />
                   </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
+
                   <div>
                     <label className="text-sm font-medium">Jumlah</label>
                     <Input type="number" min={1} value={form.usageCount} onChange={(event) => setForm((prev) => ({ ...prev, usageCount: Math.max(1, Number(event.target.value) || 1) }))} />
@@ -621,18 +635,18 @@ export default function AssetUsagePage() {
                     <label className="text-sm font-medium">Sebelum</label>
                     <Input value={form.conditionBefore} onChange={(event) => setForm((prev) => ({ ...prev, conditionBefore: event.target.value }))} />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Sesudah</label>
-                    <Input value={form.conditionAfter} onChange={(event) => setForm((prev) => ({ ...prev, conditionAfter: event.target.value }))} />
+
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Catatan</label>
+                    <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Opsional" />
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Catatan</label>
-                  <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Opsional" />
+
+                <div className="mt-3 flex justify-end">
+                  <Button className="w-full md:w-48" onClick={handleSubmit} disabled={isSaving || isLoading}>
+                    <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
+                  </Button>
                 </div>
-                <Button className="w-full" onClick={handleSubmit} disabled={isSaving || isLoading}>
-                  <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
-                </Button>
               </>
             )}
           </CardContent>
