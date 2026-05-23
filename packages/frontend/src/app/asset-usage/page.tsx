@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
@@ -8,11 +9,10 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
 import { isAdminOrLeaderRole } from "@/utils/role";
-import { Activity, Check, ChevronDown, ClipboardPlus, Search, Trash2 } from "lucide-react";
+import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,14 +35,30 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
 
 const functionalUsageKeys: AssetUsageContext[] = ["own_room", "emergency", "procedure", "rounding", "other"];
 
-const mapToFunctionalUsage = (ctx?: AssetUsageContext | string | null): AssetUsageContext => {
-  const key = (ctx || "other").toString();
-  if (key === "emergency") return "emergency";
-  if (key === "procedure") return "procedure";
-  if (key === "rounding") return "rounding";
-  // treat location-based contexts as 'Ruangan' (functional)
-  if (key === "same_unit_cross_room" || key === "cross_room" || key === "own_room") return "own_room";
-  return "other";
+const getUsageRoomDisplay = (log: AssetUsageLog) => {
+  const roomName = (log.roomName || "").trim();
+  const assetLocation = (log.assetLocation || "").trim();
+  const [workUnit, ...roomParts] = roomName.split(" - ").map((part) => part.trim()).filter(Boolean);
+  const roomDetail = roomParts.join(" - ");
+
+  if (workUnit && roomDetail) {
+    return {
+      primary: workUnit,
+      secondary: roomDetail,
+    };
+  }
+
+  if (roomName && assetLocation && roomName.toLowerCase() !== assetLocation.toLowerCase()) {
+    return {
+      primary: roomName,
+      secondary: assetLocation,
+    };
+  }
+
+  return {
+    primary: roomName || assetLocation || "-",
+    secondary: "",
+  };
 };
 
 const toDateTimeLocalInputValue = (date = new Date()) => {
@@ -138,6 +154,8 @@ export default function AssetUsagePage() {
   const [assetSearchTerm, setAssetSearchTerm] = useState("");
   const [assetSourceFilter, setAssetSourceFilter] = useState<AssetSourceFilter>("all");
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
+  const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
+  const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
@@ -405,232 +423,332 @@ export default function AssetUsagePage() {
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat Ruangan</h1>
-          <p className="text-sm text-slate-600">Catat pemakaian alat di ruangan sendiri untuk melihat frekuensi dan beban pemakaian.</p>
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-sm">
+            <ClipboardList className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat Ruangan</h1>
+            <p className="text-sm text-slate-600">Catat pemakaian alat di ruangan sendiri untuk melihat frekuensi dan beban pemakaian.</p>
+          </div>
         </div>
-        <Badge className="w-fit bg-teal-100 text-teal-800 hover:bg-teal-100">
-          {filteredLogs.length} log
-        </Badge>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Total Pemakaian</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-semibold">{summary.totalUsage}</CardContent>
+        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
+          <CardContent className="flex items-start justify-between gap-3 p-4">
+            <div>
+              <p className="text-[12px] text-muted-foreground">Total Pemakaian</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.totalUsage}</p>
+            </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Activity className="h-5 w-5" />
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Alat Terpakai</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-semibold">{summary.uniqueAssets}</CardContent>
+        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
+          <CardContent className="flex items-start justify-between gap-3 p-4">
+            <div>
+              <p className="text-[12px] text-muted-foreground">Alat Terpakai</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.uniqueAssets}</p>
+            </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+              <ClipboardPlus className="h-5 w-5" />
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Paling Sering</CardTitle></CardHeader>
-          <CardContent>
-            <p className="truncate text-base font-semibold">{summary.topAsset?.label || "-"}</p>
-            <p className="text-sm text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
+        <Card className="border border-slate-200/80 bg-white/90 shadow-lg">
+          <CardContent className="flex items-start justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <p className="text-[12px] text-muted-foreground">Paling Sering</p>
+              <p className="mt-1 truncate text-base font-semibold text-slate-900">{summary.topAsset?.label || "-"}</p>
+              <p className="text-sm text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
+            </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+              <Check className="h-5 w-5" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex flex-col gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><ClipboardPlus className="h-4 w-4" /> Catat Pemakaian</CardTitle>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <CardTitle className="flex items-center gap-2 text-base"><ClipboardPlus className="h-4 w-4" /> Catat Pemakaian</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsUsageFormMinimized((prev) => !prev)}
+                className="w-full rounded-2xl px-3 sm:w-auto"
+              >
+                {isUsageFormMinimized ? (
+                  <>
+                    <ChevronDown className="mr-2 h-4 w-4" />
+                    Tampilkan
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="mr-2 h-4 w-4" />
+                    Sembunyikan
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm font-medium">Alat</label>
-              <div className="relative mt-1">
-                <button
-                  type="button"
-                  className="flex min-h-11 w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-left text-sm"
-                  onClick={() => setIsAssetPickerOpen((open) => !open)}
-                >
-                  <span className={selectedAsset ? "text-slate-900" : "text-slate-500"}>
-                    {selectedAsset
-                      ? `${selectedAsset.detailInventoryName || selectedAsset.detailName} - ${selectedAsset.detailCode}`
-                      : "Pilih alat"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-slate-500" />
-                </button>
-                {isAssetPickerOpen && (
-                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
-                    <div className="border-b p-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                        <Input
-                          className="pl-9"
-                          placeholder="Cari inventaris..."
-                          value={assetSearchTerm}
-                          onChange={(event) => setAssetSearchTerm(event.target.value)}
-                        />
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {[
-                          { value: "all" as const, label: `Semua (${assetFilterCounts.all})` },
-                          { value: "medical" as const, label: `Medis (${assetFilterCounts.medical})` },
-                          { value: "non_medical" as const, label: `Non-Medis (${assetFilterCounts.non_medical})` },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setAssetSourceFilter(option.value)}
-                            className={`rounded-full border px-3 py-1.5 text-sm ${
-                              assetSourceFilter === option.value
-                                ? "border-teal-500 bg-teal-50 text-teal-700"
-                                : "border-slate-200 bg-white text-slate-700"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      {filteredSelectableAssets.map((item) => {
-                        const key = getInventoryKey(item);
-                        const isSelected = key === form.inventoryKey;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => handleAssetChange(key)}
-                            className="flex w-full items-start gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
-                          >
-                            <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
-                              {isSelected && <Check className="h-4 w-4 text-teal-600" />}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
-                              <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
-                            </span>
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                              {item.assetType === "medical" ? "Medis" : "Non-Medis"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {filteredSelectableAssets.length === 0 && (
-                        <div className="px-3 py-6 text-center text-sm text-slate-600">
-                          Tidak ada alat yang sesuai filter.
+            {isUsageFormMinimized ? (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-sm text-blue-900">
+                Section catat pemakaian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm font-medium">Alat</label>
+                  <div className="relative mt-1">
+                    <button
+                      type="button"
+                      className="flex min-h-11 w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-left text-sm"
+                      onClick={() => setIsAssetPickerOpen((open) => !open)}
+                    >
+                      <span className={selectedAsset ? "text-slate-900" : "text-slate-500"}>
+                        {selectedAsset
+                          ? `${selectedAsset.detailInventoryName || selectedAsset.detailName} - ${selectedAsset.detailCode}`
+                          : "Pilih alat"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-slate-500" />
+                    </button>
+                    {isAssetPickerOpen && (
+                      <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
+                        <div className="border-b p-3">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                            <Input
+                              className="pl-9"
+                              placeholder="Cari inventaris..."
+                              value={assetSearchTerm}
+                              onChange={(event) => setAssetSearchTerm(event.target.value)}
+                            />
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {[
+                              { value: "all" as const, label: `Semua (${assetFilterCounts.all})` },
+                              { value: "medical" as const, label: `Medis (${assetFilterCounts.medical})` },
+                              { value: "non_medical" as const, label: `Non-Medis (${assetFilterCounts.non_medical})` },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setAssetSourceFilter(option.value)}
+                                className={`rounded-full border px-3 py-1.5 text-sm ${
+                                  assetSourceFilter === option.value
+                                    ? "border-teal-500 bg-teal-50 text-teal-700"
+                                    : "border-slate-200 bg-white text-slate-700"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {filteredSelectableAssets.map((item) => {
+                            const key = getInventoryKey(item);
+                            const isSelected = key === form.inventoryKey;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => handleAssetChange(key)}
+                                className="flex w-full items-start gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
+                              >
+                                <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
+                                  {isSelected && <Check className="h-4 w-4 text-teal-600" />}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
+                                  <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                  {item.assetType === "medical" ? "Medis" : "Non-Medis"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {filteredSelectableAssets.length === 0 && (
+                            <div className="px-3 py-6 text-center text-sm text-slate-600">
+                              Tidak ada alat yang sesuai filter.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              {form.usageContext === "own_room" && selectableAssets.length === 0 && (
-                <p className="mt-1 text-xs font-medium text-red-600">
-                  Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium">Ruangan Penggunaan</label>
-              <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Jenis Penggunaan</label>
-              <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
-                {functionalUsageKeys.map((key) => (
-                  <option key={key} value={key}>{usageContextLabels[key]}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-sm font-medium">Mulai</label>
-                <Input type="datetime-local" value={form.startedAt} onChange={(event) => setForm((prev) => ({ ...prev, startedAt: event.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Selesai</label>
-                <Input type="datetime-local" value={form.endedAt} onChange={(event) => setForm((prev) => ({ ...prev, endedAt: event.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-sm font-medium">Jumlah</label>
-                <Input type="number" min={1} value={form.usageCount} onChange={(event) => setForm((prev) => ({ ...prev, usageCount: Math.max(1, Number(event.target.value) || 1) }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Sebelum</label>
-                <Input value={form.conditionBefore} onChange={(event) => setForm((prev) => ({ ...prev, conditionBefore: event.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Sesudah</label>
-                <Input value={form.conditionAfter} onChange={(event) => setForm((prev) => ({ ...prev, conditionAfter: event.target.value }))} />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Catatan</label>
-              <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Opsional" />
-            </div>
-            <Button className="w-full" onClick={handleSubmit} disabled={isSaving || isLoading}>
-              <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
-            </Button>
+                  {form.usageContext === "own_room" && selectableAssets.length === 0 && (
+                    <p className="mt-1 text-xs font-medium text-red-600">
+                      Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Ruangan Penggunaan</label>
+                  <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Jenis Penggunaan</label>
+                  <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
+                    {functionalUsageKeys.map((key) => (
+                      <option key={key} value={key}>{usageContextLabels[key]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-sm font-medium">Mulai</label>
+                    <Input type="datetime-local" value={form.startedAt} onChange={(event) => setForm((prev) => ({ ...prev, startedAt: event.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Selesai</label>
+                    <Input type="datetime-local" value={form.endedAt} onChange={(event) => setForm((prev) => ({ ...prev, endedAt: event.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-sm font-medium">Jumlah</label>
+                    <Input type="number" min={1} value={form.usageCount} onChange={(event) => setForm((prev) => ({ ...prev, usageCount: Math.max(1, Number(event.target.value) || 1) }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Sebelum</label>
+                    <Input value={form.conditionBefore} onChange={(event) => setForm((prev) => ({ ...prev, conditionBefore: event.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Sesudah</label>
+                    <Input value={form.conditionAfter} onChange={(event) => setForm((prev) => ({ ...prev, conditionAfter: event.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Catatan</label>
+                  <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Opsional" />
+                </div>
+                <Button className="w-full" onClick={handleSubmit} disabled={isSaving || isLoading}>
+                  <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Riwayat Pemakaian</CardTitle>
+        <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <CardTitle className="text-base">Riwayat Pemakaian</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsUsageHistoryMinimized((prev) => !prev)}
+                className="w-full rounded-2xl px-3 sm:w-auto"
+              >
+                {isUsageHistoryMinimized ? (
+                  <>
+                    <ChevronDown className="mr-2 h-4 w-4" />
+                    Tampilkan
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="mr-2 h-4 w-4" />
+                    Sembunyikan
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <Input className="pl-9" placeholder="Cari alat/operator" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+            {isUsageHistoryMinimized ? (
+              <div className="rounded-2xl border border-green-100 bg-green-50/80 px-4 py-4 text-center text-sm text-green-900">
+                Section riwayat pemakaian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
               </div>
-              <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
-            </div>
-            <div className="overflow-x-auto">
-            <Table className="w-full min-w-0">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="max-w-64">Alat</TableHead>
-                  <TableHead className="w-40 max-w-40">Ruangan</TableHead>
-                  <TableHead className="w-48">Waktu</TableHead>
-                  <TableHead className="w-20 text-center">Jumlah</TableHead>
-                  <TableHead className="w-48">Kondisi</TableHead>
-                  <TableHead className="w-28" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="min-w-0 max-w-64">
-                      <p className="font-medium truncate">{log.assetDetailName || log.assetName || "-"}</p>
-                      <p className="text-xs text-slate-600 truncate">{log.assetDetailCode || log.assetCode || "-"}</p>
-                    </TableCell>
-                    <TableCell className="min-w-0 w-40 max-w-40">
-                      <p className="truncate">{log.roomName || "-"}</p>
-                      <p className="text-xs text-slate-600 truncate">{usageContextLabels[mapToFunctionalUsage(log.usageContext)]}</p>
-                    </TableCell>
-                    <TableCell className="w-48">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
-                    <TableCell className="w-20 text-center">{log.usageCount}</TableCell>
-                    <TableCell className="min-w-0 w-48 truncate">{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
-                    <TableCell className="w-28 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="icon" onClick={() => openCompleteDialog(log)} aria-label={log.endedAt ? "Ubah Penyelesaian" : "Selesaikan"}>
-                          <Check className="h-4 w-4 text-slate-700" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredLogs.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-slate-600">
-                      {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input className="pl-9" placeholder="Cari alat/operator" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+                  </div>
+                  <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
+                </div>
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <Table className="w-full min-w-0 border-separate border-spacing-0">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="max-w-64 border-b border-slate-200 bg-white text-slate-800">Alat</TableHead>
+                      <TableHead className="w-40 max-w-40 border-b border-slate-200 bg-white text-slate-800">Ruangan</TableHead>
+                      <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Waktu</TableHead>
+                      <TableHead className="w-20 border-b border-slate-200 bg-white text-center text-slate-800">Jumlah</TableHead>
+                      <TableHead className="w-48 border-b border-slate-200 bg-white text-slate-800">Kondisi</TableHead>
+                      <TableHead className="w-28 border-b border-slate-200 bg-white text-slate-800">Status</TableHead>
+                      <TableHead className="w-14 border-b border-slate-200 bg-white" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLogs.map((log) => {
+                      const roomDisplay = getUsageRoomDisplay(log);
+
+                      return (
+                        <TableRow key={log.id} className="odd:bg-white even:bg-slate-50/30 hover:bg-slate-50">
+                          <TableCell className="min-w-0 max-w-64 border-b border-slate-100 bg-white align-top">
+                            <p className="font-medium truncate">{log.assetDetailName || log.assetName || "-"}</p>
+                            <p className="text-xs text-slate-600 truncate">{log.assetDetailCode || log.assetCode || "-"}</p>
+                          </TableCell>
+                          <TableCell className="min-w-0 w-40 max-w-40 border-b border-slate-100 bg-white align-top">
+                            <p className="truncate">{roomDisplay.primary}</p>
+                            {roomDisplay.secondary ? (
+                              <p className="text-xs text-slate-600 truncate">{roomDisplay.secondary}</p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="w-48 border-b border-slate-100 bg-white align-top">{formatDayTimeLabel(log.startedAt) || "-"}</TableCell>
+                          <TableCell className="w-20 border-b border-slate-100 bg-white text-center align-top font-semibold text-slate-900">{log.usageCount}</TableCell>
+                          <TableCell className="min-w-0 w-48 truncate border-b border-slate-100 bg-white align-top">{log.conditionBefore || "-"} -&gt; {log.conditionAfter || "-"}</TableCell>
+                          <TableCell className="w-28 border-b border-slate-100 bg-white align-top">
+                            <Badge
+                              className={log.endedAt ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-slate-100 text-slate-700 hover:bg-slate-100"}
+                            >
+                              {log.endedAt ? "Selesai" : "Sedang Digunakan"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="w-20 border-b border-slate-100 bg-white text-right align-bottom">
+                            <div className="flex h-full flex-col items-end justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                              {isAdminOrLeaderRole(currentUser?.role) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 rounded-lg p-0 text-emerald-600 hover:bg-emerald-50"
+                                  onClick={() => openCompleteDialog(log)}
+                                  aria-label="Edit penggunaan alat"
+                                  title="Edit penggunaan alat"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      );
+                    })}
+                    {filteredLogs.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-8 text-center text-slate-600">
+                          {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
