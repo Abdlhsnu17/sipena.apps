@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
@@ -137,6 +138,8 @@ export default function DashboardPage() {
     completedMaintenance: 0,
     activeBorrowings: 0,
     returnedBorrowings: 0,
+    totalUsageLogs: 0,
+    usedAssetCount: 0,
     nonMedicalRoomCount: 0,
     medicalRoomCount: 0,
     totalRoomCount: 0,
@@ -169,6 +172,8 @@ export default function DashboardPage() {
         completedMaintenance: 0,
         activeBorrowings: 0,
         returnedBorrowings: 0,
+        totalUsageLogs: 0,
+        usedAssetCount: 0,
         nonMedicalDetailsCount: 0,
         medicalDetailsCount: 0,
         nonMedicalRoomCount: 0,
@@ -179,17 +184,19 @@ export default function DashboardPage() {
     }
 
     try {
-      const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse] = await Promise.all([
+      const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
         assetService.getMedicalAssets({ page: 1, limit: 1000 }),
         assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
         maintenanceService.getAll({ page: 1, limit: 1000 }),
         borrowingService.getAll({ page: 1, limit: 1000 }),
+        assetUsageService.getAll({ page: 1, limit: 1000 }),
       ])
 
       const medicalAssets = medicalResponse.success ? medicalResponse.data : []
       const nonMedicalAssets = nonMedicalResponse.success ? nonMedicalResponse.data : []
       const maintenanceData = maintenanceResponse.success ? maintenanceResponse.data : []
       const borrowingsData = borrowingResponse.success ? borrowingResponse.data : []
+      const usageLogs = usageResponse.success ? usageResponse.data : []
 
       const totalNonMedicalAssets = nonMedicalAssets.length
       const nonMedicalRoomAssets = nonMedicalAssets.filter((a) => a.status !== "disposed")
@@ -217,6 +224,10 @@ export default function DashboardPage() {
         ["approved", "borrowed", "overdue"].includes(b.status)
       ).length
       const returnedBorrowings = borrowingsData.filter((b) => b.status === "returned").length
+      const totalUsageLogs = usageLogs.reduce((sum, log) => sum + (log.usageCount || 0), 0)
+      const usedAssetCount = new Set(
+        usageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))
+      ).size
 
       const totalRoomCount = new Set([...nonMedicalRoomSet, ...medicalRoomSet]).size
       setStats({
@@ -228,6 +239,8 @@ export default function DashboardPage() {
         completedMaintenance,
         activeBorrowings,
         returnedBorrowings,
+        totalUsageLogs,
+        usedAssetCount,
         nonMedicalDetailsCount,
         medicalDetailsCount,
         nonMedicalRoomCount: nonMedicalRoomSet.size,
@@ -299,7 +312,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card className={`${statCardClass} bg-linear-to-br from-teal-50/65 via-white to-cyan-50/50`}>
             <CardHeader className="flex items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Inventaris Non Medis</CardTitle>
@@ -403,6 +416,32 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <span>Selesai Final</span>
                   <span className="text-muted-foreground">{stats.completedMaintenance}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`${statCardClass} bg-linear-to-br from-emerald-50/65 via-white to-teal-50/45`}>
+            <CardHeader className="flex items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Penggunaan Alat</CardTitle>
+              <div className="rounded-2xl bg-linear-to-br from-emerald-100 to-teal-100 p-2 text-emerald-700 shadow-inner">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">
+                  {stats.totalUsageLogs.toLocaleString("id-ID")}
+                </div>
+                <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-emerald-600 border-emerald-300 bg-emerald-50/70">
+                  Tercatat
+                </Badge>
+              </div>
+              <p className="text-sm text-foreground/70">Log penggunaan alat yang sudah masuk sistem</p>
+              <div className="rounded-2xl border border-emerald-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="flex items-center justify-between gap-3">
+                  <span>Aset terpakai</span>
+                  <span className="text-muted-foreground">{stats.usedAssetCount.toLocaleString("id-ID")}</span>
                 </div>
               </div>
             </CardContent>

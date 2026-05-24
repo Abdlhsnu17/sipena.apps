@@ -214,7 +214,7 @@ export class BorrowingService {
 
     if (!actorId) return;
 
-    await this.assetUsageService.create({
+    const usageResponse = await this.assetUsageService.create({
       assetId,
       assetType: assetType as any,
       assetDetailId: detailId || undefined,
@@ -230,6 +230,10 @@ export class BorrowingService {
       notes: data.notes || undefined,
       createdBy: actorId
     });
+
+    if (!usageResponse.success) {
+      throw new Error(usageResponse.message || 'Gagal membuat riwayat penggunaan alat');
+    }
   }
 
   private async completeUsageLogForBorrowing(data: {
@@ -1122,8 +1126,6 @@ export class BorrowingService {
       );
     }
 
-    // Create an asset usage log immediately when borrowing is created.
-    // Non-blocking: do not fail the borrowing creation if logging fails.
     try {
       await this.ensureUsageLogForBorrowing({
         assetId: Number(data.assetId),
@@ -1140,7 +1142,21 @@ export class BorrowingService {
         createdBy: data.userId
       });
     } catch (err) {
-      // ignore logging errors to avoid breaking borrowing flow
+      await pool.query('DELETE FROM borrowing_records WHERE id = ?', [result.insertId]);
+      await this.syncAssetMasterAfterValidatedReturn(data.assetId, assetType, {
+        borrowingId: result.insertId,
+        assetDetailId: detailId || null,
+        returnCondition: 'Baik'
+      });
+      await this.syncAssetDetailBorrowingState(data.assetId, assetType, {
+        detailId: detailId || null,
+        detailCode: data.assetDetailCode || null,
+        returnCondition: 'Baik'
+      });
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Peminjaman gagal karena riwayat penggunaan alat tidak dapat dibuat'
+      };
     }
 
     // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)
