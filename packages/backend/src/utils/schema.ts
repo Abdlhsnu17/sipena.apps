@@ -546,6 +546,19 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
   }
 
   const existingColumns = await getExistingColumns('asset_usage_logs', ['id', 'no', 'borrowing_id']);
+  if (!existingColumns.has('no')) {
+    const afterClause = existingColumns.has('id') ? ' AFTER `id`' : '';
+    await pool.query(`ALTER TABLE asset_usage_logs ADD COLUMN \`no\` VARCHAR(50) DEFAULT NULL${afterClause}`);
+    existingColumns.add('no');
+  }
+
+  if (
+    !(await hasIndex('asset_usage_logs', 'uniq_asset_usage_no')) &&
+    !(await hasIndex('asset_usage_logs', 'uniq_asset_usage_logs_no'))
+  ) {
+    await pool.query('CREATE UNIQUE INDEX uniq_asset_usage_no ON asset_usage_logs (`no`)');
+  }
+
   if (!existingColumns.has('borrowing_id')) {
     const previousColumn = existingColumns.has('no') ? 'no' : 'id';
     const afterClause = existingColumns.has(previousColumn) ? ` AFTER \`${previousColumn}\`` : '';
