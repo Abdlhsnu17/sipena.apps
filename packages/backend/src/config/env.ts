@@ -54,7 +54,9 @@ export const applyDevelopmentEnvDefaults = (): void => {
   process.env.DB_NAME ||= 'sipena_db_local';
   process.env.DB_USER ||= 'root';
   const currentPassword = process.env.DB_PASSWORD?.trim() || '';
-  if (DB_PASSWORD_PLACEHOLDERS.has(currentPassword)) {
+  const dbHost = (process.env.DB_HOST || '').trim().toLowerCase();
+  const isLocalDatabaseHost = !dbHost || dbHost === 'localhost' || dbHost === '127.0.0.1' || dbHost === '::1';
+  if (isLocalDatabaseHost && DB_PASSWORD_PLACEHOLDERS.has(currentPassword)) {
     process.env.DB_PASSWORD = '';
   }
   process.env.DB_PASSWORD ||= process.env.MYSQL_ROOT_PASSWORD || '';

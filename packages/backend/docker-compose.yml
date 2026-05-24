@@ -3,10 +3,10 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-generate_a_strong_password_here}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_changeme}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-sipena_db_local}
       MYSQL_USER: ${MYSQL_USER:-sipena_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-generate_a_strong_password_here}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
     ports:
       - "3306:3306"
     volumes:
@@ -44,7 +44,7 @@ services:
       PMA_HOST: ${PMA_HOST:-mysql}
       PMA_PORT: ${PMA_PORT:-3306}
       PMA_USER: ${PMA_USER:-root}
-      PMA_PASSWORD: ${PMA_PASSWORD:-generate_a_strong_password_here}
+      PMA_PASSWORD: ${PMA_PASSWORD:-root_changeme}
     ports:
       - "${PHPMYADMIN_HOST_PORT:-8081}:80"
     depends_on:
@@ -58,7 +58,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: ${PORT:-4000}
+      PORT: 4000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
       GENERAL_RATE_LIMIT_MAX: ${GENERAL_RATE_LIMIT_MAX:-1000}
@@ -74,7 +74,7 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME:-sipena_db_local}
       DB_USER: ${DB_USER:-sipena_app}
-      DB_PASSWORD: ${DB_PASSWORD:-generate_a_strong_password_here}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_before_production}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
