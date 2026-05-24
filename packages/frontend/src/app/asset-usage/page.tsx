@@ -536,8 +536,8 @@ export default function AssetUsagePage() {
     sections.push({
       title: "Data Pemakaian",
       lines: [
-        { label: "Ruangan Pemakaian", value: getUsageRoomDisplay(log).primary },
-        { label: "Lokasi Pembanding", value: getUsageRoomDisplay(log).secondary || "-" },
+        { label: "Ruangan Pengguna", value: getUsageRoomDisplay(log).primary },
+        { label: "Lokasi Alat Tercatat", value: getUsageRoomDisplay(log).secondary || log.assetLocation || "-" },
         { label: "Jenis Pemakaian", value: usageContextLabel },
         { label: "Waktu Mulai", value: formatDayTimeLabel(log.startedAt) || "-" },
         { label: "Jumlah", value: String(log.usageCount || 1) },
@@ -862,6 +862,7 @@ export default function AssetUsagePage() {
                   ) : (
                     filteredLogs.map((log) => {
                       const roomDisplay = getUsageRoomDisplay(log);
+                      const userLabel = log.operatorName || log.createdByName || "-";
                       const isExpanded = expandedUsageHistoryIds.includes(log.id);
                       const detailSections = getUsageDetailSections(log);
                       const leftSections = detailSections.slice(0, 2);
@@ -891,8 +892,10 @@ export default function AssetUsagePage() {
                                   <div className="mt-1.5 space-y-1.5">
                                     <p className="text-[11px] text-muted-foreground">No ID: {log.id}</p>
                                     <p className="text-[11px] text-muted-foreground">
-                                      Ruangan: <span className="font-medium text-slate-700">{roomDisplay.primary}</span>
-                                      {roomDisplay.secondary ? ` · ${roomDisplay.secondary}` : ""}
+                                      Ruangan pengguna: <span className="font-medium text-slate-700">{roomDisplay.primary}</span>
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Pengguna: <span className="font-medium text-slate-700">{userLabel}</span>
                                     </p>
                                     <p className="text-[11px] text-muted-foreground">
                                       Kondisi: <span className="font-medium text-slate-700">{getUsageConditionLabel(log)}</span>
