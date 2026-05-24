@@ -239,6 +239,27 @@ export default function AssetUsagePage() {
     if (currentUser) void loadData();
   }, [currentUser]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const refreshOnFocus = () => {
+      void loadData();
+    };
+    const refreshOnVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadData();
+      }
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+    };
+  }, [currentUser]);
+
   const selectedAsset = useMemo(
     () => assets.find((item) => getInventoryKey(item) === form.inventoryKey),
     [assets, form.inventoryKey]
