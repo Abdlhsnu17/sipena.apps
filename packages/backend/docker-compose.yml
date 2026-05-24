@@ -3,12 +3,12 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-generate_a_strong_password_here}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-sipena_db_local}
       MYSQL_USER: ${MYSQL_USER:-sipena_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dev_app_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-generate_a_strong_password_here}
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ../database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -25,7 +25,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -44,9 +44,9 @@ services:
       PMA_HOST: ${PMA_HOST:-mysql}
       PMA_PORT: ${PMA_PORT:-3306}
       PMA_USER: ${PMA_USER:-root}
-      PMA_PASSWORD: ${PMA_PASSWORD:-root_dev_password}
+      PMA_PASSWORD: ${PMA_PASSWORD:-generate_a_strong_password_here}
     ports:
-      - "8081:80"
+      - "${PHPMYADMIN_HOST_PORT:-8081}:80"
     depends_on:
       mysql:
         condition: service_healthy
@@ -74,7 +74,7 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME:-sipena_db_local}
       DB_USER: ${DB_USER:-sipena_app}
-      DB_PASSWORD: ${DB_PASSWORD:-dev_app_password}
+      DB_PASSWORD: ${DB_PASSWORD:-generate_a_strong_password_here}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_before_production}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -86,7 +86,7 @@ services:
       SMS_OTP_WEBHOOK_TOKEN: ${SMS_OTP_WEBHOOK_TOKEN:-}
       DB_AUTO_INIT_FROM_SCHEMA: "true"
     ports:
-      - "4000:4000"
+      - "${BACKEND_HOST_PORT:-4000}:4000"
     volumes:
       - backend_uploads:/app/packages/backend/uploads
     healthcheck:
@@ -115,7 +115,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
       API_PROXY_TARGET: ${API_PROXY_TARGET:-http://backend:4000}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_HOST_PORT:-3000}:3000"
     healthcheck:
       test:
         - CMD
