@@ -11,7 +11,7 @@ COPY packages/frontend/package.json packages/frontend/package.json
 RUN npm install
 
 COPY packages/backend packages/backend
-COPY packages/database packages/db
+COPY packages/database packages/database
 
 RUN npm run build --workspace=inventory-backend
 

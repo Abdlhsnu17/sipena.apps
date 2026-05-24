@@ -245,7 +245,7 @@ Langkah cepat:
 
 Catatan:
 
-- Schema database otomatis diimpor dari `packages/db/seeds/schema.sql` saat volume MySQL masih baru.
+- Schema database otomatis diimpor dari `packages/database/seeds/schema.sql` saat volume MySQL masih baru.
 - Jika sebelumnya sudah pernah membuat volume MySQL dan ingin mengulang inisialisasi dari nol, jalankan `docker compose -f packages/backend/docker-compose.yml down -v` lalu `up` lagi.
 - Frontend Docker memakai proxy internal Next.js ke `backend`, jadi `NEXT_PUBLIC_API_URL` bisa dibiarkan kosong.
 - Jika hanya ingin menyalakan service infrastruktur, jalankan `docker compose -f packages/backend/docker-compose.yml up mysql redis phpmyadmin -d`.
