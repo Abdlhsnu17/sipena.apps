@@ -986,7 +986,7 @@ export default function ReturnsPage() {
 
   return (
     <div
-      className="mx-auto min-h-full w-full max-w-7xl space-y-4 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40 page-gutter"
+      className="mx-auto min-h-full w-full max-w-7xl space-y-5 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40 page-gutter"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
     >
           <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">

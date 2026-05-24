@@ -716,7 +716,7 @@ export default function AssetUsagePage() {
     });
 
     sections.push({
-      title: "Penyelesaian Penggunaan",
+      title: "Catatan Pemakaian",
       lines: [
         { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
         { label: "Kondisi Akhir", value: log.conditionAfter || "-" },
@@ -742,18 +742,18 @@ export default function AssetUsagePage() {
   };
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="mt-1 inline-flex shrink-0 rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2">
+    <div className="mx-auto min-h-full w-full max-w-7xl space-y-5 bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/40 page-gutter">
+      <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+          <div className="rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2.5">
             <ClipboardList className="h-5 w-5 text-white" />
-          </span>
+          </div>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat</h1>
-            <p className="text-sm text-slate-600">Catat pemakaian alat untuk melihat frekuensi dan beban pemakaian.</p>
+            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Penggunaan Alat</h1>
+            <p className="mt-1 text-[12px] text-muted-foreground">Catat pemakaian alat untuk melihat frekuensi dan beban pemakaian.</p>
           </div>
         </div>
-      </div>
+      </section>
 
         <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
           <CardContent className="p-4">
@@ -1008,7 +1008,8 @@ export default function AssetUsagePage() {
                   </div>
                   <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
                 </div>
-                <div className="space-y-4">
+                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                  <div className="space-y-4 py-3">
                   {filteredLogs.length === 0 ? (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
                       {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
@@ -1077,9 +1078,9 @@ export default function AssetUsagePage() {
 
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="grid gap-3 lg:grid-cols-2">
+                              <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">
                                 {[leftSections, rightSections].map((columnSections, columnIndex) => (
-                                  <div key={columnIndex} className="space-y-3">
+                                  <div key={columnIndex} className="mb-3 break-inside-avoid space-y-3">
                                     {columnSections.map((section) => (
                                       <div key={section.title} className="space-y-2">
                                         <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700">
@@ -1131,6 +1132,7 @@ export default function AssetUsagePage() {
                       );
                     })
                   )}
+                  </div>
                 </div>
               </>
             )}
