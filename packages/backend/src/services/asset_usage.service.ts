@@ -27,6 +27,17 @@ interface CountRow extends RowDataPacket {
 
 interface ActiveBorrowingRow extends RowDataPacket {
   id: number;
+  asset_id: number;
+  asset_type?: AssetType | null;
+  asset_detail_id?: string | null;
+  asset_detail_name?: string | null;
+  asset_detail_code?: string | null;
+  asset_location?: string | null;
+  destination_room?: string | null;
+  user_id: number;
+  borrow_date: string | Date;
+  quantity?: number | null;
+  notes?: string | null;
 }
 
 type UsageSyncOptions = {
@@ -152,6 +163,113 @@ export class AssetUsageService {
   private isDamagedUsageCondition(value?: string | null): boolean {
     const normalized = String(value || '').trim().toLowerCase();
     return normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken');
+  }
+
+  private async hasActiveUsageForBorrowing(assetId: number, assetType: AssetType, detailId?: string | null): Promise<boolean> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+
+    if (!normalizedDetailId || isFallbackDetail) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COUNT(*) as count
+         FROM asset_usage_logs
+         WHERE asset_id = ?
+           AND COALESCE(asset_type, 'medical') = ?
+           AND ended_at IS NULL`,
+        [assetId, normalizedAssetType]
+      );
+      return (rows[0]?.count || 0) > 0;
+    }
+
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM asset_usage_logs
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND ended_at IS NULL
+         AND (asset_detail_id = ? OR asset_detail_id IS NULL OR asset_detail_id IN (?, ?))`,
+      [assetId, normalizedAssetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
+    );
+    return (rows[0]?.count || 0) > 0;
+  }
+
+  private async getInventoryConditionForUsage(assetId: number, assetType: AssetType, detailId?: string | null, detailCode?: string | null): Promise<string | null> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
+    if (!assetResponse.success || !assetResponse.data) return null;
+
+    const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
+    const details = Array.isArray(specifications.details) ? specifications.details : [];
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+
+    if ((normalizedDetailId && !isFallbackDetail) || normalizedDetailCode) {
+      const selectedDetail = details.find((detail) => this.matchesAssetDetail(detail, normalizedDetailId, normalizedDetailCode));
+      const detailCondition = this.normalizeUsageConditionLabel(selectedDetail?.condition);
+      if (detailCondition) return detailCondition;
+    }
+
+    return this.normalizeUsageConditionLabel((assetResponse.data as any).condition);
+  }
+
+  private async syncActiveBorrowingUsageLogs(): Promise<void> {
+    const [rows] = await pool.query<ActiveBorrowingRow[]>(
+      `SELECT b.id,
+              b.asset_id,
+              COALESCE(b.asset_type, 'medical') as asset_type,
+              b.asset_detail_id,
+              b.asset_detail_name,
+              b.asset_detail_code,
+              COALESCE(ma.location, na.location) as asset_location,
+              b.destination_room,
+              b.user_id,
+              b.borrow_date,
+              b.quantity,
+              b.notes
+       FROM borrowing_records b
+       LEFT JOIN medical_assets ma ON b.asset_id = ma.id AND COALESCE(b.asset_type, 'medical') = 'medical'
+       LEFT JOIN non_medical_assets na ON b.asset_id = na.id AND b.asset_type = 'non_medical'
+       WHERE b.status IN ('approved', 'borrowed', 'overdue')
+       ORDER BY b.created_at DESC
+       LIMIT 500`
+    );
+
+    for (const row of rows) {
+      const assetId = Number(row.asset_id);
+      const assetType = this.normalizeAssetType(row.asset_type);
+      const detailId = this.normalizeDetailIdentifier(row.asset_detail_id);
+
+      if (await this.hasActiveUsageForBorrowing(assetId, assetType, detailId || null)) {
+        continue;
+      }
+
+      const conditionBefore = await this.getInventoryConditionForUsage(
+        assetId,
+        assetType,
+        detailId || null,
+        row.asset_detail_code || null
+      );
+
+      await this.create({
+        assetId,
+        assetType,
+        assetDetailId: detailId || undefined,
+        assetDetailName: row.asset_detail_name || undefined,
+        assetDetailCode: row.asset_detail_code || undefined,
+        assetLocation: row.asset_location || undefined,
+        roomName: row.destination_room || row.asset_location || '-',
+        operatorUserId: row.user_id,
+        usageContext: 'other',
+        startedAt: row.borrow_date,
+        usageCount: row.quantity && row.quantity > 0 ? row.quantity : 1,
+        conditionBefore: conditionBefore || undefined,
+        notes: row.notes || undefined,
+        createdBy: row.user_id
+      });
+    }
   }
 
   private async syncAssetStateAfterUsage(assetId: number, assetType: AssetType, options?: UsageSyncOptions): Promise<void> {
@@ -343,6 +461,8 @@ export class AssetUsageService {
     await this.assetService.updateStatus(String(assetId), 'borrowed', normalizedAssetType);
   }
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
+    await this.syncActiveBorrowingUsageLogs();
+
     const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
     const offset = (page - 1) * limit;
 
