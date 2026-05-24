@@ -736,18 +736,25 @@ export default function BorrowingPage() {
       return
     }
 
-    if (
-      selectedBorrowableAssets.length === 0 ||
-      !formData.borrowDate ||
-      !formData.borrowerPosition.trim() ||
-      !formData.borrowerWorkUnit.trim() ||
-      !formData.ownerName.trim() ||
-      !formData.ownerPosition.trim() ||
-      !formData.ownerWorkUnit.trim() ||
-      !formData.purpose.trim() ||
+    const effectiveOwnerWorkUnit = (derivedOwnerWorkUnitLabel || formData.ownerWorkUnit).trim()
+    const missingRequiredFields = [
+      selectedBorrowableAssets.length === 0 ? "Inventaris" : "",
+      !formData.borrowDate ? "Tanggal Pinjam" : "",
+      !formData.borrowerPosition.trim() ? "Jabatan Peminjam" : "",
+      !formData.borrowerWorkUnit.trim() ? "Unit Kerja Peminjam" : "",
+      !formData.ownerName.trim() ? "Nama Pemilik Inventaris" : "",
+      !formData.ownerPosition.trim() ? "Jabatan Pemilik Inventaris" : "",
+      !effectiveOwnerWorkUnit ? "Unit Kerja Pemilik Inventaris" : "",
       !formData.destinationRoom.trim()
-    ) {
-      alert("Mohon lengkapi semua field yang diperlukan")
+        ? formData.purposeType === "inside_hospital"
+          ? "Ruang / Instalasi Tujuan"
+          : "Tujuan Pelayanan"
+        : "",
+      !formData.purpose.trim() ? "Keperluan Peminjaman" : "",
+    ].filter(Boolean)
+
+    if (missingRequiredFields.length > 0) {
+      alert(`Mohon lengkapi field berikut: ${missingRequiredFields.join(", ")}`)
       return
     }
 
@@ -796,7 +803,7 @@ export default function BorrowingPage() {
             borrowerWorkUnit: formData.borrowerWorkUnit.trim(),
             ownerName: formData.ownerName.trim(),
             ownerPosition: formData.ownerPosition.trim(),
-            ownerWorkUnit: resolveOwnerWorkUnitForAsset(selectedAsset) || formData.ownerWorkUnit.trim(),
+            ownerWorkUnit: resolveOwnerWorkUnitForAsset(selectedAsset) || effectiveOwnerWorkUnit,
             purposeType: formData.purposeType,
             destinationRoom: formData.destinationRoom.trim(),
             purpose: formData.purpose.trim(),
