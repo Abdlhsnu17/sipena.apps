@@ -205,6 +205,12 @@ export class BorrowingService {
     const startedAt = normalizeDateInput(data.startedAt as any) || new Date();
     const roomName = normalizeOptionalText(data.roomName) || normalizeOptionalText(data.assetLocation) || '-';
     const actorId = Number(data.createdBy || data.operatorUserId || 0);
+    const conditionBefore = await this.getInventoryConditionForUsage(
+      assetId,
+      assetType,
+      detailId || null,
+      data.assetDetailCode || null
+    );
 
     if (!actorId) return;
 
@@ -220,6 +226,7 @@ export class BorrowingService {
       usageContext: 'other',
       startedAt,
       usageCount: data.usageCount && data.usageCount > 0 ? data.usageCount : 1,
+      conditionBefore: conditionBefore || undefined,
       notes: data.notes || undefined,
       createdBy: actorId
     });
@@ -378,6 +385,42 @@ export class BorrowingService {
   private isDamagedReturnCondition(condition?: string | null): boolean {
     const normalized = String(condition || '').toLowerCase();
     return normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken');
+  }
+
+  private normalizeInventoryConditionLabel(condition?: string | null): string | null {
+    const normalized = String(condition || '').trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken')) return 'Rusak';
+    if (normalized.includes('cukup') || normalized.includes('fair')) return 'Cukup';
+    if (normalized.includes('poor') || normalized.includes('buruk') || normalized.includes('kurang')) return 'Cukup';
+    if (normalized.includes('baik') || normalized.includes('good')) return 'Baik';
+    return String(condition).trim();
+  }
+
+  private async getInventoryConditionForUsage(
+    assetId: number,
+    assetType: string,
+    detailId?: string | null,
+    detailCode?: string | null
+  ): Promise<string | null> {
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
+    if (!assetResponse.success || !assetResponse.data) return null;
+
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+    const assetDetails = this.getAssetDetails(assetResponse.data.specifications);
+
+    if ((normalizedDetailId && !isFallbackDetail) || normalizedDetailCode) {
+      const selectedDetail = normalizedDetailId && !isFallbackDetail
+        ? this.findDetailById(assetDetails, normalizedDetailId)
+        : this.findDetailById(assetDetails, normalizedDetailCode);
+      const detailCondition = this.normalizeInventoryConditionLabel(selectedDetail?.condition);
+      if (detailCondition) return detailCondition;
+    }
+
+    return this.normalizeInventoryConditionLabel((assetResponse.data as any).condition);
   }
 
   private isBorrowingLockStatus(status?: string | null, returnValidatedAt?: string | Date | null): boolean {

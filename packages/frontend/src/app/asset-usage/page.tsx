@@ -8,6 +8,7 @@ import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
+import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
 import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -166,6 +167,8 @@ const deriveUsageContextFromProfile = (
 
 const isOwnRoomAsset = (item: DetailInventoryItem, user: User | null) =>
   isAdminOrLeaderRole(user?.role) || deriveUsageContextFromProfile(item, user) === "own_room";
+
+const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
 export default function AssetUsagePage() {
   const router = useRouter();
@@ -525,7 +528,7 @@ export default function AssetUsagePage() {
     sections.push({
       title: "Data Alat Digunakan",
       lines: [
-        { label: "No ID Pemakaian", value: String(log.id) },
+        { label: "No ID Pemakaian", value: getUsageNoId(log) },
         { label: "Jenis Inventaris", value: log.assetType === "medical" ? "Medis" : "Non-Medis" },
         { label: "Nama Alat", value: log.assetDetailName || log.assetName || "-" },
         { label: "Kode Alat", value: log.assetDetailCode || log.assetCode || "-" },
@@ -890,7 +893,10 @@ export default function AssetUsagePage() {
                                   <p className="truncate text-[13px] font-semibold text-slate-900">{log.assetDetailName || log.assetName || "-"}</p>
                                   <p className="text-[12px] font-medium text-slate-700">{log.assetDetailCode || log.assetCode || "-"}</p>
                                   <div className="mt-1.5 space-y-1.5">
-                                    <p className="text-[11px] text-muted-foreground">No ID: {log.id}</p>
+                                    <p className="text-[11px] text-muted-foreground">No ID: {getUsageNoId(log)}</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Ruangan alat: <span className="font-medium text-slate-700">{log.assetLocation || "-"}</span>
+                                    </p>
                                     <p className="text-[11px] text-muted-foreground">
                                       Ruangan pengguna: <span className="font-medium text-slate-700">{roomDisplay.primary}</span>
                                     </p>
