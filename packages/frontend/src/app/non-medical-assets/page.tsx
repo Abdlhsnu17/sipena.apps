@@ -821,9 +821,8 @@ export default function NonMedicalAssetsPage() {
       )}
 
       <div className="mt-8 pt-6 border-t border-border text-center">
-        <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana
+        <p className="text-[13px] text-muted-foreground">
+          Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
         </p>
       </div>
     </div>

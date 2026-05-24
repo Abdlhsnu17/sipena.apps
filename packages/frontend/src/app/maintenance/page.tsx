@@ -1617,8 +1617,7 @@ export default function MaintenancePage() {
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">
-            Kementerian Kesehatan RI - RSUP Persahabatan Sistem Informasi Inventaris dan Pemeliharaan Sarana
-            Prasarana Peminjaman
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
 	        </div>
 	      </div>

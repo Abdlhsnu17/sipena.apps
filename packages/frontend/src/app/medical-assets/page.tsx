@@ -759,9 +759,10 @@ export default function MedicalAssetsPage() {
         )}
 
         {/* Copyright Footer */}
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          Kementerian Kesehatan RI - RSUP Persahabatan<br />
-          Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          </p>
         </div>
       </div>
 

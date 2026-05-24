@@ -1,9 +1,9 @@
 "use client"
 
-import { getCurrentUser, getUsers } from "@/services/auth-utils"
-import type { User } from "@/types/auth-types"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { getCurrentUser, getUsers } from "@/services/auth-utils";
+import type { User } from "@/types/auth-types";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function UMLPage() {
   const router = useRouter()
@@ -26,9 +26,10 @@ export default function UMLPage() {
         {/* Header, Navigation Tabs, and Footer restored below */}
         {/* ...header code... */}
         {/* ...tabs code... */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
-          <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
-          <p className="text-xs text-muted-foreground mt-1">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          </p>
         </div>
       </div>
     </div>

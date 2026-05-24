@@ -656,9 +656,10 @@ export default function UMLPage() {
           </section>
         )}
 
-        <div className="border-t border-gray-200 pt-6 text-center dark:border-gray-800">
-          <p className="text-sm text-muted-foreground">Kementerian Kesehatan RI - RSUP Persahabatan</p>
-          <p className="mt-1 text-xs text-muted-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana (SiPeNa)</p>
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          </p>
         </div>
       </div>
     </div>

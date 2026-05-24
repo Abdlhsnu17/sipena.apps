@@ -698,10 +698,9 @@ export default function ReportsPage() {
           </Card>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-border text-center">
-          <p className="text-sm text-muted-foreground">
-            Kementerian Kesehatan RI - RSUP Persahabatan • Sistem Informasi Inventaris & Pemeliharaan Sarana
-            Prasarana Peminjaman
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
         </div>
       </div>

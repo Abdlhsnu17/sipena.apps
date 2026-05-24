@@ -1,18 +1,18 @@
 
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useConfirm } from "@/hooks/use-confirm"
-import { useToast } from "@/hooks/use-toast"
-import { API_BASE_URL } from "@/services/api.service"
-import { getAuthToken, getCurrentUser } from "@/services/auth-utils"
-import reportService, { type ReportUpload } from "@/services/report.service"
-import type { User } from "@/types/auth-types"
-import { Trash2, UploadCloud } from "lucide-react"
-import { type ChangeEvent, useEffect, useRef, useState } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/services/api.service";
+import { getAuthToken, getCurrentUser } from "@/services/auth-utils";
+import reportService, { type ReportUpload } from "@/services/report.service";
+import type { User } from "@/types/auth-types";
+import { Trash2, UploadCloud } from "lucide-react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 type RawUpload = Record<string, unknown>
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
   ".pdf",
@@ -707,10 +707,10 @@ export default function UnggahanPage() {
             ) : null}
           </DialogContent>
         </Dialog>
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          Kementerian Kesehatan RI - RSUP Persahabatan
-          <br />
-          Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          </p>
         </div>
       </div>
     </main>
