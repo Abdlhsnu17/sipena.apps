@@ -44,6 +44,19 @@ const toLocalIsoDateTime = (value?: string | Date | null): string => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
+const generateUsageNumber = (value?: string | Date | null): string => {
+  const date = value ? (value instanceof Date ? value : new Date(String(value))) : new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  const rand = Math.floor(Math.random() * 9000) + 1000; // 4 digits
+  return `PG-${y}${m}${d}-${hh}${mm}${ss}-${rand}`;
+};
+
 const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => ({
   ...row,
   assetName: row.asset_name || row.assetName,
@@ -438,13 +451,16 @@ export class AssetUsageService {
       return { success: false, message: 'Waktu selesai tidak boleh lebih awal dari waktu mulai' };
     }
 
+    const generatedNo = data.no || generateUsageNumber(data.startedAt);
+
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO asset_usage_logs (
-        asset_id, asset_type, asset_detail_id, asset_detail_name, asset_detail_code,
+        no, asset_id, asset_type, asset_detail_id, asset_detail_name, asset_detail_code,
         asset_location, room_name, operator_user_id, usage_context, started_at,
         ended_at, usage_count, condition_before, condition_after, notes, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        generatedNo,
         data.assetId,
         data.assetType || 'medical',
         data.assetDetailId || null,

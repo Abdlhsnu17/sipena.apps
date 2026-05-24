@@ -1,6 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import mysql, { RowDataPacket } from 'mysql2/promise';
+import path from 'path';
 import pool from '../config/database';
 
 let ensuredNonMedicalSpecificationsColumn = false;
@@ -511,6 +511,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
   if (tables.length === 0) {
     await pool.query(`
       CREATE TABLE asset_usage_logs (
+        `no` VARCHAR(50) DEFAULT NULL,
         id INT(11) NOT NULL AUTO_INCREMENT,
         asset_id INT(11) NOT NULL,
         asset_type VARCHAR(20) NOT NULL DEFAULT 'medical',
@@ -531,6 +532,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
         PRIMARY KEY (id),
+        UNIQUE KEY `uniq_asset_usage_no` (`no`),
         KEY idx_asset_usage_asset (asset_type, asset_id, asset_detail_id),
         KEY idx_asset_usage_room_started (room_name, started_at),
         KEY idx_asset_usage_operator (operator_user_id),
