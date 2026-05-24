@@ -1,17 +1,11 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
-import { assetService, type Asset } from "@/services/asset.service";
+import { assetService } from "@/services/asset.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
-import type { DetailInventoryItem } from "@/types/detail-inventory";
-import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { parseDateValue } from "@/utils/format";
-import ExcelJS from "exceljs";
-import { BookOpen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
     Bar,
@@ -44,7 +38,6 @@ export default function ReportsPage() {
   const [usageRoomData, setUsageRoomData] = useState<any[]>([])
   const [usageYearData, setUsageYearData] = useState<any[]>([])
   const [usageContextData, setUsageContextData] = useState<any[]>([])
-  const [assetDetails, setAssetDetails] = useState<DetailInventoryItem[]>([])
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
 
@@ -170,13 +163,10 @@ export default function ReportsPage() {
         ])
 
         const [medicalResult, nonMedicalResult, maintenanceResult, borrowingResult, usageResult] = results
-        let medicalAssets: Asset[] = []
-        let nonMedicalAssets: Asset[] = []
 
         if (medicalResult.status === "fulfilled" && medicalResult.value.success) {
           const medicalData = toArray(medicalResult.value.data)
           setMedicalRooms(medicalData)
-          medicalAssets = medicalData
         } else if (medicalResult.status === "rejected") {
           console.error("Failed to load medical assets:", medicalResult.reason)
         }
@@ -184,16 +174,8 @@ export default function ReportsPage() {
         if (nonMedicalResult.status === "fulfilled" && nonMedicalResult.value.success) {
           const nonMedicalData = toArray(nonMedicalResult.value.data)
           setNonMedicalRooms(nonMedicalData)
-          nonMedicalAssets = nonMedicalData
         } else if (nonMedicalResult.status === "rejected") {
           console.error("Failed to load non-medical assets:", nonMedicalResult.reason)
-        }
-
-        const combinedAssets = [...medicalAssets, ...nonMedicalAssets]
-        if (combinedAssets.length > 0) {
-          setAssetDetails(flattenDetailInventories(combinedAssets, { includeAssetFallback: true }))
-        } else {
-          setAssetDetails([])
         }
 
         if (maintenanceResult.status === "fulfilled" && maintenanceResult.value.success) {
@@ -223,485 +205,321 @@ export default function ReportsPage() {
     }
 
     loadReportData()
-  }, [generateMonthlyData])
+  }, [generateMonthlyData, generateUsageData])
 
   const totalNonMedicalAssets = nonMedicalRooms.length
   const totalMedicalAssets = medicalRooms.length
   const totalAssets = totalNonMedicalAssets + totalMedicalAssets
 
-  // Group assets by location/room
-  const getDistributionByLocation = () => {
-    const locationMap = new Map<string, number>()
-    
-    ;[...nonMedicalRooms, ...medicalRooms].forEach((asset) => {
-      const location = asset.location || "Tidak Ditentukan"
-      locationMap.set(location, (locationMap.get(location) || 0) + 1)
-    })
-    
-    return Array.from(locationMap, ([name, value]) => ({ name, value }))
-  }
-
-  // distributionData not currently used in the UI; remove to avoid unused var
-
   const totalCost = maintenance.reduce((sum, m) => sum + (Number.parseInt(m.cost) || 0), 0)
   const totalUsageCount = assetUsageLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0)
-  const usageRoomTop = usageRoomData[0]
-  const usageYearTop = usageYearData[0]
-  const topUsedAsset = Object.values(
+  const uniqueUsedAssets = assetUsageLogs.length > 0
+    ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size
+    : 0
+  const inventorySummaryData = [
+    { name: "Total", total: totalAssets },
+    { name: "Non Medis", total: totalNonMedicalAssets },
+    { name: "Medis", total: totalMedicalAssets },
+  ]
+  const operationalSummaryData = [
+    { name: "Pemeliharaan", total: maintenance.length },
+    { name: "Peminjaman", total: borrowings.length },
+    { name: "Penggunaan", total: totalUsageCount },
+    { name: "Alat Terpakai", total: uniqueUsedAssets },
+  ]
+  const maintenanceStatusData = [
+    { status: "Tervalidasi", total: maintenance.filter((m) => m.status === "validated").length },
+    { status: "Belum Validasi", total: maintenance.filter((m) => m.status !== "validated").length },
+  ]
+  const maintenanceRoomData = monthlyDataByLocation
+    .map((item) => ({
+      room: item.location,
+      total: Object.values(item).reduce((sum: number, value) => (typeof value === "number" ? sum + value : sum), 0),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+  const maintenanceAssetData = Object.values(
+    maintenance.reduce<Record<string, { name: string; total: number }>>((acc, item) => {
+      const key = item.assetDetailName || item.assetName || "Tidak Ditentukan"
+      acc[key] = { name: key, total: (acc[key]?.total || 0) + 1 }
+      return acc
+    }, {})
+  )
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8)
+  const borrowingStatusData = [
+    { status: "Total", total: borrowings.length },
+    { status: "Dipinjam", total: borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length },
+    { status: "Kembali", total: borrowings.filter((b) => b.status === "returned").length },
+    { status: "Terlambat", total: borrowings.filter((b) => b.status === "overdue").length },
+  ]
+  const maintenanceCostData = [
+    { name: "Biaya", total: totalCost },
+  ]
+  const usedAssetData = Object.values(
     assetUsageLogs.reduce<Record<string, { label: string; count: number }>>((acc, log) => {
       const key = log.assetDetailName || log.assetName || `Aset ${log.assetId}`
       acc[key] = { label: key, count: (acc[key]?.count || 0) + (log.usageCount || 1) }
       return acc
     }, {})
-  ).sort((a, b) => b.count - a.count)[0]
-  const topUsageContext = usageContextData[0]
-
-  const exportReport = async () => {
-    const createdAt = new Date()
-    const createdAtLabel = createdAt.toLocaleString("id-ID")
-    const summaryEntries = [
-      ["Dicetak pada", createdAtLabel],
-      ["Total inventaris non medis", totalNonMedicalAssets.toLocaleString("id-ID")],
-      ["Total inventaris medis", totalMedicalAssets.toLocaleString("id-ID")],
-      ["Total inventaris", totalAssets.toLocaleString("id-ID")],
-      ["Total pemeliharaan tersimpan", maintenance.length.toString()],
-      ["Total peminjaman", borrowings.length.toString()],
-      ["Total penggunaan alat", totalUsageCount.toLocaleString("id-ID")],
-      ["Total biaya", `Rp ${totalCost.toLocaleString("id-ID")}`],
-    ]
-
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = "SIPENARS"
-    workbook.created = createdAt
-
-    const summarySheet = workbook.addWorksheet("Ringkasan")
-    summarySheet.columns = [
-      { header: "Keterangan", width: 35 },
-      { header: "Nilai", width: 50 },
-    ]
-    summaryEntries.forEach(([label, value]) => summarySheet.addRow([label, value]))
-
-    const buildSheet = (title: string, rows: any[]) => {
-      const sheet = workbook.addWorksheet(title)
-      if (!rows?.length) {
-        sheet.addRow(["Tidak ada data tersedia"])
-        return
-      }
-      const columns = new Set<string>()
-      rows.forEach((row) => {
-        if (row && typeof row === "object") {
-          Object.keys(row).forEach((key) => columns.add(key))
-        }
-      })
-      if (!columns.size) {
-        sheet.addRow(["Tidak ada kolom yang dapat ditampilkan"])
-        return
-      }
-      const headers = Array.from(columns)
-      sheet.addRow(headers)
-      const formatCell = (value: unknown) => {
-        if (value === null || value === undefined) return ""
-        if (typeof value === "object") return JSON.stringify(value)
-        return value
-      }
-      rows.forEach((row) => {
-        const rowValues = headers.map((header) => formatCell(row?.[header]))
-        sheet.addRow(rowValues)
-      })
-    }
-
-    const detailRows = assetDetails.map((detail) => ({
-      ...detail,
-      keterangan: detail.notes ?? detail.detailInventoryName ?? detail.detailName ?? detail.detailCode ?? "",
-    }))
-
-    buildSheet("Inventaris Non Medis", nonMedicalRooms)
-    buildSheet("Inventaris Medis", medicalRooms)
-    buildSheet("Rincian Barang", detailRows)
-    buildSheet("Pemeliharaan", maintenance)
-    buildSheet("Peminjaman", borrowings)
-    buildSheet("Statistik Bulanan", monthlyData)
-    buildSheet("Penggunaan Alat", assetUsageLogs)
-    buildSheet("Penggunaan Per Ruangan", usageRoomData)
-    buildSheet("Penggunaan Per Tahun", usageYearData)
-    buildSheet("Statistik Penggunaan", usageMonthlyData)
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    })
-    const objectUrl = URL.createObjectURL(blob)
-    const element = document.createElement("a")
-    element.href = objectUrl
-    element.download = `laporan-${createdAt.toISOString().split("T")[0]}.xlsx`
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-    URL.revokeObjectURL(objectUrl)
-  }
+  )
+    .map((item) => ({ name: item.label, total: item.count }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8)
 
   return (
     <div
       className="bg-white dark:bg-slate-950"
       data-main-scroll
     >
-      <div className="mx-auto max-w-7xl space-y-8 page-gutter">
-
-        <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 sm:items-center">
-                <div className="rounded-2xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-lg">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold leading-tight text-foreground sm:text-2xl lg:text-3xl">
-                    Laporan & Analitik
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    Ringkasan operasional inventaris, pemeliharaan, dan peminjaman.
-                  </p>
-                </div>
-              </div>
-
-            </div>
-            <Button onClick={exportReport} className="w-full rounded-2xl bg-slate-700 px-5 text-white shadow-lg hover:bg-slate-800 sm:w-auto">
-              Unduh Laporan
-            </Button>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-2">
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md transition-shadow hover:shadow-lg">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-cyan-700">
-                Total Keseluruhan Ruangan Yang Aktif
-              </CardTitle>
+      <div className="mx-auto max-w-7xl space-y-4 page-gutter">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-cyan-50/80 via-sky-50/70 to-blue-50/80 shadow-sm">
+            <CardHeader className="border-b border-cyan-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-cyan-800">Komposisi Ruangan Aktif</CardTitle>
+              <CardDescription className="text-xs">Total, medis, dan non medis</CardDescription>
             </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-cyan-900 sm:text-[1.6rem]">{totalAssets.toLocaleString("id-ID")}</p>
-              <p className="mt-0.5 text-[9px] leading-tight text-cyan-600">Gabungan Ruangan Medis & Non-Medis</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-teal-50/80 via-emerald-100/60 to-green-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-teal-700">
-                Ruangan Dengan Unit Non Medis Aktif
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-teal-900 sm:text-[1.6rem]">
-                {totalNonMedicalAssets.toLocaleString("id-ID")}
-              </p>
-              <p className="mt-0.5 text-[9px] leading-tight text-teal-600">Ruangan Aktif Dengan Unit Non-Medis Yang Berbeda</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-blue-700">
-                Ruangan Dengan Unit Medis Aktif
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-blue-900 sm:text-[1.6rem]">
-                {totalMedicalAssets.toLocaleString("id-ID")}
-              </p>
-              <p className="mt-0.5 text-[9px] leading-tight text-blue-600">Ruangan Aktif Dengan Unit Medis Yang Berbeda</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-rose-50/80 via-red-100/60 to-orange-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-rose-700">
-                Total Pemeliharaan
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-rose-900 sm:text-[1.6rem]">
-                {maintenance.length.toLocaleString("id-ID")}
-              </p>
-              <p className="mt-0.5 text-[9px] leading-tight text-rose-600">Jadwal tersimpan</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-orange-50/80 via-amber-100/60 to-yellow-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-orange-700">
-                Total Peminjaman
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-orange-900 sm:text-[1.6rem]">
-                {borrowings.length.toLocaleString("id-ID")}
-              </p>
-              <p className="mt-0.5 text-[9px] leading-tight text-orange-600">Sesi perizinan</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-violet-700">
-                Total Biaya
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
-              <p className="text-[1.5rem] font-semibold leading-none text-violet-900 sm:text-[1.6rem]">
-                Rp {totalCost.toLocaleString("id-ID")}
-              </p>
-              <p className="mt-0.5 text-[9px] leading-tight text-violet-600">Nilai biaya perawatan</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-slate-50/80 via-gray-100/60 to-zinc-50/80 shadow-md lg:col-span-2">
-            <CardHeader className="border-0 p-4 border-b border-slate-200/50">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-lg font-semibold leading-tight">Status Ringkas</CardTitle>
-                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
-                  Real-time
-                </Badge>
-              </div>
-              <CardDescription className="text-sm text-muted-foreground">
-                Menyajikan ringkasan KPI maintenance dan peminjaman sesuai panduan UI/UX terbaru.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border/40 bg-white/80 p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground">Total maintenance</p>
-                  <p className="text-lg font-semibold">{maintenance.length}</p>
-                </div>
-                <div className="rounded-2xl border border-border/40 bg-white/80 p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground">Total peminjaman</p>
-                  <p className="text-lg font-semibold">{borrowings.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-emerald-50/80 via-green-100/60 to-teal-50/80 shadow-md">
-            <CardHeader className="border-b border-emerald-200/50">
-              <CardTitle>Penggunaan Alat Per Bulan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={usageMonthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
-                  <XAxis dataKey="month" />
-                  <YAxis allowDecimals={false} />
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={230}>
+                <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#bae6fd" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="total" stroke="#059669" strokeWidth={2} name="Total Pemakaian" />
+                  <Bar dataKey="total" fill="#0284c7" name="Jumlah Ruangan" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border-0 bg-linear-to-br from-emerald-50/80 via-teal-50/70 to-cyan-50/80 shadow-sm xl:col-span-2">
+            <CardHeader className="border-b border-emerald-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-emerald-800">Aktivitas Operasional</CardTitle>
+              <CardDescription className="text-xs">Pemeliharaan, peminjaman, penggunaan, dan alat terpakai</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={230}>
+                <BarChart data={operationalSummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#a7f3d0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#059669" name="Total" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-blue-50/80 via-indigo-50/70 to-slate-50/80 shadow-sm xl:col-span-2">
+            <CardHeader className="border-b border-blue-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-blue-800">Pemeliharaan Per Bulan</CardTitle>
+              <CardDescription className="text-xs">Perbandingan jadwal tervalidasi dan belum validasi</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={monthlyData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#bfdbfe" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="completed" stackId="maintenance" fill="#2563eb" name="Tervalidasi" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="pending" stackId="maintenance" fill="#f97316" name="Belum Validasi" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border-0 bg-linear-to-br from-orange-50/80 via-amber-50/70 to-yellow-50/80 shadow-sm">
+            <CardHeader className="border-b border-orange-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-orange-800">Status Pemeliharaan</CardTitle>
+              <CardDescription className="text-xs">Distribusi validasi jadwal</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={maintenanceStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" />
+                  <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#f97316" name="Jumlah" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-cyan-50/80 via-teal-50/70 to-emerald-50/80 shadow-sm">
+            <CardHeader className="border-b border-cyan-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-cyan-800">Pemeliharaan Per Ruangan</CardTitle>
+              <CardDescription className="text-xs">Sepuluh ruangan dengan aktivitas terbanyak</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={maintenanceRoomData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#99f6e4" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#0891b2" name="Total Pemeliharaan" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border-0 bg-linear-to-br from-indigo-50/80 via-blue-50/70 to-cyan-50/80 shadow-sm">
+            <CardHeader className="border-b border-indigo-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-indigo-800">Inventaris Sering Dipelihara</CardTitle>
+              <CardDescription className="text-xs">Delapan inventaris teratas</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={maintenanceAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#c7d2fe" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#4f46e5" name="Frekuensi" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-emerald-50/80 via-green-50/70 to-teal-50/80 shadow-sm xl:col-span-2">
+            <CardHeader className="border-b border-emerald-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-emerald-800">Penggunaan Alat Per Bulan</CardTitle>
+              <CardDescription className="text-xs">Tren pemakaian alat sepanjang tahun</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={usageMonthlyData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#a7f3d0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="total" stroke="#059669" strokeWidth={2} name="Total Pemakaian" dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-teal-50/80 via-cyan-100/60 to-blue-50/80 shadow-md">
-            <CardHeader className="border-b border-teal-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-teal-700">
-                Ringkasan Penggunaan Alat
-              </CardTitle>
+          <Card className="rounded-lg border-0 bg-linear-to-br from-violet-50/80 via-purple-50/70 to-fuchsia-50/80 shadow-sm">
+            <CardHeader className="border-b border-violet-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-violet-800">Konteks Penggunaan</CardTitle>
+              <CardDescription className="text-xs">Kategori penggunaan alat</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-col gap-2 rounded-2xl border border-teal-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-[9px] font-medium leading-tight text-foreground">Total penggunaan</span>
-                <Badge className="border-0 bg-teal-100 px-1.5 py-0 text-[9px] font-medium leading-none text-teal-700">
-                  {totalUsageCount.toLocaleString("id-ID")}
-                </Badge>
-              </div>
-              <div className="flex flex-col gap-2 rounded-2xl border border-cyan-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-[9px] font-medium leading-tight text-foreground">Alat terpakai</span>
-                <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[9px] font-medium leading-none text-cyan-700">
-                  {assetUsageLogs.length > 0 ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size : 0}
-                </Badge>
-              </div>
-              <div className="flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-[9px] font-medium leading-tight text-foreground">Konteks terbanyak</span>
-                <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[9px] font-medium leading-none text-emerald-700">
-                  {topUsageContext ? `${topUsageContext.context} (${topUsageContext.total})` : "Belum ada data"}
-                </Badge>
-              </div>
-              <div className="flex flex-col gap-2 rounded-2xl border border-blue-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-[9px] font-medium leading-tight text-foreground">Aset paling sering dipakai</span>
-                <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[9px] font-medium leading-none text-blue-700">
-                  {topUsedAsset ? `${topUsedAsset.label} (${topUsedAsset.count})` : "Belum ada data"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-teal-100/60 to-green-50/80 shadow-md lg:col-span-2">
-            <CardHeader className="border-b border-cyan-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-cyan-700">
-                Pemeliharaan Per Ruangan
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {monthlyDataByLocation.length === 0 ? (
-                  <p className="text-[9px] text-muted-foreground">Tidak ada data pemeliharaan</p>
-                ) : (
-                  monthlyDataByLocation.map((item, idx) => {
-                    const colors = [
-                      "bg-cyan-50 border-cyan-200 text-cyan-700",
-                      "bg-teal-50 border-teal-200 text-teal-700",
-                      "bg-emerald-50 border-emerald-200 text-emerald-700",
-                      "bg-green-50 border-green-200 text-green-700",
-                      "bg-blue-50 border-blue-200 text-blue-700",
-                      "bg-sky-50 border-sky-200 text-sky-700",
-                    ]
-                    const colorClass = colors[idx % colors.length]
-                    const totalMaintenance = Object.values(item).reduce((sum: number, val: any) => {
-                      return typeof val === "number" ? sum + val : sum
-                    }, 0)
-                    return (
-                      <div key={item.location} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-[9px] leading-tight">{item.location}</span>
-                        </div>
-                        <Badge className="border-0 bg-current/20 px-1.5 py-0 text-[9px] font-medium leading-none text-current">{totalMaintenance} kali</Badge>
-                      </div>
-                    )
-                  }))}
-              </div>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={usageContextData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ddd6fe" />
+                  <XAxis dataKey="context" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#7c3aed" name="Total" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-emerald-50/80 via-green-100/60 to-teal-50/80 shadow-md lg:col-span-2">
-            <CardHeader className="border-b border-emerald-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-emerald-700">
-                Penggunaan Alat Per Ruangan
-              </CardTitle>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-teal-50/80 via-emerald-50/70 to-green-50/80 shadow-sm xl:col-span-2">
+            <CardHeader className="border-b border-teal-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-teal-800">Penggunaan Alat Per Ruangan</CardTitle>
+              <CardDescription className="text-xs">Sepuluh ruangan dengan pemakaian terbanyak</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ left: 16, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="room" type="category" width={130} tick={{ fontSize: 9 }} />
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={310}>
+                <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#99f6e4" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="total" fill="#059669" name="Total Pemakaian" />
+                  <Bar dataKey="total" fill="#0d9488" name="Total Pemakaian" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md">
-            <CardHeader className="border-b border-violet-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-violet-700">
-                Akumulasi Tahunan
-              </CardTitle>
+          <Card className="rounded-lg border-0 bg-linear-to-br from-fuchsia-50/80 via-pink-50/70 to-rose-50/80 shadow-sm">
+            <CardHeader className="border-b border-fuchsia-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-fuchsia-800">Penggunaan Tahunan</CardTitle>
+              <CardDescription className="text-xs">Akumulasi pemakaian per tahun</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={310}>
+                <BarChart data={usageYearData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5d0fe" />
+                  <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#c026d3" name="Total Tahunan" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-sky-50/80 via-blue-50/70 to-indigo-50/80 shadow-sm xl:col-span-2">
+            <CardHeader className="border-b border-sky-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-sky-800">Alat Paling Sering Dipakai</CardTitle>
+              <CardDescription className="text-xs">Delapan alat dengan frekuensi pemakaian tertinggi</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={usedAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#bae6fd" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#0284c7" name="Total Pemakaian" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-lg border-0 bg-linear-to-br from-rose-50/80 via-red-50/70 to-orange-50/80 shadow-sm">
+            <CardHeader className="border-b border-rose-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-rose-800">Status Peminjaman</CardTitle>
+              <CardDescription className="text-xs">Distribusi status sesi peminjaman</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={borrowingStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#fecdd3" />
+                  <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#e11d48" name="Jumlah" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-lg border-0 bg-linear-to-br from-slate-50/80 via-zinc-50/70 to-stone-50/80 shadow-sm xl:col-span-3">
+            <CardHeader className="border-b border-slate-200/50 px-4 py-3">
+              <CardTitle className="text-sm font-semibold text-slate-800">Biaya Pemeliharaan</CardTitle>
+              <CardDescription className="text-xs">Total nilai biaya perawatan tersimpan</CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 py-3">
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={usageYearData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
-                  <XAxis dataKey="year" tick={{ fontSize: 9 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 9 }} />
+                <BarChart data={maintenanceCostData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="total" fill="#7c3aed" name="Total Tahunan" />
+                  <Bar dataKey="total" fill="#475569" name="Rupiah" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-violet-200 bg-white/80 p-3">
-                  <p className="text-[9px] text-muted-foreground">Ruangan terdata</p>
-                  <p className="text-[9px] font-semibold leading-tight">{usageRoomData.length}</p>
-                </div>
-                <div className="rounded-2xl border border-fuchsia-200 bg-white/80 p-3">
-                  <p className="text-[9px] text-muted-foreground">Tahun tertinggi</p>
-                  <p className="text-[9px] font-semibold leading-tight">{usageYearTop ? `${usageYearTop.year} (${usageYearTop.total})` : "Belum ada data"}</p>
-                </div>
-                <div className="rounded-2xl border border-pink-200 bg-white/80 p-3">
-                  <p className="text-[9px] text-muted-foreground">Ruangan terpadat</p>
-                  <p className="text-[9px] font-semibold leading-tight">{usageRoomTop ? `${usageRoomTop.room} (${usageRoomTop.total})` : "Belum ada data"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md lg:col-span-2">
-            <CardHeader className="border-b border-blue-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-blue-700">
-                Inventaris Paling Sering Dipelihara
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {maintenance.length === 0 ? (
-                <p className="text-[9px] text-muted-foreground">Tidak ada data</p>
-              ) : (
-                <div className="space-y-2">
-                  {[...new Set(maintenance.map((m) => m.assetDetailName || m.assetName))]
-                    .map((name) => ({
-                      name,
-                      count: maintenance.filter((m) => (m.assetDetailName || m.assetName) === name).length,
-                    }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 5)
-                    .map((item, idx) => {
-                      const colors = [
-                        "bg-blue-50/80 border-blue-200 text-blue-700",
-                        "bg-cyan-50/80 border-cyan-200 text-cyan-700",
-                        "bg-teal-50/80 border-teal-200 text-teal-700",
-                        "bg-emerald-50/80 border-emerald-200 text-emerald-700",
-                        "bg-indigo-50/80 border-indigo-200 text-indigo-700",
-                      ]
-                      const colorClass = colors[idx % colors.length]
-                      return (
-                        <div key={idx} className={`flex flex-col gap-1.5 rounded-lg border px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between ${colorClass}`}>
-                            <span className="truncate font-medium text-[9px] leading-tight">{item.name}</span>
-                            <Badge className="bg-current/20 text-current border-0 px-1.5 py-0 text-[9px] font-medium leading-none">
-                            {item.count}x
-                          </Badge>
-                        </div>
-                      )
-                    })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-rose-50/80 via-pink-100/60 to-red-50/80 shadow-md">
-            <CardHeader className="border-b border-rose-200/50">
-              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-rose-700">
-                Statistik Peminjaman
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex flex-col gap-1 rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[9px] font-medium leading-tight text-foreground">Total Peminjaman</span>
-                  <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[9px] font-medium leading-none text-blue-700">{borrowings.length}</Badge>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[9px] font-medium leading-tight text-foreground">Sedang Dipinjam</span>
-                  <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[9px] font-medium leading-none text-emerald-700">
-                    {borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length}
-                  </Badge>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-cyan-200 bg-cyan-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[9px] font-medium leading-tight text-foreground">Dikembalikan</span>
-                  <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[9px] font-medium leading-none text-cyan-700">
-                    {borrowings.filter((b) => b.status === "returned").length}
-                  </Badge>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-red-200 bg-red-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[9px] font-medium leading-tight text-foreground">Terlambat</span>
-                  <Badge className="border-0 bg-red-100 px-1.5 py-0 text-[9px] font-medium leading-none text-red-700">
-                    {borrowings.filter((b) => b.status === "overdue").length}
-                  </Badge>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
