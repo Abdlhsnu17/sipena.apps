@@ -611,8 +611,8 @@ export default function AssetUsagePage() {
             <ClipboardList className="h-5 w-5 text-white" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat Ruangan</h1>
-            <p className="text-sm text-slate-600">Catat pemakaian alat di ruangan sendiri untuk melihat frekuensi dan beban pemakaian.</p>
+            <h1 className="text-2xl font-semibold text-slate-900">Penggunaan Alat</h1>
+            <p className="text-sm text-slate-600">Catat pemakaian alat untuk melihat frekuensi dan beban pemakaian.</p>
           </div>
         </div>
       </div>
