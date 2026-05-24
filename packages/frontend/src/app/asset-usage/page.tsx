@@ -10,8 +10,10 @@ import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
+import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
+import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -402,7 +404,7 @@ export default function AssetUsagePage() {
   }), [selectableAssets]);
 
   const filteredSelectableAssets = useMemo(() => {
-    const normalizedSearch = assetSearchTerm.trim().toLowerCase();
+    const searchTerm = assetSearchTerm.trim();
     return selectableAssets.filter((item) => {
       const matchesSource =
         assetSourceFilter === "all" ||
@@ -410,18 +412,7 @@ export default function AssetUsagePage() {
         (assetSourceFilter === "non_medical" && item.assetType === "non_medical");
       if (!matchesSource) return false;
 
-      const searchable = [
-        item.detailInventoryName,
-        item.detailName,
-        item.detailCode,
-        item.assetName,
-        item.assetCode,
-        item.roomName,
-        item.assetLocation,
-        item.detailBrandModel,
-        item.serialNumber,
-      ].filter(Boolean).join(" ").toLowerCase();
-      return !normalizedSearch || searchable.includes(normalizedSearch);
+      return matchesSearchKeyword(searchTerm, [buildInventorySearchKey(item)]);
     });
   }, [assetSearchTerm, assetSourceFilter, selectableAssets]);
 
@@ -1262,7 +1253,7 @@ export default function AssetUsagePage() {
 
       <div className="mt-8 pt-6 border-t border-border text-center">
         <p className="text-[13px] text-muted-foreground">
-          Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana
         </p>
       </div>
     </div>

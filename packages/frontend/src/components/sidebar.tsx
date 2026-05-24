@@ -585,8 +585,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           </div>
         )}
         {!isCollapsed && (
-          <p className="text-xs text-muted-foreground mt-2 px-4 font-bold">
-            Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana
+            <p className="text-xs text-muted-foreground mt-2 px-4 font-bold">
+            Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana
           </p>
         )}
       </div>

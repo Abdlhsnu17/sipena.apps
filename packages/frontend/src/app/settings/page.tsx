@@ -1,21 +1,21 @@
 "use client"
 
-import { useTheme } from "@/components/theme-provider"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { getCurrentUser, setCurrentUser } from "@/services/auth-utils"
-import { authService } from "@/services/auth.service"
-import { userService } from "@/services/user.service"
-import { toPublicPhotoUrl } from "@/utils/photoUrl"
+import { useTheme } from "@/components/theme-provider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
+import { authService } from "@/services/auth.service";
+import { userService } from "@/services/user.service";
+import { toPublicPhotoUrl } from "@/utils/photoUrl";
 // ...existing code...
-import { Eye, EyeOff, Monitor, Moon, Settings, Smartphone, Sun } from "lucide-react"
-import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react"
+import { Eye, EyeOff, Monitor, Moon, Settings, Smartphone, Sun } from "lucide-react";
+import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -596,20 +596,16 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Informasi Sistem</CardTitle>
-                <CardDescription>Ringkasan aplikasi dan akun aktif</CardDescription>
+                <CardDescription>Ringkasan aplikasi</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Nama Sistem</p>
-                  <p className="font-medium text-foreground">SIPENA RSUP Persahabatan</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Institusi</p>
-                  <p className="font-medium text-foreground">RSUP Persahabatan Kementerian Kesehatan</p>
+                  <p className="font-medium text-foreground">Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Tanggal Hari Ini</p>
-                  <p className="font-medium text-foreground">{new Date().toLocaleDateString("id-ID")}</p>
+                  <p className="font-medium text-foreground">24/5/2026</p>
                 </div>
               </CardContent>
             </Card>

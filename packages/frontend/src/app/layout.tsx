@@ -1,13 +1,13 @@
 
-import type { Metadata, Viewport } from "next"
-import { ThemeScript } from "@/components/theme-script"
-import type React from "react"
-import ClientLayout from "./client-layout"
-import "@/styles/globals.css"
+import { ThemeScript } from "@/components/theme-script";
+import "@/styles/globals.css";
+import type { Metadata, Viewport } from "next";
+import type React from "react";
+import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
-  title: "Sistem Inventaris & Pemeliharaan Sarana RSUP Persahabatan",
-  description: "Sistem manajemen inventaris dan pemeliharaan sarana serta peminjaman RSUP Persahabatan",
+  title: "Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana",
+  description: "Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana RSUP Persahabatan",
   generator: 'Next.js',
 }
 

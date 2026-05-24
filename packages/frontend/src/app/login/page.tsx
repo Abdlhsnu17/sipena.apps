@@ -1,18 +1,18 @@
 "use client"
 
-import AuthHeader from "@/components/auth-header"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
-import { useToast } from "@/hooks/use-toast"
-import { resolveSafeRedirectPath } from "@/services/auth-utils"
-import authService from "@/services/auth.service"
-import { AlertCircle, Eye, EyeOff, IdCard, KeyRound, Lock } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
-import type React from "react"
-import { useEffect, useState } from "react"
+import AuthHeader from "@/components/auth-header";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll";
+import { useToast } from "@/hooks/use-toast";
+import { resolveSafeRedirectPath } from "@/services/auth-utils";
+import authService from "@/services/auth.service";
+import { AlertCircle, Eye, EyeOff, IdCard, KeyRound, Lock } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter()
@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:p-8">
             <div className="mb-6">
               <AuthHeader
-                title="Sistem Inventaris & Peminjaman Serta Pemeliharaan Sarana"
+                title="Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana"
                 description="SiPeNa"
               />
             </div>
