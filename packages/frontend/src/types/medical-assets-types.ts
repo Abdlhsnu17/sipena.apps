@@ -155,7 +155,7 @@ export interface MedicalAsset {
   lastMaintenance: string
   nextMaintenance: string
   condition: "Baik" | "Cukup" | "Rusak"
-  status: "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan"
+  status: "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
   notes: string
   usagePurpose: string
 }

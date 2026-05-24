@@ -163,6 +163,34 @@ const isBorrowingLockRecord = (record: { status: string; returnValidatedAt?: str
   ["pending", "approved", "borrowed", "overdue"].includes(record.status) ||
   (record.status === "returned" && !record.returnValidatedAt);
 
+const getEffectiveAvailability = (
+  item: DetailInventoryItem,
+  activeUsageLocks: Set<string>,
+  activeMaintenanceLocks: Set<string>,
+  activeBorrowingLocks: Set<string>
+) => {
+  const baseKey = getInventoryLockKey(item.assetType, item.assetId);
+  const detailKey = getInventoryLockKey(item.assetType, item.assetId, item.detailId);
+  const isFallbackAssetItem = isAssetFallbackDetailId(item.detailId, item.assetId, item.assetType);
+
+  if (item.availability === "disposed") return "disposed";
+  if (activeUsageLocks.has(baseKey) || activeUsageLocks.has(detailKey)) return "in_use";
+  if (item.availability === "maintenance" || activeMaintenanceLocks.has(baseKey) || activeMaintenanceLocks.has(detailKey)) {
+    return "maintenance";
+  }
+  if (item.availability === "in_use") return "in_use";
+  if (activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey)) return "borrowed";
+
+  if (isFallbackAssetItem) {
+    if (item.assetStatus === "disposed") return "disposed";
+    if (item.assetStatus === "maintenance") return "maintenance";
+    if (item.assetStatus === "in_use") return "in_use";
+    if (item.assetStatus === "borrowed") return "borrowed";
+  }
+
+  return "available";
+};
+
 const normalizeLocationText = (value?: string | null) =>
   (value || "")
     .toLowerCase()
@@ -357,6 +385,17 @@ export default function AssetUsagePage() {
   useEffect(() => {
     if (!currentUser) return;
 
+    const handleInventoryRefresh = () => {
+      void loadData();
+    };
+
+    window.addEventListener("inventory-refresh", handleInventoryRefresh);
+    return () => window.removeEventListener("inventory-refresh", handleInventoryRefresh);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
     const refreshOnFocus = () => {
       void loadData();
     };
@@ -382,17 +421,9 @@ export default function AssetUsagePage() {
 
   const availableAssets = useMemo(() => {
     return assets.filter((item) => {
-      const baseKey = getInventoryLockKey(item.assetType, item.assetId);
-      const detailKey = getInventoryLockKey(item.assetType, item.assetId, item.detailId);
-
-      if (item.assetStatus === "disposed" || item.availability === "disposed") return false;
-      if (item.assetStatus === "maintenance" || item.availability === "maintenance") return false;
-      if (item.assetStatus === "borrowed" || item.availability === "borrowed") return false;
-      if (item.assetStatus === "in_use" || item.availability === "in_use") return false;
+      if (item.assetStatus === "disposed") return false;
       if (item.condition === "damaged") return false;
-      if (activeUsageLocks.has(baseKey) || activeUsageLocks.has(detailKey)) return false;
-      if (activeMaintenanceLocks.has(baseKey) || activeMaintenanceLocks.has(detailKey)) return false;
-      return !(activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey));
+      return getEffectiveAvailability(item, activeUsageLocks, activeMaintenanceLocks, activeBorrowingLocks) === "available";
     });
   }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets]);
 
