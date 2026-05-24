@@ -37,7 +37,7 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   other: "Lainnya",
 };
 
-const functionalUsageKeys: AssetUsageContext[] = ["own_room", "emergency", "procedure", "rounding"];
+const functionalUsageKeys: AssetUsageContext[] = ["emergency", "rounding"];
 
 const getUsageRoomDisplay = (log: AssetUsageLog) => {
   const roomName = (log.roomName || "").trim();
@@ -113,7 +113,7 @@ type UsageDetailSection = {
 const initialForm: FormState = {
   inventoryKey: "",
   roomName: "",
-  usageContext: "own_room",
+  usageContext: "rounding",
   startedAt: toDateTimeLocalInputValue(),
   endedAt: "",
   usageCount: 1,
