@@ -39,6 +39,17 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
 
 const functionalUsageKeys: AssetUsageContext[] = ["emergency", "rounding"];
 
+const getAssetRoomOptions = (item?: DetailInventoryItem) => {
+  if (!item) return [];
+  return Array.from(
+    new Set(
+      [item.roomName, item.assetLocation]
+        .map((value) => (value || "").trim())
+        .filter(Boolean)
+    )
+  );
+};
+
 const getUsageRoomDisplay = (log: AssetUsageLog) => {
   const roomName = (log.roomName || "").trim();
   const assetLocation = (log.assetLocation || "").trim();
@@ -267,7 +278,7 @@ export default function AssetUsagePage() {
   const [completeForm, setCompleteForm] = useState<CompleteFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const sortedFunctionalUsageKeys = useMemo(
-    () => [...functionalUsageKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
+    () => [...functionalUsageKeys, "own_room"].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
     []
   );
 
@@ -435,6 +446,18 @@ export default function AssetUsagePage() {
     return availableAssets.filter((item) => isOwnRoomAsset(item, currentUser));
   }, [availableAssets, currentUser, form.usageContext]);
 
+  const roomOptions = useMemo(() => {
+    if (selectedAsset) {
+      return getAssetRoomOptions(selectedAsset);
+    }
+
+    return Array.from(
+      new Set(
+        selectableAssets.flatMap((item) => getAssetRoomOptions(item))
+      )
+    ).sort((a, b) => a.localeCompare(b, "id"));
+  }, [selectedAsset, selectableAssets]);
+
   const assetFilterCounts = useMemo(() => ({
     all: selectableAssets.length,
     medical: selectableAssets.filter((item) => item.assetType === "medical").length,
@@ -496,10 +519,11 @@ export default function AssetUsagePage() {
 
   const handleAssetChange = (inventoryKey: string) => {
     const item = assets.find((asset) => getInventoryKey(asset) === inventoryKey);
+    const nextRoomName = getAssetRoomOptions(item)[0] || getUserUsageRoom(currentUser) || "";
     setForm((prev) => ({
       ...prev,
       inventoryKey,
-      roomName: getUserUsageRoom(currentUser) || item?.roomName || item?.assetLocation || prev.roomName,
+      roomName: nextRoomName || prev.roomName,
     }));
     setIsAssetPickerOpen(false);
   };
@@ -513,14 +537,22 @@ export default function AssetUsagePage() {
     const nextAsset = currentStillVisible
       ? nextSelectableAssets.find((item) => getInventoryKey(item) === form.inventoryKey)
       : nextSelectableAssets[0];
+    const nextRoomName = getAssetRoomOptions(nextAsset)[0] || getUserUsageRoom(currentUser) || "";
 
     setForm((prev) => ({
       ...prev,
       usageContext,
       inventoryKey: nextAsset ? getInventoryKey(nextAsset) : "",
-      roomName: getUserUsageRoom(currentUser) || nextAsset?.roomName || nextAsset?.assetLocation || prev.roomName,
+      roomName: nextRoomName || prev.roomName,
     }));
   };
+
+  useEffect(() => {
+    if (!selectedAsset) return;
+    const nextRoomName = getAssetRoomOptions(selectedAsset)[0];
+    if (!nextRoomName) return;
+    setForm((prev) => (prev.roomName === nextRoomName ? prev : { ...prev, roomName: nextRoomName }));
+  }, [selectedAsset]);
 
   const handleSubmit = async () => {
     if (!selectedAsset) {
@@ -955,7 +987,19 @@ export default function AssetUsagePage() {
 
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium">Ruangan Penggunaan</label>
-                    <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
+                    {roomOptions.length > 0 ? (
+                      <select
+                        className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                        value={form.roomName}
+                        onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))}
+                      >
+                        {roomOptions.map((room) => (
+                          <option key={room} value={room}>{room}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
+                    )}
                   </div>
 
                   <div className="md:col-span-2">
