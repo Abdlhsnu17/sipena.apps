@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import { borrowingService } from "@/services/borrowing.service";
+import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
@@ -120,6 +122,38 @@ const initialForm: FormState = {
 const getInventoryKey = (item: DetailInventoryItem) => `${item.assetType}|${item.assetId}|${item.detailId}`;
 type AssetSourceFilter = "all" | "medical" | "non_medical";
 
+const activeMaintenanceStatuses = new Set(["scheduled", "in_progress", "completed"]);
+
+const getInventoryLockKey = (assetType: string | undefined, assetId: number, detailId?: string | number | null) => {
+  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical";
+  const baseKey = `${normalizedAssetType}|${assetId}`;
+  const normalizedDetailId = String(detailId || "").trim();
+  return normalizedDetailId ? `${baseKey}|${normalizedDetailId}` : baseKey;
+};
+
+const normalizeDetailIdentifier = (value?: string | number | null) => {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+};
+
+const isAssetFallbackDetailId = (
+  detailId: string | number | undefined | null,
+  assetId: number,
+  assetType?: string
+) => {
+  const normalizedDetailId = normalizeDetailIdentifier(detailId);
+  if (!normalizedDetailId) return false;
+  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical";
+  return (
+    normalizedDetailId === `asset-${assetId}` ||
+    normalizedDetailId === `asset-${normalizedAssetType}-${assetId}`
+  );
+};
+
+const isBorrowingLockRecord = (record: { status: string; returnValidatedAt?: string | null }) =>
+  ["pending", "approved", "borrowed", "overdue"].includes(record.status) ||
+  (record.status === "returned" && !record.returnValidatedAt);
+
 const normalizeLocationText = (value?: string | null) =>
   (value || "")
     .toLowerCase()
@@ -178,6 +212,9 @@ export default function AssetUsagePage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [assets, setAssets] = useState<DetailInventoryItem[]>([]);
   const [logs, setLogs] = useState<AssetUsageLog[]>([]);
+  const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set());
+  const [activeMaintenanceLocks, setActiveMaintenanceLocks] = useState<Set<string>>(new Set());
+  const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [assetSearchTerm, setAssetSearchTerm] = useState("");
@@ -209,10 +246,12 @@ export default function AssetUsagePage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [medicalAssetResponse, nonMedicalAssetResponse, usageResponse] = await Promise.all([
+      const [medicalAssetResponse, nonMedicalAssetResponse, usageResponse, maintenanceResponse, borrowingResponse] = await Promise.all([
         assetService.getAll({ page: 1, limit: 1000, type: "medical" }),
         assetService.getAll({ page: 1, limit: 1000, type: "non_medical" }),
         assetUsageService.getAll({ page: 1, limit: 1000 }),
+        maintenanceService.getAll({ page: 1, limit: 1000 }),
+        borrowingService.getAll({ page: 1, limit: 1000 }),
       ]);
 
       if (medicalAssetResponse.success || nonMedicalAssetResponse.success) {
@@ -226,9 +265,76 @@ export default function AssetUsagePage() {
 
       if (usageResponse.success) {
         setLogs(usageResponse.data);
+
+        const nextUsageLocks = new Set<string>();
+        usageResponse.data.forEach((record) => {
+          if (record.endedAt) return;
+
+          const assetType = record.assetType === "non_medical" ? "non_medical" : "medical";
+          const assetId = Number(record.assetId);
+          if (!Number.isFinite(assetId) || assetId <= 0) return;
+
+          const detailId = normalizeDetailIdentifier(record.assetDetailId);
+          if (detailId && !isAssetFallbackDetailId(detailId, assetId, assetType)) {
+            nextUsageLocks.add(getInventoryLockKey(assetType, assetId, detailId));
+            return;
+          }
+
+          nextUsageLocks.add(getInventoryLockKey(assetType, assetId));
+        });
+        setActiveUsageLocks(nextUsageLocks);
+      } else {
+        setActiveUsageLocks(new Set());
+      }
+
+      if (maintenanceResponse.success) {
+        const nextMaintenanceLocks = new Set<string>();
+        maintenanceResponse.data.forEach((record) => {
+          if (!activeMaintenanceStatuses.has(record.status)) return;
+
+          const assetType = record.assetType === "non_medical" ? "non_medical" : "medical";
+          const assetId = Number(record.assetId);
+          if (!Number.isFinite(assetId) || assetId <= 0) return;
+
+          const detailId = normalizeDetailIdentifier(record.assetDetailId);
+          if (detailId && !isAssetFallbackDetailId(detailId, assetId, assetType)) {
+            nextMaintenanceLocks.add(getInventoryLockKey(assetType, assetId, detailId));
+            return;
+          }
+
+          nextMaintenanceLocks.add(getInventoryLockKey(assetType, assetId));
+        });
+        setActiveMaintenanceLocks(nextMaintenanceLocks);
+      } else {
+        setActiveMaintenanceLocks(new Set());
+      }
+
+      if (borrowingResponse.success) {
+        const nextBorrowingLocks = new Set<string>();
+        borrowingResponse.data.forEach((record) => {
+          if (!isBorrowingLockRecord(record)) return;
+
+          const assetType = record.assetType === "non_medical" ? "non_medical" : "medical";
+          const assetId = Number(record.assetId);
+          if (!Number.isFinite(assetId) || assetId <= 0) return;
+
+          const detailId = normalizeDetailIdentifier(record.assetDetailId);
+          if (detailId && !isAssetFallbackDetailId(detailId, assetId, assetType)) {
+            nextBorrowingLocks.add(getInventoryLockKey(assetType, assetId, detailId));
+            return;
+          }
+
+          nextBorrowingLocks.add(getInventoryLockKey(assetType, assetId));
+        });
+        setActiveBorrowingLocks(nextBorrowingLocks);
+      } else {
+        setActiveBorrowingLocks(new Set());
       }
     } catch (error) {
       console.error("Error loading asset usage:", error);
+      setActiveUsageLocks(new Set());
+      setActiveMaintenanceLocks(new Set());
+      setActiveBorrowingLocks(new Set());
       toast({ title: "Gagal memuat data", description: "Data penggunaan alat belum dapat dimuat.", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -265,13 +371,29 @@ export default function AssetUsagePage() {
     [assets, form.inventoryKey]
   );
 
+  const availableAssets = useMemo(() => {
+    return assets.filter((item) => {
+      const baseKey = getInventoryLockKey(item.assetType, item.assetId);
+      const detailKey = getInventoryLockKey(item.assetType, item.assetId, item.detailId);
+
+      if (item.assetStatus === "disposed" || item.availability === "disposed") return false;
+      if (item.assetStatus === "maintenance" || item.availability === "maintenance") return false;
+      if (item.assetStatus === "borrowed" || item.availability === "borrowed") return false;
+      if (item.assetStatus === "in_use" || item.availability === "in_use") return false;
+      if (item.condition === "damaged") return false;
+      if (activeUsageLocks.has(baseKey) || activeUsageLocks.has(detailKey)) return false;
+      if (activeMaintenanceLocks.has(baseKey) || activeMaintenanceLocks.has(detailKey)) return false;
+      return !(activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey));
+    });
+  }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets]);
+
   const selectableAssets = useMemo(() => {
     if (form.usageContext === "emergency") {
-      return assets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
+      return availableAssets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
     }
-    if (form.usageContext !== "own_room") return assets;
-    return assets.filter((item) => isOwnRoomAsset(item, currentUser));
-  }, [assets, currentUser, form.usageContext]);
+    if (form.usageContext !== "own_room") return availableAssets;
+    return availableAssets.filter((item) => isOwnRoomAsset(item, currentUser));
+  }, [availableAssets, currentUser, form.usageContext]);
 
   const assetFilterCounts = useMemo(() => ({
     all: selectableAssets.length,
@@ -302,6 +424,14 @@ export default function AssetUsagePage() {
       return !normalizedSearch || searchable.includes(normalizedSearch);
     });
   }, [assetSearchTerm, assetSourceFilter, selectableAssets]);
+
+  useEffect(() => {
+    if (!form.inventoryKey) return;
+    const currentStillSelectable = selectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey);
+    if (currentStillSelectable) return;
+
+    setForm((prev) => ({ ...prev, inventoryKey: "" }));
+  }, [form.inventoryKey, selectableAssets]);
 
   const filteredLogs = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -348,9 +478,9 @@ export default function AssetUsagePage() {
 
   const handleUsageContextChange = (usageContext: AssetUsageContext) => {
     let nextSelectableAssets: DetailInventoryItem[];
-    if (usageContext === "emergency") nextSelectableAssets = assets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
-    else if (usageContext === "own_room") nextSelectableAssets = assets.filter((item) => isOwnRoomAsset(item, currentUser));
-    else nextSelectableAssets = assets;
+    if (usageContext === "emergency") nextSelectableAssets = availableAssets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
+    else if (usageContext === "own_room") nextSelectableAssets = availableAssets.filter((item) => isOwnRoomAsset(item, currentUser));
+    else nextSelectableAssets = availableAssets;
     const currentStillVisible = nextSelectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey);
     const nextAsset = currentStillVisible
       ? nextSelectableAssets.find((item) => getInventoryKey(item) === form.inventoryKey)
@@ -367,6 +497,14 @@ export default function AssetUsagePage() {
   const handleSubmit = async () => {
     if (!selectedAsset) {
       toast({ title: "Pilih alat", description: "Alat yang digunakan wajib dipilih.", variant: "destructive" });
+      return;
+    }
+    if (!selectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey)) {
+      toast({
+        title: "Alat tidak tersedia",
+        description: "Alat sedang digunakan, dipinjam, dalam pemeliharaan, atau tidak aktif.",
+        variant: "destructive",
+      });
       return;
     }
     if (!form.roomName.trim()) {
