@@ -755,44 +755,36 @@ export default function AssetUsagePage() {
         </div>
       </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
-          <CardContent className="flex items-start justify-between gap-2 p-2">
-            <div>
-              <p className="text-[12px] text-muted-foreground">Total Pemakaian</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{summary.totalUsage}</p>
-            </div>
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-              <Activity className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
-          <CardContent className="flex items-start justify-between gap-2 p-2">
-            <div>
-              <p className="text-[12px] text-muted-foreground">Alat Terpakai</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{summary.uniqueAssets}</p>
-            </div>
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-              <ClipboardPlus className="h-4 w-4" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-slate-200/80 bg-white/90 shadow-sm">
-          <CardContent className="flex items-start justify-between gap-2 p-2">
-            <div className="min-w-0">
-              <p className="text-[12px] text-muted-foreground">Paling Sering</p>
-              <p className="mt-1 truncate text-sm font-semibold text-slate-900">{summary.topAsset?.label || "-"}</p>
-              <p className="text-xs text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
-            </div>
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
-              <Check className="h-4 w-4" />
+        <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
+          <CardContent className="p-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
+                <div>
+                  <p className="text-[12px] text-muted-foreground">Total Pemakaian</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.totalUsage}</p>
+                </div>
+                <Activity className="h-4 w-4 shrink-0 text-amber-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
+                <div>
+                  <p className="text-[12px] text-muted-foreground">Alat Terpakai</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.uniqueAssets}</p>
+                </div>
+                <ClipboardPlus className="h-4 w-4 shrink-0 text-teal-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-cyan-50/50 p-3 dark:bg-cyan-950/30">
+                <div className="min-w-0">
+                  <p className="text-[12px] text-muted-foreground">Paling Sering</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-foreground">{summary.topAsset?.label || "-"}</p>
+                  <p className="text-xs text-slate-600">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
+                </div>
+                <Check className="h-4 w-4 shrink-0 text-cyan-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        </div>
-      </div>
 
       <div className="flex flex-col gap-4">
         <Card>
