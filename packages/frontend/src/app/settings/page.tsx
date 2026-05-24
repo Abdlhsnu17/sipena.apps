@@ -534,16 +534,16 @@ export default function SettingsPage() {
               <CardContent className="grid gap-3">
                 <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nama Sistem</p>
-                    <p className="text-sm font-semibold leading-6 text-foreground">
+                    <p className="text-sm font-semibold text-foreground">Nama Sistem</p>
+                    <p className="text-sm leading-6 text-muted-foreground">
                       Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
                     </p>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal Hari Ini</p>
-                    <p className="text-sm font-semibold text-foreground">24/5/2026</p>
+                    <p className="text-sm font-semibold text-foreground">Tanggal Hari Ini</p>
+                    <p className="text-sm text-muted-foreground">24/5/2026</p>
                   </div>
                 </div>
               </CardContent>

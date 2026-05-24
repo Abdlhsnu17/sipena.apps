@@ -199,6 +199,13 @@ const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnV
 const resolveOwnerWorkUnitForAsset = (asset?: BorrowableAsset | null) =>
   asset?.roomName || asset?.assetLocation || asset?.assetName || ""
 
+const resolveDefaultDestinationRoom = (currentUser?: User | null) => {
+  const subWorkUnit = currentUser?.subWorkUnit?.trim()
+  if (subWorkUnit) return subWorkUnit
+  const workUnit = currentUser?.workUnit?.trim()
+  return workUnit || ""
+}
+
 const getDefaultFormData = (currentUser?: User | null) => ({
   assetId: "",
   assetType: "medical" as "medical" | "non_medical",
@@ -215,7 +222,7 @@ const getDefaultFormData = (currentUser?: User | null) => ({
   ownerPosition: "",
   ownerWorkUnit: "",
   purposeType: "inside_hospital" as "inside_hospital" | "outside_hospital",
-  destinationRoom: "",
+  destinationRoom: resolveDefaultDestinationRoom(currentUser),
   purpose: "",
   quantity: "1",
   notes: "",
@@ -454,6 +461,10 @@ export default function BorrowingPage() {
       ...prev,
       borrowerPosition: prev.borrowerPosition || getUserRoleLabel(currentUser.role),
       borrowerWorkUnit: prev.borrowerWorkUnit || currentUser.workUnit || "",
+      destinationRoom:
+        prev.purposeType === "inside_hospital"
+          ? prev.destinationRoom || resolveDefaultDestinationRoom(currentUser)
+          : prev.destinationRoom,
     }))
   }, [currentUser])
 
@@ -1910,9 +1921,19 @@ export default function BorrowingPage() {
                     <select
                       value={formData.purposeType}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          purposeType: e.target.value as "inside_hospital" | "outside_hospital",
+                        setFormData((prev) => {
+                          const purposeType = e.target.value as "inside_hospital" | "outside_hospital"
+                          if (purposeType === "inside_hospital") {
+                            return {
+                              ...prev,
+                              purposeType,
+                              destinationRoom: prev.destinationRoom || resolveDefaultDestinationRoom(currentUser),
+                            }
+                          }
+                          return {
+                            ...prev,
+                            purposeType,
+                          }
                         })
                       }
                       className="w-full rounded-2xl border border-border/80 bg-background px-3 py-2 text-[14px] text-foreground transition focus:border-teal-500"
