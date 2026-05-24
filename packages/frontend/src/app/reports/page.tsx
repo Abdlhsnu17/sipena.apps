@@ -505,36 +505,48 @@ export default function ReportsPage() {
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-teal-50/80 via-cyan-100/60 to-blue-50/80 shadow-md">
             <CardHeader className="border-b border-teal-200/50">
-              <CardTitle>Ringkasan Penggunaan Alat</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-teal-700">
+                Ringkasan Penggunaan Alat
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-col gap-2 rounded-2xl border border-teal-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-medium text-foreground">Total penggunaan</span>
-                <Badge className="bg-teal-100 text-teal-700 border-0">{totalUsageCount.toLocaleString("id-ID")}</Badge>
+                <span className="text-[9px] font-medium leading-tight text-foreground">Total penggunaan</span>
+                <Badge className="border-0 bg-teal-100 px-1.5 py-0 text-[9px] font-medium leading-none text-teal-700">
+                  {totalUsageCount.toLocaleString("id-ID")}
+                </Badge>
               </div>
               <div className="flex flex-col gap-2 rounded-2xl border border-cyan-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-medium text-foreground">Alat terpakai</span>
-                <Badge className="bg-cyan-100 text-cyan-700 border-0">{assetUsageLogs.length > 0 ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size : 0}</Badge>
+                <span className="text-[9px] font-medium leading-tight text-foreground">Alat terpakai</span>
+                <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[9px] font-medium leading-none text-cyan-700">
+                  {assetUsageLogs.length > 0 ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size : 0}
+                </Badge>
               </div>
               <div className="flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-medium text-foreground">Konteks terbanyak</span>
-                <Badge className="bg-emerald-100 text-emerald-700 border-0">{topUsageContext ? `${topUsageContext.context} (${topUsageContext.total})` : "Belum ada data"}</Badge>
+                <span className="text-[9px] font-medium leading-tight text-foreground">Konteks terbanyak</span>
+                <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[9px] font-medium leading-none text-emerald-700">
+                  {topUsageContext ? `${topUsageContext.context} (${topUsageContext.total})` : "Belum ada data"}
+                </Badge>
               </div>
               <div className="flex flex-col gap-2 rounded-2xl border border-blue-200 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-medium text-foreground">Aset paling sering dipakai</span>
-                <Badge className="bg-blue-100 text-blue-700 border-0">{topUsedAsset ? `${topUsedAsset.label} (${topUsedAsset.count})` : "Belum ada data"}</Badge>
+                <span className="text-[9px] font-medium leading-tight text-foreground">Aset paling sering dipakai</span>
+                <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[9px] font-medium leading-none text-blue-700">
+                  {topUsedAsset ? `${topUsedAsset.label} (${topUsedAsset.count})` : "Belum ada data"}
+                </Badge>
               </div>
             </CardContent>
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-teal-100/60 to-green-50/80 shadow-md lg:col-span-2">
             <CardHeader className="border-b border-cyan-200/50">
-              <CardTitle>Pemeliharaan Per Ruangan</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-cyan-700">
+                Pemeliharaan Per Ruangan
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {monthlyDataByLocation.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Tidak ada data pemeliharaan</p>
+                  <p className="text-[9px] text-muted-foreground">Tidak ada data pemeliharaan</p>
                 ) : (
                   monthlyDataByLocation.map((item, idx) => {
                     const colors = [
@@ -552,9 +564,9 @@ export default function ReportsPage() {
                     return (
                       <div key={item.location} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{item.location}</span>
+                          <span className="font-medium text-[9px] leading-tight">{item.location}</span>
                         </div>
-                        <Badge className="bg-current/20 text-current border-0 text-xs">{totalMaintenance} kali</Badge>
+                        <Badge className="border-0 bg-current/20 px-1.5 py-0 text-[9px] font-medium leading-none text-current">{totalMaintenance} kali</Badge>
                       </div>
                     )
                   }))}
@@ -566,14 +578,16 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="rounded-3xl border-0 bg-linear-to-br from-emerald-50/80 via-green-100/60 to-teal-50/80 shadow-md lg:col-span-2">
             <CardHeader className="border-b border-emerald-200/50">
-              <CardTitle>Penggunaan Alat Per Ruangan</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-emerald-700">
+                Penggunaan Alat Per Ruangan
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ left: 16, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
                   <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="room" type="category" width={150} tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="room" type="category" width={130} tick={{ fontSize: 9 }} />
                   <Tooltip />
                   <Bar dataKey="total" fill="#059669" name="Total Pemakaian" />
                 </BarChart>
@@ -583,44 +597,48 @@ export default function ReportsPage() {
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md">
             <CardHeader className="border-b border-violet-200/50">
-              <CardTitle>Akumulasi Tahunan</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-violet-700">
+                Akumulasi Tahunan
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={usageYearData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
-                  <XAxis dataKey="year" />
-                  <YAxis allowDecimals={false} />
+                  <XAxis dataKey="year" tick={{ fontSize: 9 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 9 }} />
                   <Tooltip />
                   <Bar dataKey="total" fill="#7c3aed" name="Total Tahunan" />
                 </BarChart>
               </ResponsiveContainer>
               <div className="space-y-3">
                 <div className="rounded-2xl border border-violet-200 bg-white/80 p-3">
-                  <p className="text-xs text-muted-foreground">Ruangan terdata</p>
-                  <p className="text-lg font-semibold">{usageRoomData.length}</p>
+                  <p className="text-[9px] text-muted-foreground">Ruangan terdata</p>
+                  <p className="text-[9px] font-semibold leading-tight">{usageRoomData.length}</p>
                 </div>
                 <div className="rounded-2xl border border-fuchsia-200 bg-white/80 p-3">
-                  <p className="text-xs text-muted-foreground">Tahun tertinggi</p>
-                  <p className="text-lg font-semibold">{usageYearTop ? `${usageYearTop.year} (${usageYearTop.total})` : "Belum ada data"}</p>
+                  <p className="text-[9px] text-muted-foreground">Tahun tertinggi</p>
+                  <p className="text-[9px] font-semibold leading-tight">{usageYearTop ? `${usageYearTop.year} (${usageYearTop.total})` : "Belum ada data"}</p>
                 </div>
                 <div className="rounded-2xl border border-pink-200 bg-white/80 p-3">
-                  <p className="text-xs text-muted-foreground">Ruangan terpadat</p>
-                  <p className="text-lg font-semibold">{usageRoomTop ? `${usageRoomTop.room} (${usageRoomTop.total})` : "Belum ada data"}</p>
+                  <p className="text-[9px] text-muted-foreground">Ruangan terpadat</p>
+                  <p className="text-[9px] font-semibold leading-tight">{usageRoomTop ? `${usageRoomTop.room} (${usageRoomTop.total})` : "Belum ada data"}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          <Card className="rounded-3xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          <Card className="rounded-3xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md lg:col-span-2">
             <CardHeader className="border-b border-blue-200/50">
-              <CardTitle>Inventaris Paling Sering Dipelihara</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-blue-700">
+                Inventaris Paling Sering Dipelihara
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {maintenance.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Tidak ada data</p>
+                <p className="text-[9px] text-muted-foreground">Tidak ada data</p>
               ) : (
                 <div className="space-y-2">
                   {[...new Set(maintenance.map((m) => m.assetDetailName || m.assetName))]
@@ -640,9 +658,9 @@ export default function ReportsPage() {
                       ]
                       const colorClass = colors[idx % colors.length]
                       return (
-                        <div key={idx} className={`flex flex-col gap-1.5 rounded-lg border px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between ${colorClass}`}>
-                          <span className="truncate font-medium text-[12px] leading-tight">{item.name}</span>
-                          <Badge className="bg-current/20 text-current border-0 px-1.5 py-0 text-[11px] font-medium leading-none">
+                        <div key={idx} className={`flex flex-col gap-1.5 rounded-lg border px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between ${colorClass}`}>
+                            <span className="truncate font-medium text-[9px] leading-tight">{item.name}</span>
+                            <Badge className="bg-current/20 text-current border-0 px-1.5 py-0 text-[9px] font-medium leading-none">
                             {item.count}x
                           </Badge>
                         </div>
@@ -655,29 +673,31 @@ export default function ReportsPage() {
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-rose-50/80 via-pink-100/60 to-red-50/80 shadow-md">
             <CardHeader className="border-b border-rose-200/50">
-              <CardTitle>Statistik Peminjaman</CardTitle>
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-rose-700">
+                Statistik Peminjaman
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex flex-col gap-1 rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[12px] font-medium leading-tight text-foreground">Total Peminjaman</span>
-                  <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[11px] font-medium leading-none text-blue-700">{borrowings.length}</Badge>
+                <div className="flex flex-col gap-1 rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[9px] font-medium leading-tight text-foreground">Total Peminjaman</span>
+                  <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[9px] font-medium leading-none text-blue-700">{borrowings.length}</Badge>
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[12px] font-medium leading-tight text-foreground">Sedang Dipinjam</span>
-                  <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[11px] font-medium leading-none text-emerald-700">
+                <div className="flex flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[9px] font-medium leading-tight text-foreground">Sedang Dipinjam</span>
+                  <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[9px] font-medium leading-none text-emerald-700">
                     {borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-cyan-200 bg-cyan-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[12px] font-medium leading-tight text-foreground">Dikembalikan</span>
-                  <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[11px] font-medium leading-none text-cyan-700">
+                <div className="flex flex-col gap-1 rounded-lg border border-cyan-200 bg-cyan-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[9px] font-medium leading-tight text-foreground">Dikembalikan</span>
+                  <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[9px] font-medium leading-none text-cyan-700">
                     {borrowings.filter((b) => b.status === "returned").length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border border-red-200 bg-red-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[12px] font-medium leading-tight text-foreground">Terlambat</span>
-                  <Badge className="border-0 bg-red-100 px-1.5 py-0 text-[11px] font-medium leading-none text-red-700">
+                <div className="flex flex-col gap-1 rounded-lg border border-red-200 bg-red-50/50 px-2 py-1.5 text-[9px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[9px] font-medium leading-tight text-foreground">Terlambat</span>
+                  <Badge className="border-0 bg-red-100 px-1.5 py-0 text-[9px] font-medium leading-none text-red-700">
                     {borrowings.filter((b) => b.status === "overdue").length}
                   </Badge>
                 </div>
