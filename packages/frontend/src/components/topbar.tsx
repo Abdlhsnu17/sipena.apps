@@ -1,19 +1,19 @@
 "use client"
 
-import { Bell, Search } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { Bell, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
-import { borrowingService } from "@/services/borrowing.service"
-import { maintenanceService } from "@/services/maintenance.service"
+import { borrowingService } from "@/services/borrowing.service";
+import { maintenanceService } from "@/services/maintenance.service";
 import {
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
     maintenanceStatusLabel,
-} from "@/utils/api-mappers"
-import { formatDateId } from "@/utils/format"
-import { formatNoId } from "@/utils/record-id"
+} from "@/utils/api-mappers";
+import { formatDateId } from "@/utils/format";
+import { formatNoId } from "@/utils/record-id";
 
 import {
     DropdownMenu,
@@ -22,9 +22,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { getAuthToken, isLocalAuthSession } from "@/services/auth-utils"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { getAuthToken, isLocalAuthSession } from "@/services/auth-utils";
 
 type NotificationItem = {
   id: string
@@ -44,8 +44,8 @@ type NotificationItem = {
 const categoryLabelByKey: Record<NotificationItem["category"], string> = {
   schedule: "Pemeliharaan Sarana",
   maintenance: "Pemeliharaan Sarana",
-  borrowing: "Peminjaman Alat",
-  returns: "Pengembalian Alat",
+  borrowing: "Peminjaman Inventaris",
+  returns: "Pengembalian Inventaris",
 }
 
 const getIdentityLabel = (name?: string, nip?: string) => {

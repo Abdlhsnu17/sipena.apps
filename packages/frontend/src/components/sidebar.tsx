@@ -1,21 +1,21 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { buildLoginRedirectUrl, isLocalAuthSession } from "@/services/auth-utils"
-import type { User } from "@/services/auth.service"
-import authService from "@/services/auth.service"
-import userActivityService, { type UserActivity } from "@/services/user-activity.service"
-import { cn } from "@/utils"
-import { getFeatureLabel } from "@/utils/feature-presentation"
-import { toPublicPhotoUrl } from "@/utils/photoUrl"
-import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { buildLoginRedirectUrl, isLocalAuthSession } from "@/services/auth-utils";
+import type { User } from "@/services/auth.service";
+import authService from "@/services/auth.service";
+import userActivityService, { type UserActivity } from "@/services/user-activity.service";
+import { cn } from "@/utils";
+import { getFeatureLabel } from "@/utils/feature-presentation";
+import { toPublicPhotoUrl } from "@/utils/photoUrl";
+import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role";
 import {
     BarChart3,
     Building,
     Calendar,
-    ClipboardList,
     ChevronDown,
+    ClipboardList,
     Clock3,
     FileText,
     HandHelping,
@@ -30,11 +30,11 @@ import {
     Stethoscope,
     Users,
     X
-} from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, type ComponentType, type SyntheticEvent } from "react"
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, type ComponentType, type SyntheticEvent } from "react";
 
 
 
@@ -420,12 +420,12 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
-    { href: "/asset-usage", label: "Penggunaan Alat", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "ruangan", "log"] },
+    { href: "/asset-usage", label: "Penggunaan Inventaris", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
     { href: "/users", label: "Manajemen Pengguna", icon: Users, iconColor: "text-amber-600", searchKeywords: ["pengguna", "user", "nip", "nik", "akun"] },
-    { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
+    { href: "/borrowing", label: "Peminjaman Inventaris", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
-    { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/returns", label: "Pengembalian Inventaris", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const staffLinks: SidebarLink[] = [
@@ -434,10 +434,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
-    { href: "/asset-usage", label: "Penggunaan Alat", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "ruangan", "log"] },
+    { href: "/asset-usage", label: "Penggunaan Inventaris", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/borrowing", label: "Peminjaman Inventaris", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
+    { href: "/returns", label: "Pengembalian Inventaris", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
@@ -447,10 +447,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
-    { href: "/asset-usage", label: "Penggunaan Alat", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "ruangan", "log"] },
+    { href: "/asset-usage", label: "Penggunaan Inventaris", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/borrowing", label: "Peminjaman Inventaris", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
+    { href: "/returns", label: "Pengembalian Inventaris", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
@@ -466,9 +466,9 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
-    { href: "/asset-usage", label: "Penggunaan Alat", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "ruangan", "log"] },
-    { href: "/borrowing", label: "Peminjaman Alat", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian Alat", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/asset-usage", label: "Penggunaan Inventaris", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
+    { href: "/borrowing", label: "Peminjaman Inventaris", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
+    { href: "/returns", label: "Pengembalian Inventaris", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 

@@ -181,6 +181,7 @@ export class BorrowingService {
   }
 
   private async ensureUsageLogForBorrowing(data: {
+    borrowingId?: string | number | null;
     assetId: number;
     assetType: string;
     assetDetailId?: string | null;
@@ -197,6 +198,15 @@ export class BorrowingService {
     const assetId = Number(data.assetId);
     const assetType = data.assetType || 'medical';
     const detailId = this.normalizeDetailIdentifier(data.assetDetailId);
+    const borrowingId = data.borrowingId ? Number(data.borrowingId) : null;
+
+    if (borrowingId) {
+      const [existingUsageRows] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM asset_usage_logs WHERE borrowing_id = ? LIMIT 1',
+        [borrowingId]
+      );
+      if (existingUsageRows.length > 0) return;
+    }
 
     if (await this.hasActiveUsage(assetId, assetType, detailId || null)) {
       return;
@@ -215,6 +225,7 @@ export class BorrowingService {
     if (!actorId) return;
 
     const usageResponse = await this.assetUsageService.create({
+      borrowingId: borrowingId || undefined,
       assetId,
       assetType: assetType as any,
       assetDetailId: detailId || undefined,
@@ -237,6 +248,7 @@ export class BorrowingService {
   }
 
   private async completeUsageLogForBorrowing(data: {
+    borrowingId?: string | number | null;
     assetId: number;
     assetType: string;
     assetDetailId?: string | null;
@@ -249,6 +261,7 @@ export class BorrowingService {
     const detailWhere = this.buildUsageDetailWhere(assetId, assetType, data.assetDetailId);
     const operatorId = data.operatorUserId ? Number(data.operatorUserId) : null;
     const operatorClause = operatorId ? 'AND operator_user_id = ?' : '';
+    const borrowingId = data.borrowingId ? Number(data.borrowingId) : null;
     const params = [
       assetId,
       assetType,
@@ -256,7 +269,21 @@ export class BorrowingService {
       ...(operatorId ? [operatorId] : [])
     ];
 
-    let [rows] = await pool.query<ActiveUsageRow[]>(
+    let rows: ActiveUsageRow[] = [];
+
+    if (borrowingId) {
+      [rows] = await pool.query<ActiveUsageRow[]>(
+        `SELECT id, ended_at
+         FROM asset_usage_logs
+         WHERE borrowing_id = ?
+         ORDER BY COALESCE(ended_at, started_at) DESC, created_at DESC
+         LIMIT 1`,
+        [borrowingId]
+      );
+    }
+
+    if (rows.length === 0) {
+      [rows] = await pool.query<ActiveUsageRow[]>(
       `SELECT id, ended_at
        FROM asset_usage_logs
        WHERE asset_id = ?
@@ -266,8 +293,9 @@ export class BorrowingService {
          ${operatorClause}
        ORDER BY started_at DESC, created_at DESC
        LIMIT 1`,
-      params
-    );
+        params
+      );
+    }
 
     if (rows.length === 0) {
       [rows] = await pool.query<ActiveUsageRow[]>(
@@ -1128,6 +1156,7 @@ export class BorrowingService {
 
     try {
       await this.ensureUsageLogForBorrowing({
+        borrowingId: result.insertId,
         assetId: Number(data.assetId),
         assetType,
         assetDetailId: detailId || null,
@@ -1235,6 +1264,7 @@ export class BorrowingService {
       const startedAt = normalizeDateInput(borrowing.data.borrowDate) || new Date();
 
       await this.ensureUsageLogForBorrowing({
+        borrowingId: borrowing.data.id,
         assetId,
         assetType,
         assetDetailId: borrowing.data.assetDetailId || null,
@@ -1410,6 +1440,7 @@ export class BorrowingService {
 
     try {
       await this.completeUsageLogForBorrowing({
+        borrowingId: id,
         assetId,
         assetType,
         assetDetailId,
@@ -1582,6 +1613,7 @@ export class BorrowingService {
           : normalizeDateInput(borrowingRow.borrowDate) || new Date();
 
         await this.ensureUsageLogForBorrowing({
+          borrowingId: id,
           assetId,
           assetType,
           assetDetailId: borrowingRow.assetDetailId || borrowingRow.asset_detail_id || null,
@@ -1623,6 +1655,7 @@ export class BorrowingService {
 
       try {
         await this.completeUsageLogForBorrowing({
+          borrowingId: id,
           assetId,
           assetType,
           assetDetailId,

@@ -512,6 +512,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
     await pool.query(`
       CREATE TABLE asset_usage_logs (
         \`no\` VARCHAR(50) DEFAULT NULL,
+        borrowing_id INT(11) DEFAULT NULL,
         id INT(11) NOT NULL AUTO_INCREMENT,
         asset_id INT(11) NOT NULL,
         asset_type VARCHAR(20) NOT NULL DEFAULT 'medical',
@@ -533,6 +534,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
         PRIMARY KEY (id),
         UNIQUE KEY \`uniq_asset_usage_no\` (\`no\`),
+        KEY idx_asset_usage_borrowing (borrowing_id),
         KEY idx_asset_usage_asset (asset_type, asset_id, asset_detail_id),
         KEY idx_asset_usage_room_started (room_name, started_at),
         KEY idx_asset_usage_operator (operator_user_id),
@@ -541,6 +543,15 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
         CONSTRAINT fk_asset_usage_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+  }
+
+  const existingColumns = await getExistingColumns('asset_usage_logs', ['borrowing_id']);
+  if (!existingColumns.has('borrowing_id')) {
+    await pool.query('ALTER TABLE asset_usage_logs ADD COLUMN borrowing_id INT(11) DEFAULT NULL AFTER `no`');
+  }
+
+  if (!(await hasIndex('asset_usage_logs', 'idx_asset_usage_borrowing'))) {
+    await pool.query('CREATE INDEX idx_asset_usage_borrowing ON asset_usage_logs (borrowing_id)');
   }
 
   ensuredAssetUsageLogsTable = true;

@@ -50,14 +50,14 @@ const getDetailInventoryKey = (asset: DetailInventoryItem, index?: number) => {
 
 const buildRepairNoteTemplate = (asset?: DetailInventoryItem | null) => {
   const assetLabel = asset ? formatAssetLabel(asset) : ""
-  const alatLine = assetLabel ? `Alat: ${assetLabel}` : ""
-  return `\n\n${alatLine}`
+  const inventarisLine = assetLabel ? `Inventaris: ${assetLabel}` : ""
+  return `\n\n${inventarisLine}`
 }
 
 const CANCELLATION_REASON_OPTIONS = [
   "Salah input",
   "Jadwal berubah",
-  "Alat masih layak pakai",
+  "Inventaris masih layak pakai",
 ]
 
 const STATUS_OPTIONS = [

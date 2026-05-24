@@ -241,7 +241,7 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   },
   {
     key: "namaAlat",
-    label: "Nama Alat",
+    label: "Nama Inventaris",
     getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
     defaultSelected: true,
   },
@@ -259,7 +259,7 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   },
   {
     key: "ruanganAlat",
-    label: "Nama Ruangan Alat",
+    label: "Nama Ruangan Inventaris",
     getValue: (borrowing) => borrowing.assetLocation || "-",
     defaultSelected: true,
   },
@@ -302,19 +302,19 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
   },
   {
     key: "pemilikAlat",
-    label: "Pemilik Alat",
+    label: "Pemilik Inventaris",
     getValue: (borrowing) => borrowing.ownerName || "-",
     defaultSelected: true,
   },
   {
     key: "jabatanPemilikAlat",
-    label: "Jabatan Pemilik Alat",
+    label: "Jabatan Pemilik Inventaris",
     getValue: (borrowing) => borrowing.ownerPosition || "-",
     defaultSelected: true,
   },
   {
     key: "unitPemilikAlat",
-    label: "Unit Pemilik Alat",
+    label: "Unit Pemilik Inventaris",
     getValue: (borrowing) => borrowing.ownerWorkUnit || "-",
     defaultSelected: true,
   },
@@ -1176,10 +1176,10 @@ export default function BorrowingPage() {
         appendLine(identities, "Jenis Inventaris", assetTypeLabel)
       }
       if (columnSet.has("namaAlat")) {
-        appendLine(identities, "Nama Alat", assetName)
+        appendLine(identities, "Nama Inventaris", assetName)
       }
       if (columnSet.has("kode")) {
-        appendLine(identities, "Kode Alat", assetCode)
+        appendLine(identities, "Kode Inventaris", assetCode)
       }
       if (columnSet.has("merek")) {
         const brandModel = detail?.detailBrandModel || detail?.detailName || ""
@@ -1188,7 +1188,7 @@ export default function BorrowingPage() {
         }
       }
       if (columnSet.has("ruanganAlat")) {
-        appendLine(identities, "Nama Ruangan Alat", assetRoom)
+        appendLine(identities, "Nama Ruangan Inventaris", assetRoom)
       }
 
       const details: SectionLine[] = []
@@ -1228,13 +1228,13 @@ export default function BorrowingPage() {
 
       const ownerLines: SectionLine[] = []
       if (columnSet.has("pemilikAlat")) {
-        appendLine(ownerLines, "Nama Pemilik Alat", ownerName)
+        appendLine(ownerLines, "Nama Pemilik Inventaris", ownerName)
       }
       if (columnSet.has("jabatanPemilikAlat") && ownerPosition !== "-") {
-        appendLine(ownerLines, "Jabatan Pemilik Alat", ownerPosition)
+        appendLine(ownerLines, "Jabatan Pemilik Inventaris", ownerPosition)
       }
       if (columnSet.has("unitPemilikAlat")) {
-        appendLine(ownerLines, "Unit Pemilik Alat", ownerWorkUnit)
+        appendLine(ownerLines, "Unit Pemilik Inventaris", ownerWorkUnit)
       }
 
       const logLines: SectionLine[] = []
@@ -1272,7 +1272,7 @@ export default function BorrowingPage() {
     const rowsToExport = selectedBorrowings.length ? selectedBorrowings : filteredBorrowings
     if (!rowsToExport.length) return
     void exportNarrativeReport(format, {
-      title: "Daftar Peminjaman Alat",
+      title: "Daftar Peminjaman Inventaris",
       subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
       entries: rowsToExport,
       filePrefix: "daftar-peminjaman",
@@ -1620,9 +1620,9 @@ export default function BorrowingPage() {
                   <HandHelping className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman Alat</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman Inventaris</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Audit, validasi, dan monitoring status alat dalam satu halaman.
+                    Audit, validasi, dan monitoring status inventaris dalam satu halaman.
                   </p>
 
                 </div>
@@ -1742,7 +1742,7 @@ export default function BorrowingPage() {
                     selectedSummaryLabel={(assets) => `${assets.length} inventaris dipilih`}
                     renderItemMeta={(asset) => (
                       <span>
-                        {getEffectiveAvailabilityLabel(asset)} · Kondisi: {getConditionLabel(asset)}
+                        Status: {getEffectiveAvailabilityLabel(asset)} · Kondisi: {getConditionLabel(asset)}
                       </span>
                     )}
                     disabled={hasBorrowingOverdueBlock}
@@ -1750,7 +1750,7 @@ export default function BorrowingPage() {
                   <p className="mt-2 text-[12px] text-muted-foreground">
                     {hasBorrowingOverdueBlock
                       ? "Pemilihan inventaris dikunci karena Anda masih memiliki peminjaman terlambat."
-                      : "Anda bisa memilih beberapa inventaris sekaligus dalam satu form peminjaman."}
+                      : "Pilih inventaris yang akan dipinjam."}
                   </p>
                   {selectedBorrowableAssets.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -1865,7 +1865,7 @@ export default function BorrowingPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-[14px] font-medium mb-1">Nama Pemilik Alat</label>
+                    <label className="block text-[14px] font-medium mb-1">Nama Pemilik Inventaris</label>
                     <Input
                       value={formData.ownerName}
                       onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
@@ -1874,7 +1874,7 @@ export default function BorrowingPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[14px] font-medium mb-1">Jabatan Pemilik Alat</label>
+                    <label className="block text-[14px] font-medium mb-1">Jabatan Pemilik Inventaris</label>
                     <Input
                       value={formData.ownerPosition}
                       onChange={(e) => setFormData({ ...formData, ownerPosition: e.target.value })}
@@ -1883,7 +1883,7 @@ export default function BorrowingPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-[14px] font-medium mb-1">Unit Kerja Pemilik Alat</label>
+                    <label className="block text-[14px] font-medium mb-1">Unit Kerja Pemilik Inventaris</label>
                     <Input
                       value={derivedOwnerWorkUnitLabel}
                       onChange={(e) => setFormData({ ...formData, ownerWorkUnit: e.target.value })}
@@ -1894,7 +1894,7 @@ export default function BorrowingPage() {
                     <p className="mt-1 text-[12px] text-muted-foreground">
                       {selectedBorrowableAssets.length > 0
                         ? "Nilai ini otomatis mengikuti ruangan/lokasi inventaris yang dipilih agar data peminjaman tetap sinkron."
-                        : "Pilih inventaris terlebih dahulu agar unit kerja pemilik alat terisi otomatis."}
+                        : "Pilih inventaris terlebih dahulu agar unit kerja pemilik inventaris terisi otomatis."}
                     </p>
                   </div>
                   <div>
@@ -2392,21 +2392,21 @@ export default function BorrowingPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Nama Pemilik Alat</label>
+                  <label className="text-[13px] font-medium text-muted-foreground">Nama Pemilik Inventaris</label>
                   <Input
                     value={editForm.ownerName}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, ownerName: event.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Jabatan Pemilik Alat</label>
+                  <label className="text-[13px] font-medium text-muted-foreground">Jabatan Pemilik Inventaris</label>
                   <Input
                     value={editForm.ownerPosition}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, ownerPosition: event.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Unit Kerja Pemilik Alat</label>
+                  <label className="text-[13px] font-medium text-muted-foreground">Unit Kerja Pemilik Inventaris</label>
                   <Input
                     value={editForm.ownerWorkUnit}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, ownerWorkUnit: event.target.value }))}

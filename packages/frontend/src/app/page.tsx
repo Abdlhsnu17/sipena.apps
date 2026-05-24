@@ -323,18 +323,20 @@ export default function DashboardPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">
-                  {stats.totalNonMedicalAssets.toLocaleString("id-ID")}
+                  {stats.activeNonMedicalAssets.toLocaleString("id-ID")}
                 </div>
                 <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-teal-600 border-teal-300 bg-teal-50/70">
-                  Total Alat
+                  Ruangan Aktif
                 </Badge>
               </div>
-              <p className="text-sm text-foreground/70">Alat non medis terdaftar</p>
+              <p className="text-sm text-foreground/70">
+                Ruangan tercatat
+              </p>
               <div className="rounded-2xl border border-teal-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span>Ruangan aktif</span>
+                  <span>Detail inventaris terinput</span>
                   <span className="text-muted-foreground">
-                    {stats.activeNonMedicalAssets.toLocaleString("id-ID")}
+                    {stats.nonMedicalDetailsCount.toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>
@@ -351,18 +353,20 @@ export default function DashboardPage() {
             <CardContent className="space-y-2">
               <div className="space-y-2">
                 <div className="text-3xl font-semibold tracking-tight text-muted-foreground sm:text-4xl">
-                  {stats.totalMedicalAssets.toLocaleString("id-ID")}
+                  {stats.activeMedicalAssets.toLocaleString("id-ID")}
                 </div>
                 <Badge variant="outline" className="max-w-full text-[10px] uppercase tracking-[0.28em] text-cyan-600 border-cyan-300 bg-cyan-50/70">
-                  Total Alat
+                  Ruangan Aktif
                 </Badge>
               </div>
-              <p className="text-sm text-foreground/70">Alat medis terdaftar</p>
+              <p className="text-sm text-foreground/70">
+                Ruangan tercatat
+              </p>
               <div className="rounded-2xl border border-cyan-200/70 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span>Ruangan aktif</span>
+                  <span>Detail inventaris terinput</span>
                   <span className="text-muted-foreground">
-                    {stats.activeMedicalAssets.toLocaleString("id-ID")}
+                    {stats.medicalDetailsCount.toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>

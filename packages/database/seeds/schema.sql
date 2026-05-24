@@ -144,6 +144,8 @@ CREATE TABLE `jadwal_pemeliharaan` (
 
 CREATE TABLE `asset_usage_logs` (
   `id` int(11) NOT NULL,
+  `no` varchar(50) DEFAULT NULL,
+  `borrowing_id` int(11) DEFAULT NULL,
   `asset_id` int(11) NOT NULL,
   `asset_type` varchar(20) NOT NULL DEFAULT 'medical',
   `asset_detail_id` varchar(100) DEFAULT NULL,
@@ -501,6 +503,8 @@ ALTER TABLE `borrowing_records`
 --
 ALTER TABLE `asset_usage_logs`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_asset_usage_no` (`no`),
+  ADD KEY `idx_asset_usage_borrowing` (`borrowing_id`),
   ADD KEY `idx_asset_usage_asset` (`asset_type`,`asset_id`,`asset_detail_id`),
   ADD KEY `idx_asset_usage_room_started` (`room_name`,`started_at`),
   ADD KEY `idx_asset_usage_operator` (`operator_user_id`),

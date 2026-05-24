@@ -13,6 +13,7 @@ import { formatDateTimeForMySQL } from '../utils/helpers';
 import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
+  borrowing_id?: number | null;
   asset_name?: string | null;
   asset_code?: string | null;
   asset_location?: string | null;
@@ -70,6 +71,7 @@ const generateUsageNumber = (value?: string | Date | null): string => {
 
 const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => ({
   ...row,
+  borrowingId: row.borrowing_id ?? row.borrowingId,
   assetName: row.asset_name || row.assetName,
   assetCode: row.asset_code || row.assetCode,
   assetLocation: row.asset_location || row.assetLocation,
@@ -195,6 +197,19 @@ export class AssetUsageService {
     return (rows[0]?.count || 0) > 0;
   }
 
+  private async hasUsageForBorrowingId(borrowingId?: number | null): Promise<boolean> {
+    if (!borrowingId) return false;
+
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM asset_usage_logs
+       WHERE borrowing_id = ?`,
+      [borrowingId]
+    );
+
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private async getInventoryConditionForUsage(assetId: number, assetType: AssetType, detailId?: string | null, detailCode?: string | null): Promise<string | null> {
     const normalizedAssetType = this.normalizeAssetType(assetType);
     const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
@@ -242,6 +257,10 @@ export class AssetUsageService {
       const assetType = this.normalizeAssetType(row.asset_type);
       const detailId = this.normalizeDetailIdentifier(row.asset_detail_id);
 
+      if (await this.hasUsageForBorrowingId(row.id)) {
+        continue;
+      }
+
       if (await this.hasActiveUsageForBorrowing(assetId, assetType, detailId || null)) {
         continue;
       }
@@ -254,6 +273,7 @@ export class AssetUsageService {
       );
 
       await this.create({
+        borrowingId: row.id,
         assetId,
         assetType,
         assetDetailId: detailId || undefined,
@@ -371,6 +391,29 @@ export class AssetUsageService {
     const operatorId = log.operatorUserId ? Number(log.operatorUserId) : null;
     const operatorClause = operatorId ? 'AND user_id = ?' : '';
     const conditionAfter = this.normalizeUsageConditionLabel(log.conditionAfter || log.conditionBefore) || 'Baik';
+    const explicitBorrowingId = Number(log.borrowingId || (log as any).borrowing_id || 0);
+
+    if (explicitBorrowingId) {
+      await pool.query(
+        `UPDATE borrowing_records
+         SET status = 'returned',
+             return_date = ?,
+             return_condition = ?,
+             return_notes = ?,
+             returned_by = COALESCE(returned_by, ?),
+             updated_at = NOW()
+         WHERE id = ?
+           AND status IN ('approved', 'borrowed', 'overdue')`,
+        [
+          endedAt,
+          conditionAfter,
+          log.notes || null,
+          operatorId,
+          explicitBorrowingId
+        ]
+      );
+      return;
+    }
 
     const [rows] = await pool.query<ActiveBorrowingRow[]>(
       `SELECT id
@@ -575,12 +618,13 @@ export class AssetUsageService {
 
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO asset_usage_logs (
-        no, asset_id, asset_type, asset_detail_id, asset_detail_name, asset_detail_code,
+        no, borrowing_id, asset_id, asset_type, asset_detail_id, asset_detail_name, asset_detail_code,
         asset_location, room_name, operator_user_id, usage_context, started_at,
         ended_at, usage_count, condition_before, condition_after, notes, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         generatedNo,
+        data.borrowingId || null,
         data.assetId,
         data.assetType || 'medical',
         data.assetDetailId || null,

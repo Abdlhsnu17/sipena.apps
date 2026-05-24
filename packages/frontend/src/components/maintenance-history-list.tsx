@@ -386,7 +386,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       },
       {
         key: "namaAlat",
-        label: "Nama Alat",
+        label: "Nama Inventaris",
         getValue: (history) =>
           findDetailInfo(history)?.detailName ||
           findDetailInfo(history)?.assetName ||
@@ -440,7 +440,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       },
       {
         key: "ruangan",
-        label: "Nama Ruangan Alat",
+        label: "Nama Ruangan Inventaris",
         getValue: (history) => {
           const detail = findDetailInfo(history);
           return detail?.roomName || detail?.assetLocation || history.assetLocation || "-";
