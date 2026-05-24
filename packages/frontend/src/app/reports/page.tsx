@@ -386,86 +386,86 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-2">
           <Card className="rounded-2xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md transition-shadow hover:shadow-lg">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-cyan-700">
-                Total Keseluruhan Ruangan Yang Aktif 
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-cyan-700">
+                Total Keseluruhan Ruangan Yang Aktif
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-cyan-900 sm:text-[2rem]">{totalAssets.toLocaleString("id-ID")}</p>
-              <p className="mt-0.5 text-[10px] leading-snug text-cyan-600">Gabungan Ruangan Medis & Non-Medis</p>
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-cyan-900 sm:text-[1.6rem]">{totalAssets.toLocaleString("id-ID")}</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-cyan-600">Gabungan Ruangan Medis & Non-Medis</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl border-0 bg-linear-to-br from-teal-50/80 via-emerald-100/60 to-green-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-teal-700">
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-teal-700">
                 Ruangan Dengan Unit Non Medis Aktif
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-teal-900 sm:text-[2rem]">
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-teal-900 sm:text-[1.6rem]">
                 {totalNonMedicalAssets.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[10px] leading-snug text-teal-600">Ruangan Aktif Dengan Unit Non-Medis Yang Berbeda</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-teal-600">Ruangan Aktif Dengan Unit Non-Medis Yang Berbeda</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-blue-700">
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-blue-700">
                 Ruangan Dengan Unit Medis Aktif
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-blue-900 sm:text-[2rem]">
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-blue-900 sm:text-[1.6rem]">
                 {totalMedicalAssets.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[10px] leading-snug text-blue-600">Ruangan Aktif Dengan Unit Medis Yang Berbeda</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-blue-600">Ruangan Aktif Dengan Unit Medis Yang Berbeda</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl border-0 bg-linear-to-br from-rose-50/80 via-red-100/60 to-orange-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-rose-700">
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-rose-700">
                 Total Pemeliharaan
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-rose-900 sm:text-[2rem]">
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-rose-900 sm:text-[1.6rem]">
                 {maintenance.length.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[10px] leading-snug text-rose-600">Jadwal tersimpan</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-rose-600">Jadwal tersimpan</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl border-0 bg-linear-to-br from-orange-50/80 via-amber-100/60 to-yellow-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-orange-700">
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-orange-700">
                 Total Peminjaman
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-orange-900 sm:text-[2rem]">
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-orange-900 sm:text-[1.6rem]">
                 {borrowings.length.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[10px] leading-snug text-orange-600">Sesi perizinan</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-orange-600">Sesi perizinan</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="border-0 px-4 pt-2 pb-0 sm:px-5 sm:pt-2.5">
-              <CardTitle className="text-[10px] uppercase tracking-[0.28em] text-violet-700">
+            <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
+              <CardTitle className="truncate whitespace-nowrap overflow-hidden text-[9px] leading-tight uppercase tracking-[0.18em] text-violet-700">
                 Total Biaya
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-2 pt-0 sm:px-5 sm:pb-2.5">
-              <p className="text-[1.85rem] font-semibold leading-none text-violet-900 sm:text-[2rem]">
+            <CardContent className="px-4 pb-1 pt-0 sm:px-5 sm:pb-1.5">
+              <p className="text-[1.5rem] font-semibold leading-none text-violet-900 sm:text-[1.6rem]">
                 Rp {totalCost.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[10px] leading-snug text-violet-600">Nilai biaya perawatan</p>
+              <p className="mt-0.5 text-[9px] leading-tight text-violet-600">Nilai biaya perawatan</p>
             </CardContent>
           </Card>
         </div>
