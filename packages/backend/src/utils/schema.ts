@@ -545,9 +545,11 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
     `);
   }
 
-  const existingColumns = await getExistingColumns('asset_usage_logs', ['borrowing_id']);
+  const existingColumns = await getExistingColumns('asset_usage_logs', ['id', 'no', 'borrowing_id']);
   if (!existingColumns.has('borrowing_id')) {
-    await pool.query('ALTER TABLE asset_usage_logs ADD COLUMN borrowing_id INT(11) DEFAULT NULL AFTER `no`');
+    const previousColumn = existingColumns.has('no') ? 'no' : 'id';
+    const afterClause = existingColumns.has(previousColumn) ? ` AFTER \`${previousColumn}\`` : '';
+    await pool.query(`ALTER TABLE asset_usage_logs ADD COLUMN borrowing_id INT(11) DEFAULT NULL${afterClause}`);
   }
 
   if (!(await hasIndex('asset_usage_logs', 'idx_asset_usage_borrowing'))) {
