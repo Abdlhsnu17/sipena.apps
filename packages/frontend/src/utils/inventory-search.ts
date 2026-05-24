@@ -1,5 +1,13 @@
 import type { DetailInventoryItem } from '@/types/detail-inventory'
+import { getDetailInventoryStatusLabel } from '@/utils/detail-inventory'
 import { formatNoId } from '@/utils/record-id'
+
+const getConditionSearchLabel = (condition?: DetailInventoryItem['condition']) => {
+  if (condition === 'damaged') return 'rusak damaged'
+  if (condition === 'poor') return 'kurang poor'
+  if (condition === 'fair') return 'cukup fair'
+  return 'baik good'
+}
 
 export const buildInventorySearchKey = (asset: DetailInventoryItem): string => {
   const sourcePrefix = asset.source === "medis" ? "IMD" : "INM"
@@ -25,6 +33,12 @@ export const buildInventorySearchKey = (asset: DetailInventoryItem): string => {
     asset.roomName,
     asset.usagePurpose,
     asset.assetCategory,
+    asset.statusLabel,
+    getDetailInventoryStatusLabel(asset),
+    asset.availability,
+    asset.assetStatus,
+    asset.conditionLabel,
+    getConditionSearchLabel(asset.condition),
   ]
     .filter(Boolean)
     .map((value) => value?.toString().toLowerCase())

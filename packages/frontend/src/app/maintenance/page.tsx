@@ -133,7 +133,7 @@ export default function MaintenancePage() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const activeMaintenanceStatuses = useMemo(
-    () => new Set(["scheduled", "in_progress", "completed"]),
+    () => new Set(["requested", "scheduled", "in_progress", "completed"]),
     []
   )
 

@@ -8,7 +8,7 @@ import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
-import { flattenDetailInventories } from "@/utils/detail-inventory";
+import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { formatDayTimeLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
@@ -124,7 +124,14 @@ const initialForm: FormState = {
 const getInventoryKey = (item: DetailInventoryItem) => `${item.assetType}|${item.assetId}|${item.detailId}`;
 type AssetSourceFilter = "all" | "medical" | "non_medical";
 
-const activeMaintenanceStatuses = new Set(["scheduled", "in_progress", "completed"]);
+const activeMaintenanceStatuses = new Set(["requested", "scheduled", "in_progress", "completed"]);
+
+const getConditionLabel = (asset: DetailInventoryItem) => {
+  if (asset.condition === "damaged") return "Rusak";
+  if (asset.condition === "poor") return "Kurang";
+  if (asset.condition === "fair") return "Cukup";
+  return "Baik";
+};
 
 const getInventoryLockKey = (assetType: string | undefined, assetId: number, detailId?: string | number | null) => {
   const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical";
@@ -425,10 +432,9 @@ export default function AssetUsagePage() {
   }, [form.inventoryKey, selectableAssets]);
 
   const filteredLogs = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const normalizedRoom = roomFilter.trim().toLowerCase();
     return logs.filter((log) => {
-      const searchable = [
+      const matchesSearch = matchesSearchKeyword(searchTerm, [
+        getUsageNoId(log),
         log.assetDetailName,
         log.assetName,
         log.assetDetailCode,
@@ -436,9 +442,9 @@ export default function AssetUsagePage() {
         log.roomName,
         log.operatorName,
         log.notes,
-      ].filter(Boolean).join(" ").toLowerCase();
-      return (!normalizedSearch || searchable.includes(normalizedSearch)) &&
-        (!normalizedRoom || (log.roomName || "").toLowerCase().includes(normalizedRoom));
+        log.endedAt ? "Selesai" : "Sedang Digunakan",
+      ]);
+      return matchesSearch && matchesSearchKeyword(roomFilter, [log.roomName]);
     });
   }, [logs, roomFilter, searchTerm]);
 
@@ -890,6 +896,9 @@ export default function AssetUsagePage() {
                                   <span className="min-w-0 flex-1">
                                     <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
                                     <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
+                                    <span className="block truncate text-xs text-slate-500">
+                                      Status: {getDetailInventoryStatusLabel(item)} · Kondisi: {getConditionLabel(item)}
+                                    </span>
                                   </span>
                                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
                                     {item.assetType === "medical" ? "Medis" : "Non-Medis"}

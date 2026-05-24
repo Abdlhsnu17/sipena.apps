@@ -632,7 +632,7 @@ export default function BorrowingPage() {
 
       const nextLocks = new Set<string>()
       response.data.forEach((record) => {
-        if (!["requested", "scheduled", "in_progress"].includes(record.status)) return
+        if (!["requested", "scheduled", "in_progress", "completed"].includes(record.status)) return
 
         const assetType = record.assetType === "non_medical" ? "non_medical" : "medical"
         const assetId = Number(record.assetId)
@@ -1595,6 +1595,7 @@ export default function BorrowingPage() {
     }
     return borrowableAssets.filter((asset) =>
       matchesSearchKeyword(searchTerm, [
+        buildInventorySearchKey(asset),
         formatInventoryLabel(asset),
         formatInventoryDisplayLabel(asset),
         formatNoId(asset.source === "medis" ? "IMD" : "INM", asset.assetId),
