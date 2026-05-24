@@ -6,8 +6,8 @@ import type React from "react";
 import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
-  title: "Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana",
-  description: "Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana RSUP Persahabatan",
+  title: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)",
+  description: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa) - RSUP Persahabatan",
   generator: 'Next.js',
 }
 

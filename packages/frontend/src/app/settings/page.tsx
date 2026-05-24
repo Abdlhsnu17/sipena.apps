@@ -601,7 +601,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-3 text-sm">
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Nama Sistem</p>
-                  <p className="font-medium text-foreground">Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana</p>
+                  <p className="font-medium text-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Tanggal Hari Ini</p>

@@ -52,7 +52,7 @@ export default function UMLPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Dokumentasi UML Diagram Use Case & Unggahan </h1>
-          <p className="text-muted-foreground text-sm">Diagram sistem inventaris dan pemeliharaan RSUP Persahabatan</p>
+          <p className="text-muted-foreground text-sm">Diagram Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa) - RSUP Persahabatan</p>
           <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <p className="text-sm text-teal-800">
               <strong>Dokumentasi ini menjelaskan:</strong> Arsitektur sistem, hubungan antar entitas, alur kerja proses peminjaman dan pemeliharaan inventaris. 
@@ -254,7 +254,7 @@ export default function UMLPage() {
             <CardHeader>
               <CardTitle>Class Diagram - Struktur Kelas & Entitas</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Struktur kelas dan hubungan antar entitas dalam sistem inventaris RSUP Persahabatan
+                Struktur kelas dan hubungan antar entitas dalam Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa) - RSUP Persahabatan
               </p>
             </CardHeader>
             <CardContent>
@@ -590,7 +590,7 @@ export default function UMLPage() {
           {/* Activity Diagram */}
           <Card>
             <CardHeader>
-              <CardTitle>Activity Diagram - Proses Peminjaman Alat RSUP Persahabatan</CardTitle>
+              <CardTitle>Activity Diagram - Proses Peminjaman Alat (SiPeNa) - RSUP Persahabatan</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Alur kerja step-by-step dalam proses peminjaman alat inventaris, menunjukkan validasi role-based access
               </p>
@@ -820,7 +820,7 @@ export default function UMLPage() {
           {/* Enhanced Activity Diagram - Maintenance Process */}
           <Card>
             <CardHeader>
-              <CardTitle>Activity Diagram - Proses Jadwal Pemeliharaan Alat RSUP Persahabatan</CardTitle>
+              <CardTitle>Activity Diagram - Proses Jadwal Pemeliharaan Alat (SiPeNa) - RSUP Persahabatan</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Alur kerja step-by-step dalam proses jadwal pemeliharaan alat inventaris, menunjukkan validasi role-based access
               </p>
