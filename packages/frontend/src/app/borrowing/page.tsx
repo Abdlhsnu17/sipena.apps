@@ -533,7 +533,7 @@ export default function BorrowingPage() {
     if (borrowing.status !== "overdue") return false
     if (borrowing.isExtensionBlocked) return false
     if ((borrowing.extensionCount || 0) >= 3) return false
-    return hasFullAccess || isBorrowingOwner(borrowing)
+    return true
   }
 
   const getBorrowingExtensionLimitMessage = (borrowing: ApiBorrowing) => {
@@ -2258,7 +2258,7 @@ export default function BorrowingPage() {
                               Pilih kartu
                             </label>
                             <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-600">
-                              {(b.status === "overdue" && (hasFullAccess || isBorrowingOwner(b))) ? (
+                              {b.status === "overdue" ? (
                                 <Button
                                   variant="outline"
                                   size="sm"

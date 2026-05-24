@@ -3,7 +3,6 @@ import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user_activity.service';
-import { hasAnyRole } from '../utils/role';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -582,21 +581,12 @@ export class BorrowingController {
 
       const { id } = req.params;
       const actorId = getActorUserId(req);
-      const isPrivilegedActor = hasAnyRole(req.user?.role, ['admin', 'leader']);
       const borrowing = await this.borrowingService.getById(id);
 
       if (!borrowing.success || !borrowing.data) {
         res.status(404).json({
           success: false,
           message: 'Peminjaman tidak ditemukan'
-        });
-        return;
-      }
-
-      if (!isPrivilegedActor && (!actorId || Number(borrowing.data.userId) !== actorId)) {
-        res.status(403).json({
-          success: false,
-          message: 'Anda hanya dapat memperpanjang peminjaman milik sendiri'
         });
         return;
       }
