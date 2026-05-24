@@ -388,24 +388,24 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="rounded-3xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md transition-shadow hover:shadow-lg">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-cyan-700">
                 Total Keseluruhan Ruangan Yang Aktif 
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-cyan-900 sm:text-4xl">{totalAssets.toLocaleString("id-ID")}</p>
               <p className="text-xs text-cyan-600 mt-1">Gabungan Ruangan Medis & Non-Medis</p>
             </CardContent>
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-teal-50/80 via-emerald-100/60 to-green-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-teal-700">
                 Ruangan Dengan Unit Non Medis Aktif
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-teal-900 sm:text-4xl">
                 {totalNonMedicalAssets.toLocaleString("id-ID")}
               </p>
@@ -414,12 +414,12 @@ export default function ReportsPage() {
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-blue-50/80 via-indigo-100/60 to-purple-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-blue-700">
                 Ruangan Dengan Unit Medis Aktif
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-blue-900 sm:text-4xl">
                 {totalMedicalAssets.toLocaleString("id-ID")}
               </p>
@@ -428,12 +428,12 @@ export default function ReportsPage() {
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-rose-50/80 via-red-100/60 to-orange-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-rose-700">
                 Total Pemeliharaan
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-rose-900 sm:text-4xl">
                 {maintenance.length.toLocaleString("id-ID")}
               </p>
@@ -442,12 +442,12 @@ export default function ReportsPage() {
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-orange-50/80 via-amber-100/60 to-yellow-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-orange-700">
                 Total Peminjaman
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-orange-900 sm:text-4xl">
                 {borrowings.length.toLocaleString("id-ID")}
               </p>
@@ -456,12 +456,12 @@ export default function ReportsPage() {
           </Card>
 
           <Card className="rounded-3xl border-0 bg-linear-to-br from-violet-50/80 via-fuchsia-100/60 to-pink-50/80 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-1 border-0">
+            <CardHeader className="border-0 px-5 pt-5 pb-0 sm:px-6 sm:pt-6">
               <CardTitle className="text-xs uppercase tracking-[0.4em] text-violet-700">
                 Total Biaya
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
               <p className="text-3xl font-semibold text-violet-900">
                 Rp {totalCost.toLocaleString("id-ID")}
               </p>
@@ -671,23 +671,23 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-blue-200 bg-blue-50/50 rounded">
+                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-blue-200 bg-blue-50/50 rounded">
                   <span className="text-foreground font-medium">Total Peminjaman</span>
                   <Badge className="bg-blue-100 text-blue-700 border-0">{borrowings.length}</Badge>
                 </div>
-                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-emerald-200 bg-emerald-50/50 rounded">
+                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-emerald-200 bg-emerald-50/50 rounded">
                   <span className="text-foreground font-medium">Sedang Dipinjam</span>
                   <Badge className="bg-emerald-100 text-emerald-700 border-0">
                     {borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-cyan-200 bg-cyan-50/50 rounded">
+                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-cyan-200 bg-cyan-50/50 rounded">
                   <span className="text-foreground font-medium">Dikembalikan</span>
                   <Badge className="bg-cyan-100 text-cyan-700 border-0">
                     {borrowings.filter((b) => b.status === "returned").length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border border-red-200 bg-red-50/50 rounded">
+                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-red-200 bg-red-50/50 rounded">
                   <span className="text-foreground font-medium">Terlambat</span>
                   <Badge className="bg-red-100 text-red-700 border-0">
                     {borrowings.filter((b) => b.status === "overdue").length}

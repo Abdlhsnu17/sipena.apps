@@ -281,171 +281,171 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profil Akun</CardTitle>
-                <CardDescription>
-                  Lengkapi NIP, jenis kelamin, unit kerja, alamat, dan foto profil agar identitas akun lengkap.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {profileLoading ? (
-                  <p className="text-sm text-muted-foreground">Memuat informasi profil...</p>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between dark:border-slate-700 dark:bg-slate-900/40">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-20 w-20 shrink-0 border border-white/70 shadow-sm dark:border-slate-700">
-                          {profileImageSrc && !imageError ? (
-                            <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
-                          ) : null}
-                          <AvatarFallback className="text-lg font-semibold uppercase text-white">
-                            {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-foreground">Foto Profil</p>
-                          <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB).</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 md:items-end">
-                        <label
-                          htmlFor="profilePhoto"
-                          className="inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 px-4 py-2 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
-                        >
-                          <span>Pilih Foto</span>
-                          <input
-                            id="profilePhoto"
-                            type="file"
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={handlePhotoChange}
-                          />
-                        </label>
-                        {photoFile && (
-                          <>
-                            <p className="max-w-xs text-xs font-medium text-amber-700 dark:text-amber-300 md:text-right">
-                              Pratinjau foto sudah tampil. Klik <span className="font-semibold">Simpan Profil</span> agar avatar akun ikut berubah.
-                            </p>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground md:self-end" onClick={clearPhotoSelection}>
-                              Batalkan pratinjau
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profil Akun</CardTitle>
+              <CardDescription>
+                Lengkapi NIP, jenis kelamin, unit kerja, alamat, dan foto profil agar identitas akun lengkap.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {profileLoading ? (
+                <p className="text-sm text-muted-foreground">Memuat informasi profil...</p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between dark:border-slate-700 dark:bg-slate-900/40">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-20 w-20 shrink-0 border border-white/70 shadow-sm dark:border-slate-700">
+                        {profileImageSrc && !imageError ? (
+                          <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
+                        ) : null}
+                        <AvatarFallback className="text-lg font-semibold uppercase text-white">
+                          {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="space-y-2">
-                        <Label htmlFor="profileNip">NIP</Label>
-                        <Input
-                          id="profileNip"
-                          value={profileForm.nip}
-                          onChange={(event) => setProfileForm((prev) => ({ ...prev, nip: event.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profileName">Nama Lengkap</Label>
-                        <Input
-                          id="profileName"
-                          value={profileForm.name}
-                          onChange={(event) => setProfileForm((prev) => ({ ...prev, name: event.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="profileEmail">Email</Label>
-                        <Input
-                          id="profileEmail"
-                          type="email"
-                          value={profileForm.email}
-                          onChange={(event) => setProfileForm((prev) => ({ ...prev, email: event.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <Label>Jenis Kelamin</Label>
-                        <Select
-                          value={profileForm.gender || undefined}
-                          onValueChange={(value) => setProfileForm((prev) => ({ ...prev, gender: value }))}
-                        >
-                          <SelectTrigger size="sm">
-                            <SelectValue placeholder="Pilih jenis kelamin" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="male">Laki-laki</SelectItem>
-                            <SelectItem value="female">Perempuan</SelectItem>
-                            <SelectItem value="other">Lainnya</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <p className="text-sm font-semibold text-foreground">Foto Profil</p>
+                        <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB).</p>
                       </div>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Nomor WhatsApp / SMS</Label>
-                      <div className="relative">
-                        <Smartphone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="phoneNumber"
-                          type="tel"
-                          placeholder="+628xxxxxxxxxx"
-                          value={profileForm.phoneNumber}
-                          onChange={(event) =>
-                            setProfileForm((prev) => ({
-                              ...prev,
-                              phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
-                            }))
-                          }
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="workUnit">Unit Kerja / Instalasi</Label>
-                      <Input
-                        id="workUnit"
-                        value={profileForm.workUnit}
-                        onChange={(event) => setProfileForm((prev) => ({ ...prev, workUnit: event.target.value }))}
-                        placeholder="Contoh: Instalasi Rawat Inap"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="subWorkUnit">Sub Ruangan</Label>
-                      <Input
-                        id="subWorkUnit"
-                        value={profileForm.subWorkUnit}
-                        onChange={(event) => setProfileForm((prev) => ({ ...prev, subWorkUnit: event.target.value }))}
-                        placeholder="Contoh: Ranap Mawar / ICU / OK 1"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="homeAddress">Alamat Tempat Tinggal</Label>
-                      <Textarea
-                        id="homeAddress"
-                        rows={3}
-                        value={profileForm.homeAddress}
-                        onChange={(event) => setProfileForm((prev) => ({ ...prev, homeAddress: event.target.value }))}
-                      />
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        onClick={handleProfileSubmit}
-                        disabled={profileLoading || isUpdatingProfile}
-                        className="w-full sm:w-auto"
+                    <div className="flex flex-col gap-2 md:items-end">
+                      <label
+                        htmlFor="profilePhoto"
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 px-4 py-2 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
                       >
-                        {isUpdatingProfile ? "Menyimpan..." : photoFile ? "Simpan Profil & Foto" : "Simpan Profil"}
-                      </Button>
+                        <span>Pilih Foto</span>
+                        <input
+                          id="profilePhoto"
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={handlePhotoChange}
+                        />
+                      </label>
+                      {photoFile && (
+                        <>
+                          <p className="max-w-xs text-xs font-medium text-amber-700 dark:text-amber-300 md:text-right">
+                            Pratinjau foto sudah tampil. Klik <span className="font-semibold">Simpan Profil</span> agar avatar akun ikut berubah.
+                          </p>
+                          <Button variant="ghost" size="sm" className="text-muted-foreground md:self-end" onClick={clearPhotoSelection}>
+                            Batalkan pratinjau
+                          </Button>
+                        </>
+                      )}
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
 
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="profileNip">NIP</Label>
+                      <Input
+                        id="profileNip"
+                        value={profileForm.nip}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, nip: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profileName">Nama Lengkap</Label>
+                      <Input
+                        id="profileName"
+                        value={profileForm.name}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, name: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profileEmail">Email</Label>
+                      <Input
+                        id="profileEmail"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, email: event.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label>Jenis Kelamin</Label>
+                      <Select
+                        value={profileForm.gender || undefined}
+                        onValueChange={(value) => setProfileForm((prev) => ({ ...prev, gender: value }))}
+                      >
+                        <SelectTrigger size="sm">
+                          <SelectValue placeholder="Pilih jenis kelamin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Laki-laki</SelectItem>
+                          <SelectItem value="female">Perempuan</SelectItem>
+                          <SelectItem value="other">Lainnya</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Nomor WhatsApp / SMS</Label>
+                    <div className="relative">
+                      <Smartphone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="+628xxxxxxxxxx"
+                        value={profileForm.phoneNumber}
+                        onChange={(event) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
+                          }))
+                        }
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="workUnit">Unit Kerja / Instalasi</Label>
+                    <Input
+                      id="workUnit"
+                      value={profileForm.workUnit}
+                      onChange={(event) => setProfileForm((prev) => ({ ...prev, workUnit: event.target.value }))}
+                      placeholder="Contoh: Instalasi Rawat Inap"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="subWorkUnit">Sub Ruangan</Label>
+                    <Input
+                      id="subWorkUnit"
+                      value={profileForm.subWorkUnit}
+                      onChange={(event) => setProfileForm((prev) => ({ ...prev, subWorkUnit: event.target.value }))}
+                      placeholder="Contoh: Ranap Mawar / ICU / OK 1"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="homeAddress">Alamat Tempat Tinggal</Label>
+                    <Textarea
+                      id="homeAddress"
+                      rows={3}
+                      value={profileForm.homeAddress}
+                      onChange={(event) => setProfileForm((prev) => ({ ...prev, homeAddress: event.target.value }))}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={handleProfileSubmit}
+                      disabled={profileLoading || isUpdatingProfile}
+                      className="w-full sm:w-auto"
+                    >
+                      {isUpdatingProfile ? "Menyimpan..." : photoFile ? "Simpan Profil & Foto" : "Simpan Profil"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle>Ganti Sandi</CardTitle>
@@ -527,9 +527,24 @@ export default function SettingsPage() {
                 </Button>
               </CardContent>
             </Card>
-          </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Informasi Sistem</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nama Sistem</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-foreground">
+                    Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal Hari Ini</p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">24/5/2026</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -545,10 +560,10 @@ export default function SettingsPage() {
                 <CardDescription>Pilih mode terang, gelap, atau otomatis mengikuti sistem.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setTheme("light")}
-                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
+                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
                       mounted && theme === "light"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -563,7 +578,7 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
+                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
                       mounted && theme === "dark"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -578,7 +593,7 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("system")}
-                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
+                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
                       mounted && theme === "system"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -595,24 +610,6 @@ export default function SettingsPage() {
                 <p className="mt-3 text-xs text-muted-foreground">
                   Mode sistem akan menyesuaikan tema perangkat Anda secara otomatis.
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Informasi Sistem</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nama Sistem</p>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-foreground">
-                    Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal Hari Ini</p>
-                  <p className="mt-2 text-sm font-semibold text-foreground">24/5/2026</p>
-                </div>
               </CardContent>
             </Card>
           </div>
