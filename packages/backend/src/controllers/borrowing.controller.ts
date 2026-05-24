@@ -154,7 +154,7 @@ export class BorrowingController {
         }
       }
 
-      res.status(201).json(result);
+      res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
       console.error('Create borrowing error:', error);
         if (error instanceof Error) {

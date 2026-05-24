@@ -1142,21 +1142,7 @@ export class BorrowingService {
         createdBy: data.userId
       });
     } catch (err) {
-      await pool.query('DELETE FROM borrowing_records WHERE id = ?', [result.insertId]);
-      await this.syncAssetMasterAfterValidatedReturn(data.assetId, assetType, {
-        borrowingId: result.insertId,
-        assetDetailId: detailId || null,
-        returnCondition: 'Baik'
-      });
-      await this.syncAssetDetailBorrowingState(data.assetId, assetType, {
-        detailId: detailId || null,
-        detailCode: data.assetDetailCode || null,
-        returnCondition: 'Baik'
-      });
-      return {
-        success: false,
-        message: err instanceof Error ? err.message : 'Peminjaman gagal karena riwayat penggunaan alat tidak dapat dibuat'
-      };
+      console.error('Create usage log after borrowing failed:', err);
     }
 
     // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)

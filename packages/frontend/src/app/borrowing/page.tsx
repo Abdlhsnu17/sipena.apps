@@ -784,7 +784,7 @@ export default function BorrowingPage() {
 
       for (const selectedAsset of selectedBorrowableAssets) {
         try {
-          await borrowingService.create({
+          const result = await borrowingService.create({
             assetId: selectedAsset.assetId,
             assetType: selectedAsset.assetType,
             assetDetailId: selectedAsset.detailId,
@@ -805,6 +805,10 @@ export default function BorrowingPage() {
             quantity: Number.parseInt(formData.quantity, 10) || 1,
             notes: formData.notes || undefined,
           })
+
+          if (!result.success) {
+            throw new Error(result.message || "Gagal dibuat")
+          }
 
           successLabels.push(formatInventoryLabel(selectedAsset))
         } catch (error: any) {

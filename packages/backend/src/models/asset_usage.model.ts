@@ -5,6 +5,7 @@ export type AssetUsageContext = 'own_room' | 'same_unit_cross_room' | 'cross_roo
 export interface AssetUsageLog {
   id: number;
   no?: string;
+  borrowingId?: number;
   assetId: number;
   assetType: AssetType;
   assetName?: string;
@@ -32,6 +33,7 @@ export interface AssetUsageLog {
 
 export interface CreateAssetUsageLogDTO {
   no?: string;
+  borrowingId?: number;
   assetId: number;
   assetType?: AssetType;
   assetDetailId?: string;
