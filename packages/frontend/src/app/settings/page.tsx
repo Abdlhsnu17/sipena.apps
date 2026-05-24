@@ -295,20 +295,25 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Memuat informasi profil...</p>
                 ) : (
                   <>
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                      <Avatar className="h-20 w-20">
-                        {profileImageSrc && !imageError ? (
-                          <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
-                        ) : null}
-                        <AvatarFallback className="text-lg font-semibold uppercase text-white">
-                          {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col gap-2">
-                        <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB)</p>
+                    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between dark:border-slate-700 dark:bg-slate-900/40">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-20 w-20 shrink-0 border border-white/70 shadow-sm dark:border-slate-700">
+                          {profileImageSrc && !imageError ? (
+                            <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
+                          ) : null}
+                          <AvatarFallback className="text-lg font-semibold uppercase text-white">
+                            {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-foreground">Foto Profil</p>
+                          <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB).</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 md:items-end">
                         <label
                           htmlFor="profilePhoto"
-                          className="inline-flex items-center gap-2 rounded-full border border-teal-200 px-4 py-1 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 px-4 py-2 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
                         >
                           <span>Pilih Foto</span>
                           <input
@@ -321,10 +326,10 @@ export default function SettingsPage() {
                         </label>
                         {photoFile && (
                           <>
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                            <p className="max-w-xs text-xs font-medium text-amber-700 dark:text-amber-300 md:text-right">
                               Pratinjau foto sudah tampil. Klik <span className="font-semibold">Simpan Profil</span> agar avatar akun ikut berubah.
                             </p>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearPhotoSelection}>
+                            <Button variant="ghost" size="sm" className="text-muted-foreground md:self-end" onClick={clearPhotoSelection}>
                               Batalkan pratinjau
                             </Button>
                           </>
@@ -543,10 +548,10 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <button
                     onClick={() => setTheme("light")}
-                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all ${
+                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
                       mounted && theme === "light"
-                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
+                        : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
                     }`}
                   >
                     <span className="rounded-full bg-amber-100 p-2 dark:bg-amber-300/20">
@@ -558,10 +563,10 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all ${
+                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
                       mounted && theme === "dark"
-                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
+                        : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
                     }`}
                   >
                     <span className="rounded-full bg-indigo-100 p-2 dark:bg-indigo-300/20">
@@ -573,10 +578,10 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("system")}
-                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all ${
+                    className={`relative flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all ${
                       mounted && theme === "system"
-                        ? "border-teal-500 bg-teal-50 dark:bg-teal-950"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
+                        : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
                     }`}
                   >
                     <span className="rounded-full bg-sky-100 p-2 dark:bg-sky-300/20">
@@ -596,16 +601,17 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Informasi Sistem</CardTitle>
-                <CardDescription>Ringkasan aplikasi</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Nama Sistem</p>
-                  <p className="font-medium text-foreground">Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)</p>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nama Sistem</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-foreground">
+                    Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Tanggal Hari Ini</p>
-                  <p className="font-medium text-foreground">24/5/2026</p>
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal Hari Ini</p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">24/5/2026</p>
                 </div>
               </CardContent>
             </Card>
