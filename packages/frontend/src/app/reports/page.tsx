@@ -372,20 +372,6 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/50">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2">
-              <BookOpen className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-800 dark:text-slate-100">Ringkasan Terpadu</h3>
-              <p className="mt-1 text-sm text-slate-700/80 dark:text-slate-300/80">
-                Laporan ini menyatukan titik data penting dari inventaris, pemeliharaan, peminjaman, dan penggunaan alat untuk mendukung keputusan operasional.
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-2">
           <Card className="rounded-2xl border-0 bg-linear-to-br from-cyan-50/80 via-cyan-100/60 to-blue-50/80 shadow-md transition-shadow hover:shadow-lg">
             <CardHeader className="border-0 px-4 pt-1 pb-0 sm:px-5 sm:pt-1.5">
@@ -654,9 +640,11 @@ export default function ReportsPage() {
                       ]
                       const colorClass = colors[idx % colors.length]
                       return (
-                        <div key={idx} className={`flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between border rounded ${colorClass}`}>
-                          <span className="font-medium">{item.name}</span>
-                          <Badge className="bg-current/20 text-current border-0">{item.count}x</Badge>
+                        <div key={idx} className={`flex flex-col gap-1.5 rounded-lg border px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between ${colorClass}`}>
+                          <span className="truncate font-medium text-[12px] leading-tight">{item.name}</span>
+                          <Badge className="bg-current/20 text-current border-0 px-1.5 py-0 text-[11px] font-medium leading-none">
+                            {item.count}x
+                          </Badge>
                         </div>
                       )
                     })}
@@ -671,25 +659,25 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-blue-200 bg-blue-50/50 rounded">
-                  <span className="text-foreground font-medium">Total Peminjaman</span>
-                  <Badge className="bg-blue-100 text-blue-700 border-0">{borrowings.length}</Badge>
+                <div className="flex flex-col gap-1 rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[12px] font-medium leading-tight text-foreground">Total Peminjaman</span>
+                  <Badge className="border-0 bg-blue-100 px-1.5 py-0 text-[11px] font-medium leading-none text-blue-700">{borrowings.length}</Badge>
                 </div>
-                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-emerald-200 bg-emerald-50/50 rounded">
-                  <span className="text-foreground font-medium">Sedang Dipinjam</span>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-0">
+                <div className="flex flex-col gap-1 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[12px] font-medium leading-tight text-foreground">Sedang Dipinjam</span>
+                  <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[11px] font-medium leading-none text-emerald-700">
                     {borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-cyan-200 bg-cyan-50/50 rounded">
-                  <span className="text-foreground font-medium">Dikembalikan</span>
-                  <Badge className="bg-cyan-100 text-cyan-700 border-0">
+                <div className="flex flex-col gap-1 rounded-lg border border-cyan-200 bg-cyan-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[12px] font-medium leading-tight text-foreground">Dikembalikan</span>
+                  <Badge className="border-0 bg-cyan-100 px-1.5 py-0 text-[11px] font-medium leading-none text-cyan-700">
                     {borrowings.filter((b) => b.status === "returned").length}
                   </Badge>
                 </div>
-                <div className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between border border-red-200 bg-red-50/50 rounded">
-                  <span className="text-foreground font-medium">Terlambat</span>
-                  <Badge className="bg-red-100 text-red-700 border-0">
+                <div className="flex flex-col gap-1 rounded-lg border border-red-200 bg-red-50/50 px-2 py-1.5 text-[12px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[12px] font-medium leading-tight text-foreground">Terlambat</span>
+                  <Badge className="border-0 bg-red-100 px-1.5 py-0 text-[11px] font-medium leading-none text-red-700">
                     {borrowings.filter((b) => b.status === "overdue").length}
                   </Badge>
                 </div>
