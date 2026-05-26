@@ -540,7 +540,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="border-b border-teal-100/80 bg-gradient-to-b from-teal-50/70 to-transparent px-4 py-4 dark:border-slate-800/70 dark:from-teal-950/20">
+      <div className="border-b border-teal-100/80 bg-linear-to-b from-teal-50/70 to-transparent px-4 py-4 dark:border-slate-800/70 dark:from-teal-950/20">
         {isCollapsed ? (
           <div className="hidden flex-col items-center gap-3 xl:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
