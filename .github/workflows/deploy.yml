@@ -21,7 +21,21 @@ jobs:
           script: |
             set -eu
 
-            cd /var/www/sipena
+            deploy_path="${DEPLOY_PATH:-/var/www/sipena}"
+            repo_url="git@github.com:${{ github.repository }}.git"
+
+            if [ ! -d "$deploy_path/.git" ]; then
+              mkdir -p "$deploy_path"
+
+              if [ -n "$(ls -A "$deploy_path")" ]; then
+                echo "Deploy path exists but is not a git checkout: $deploy_path" >&2
+                exit 1
+              fi
+
+              git clone "$repo_url" "$deploy_path"
+            fi
+
+            cd "$deploy_path"
 
             git fetch origin
             git reset --hard origin/main
