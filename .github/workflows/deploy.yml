@@ -27,7 +27,9 @@ jobs:
             git reset --hard origin/main
 
             cd packages/backend
-            docker compose up -d --build mysql redis phpmyadmin
+
+            docker compose up -d --force-recreate mysql
+            docker compose up -d redis phpmyadmin
 
             docker compose exec -T mysql sh -eu -c '
               escape_sql_string() {
@@ -46,6 +48,7 @@ jobs:
               escaped_db_password="$(escape_sql_string "$db_password")"
 
               mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+            SET SESSION sql_mode = '\''NO_BACKSLASH_ESCAPES'\'';
             CREATE DATABASE IF NOT EXISTS \`$escaped_db_name\`;
             CREATE USER IF NOT EXISTS '\''$escaped_db_user'\''@'\''%'\'' IDENTIFIED BY '\''$escaped_db_password'\'';
             ALTER USER '\''$escaped_db_user'\''@'\''%'\'' IDENTIFIED BY '\''$escaped_db_password'\'';
