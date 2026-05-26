@@ -586,7 +586,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         )}
         {!isCollapsed && (
             <p className="text-xs text-muted-foreground mt-2 px-4 font-bold">
-            Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
         )}
       </div>

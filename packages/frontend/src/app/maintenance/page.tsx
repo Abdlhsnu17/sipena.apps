@@ -1615,11 +1615,11 @@ export default function MaintenancePage() {
           </DialogContent>
         </Dialog>
 
-        <div className="mt-8 pt-6 border-t border-border text-center">
-          <p className="text-[13px] text-muted-foreground">
-            Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana
-          </p>
-	        </div>
+            <div className="mt-8 pt-6 border-t border-border text-center">
+              <p className="text-[13px] text-muted-foreground">
+                Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+              </p>
+            </div>
 	      </div>
 	    </div>
 

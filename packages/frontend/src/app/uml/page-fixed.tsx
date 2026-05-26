@@ -29,8 +29,8 @@ export default function UMLPage() {
         {/* ...existing code... */}
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-border text-center">
-          <p className="text-[13px] text-muted-foreground">
-            Sistem Inventaris Peminjaman Serta Pemeliharaan Sarana
+            <p className="text-[13px] text-muted-foreground">
+            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
         </div>
       </div>
