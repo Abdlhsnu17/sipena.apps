@@ -3,7 +3,6 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import path from 'path';
 import { connectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
 import { connectRedis } from './config/redis';
@@ -11,8 +10,8 @@ import { authMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import {
-    ensureBorrowingWorkflowColumns,
     ensureAssetUsageLogsTable,
+    ensureBorrowingWorkflowColumns,
     ensureCoreSchemaInitialized,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
@@ -68,6 +67,9 @@ validateEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const STARTUP_RETRY_ATTEMPTS = Number.parseInt(process.env.STARTUP_RETRY_ATTEMPTS || '12', 10);
+const STARTUP_RETRY_DELAY_MS = Number.parseInt(process.env.STARTUP_RETRY_DELAY_MS || '5000', 10);
+
 const resolveTrustProxy = (value: string | undefined): boolean | number => {
   if (!value) {
     return 1;
@@ -196,46 +198,66 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Initialize database connections
-const startServer = async () => {
-  try {
-    // Connect to database
-    await connectDatabase();
-    console.log('✅ Database connected successfully');
-    await withSchemaLock(async () => {
-      await ensureCoreSchemaInitialized();
-      await ensureBorrowingWorkflowColumns();
-      await ensureAssetUsageLogsTable();
-      await ensureMaintenanceAssetTypeColumn();
-      await ensureMaintenanceDetailColumns();
-      await ensureMaintenanceCancellationReasonColumn();
-      await ensureNonMedicalSpecificationsColumn();
-      await ensureReportUploadsTable();
-      await ensureScheduleAssetForeignKeyRemoved();
-      await ensureUserProfileColumns();
-      await ensureUserActivityLogsTable();
-    });
-    
-    // Connect to Redis (optional)
-    const redisConnected = await connectRedis();
-    if (redisConnected) {
-      console.log('✅ Redis connected successfully');
-    } else {
-      console.log('⚠️ Redis not available - continuing without Redis');
+const sleep = async (delayMs: number): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+};
+
+// Start the HTTP server first so the container becomes responsive quickly.
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  console.log(`🌐 API URL: http://localhost:${PORT}`);
+});
+
+// Initialize database connections in the background.
+const initializeInfrastructure = async (): Promise<void> => {
+  for (let attempt = 1; attempt <= STARTUP_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      await connectDatabase();
+      console.log('✅ Database connected successfully');
+
+      await withSchemaLock(async () => {
+        await ensureCoreSchemaInitialized();
+        await ensureBorrowingWorkflowColumns();
+        await ensureAssetUsageLogsTable();
+        await ensureMaintenanceAssetTypeColumn();
+        await ensureMaintenanceDetailColumns();
+        await ensureMaintenanceCancellationReasonColumn();
+        await ensureNonMedicalSpecificationsColumn();
+        await ensureReportUploadsTable();
+        await ensureScheduleAssetForeignKeyRemoved();
+        await ensureUserProfileColumns();
+        await ensureUserActivityLogsTable();
+      });
+
+      const redisConnected = await connectRedis();
+      if (redisConnected) {
+        console.log('✅ Redis connected successfully');
+      } else {
+        console.log('⚠️ Redis not available - continuing without Redis');
+      }
+
+      console.log('✅ Startup initialization complete');
+      return;
+    } catch (error) {
+      console.error(
+        `❌ Startup initialization attempt ${attempt}/${STARTUP_RETRY_ATTEMPTS} failed:`,
+        error
+      );
+
+      if (attempt < STARTUP_RETRY_ATTEMPTS) {
+        await sleep(STARTUP_RETRY_DELAY_MS);
+        continue;
+      }
+
+      console.error('⚠️ Continuing to serve while startup initialization remains unavailable.');
+      return;
     }
-    
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-      console.log(`🌐 API URL: http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
   }
 };
+
+void initializeInfrastructure();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
