@@ -30,8 +30,8 @@ export const featureLinks: FeatureLink[] = [
   { label: "Jadwal Pemeliharaan", href: "/maintenance", icon: Calendar, iconColor: "text-red-600" },
   { label: "Laporan", href: "/reports", icon: BarChart3, iconColor: "text-purple-600" },
   { label: "Manajemen Pengguna", href: "/users", icon: Users, iconColor: "text-amber-600" },
-  { label: "Peminjaman Alat", href: "/borrowing", icon: HandHelping, iconColor: "text-amber-600" },
-  { label: "Pengembalian Alat", href: "/returns", icon: RotateCcw, iconColor: "text-green-600" },
-  { label: "Penggunaan Alat", href: "/asset-usage", icon: ClipboardList, iconColor: "text-emerald-600" },
+  { label: "Peminjaman", href: "/borrowing", icon: HandHelping, iconColor: "text-amber-600" },
+  { label: "Pengembalian", href: "/returns", icon: RotateCcw, iconColor: "text-green-600" },
+  { label: "Penggunaan", href: "/asset-usage", icon: ClipboardList, iconColor: "text-emerald-600" },
   { label: "Unggahan", href: "/unggahan", icon: FileUp, iconColor: "text-sky-700" },
 ]

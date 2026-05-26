@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
+import { appendLine, ExportFormat, exportNarrativeReport, type DocumentSection, type SectionLine } from "@/utils/export-table";
 
 // Only show functional usage categories to avoid confusion between location vs function
 const usageContextLabels: Record<AssetUsageContext, string> = {
@@ -795,6 +796,40 @@ export default function AssetUsagePage() {
     return sections;
   };
 
+  const buildUsageLetterSections = (log: AssetUsageLog): DocumentSection[] => {
+    const main: SectionLine[] = []
+    appendLine(main, 'Nomor Surat', getUsageNoId(log))
+    appendLine(main, 'Operator', log.operatorName || log.createdByName || '-')
+    appendLine(main, 'NIP Operator', log.operatorNip || '-')
+    appendLine(main, 'Nama Alat', log.assetDetailName || log.assetName || '-')
+    appendLine(main, 'Kode Alat', log.assetDetailCode || log.assetCode || '-')
+    appendLine(main, 'Ruangan Pengguna', getUsageRoomDisplay(log).primary)
+    appendLine(main, 'Waktu Mulai', formatDayTimeLabel(log.startedAt) || '-')
+    appendLine(main, 'Waktu Selesai', formatDayTimeLabel(log.endedAt) || '-')
+    appendLine(main, 'Tujuan / Keterangan', log.notes?.trim() || '-')
+
+    const sign: SectionLine[] = []
+    appendLine(sign, 'Tempat, Tanggal', formatDayTimeLabel(log.startedAt) || '-')
+    appendLine(sign, 'Penanggung Jawab', log.createdByName || '-')
+    appendLine(sign, 'Keterangan', '-')
+
+    return [
+      { title: 'SURAT PENGGUNAAN', lines: main },
+      { title: 'PENUTUP & TANDA TANGAN', lines: sign },
+    ]
+  }
+
+  const exportSingleUsageLetter = async (format: ExportFormat, log: AssetUsageLog) => {
+    void exportNarrativeReport(format, {
+      title: `Surat Penggunaan - ${log.operatorName || log.id}`,
+      subtitle: 'SURAT PENGGUNAAN',
+      entries: [log],
+      filePrefix: `surat-penggunaan-${log.id}`,
+      buildSections: buildUsageLetterSections,
+      emptyMessage: 'Tidak ada data pemakaian yang dipilih.',
+    })
+  }
+
   const toggleUsageHistoryCard = (id: number) => {
     setExpandedUsageHistoryIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -1197,6 +1232,9 @@ export default function AssetUsagePage() {
                                 title="Edit"
                               >
                                 <Pencil className="h-3 w-3 text-slate-700" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-6 rounded-full px-2 text-[12px]" onClick={() => exportSingleUsageLetter("pdf", log)}>
+                                Surat
                               </Button>
                               <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                 <Trash2 className="h-3 w-3 text-red-600" />

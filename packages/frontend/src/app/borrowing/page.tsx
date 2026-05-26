@@ -1312,6 +1312,42 @@ export default function BorrowingPage() {
     })
   }
 
+  const buildBorrowingLetterSections = (entry: ApiBorrowing): DocumentSection[] => {
+    const main: SectionLine[] = []
+    appendLine(main, 'Nomor Surat', entry.borrowingCode || `P-${entry.id}`)
+    appendLine(main, 'Pengaju', entry.userName || '-')
+    appendLine(main, 'NIP', entry.userNip || '-')
+    appendLine(main, 'Jabatan', entry.borrowerPosition || '-')
+    appendLine(main, 'Unit', entry.borrowerWorkUnit || '-')
+    appendLine(main, 'Nama Alat', entry.assetName || '-')
+    appendLine(main, 'Kode Alat', entry.assetCode || '-')
+    appendLine(main, 'No ID', entry.assetDetailId || entry.assetDetailCode || entry.borrowingCode || String(entry.id))
+    appendLine(main, 'Tanggal Pinjam', entry.borrowDate || '-')
+    appendLine(main, 'Batas Pengembalian', entry.dueDate || '-')
+    appendLine(main, 'Tujuan / Alasan', entry.purpose || entry.destinationRoom || '-')
+
+    const sign: SectionLine[] = []
+    appendLine(sign, 'Tempat, Tanggal', entry.createdAt || '-')
+    appendLine(sign, 'Penanggung Jawab', entry.ownerName || entry.ownerPosition || '-')
+    appendLine(sign, 'Jabatan Penanggung Jawab', entry.ownerPosition || '-')
+
+    const sections: DocumentSection[] = []
+    sections.push({ title: 'SURAT PEMINJAMAN', lines: main })
+    sections.push({ title: 'PENUTUP & TANDA TANGAN', lines: sign })
+    return sections
+  }
+
+  const exportSingleBorrowingLetter = async (format: ExportFormat, borrowing: ApiBorrowing) => {
+    void exportNarrativeReport(format, {
+      title: `Surat Peminjaman - ${borrowing.userName || borrowing.id}`,
+      subtitle: 'SURAT PEMINJAMAN',
+      entries: [borrowing],
+      filePrefix: `surat-peminjaman-${borrowing.id}`,
+      buildSections: buildBorrowingLetterSections,
+      emptyMessage: 'Tidak ada data peminjaman yang dipilih.',
+    })
+  }
+
   const toggleBorrowingSummary = (id: number) => {
     setExpandedBorrowingIds((prev) => {
       const next = new Set(prev)
@@ -2351,6 +2387,9 @@ export default function BorrowingPage() {
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("pdf", b)}>
                                     PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("pdf", b)}>
+                                    Surat
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("word", b)}>
                                     Word

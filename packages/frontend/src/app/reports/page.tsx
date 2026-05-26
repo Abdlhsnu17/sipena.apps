@@ -1,16 +1,16 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_BASE_URL } from "@/services/api.service";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { getAuthToken } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
-import reportService from "@/services/report.service";
+import reportService, { type DashboardStats } from "@/services/report.service";
 import { parseDateValue } from "@/utils/format";
-import { Download } from "lucide-react";
+import { Download, FileSpreadsheet, HardHat, Package, Stethoscope, TriangleAlert, UploadCloud, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
     Bar,
@@ -37,6 +37,8 @@ export default function ReportsPage() {
   const [maintenance, setMaintenance] = useState<any[]>([])
   const [borrowings, setBorrowings] = useState<any[]>([])
   const [assetUsageLogs, setAssetUsageLogs] = useState<AssetUsageLog[]>([])
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [uploadedReportCount, setUploadedReportCount] = useState(0)
   const [monthlyData, setMonthlyData] = useState<any[]>([])
   const [monthlyDataByLocation, setMonthlyDataByLocation] = useState<any[]>([])
   const [usageMonthlyData, setUsageMonthlyData] = useState<any[]>([])
@@ -173,9 +175,11 @@ export default function ReportsPage() {
           maintenanceService.getAll({ page: 1, limit: 1000 }),
           borrowingService.getAll({ page: 1, limit: 1000 }),
           assetUsageService.getAll({ page: 1, limit: 1000 }),
+          reportService.getDashboard(),
+          reportService.getUploadedReports(),
         ])
 
-        const [medicalResult, nonMedicalResult, maintenanceResult, borrowingResult, usageResult] = results
+        const [medicalResult, nonMedicalResult, maintenanceResult, borrowingResult, usageResult, dashboardResult, uploadsResult] = results
 
         if (medicalResult.status === "fulfilled" && medicalResult.value.success) {
           const medicalData = toArray(medicalResult.value.data)
@@ -212,6 +216,18 @@ export default function ReportsPage() {
         } else if (usageResult.status === "rejected") {
           console.error("Failed to load asset usage data:", usageResult.reason)
         }
+
+        if (dashboardResult.status === "fulfilled" && dashboardResult.value.success) {
+          setDashboardStats(dashboardResult.value.data)
+        } else if (dashboardResult.status === "rejected") {
+          console.error("Failed to load dashboard stats:", dashboardResult.reason)
+        }
+
+        if (uploadsResult.status === "fulfilled" && uploadsResult.value.success) {
+          setUploadedReportCount(toArray(uploadsResult.value.data).length)
+        } else if (uploadsResult.status === "rejected") {
+          console.error("Failed to load uploaded reports:", uploadsResult.reason)
+        }
       } catch (error) {
         console.error("An unexpected error occurred in loadReportData:", error)
       }
@@ -229,6 +245,11 @@ export default function ReportsPage() {
   const uniqueUsedAssets = assetUsageLogs.length > 0
     ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size
     : 0
+  const activeBorrowingsTotal = dashboardStats?.activeBorrowings ?? borrowings.filter((b) => ["approved", "borrowed", "overdue"].includes(b.status)).length
+  const overdueBorrowingsTotal = dashboardStats?.overdueBorrowings ?? borrowings.filter((b) => b.status === "overdue").length
+  const scheduledMaintenanceTotal = dashboardStats?.scheduledMaintenance ?? maintenance.filter((item) => ["requested", "scheduled", "completed"].includes(item.status)).length
+  const totalUsers = dashboardStats?.totalUsers ?? 0
+  const activeSanctions = dashboardStats?.activeSanctions ?? 0
   const inventorySummaryData = [
     { name: "Total", total: totalAssets },
     { name: "Non Medis", total: totalNonMedicalAssets },
@@ -239,6 +260,88 @@ export default function ReportsPage() {
     { name: "Peminjaman", total: borrowings.length },
     { name: "Penggunaan", total: totalUsageCount },
     { name: "Alat Terpakai", total: uniqueUsedAssets },
+  ]
+  const overviewCards = [
+    {
+      label: "Total Aset",
+      value: dashboardStats?.totalAssets ?? totalAssets,
+      description: "Inventaris medis dan non-medis",
+      icon: Package,
+      tone: "from-sky-50 via-white to-cyan-50",
+      iconTone: "text-sky-700",
+    },
+    {
+      label: "Aset Medis",
+      value: dashboardStats?.totalMedicalAssets ?? totalMedicalAssets,
+      description: "Data inventaris medis",
+      icon: Stethoscope,
+      tone: "from-cyan-50 via-white to-blue-50",
+      iconTone: "text-cyan-700",
+    },
+    {
+      label: "Aset Non Medis",
+      value: dashboardStats?.totalNonMedicalAssets ?? totalNonMedicalAssets,
+      description: "Data inventaris non-medis",
+      icon: Package,
+      tone: "from-teal-50 via-white to-emerald-50",
+      iconTone: "text-teal-700",
+    },
+    {
+      label: "Peminjaman Aktif",
+      value: activeBorrowingsTotal,
+      description: "Peminjaman yang masih berjalan",
+      icon: HardHat,
+      tone: "from-amber-50 via-white to-orange-50",
+      iconTone: "text-amber-700",
+    },
+    {
+      label: "Terlambat",
+      value: overdueBorrowingsTotal,
+      description: "Peminjaman yang perlu tindak lanjut",
+      icon: TriangleAlert,
+      tone: "from-rose-50 via-white to-red-50",
+      iconTone: "text-rose-700",
+    },
+    {
+      label: "Pemeliharaan",
+      value: scheduledMaintenanceTotal,
+      description: "Jadwal yang sedang diproses",
+      icon: HardHat,
+      tone: "from-orange-50 via-white to-amber-50",
+      iconTone: "text-orange-700",
+    },
+    {
+      label: "Penggunaan Alat",
+      value: totalUsageCount,
+      description: "Total catatan pemakaian",
+      icon: FileSpreadsheet,
+      tone: "from-emerald-50 via-white to-green-50",
+      iconTone: "text-emerald-700",
+    },
+    {
+      label: "Pengguna",
+      value: totalUsers,
+      description: "Akun yang tercatat aktif",
+      icon: Users,
+      tone: "from-violet-50 via-white to-fuchsia-50",
+      iconTone: "text-violet-700",
+    },
+    {
+      label: "Unggahan",
+      value: uploadedReportCount,
+      description: "File laporan yang tersedia",
+      icon: UploadCloud,
+      tone: "from-slate-50 via-white to-zinc-50",
+      iconTone: "text-slate-700",
+    },
+    {
+      label: "Sanksi Aktif",
+      value: activeSanctions,
+      description: "Pelanggaran yang belum selesai",
+      icon: TriangleAlert,
+      tone: "from-red-50 via-white to-rose-50",
+      iconTone: "text-red-700",
+    },
   ]
   const maintenanceStatusData = [
     { status: "Tervalidasi", total: maintenance.filter((m) => m.status === "validated").length },
@@ -325,8 +428,36 @@ export default function ReportsPage() {
       <div className="mx-auto max-w-7xl space-y-4 page-gutter">
         <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="border-b border-slate-100 px-4 py-3">
+            <CardTitle className="text-sm font-semibold text-slate-800">Ringkasan Semua Modul</CardTitle>
+            <CardDescription className="text-xs">Agar pengguna bisa melihat kondisi seluruh aplikasi dalam satu layar</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 py-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {overviewCards.map((card) => {
+                const Icon = card.icon
+                return (
+                  <div key={card.label} className={`rounded-2xl border border-slate-200 bg-linear-to-br ${card.tone} p-4 shadow-sm`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{card.label}</p>
+                        <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{Number(card.value || 0).toLocaleString("id-ID")}</div>
+                        <p className="mt-2 text-xs text-slate-600">{card.description}</p>
+                      </div>
+                      <div className={`rounded-2xl bg-white/80 p-2 ${card.iconTone}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-4 py-3">
             <CardTitle className="text-sm font-semibold text-slate-800">Export Laporan</CardTitle>
-            <CardDescription className="text-xs">Unduh data aset, peminjaman, atau pemeliharaan sesuai periode dan status</CardDescription>
+            <CardDescription className="text-xs">Unduh data lintas modul sesuai periode, status, dan jenis laporan</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-6">
             <select
@@ -337,6 +468,7 @@ export default function ReportsPage() {
               <option value="assets">Aset</option>
               <option value="borrowing">Peminjaman</option>
               <option value="maintenance">Pemeliharaan</option>
+              <option value="all">Semua Modul</option>
             </select>
             <input
               type="date"
@@ -354,7 +486,7 @@ export default function ReportsPage() {
               value={exportFilters.status}
               onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
               className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
-              disabled={exportFilters.reportType === "assets"}
+              disabled={exportFilters.reportType === "assets" || exportFilters.reportType === "all"}
             >
               <option value="">Semua status</option>
               {exportFilters.reportType === "borrowing" ? (
@@ -379,6 +511,7 @@ export default function ReportsPage() {
               value={exportFilters.type}
               onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
               className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              disabled={exportFilters.reportType === "all"}
             >
               <option value="">Semua jenis</option>
               {exportFilters.reportType === "maintenance" ? (
@@ -388,7 +521,7 @@ export default function ReportsPage() {
                   <option value="calibration">Calibration</option>
                   <option value="inspection">Inspection</option>
                 </>
-              ) : (
+              ) : exportFilters.reportType === "all" ? null : (
                 <>
                   <option value="medical">Medis</option>
                   <option value="non_medical">Non Medis</option>
@@ -398,11 +531,11 @@ export default function ReportsPage() {
             <div className="flex gap-2 md:col-span-1">
               <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null} className="flex-1">
                 <Download className="mr-2 h-4 w-4" />
-                {exporting === "excel" ? "..." : "Excel"}
+                {exporting === "excel" ? "..." : exportFilters.reportType === "all" ? "Excel Semua" : "Excel"}
               </Button>
               <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null} className="flex-1">
                 <Download className="mr-2 h-4 w-4" />
-                {exporting === "pdf" ? "..." : "PDF"}
+                {exporting === "pdf" ? "..." : exportFilters.reportType === "all" ? "PDF Semua" : "PDF"}
               </Button>
             </div>
           </CardContent>

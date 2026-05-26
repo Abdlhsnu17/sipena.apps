@@ -1057,6 +1057,40 @@ export default function MaintenancePage() {
     })
   }
 
+  const buildMaintenanceLetterSections = (entry: Maintenance): DocumentSection[] => {
+    const main: SectionLine[] = []
+    appendLine(main, 'Nomor Surat', entry.maintenanceCode || `M-${entry.id}`)
+    appendLine(main, 'Pemohon', entry.requesterName || '-')
+    appendLine(main, 'NIP', entry.requesterNip || '-')
+    appendLine(main, 'Unit', entry.assetLocation || '-')
+    appendLine(main, 'Nama Alat', entry.assetName || '-')
+    appendLine(main, 'Kode Alat', entry.assetCode || '-')
+    appendLine(main, 'Jadwal Pemeliharaan', entry.scheduledDate || '-')
+    appendLine(main, 'Jenis Pemeliharaan', entry.type || '-')
+    appendLine(main, 'Catatan', entry.notes || entry.description || '-')
+
+    const sign: SectionLine[] = []
+    appendLine(sign, 'Tempat, Tanggal', entry.createdAt || '-')
+    appendLine(sign, 'Penanggung Jawab', entry.technician || entry.validatorName || '-')
+    appendLine(sign, 'NIP Penanggung Jawab', entry.validatorNip || '-')
+
+    return [
+      { title: 'SURAT PEMELIHARAAN', lines: main },
+      { title: 'PENUTUP & TANDA TANGAN', lines: sign },
+    ]
+  }
+
+  const exportSingleMaintenanceLetter = async (format: ExportFormat, item: Maintenance) => {
+    void exportNarrativeReport(format, {
+      title: `Surat Pemeliharaan - ${item.requesterName || item.id}`,
+      subtitle: 'SURAT PEMELIHARAAN',
+      entries: [item],
+      filePrefix: `surat-pemeliharaan-${item.id}`,
+      buildSections: buildMaintenanceLetterSections,
+      emptyMessage: 'Tidak ada data pemeliharaan yang dipilih.',
+    })
+  }
+
   const handleExport = async (format: ExportFormat) => {
     if (!maintenanceRowsToExport.length) return
     const columnKeys =
@@ -1507,6 +1541,9 @@ export default function MaintenancePage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => void exportSingleNarrative("pdf", m)}>
                               PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("pdf", m)}>
+                              Surat
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleNarrative("word", m)}>
                               Word

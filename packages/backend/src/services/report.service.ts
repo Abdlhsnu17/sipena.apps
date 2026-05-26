@@ -1,5 +1,5 @@
-import fs, { promises as fsPromises } from 'fs';
 import ExcelJS from 'exceljs';
+import fs, { promises as fsPromises } from 'fs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
@@ -96,6 +96,12 @@ interface SummaryRow extends RowDataPacket {
   total: number;
 }
 
+interface ExportSheet {
+  title: string;
+  rows: Record<string, unknown>[];
+  columns?: string[];
+}
+
 interface DueBorrowingRow extends RowDataPacket {
   id: number;
   borrowing_code: string | null;
@@ -139,8 +145,8 @@ const formatCellValue = (value: unknown): string | number | Date => {
 const escapePdfText = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' => {
-  if (value === 'borrowing' || value === 'maintenance') return value;
+const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'all' => {
+  if (value === 'borrowing' || value === 'maintenance' || value === 'all') return value;
   return 'assets';
 };
 
@@ -566,6 +572,138 @@ export class ReportService {
     return { success: true, message: 'Maintenance report generated successfully', data: rows };
   }
 
+  async getUsageReport(filters: ReportFilters): Promise<ApiResponse> {
+    let query = `
+      SELECT l.*,
+        COALESCE(ma.name, na.name) as asset_name,
+        COALESCE(ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(ma.location, na.location) as asset_location,
+        op.name as operator_name,
+        op.nip as operator_nip,
+        creator.name as created_by_name
+      FROM asset_usage_logs l
+      LEFT JOIN medical_assets ma ON l.asset_type = 'medical' AND l.asset_id = ma.id
+      LEFT JOIN non_medical_assets na ON l.asset_type = 'non_medical' AND l.asset_id = na.id
+      LEFT JOIN users op ON l.operator_user_id = op.id
+      LEFT JOIN users creator ON l.created_by = creator.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (filters.startDate) {
+      query += ' AND l.started_at >= ?';
+      params.push(`${filters.startDate} 00:00:00`);
+    }
+
+    if (filters.endDate) {
+      query += ' AND l.started_at <= ?';
+      params.push(`${filters.endDate} 23:59:59`);
+    }
+
+    query += ' ORDER BY l.started_at DESC, l.created_at DESC';
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+    return { success: true, message: 'Usage report generated successfully', data: rows };
+  }
+
+  async getUploadReport(filters: ReportFilters): Promise<ApiResponse> {
+    let query = 'SELECT * FROM report_uploads WHERE 1=1';
+    const params: any[] = [];
+
+    if (filters.startDate) {
+      query += ' AND uploaded_at >= ?';
+      params.push(`${filters.startDate} 00:00:00`);
+    }
+
+    if (filters.endDate) {
+      query += ' AND uploaded_at <= ?';
+      params.push(`${filters.endDate} 23:59:59`);
+    }
+
+    query += ' ORDER BY uploaded_at DESC';
+
+    const [rows] = await pool.query<ReportUploadRow[]>(query, params);
+    return { success: true, message: 'Upload report generated successfully', data: rows.map((row) => this.mapUploadRow(row)) };
+  }
+
+  private async getDashboardSummaryRows(): Promise<Record<string, unknown>[]> {
+    const dashboard = await this.getDashboardStats();
+    if (!dashboard.success || !dashboard.data) {
+      return [];
+    }
+
+    const data = dashboard.data;
+    return [
+      { label: 'Total Aset', value: data.totalAssets },
+      { label: 'Aset Medis', value: data.totalMedicalAssets },
+      { label: 'Aset Non Medis', value: data.totalNonMedicalAssets },
+      { label: 'Aset Tersedia', value: data.availableAssets },
+      { label: 'Aset Dipinjam', value: data.borrowedAssets },
+      { label: 'Aset Pemeliharaan', value: data.maintenanceAssets },
+      { label: 'Total Peminjaman', value: data.totalBorrowings },
+      { label: 'Peminjaman Aktif', value: data.activeBorrowings },
+      { label: 'Peminjaman Pending', value: data.pendingBorrowings },
+      { label: 'Peminjaman Terlambat', value: data.overdueBorrowings },
+      { label: 'Pemeliharaan Total', value: data.totalMaintenance },
+      { label: 'Pemeliharaan Terjadwal', value: data.scheduledMaintenance },
+      { label: 'Pengguna', value: data.totalUsers },
+      { label: 'Sanksi Aktif', value: data.activeSanctions },
+      { label: 'Notifikasi Mendekati Jatuh Tempo', value: data.dueNotifications.length },
+    ];
+  }
+
+  private async getExportSheets(filters: ReportFilters): Promise<ExportSheet[]> {
+    const reportType = normalizeExportType(filters.reportType);
+    if (reportType !== 'all') {
+      const rows = await this.getExportRows(filters);
+      return [
+        {
+          title: this.getExportTitle(filters.reportType),
+          rows: rows as Record<string, unknown>[],
+          columns: this.getExportColumns(rows, filters.reportType),
+        },
+      ];
+    }
+
+    const [summaryRows, assetResult, borrowingResult, maintenanceResult, usageResult, uploadResult] = await Promise.all([
+      this.getDashboardSummaryRows(),
+      this.getAssetReport(filters),
+      this.getBorrowingReport(filters),
+      this.getMaintenanceReport(filters),
+      this.getUsageReport(filters),
+      this.getUploadReport(filters),
+    ]);
+
+    return [
+      { title: 'Ringkasan', rows: summaryRows, columns: ['label', 'value'] },
+      {
+        title: 'Aset',
+        rows: ((assetResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((assetResult.data ?? []) as RowDataPacket[], 'assets'),
+      },
+      {
+        title: 'Peminjaman',
+        rows: ((borrowingResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((borrowingResult.data ?? []) as RowDataPacket[], 'borrowing'),
+      },
+      {
+        title: 'Pemeliharaan',
+        rows: ((maintenanceResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((maintenanceResult.data ?? []) as RowDataPacket[], 'maintenance'),
+      },
+      {
+        title: 'Penggunaan',
+        rows: ((usageResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((usageResult.data ?? []) as RowDataPacket[], 'assets'),
+      },
+      {
+        title: 'Unggahan',
+        rows: ((uploadResult.data ?? []) as unknown) as Record<string, unknown>[],
+        columns: ['id', 'filename', 'contentType', 'sizeBytes', 'uploadedAt', 'notes', 'downloadPath'],
+      },
+    ];
+  }
+
   private async getExportRows(filters: ReportFilters): Promise<RowDataPacket[]> {
     const reportType = normalizeExportType(filters.reportType);
     if (reportType === 'borrowing') {
@@ -586,6 +724,8 @@ export class ReportService {
         return 'Laporan Peminjaman';
       case 'maintenance':
         return 'Laporan Pemeliharaan';
+      case 'all':
+        return 'Laporan Terpadu';
       default:
         return 'Laporan Aset';
     }
@@ -635,21 +775,22 @@ export class ReportService {
   }
 
   async exportToPdf(filters: ReportFilters): Promise<Buffer> {
-    const rows = await this.getExportRows(filters);
+    const sheets = await this.getExportSheets(filters);
     const title = this.getExportTitle(filters.reportType);
-    const columns = this.getExportColumns(rows, filters.reportType).slice(0, 6);
-    const lines = [
-      title,
-      `Dibuat: ${new Date().toLocaleString('id-ID')}`,
-      `Total data: ${rows.length}`,
-      '',
-      columns.join(' | '),
-      ...rows.map((row) =>
-        columns
-          .map((key) => String(formatCellValue(row[key])).replace(/\s+/g, ' ').slice(0, 32))
-          .join(' | ')
-      ),
-    ];
+    const lines = [title, `Dibuat: ${new Date().toLocaleString('id-ID')}`];
+
+    sheets.forEach((sheet) => {
+      lines.push('', sheet.title, `Total data: ${sheet.rows.length}`);
+      const columns = (sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType)).slice(0, 6);
+      lines.push(columns.join(' | '));
+      lines.push(
+        ...sheet.rows.map((row) =>
+          columns
+            .map((key) => String(formatCellValue(row[key])).replace(/\s+/g, ' ').slice(0, 32))
+            .join(' | ')
+        )
+      );
+    });
 
     const pdfLines = lines.flatMap((line) => {
       if (line.length <= 110) return [line];
@@ -703,26 +844,28 @@ export class ReportService {
   }
 
   async exportToExcel(filters: ReportFilters): Promise<Buffer> {
-    const rows = await this.getExportRows(filters);
+    const sheets = await this.getExportSheets(filters);
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(this.getExportTitle(filters.reportType).slice(0, 31));
-    const columns = this.getExportColumns(rows, filters.reportType);
+    sheets.forEach((sheet) => {
+      const worksheet = workbook.addWorksheet(sheet.title.slice(0, 31));
+      const columns = sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType);
 
-    worksheet.columns = columns.map((key) => ({
-      header: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
-      key,
-      width: Math.min(42, Math.max(14, key.length + 8)),
-    }));
+      worksheet.columns = columns.map((key) => ({
+        header: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+        key,
+        width: Math.min(42, Math.max(14, key.length + 8)),
+      }));
 
-    rows.forEach((row) => {
-      worksheet.addRow(columns.reduce<Record<string, string | number | Date>>((acc, key) => {
-        acc[key] = formatCellValue(row[key]);
-        return acc;
-      }, {}));
+      sheet.rows.forEach((row) => {
+        worksheet.addRow(columns.reduce<Record<string, string | number | Date>>((acc, key) => {
+          acc[key] = formatCellValue(row[key]);
+          return acc;
+        }, {}));
+      });
+
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.views = [{ state: 'frozen', ySplit: 1 }];
     });
-
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
