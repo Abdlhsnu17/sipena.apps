@@ -1,17 +1,17 @@
 "use client"
 
-import AuthHeader from "@/components/auth-header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
-import { Spinner } from "@/components/ui/spinner"
-import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
-import authService from "@/services/auth.service"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, RotateCcw } from "lucide-react"
-import { useRouter } from "next/navigation"
-import type React from "react"
-import { useState } from "react"
+import AuthHeader from "@/components/auth-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Spinner } from "@/components/ui/spinner";
+import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll";
+import authService from "@/services/auth.service";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState } from "react";
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -113,14 +113,13 @@ export default function ResetPasswordPage() {
         className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardHeader className="pb-4 text-center">
+        <CardContent className="space-y-6 pt-6 sm:pt-8">
           <AuthHeader
             title="Lupa Password"
             description="Masukkan NIP untuk menerima kode verifikasi reset password."
             showRecoveryIcon
+            variant="inline"
           />
-        </CardHeader>
-        <CardContent className="space-y-4">
           {step === "request" ? (
             <form onSubmit={handleRequestCode} className="space-y-4">
               <div>

@@ -545,7 +545,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           <div className="hidden flex-col items-center gap-3 xl:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
               <Image
-                src="/images/logo-RS.png"
+                src="/images/logo-sipena-transparent.png"
                 alt="Logo SiPeNa"
                 width={48}
                 height={28}
@@ -567,7 +567,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             <div className="flex min-w-0 flex-1 items-center">
               <div className="relative h-14 min-w-0 flex-1 overflow-hidden">
                 <Image
-                  src="/images/logo-RS.png"
+                  src="/images/logo-sipena-transparent.png"
                   alt="Logo SiPeNa"
                   width={170}
                   height={96}

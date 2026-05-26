@@ -1,16 +1,16 @@
 "use client"
 
-import AuthHeader from "@/components/auth-header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll"
-import authService from "@/services/auth.service"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, Mail, Smartphone, User2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import type React from "react"
-import { useState } from "react"
+import AuthHeader from "@/components/auth-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useMobileFocusScroll } from "@/hooks/use-mobile-focus-scroll";
+import authService from "@/services/auth.service";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, Mail, Smartphone, User2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState } from "react";
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -83,13 +83,13 @@ export default function RegisterPage() {
         className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardHeader className="pb-4 text-center">
+        <CardContent className="space-y-6 pt-6 sm:pt-8">
           <AuthHeader
             title="Daftar Akun"
             description="Buat akun baru untuk mulai menggunakan SiPeNa."
+            variant="inline"
           />
-        </CardHeader>
-        <CardContent>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="nip" className="block text-sm font-medium text-foreground mb-2">
@@ -266,14 +266,14 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-4">
-          <Button
-            type="button"
-            onClick={() => router.replace("/login")}
-            className="w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-          >
-            Kembali ke Login
-          </Button>
+          <div className="pt-1">
+            <Button
+              type="button"
+              onClick={() => router.replace("/login")}
+              className="w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+            >
+              Kembali ke Login
+            </Button>
           </div>
         </CardContent>
       </Card>
