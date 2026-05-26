@@ -47,7 +47,7 @@ jobs:
               escaped_db_user="$(escape_sql_string "$db_user")"
               escaped_db_password="$(escape_sql_string "$db_password")"
 
-              mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+              if MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -uroot <<SQL
             SET SESSION sql_mode = '\''NO_BACKSLASH_ESCAPES'\'';
             CREATE DATABASE IF NOT EXISTS \`$escaped_db_name\`;
             CREATE USER IF NOT EXISTS '\''$escaped_db_user'\''@'\''%'\'' IDENTIFIED BY '\''$escaped_db_password'\'';
@@ -55,6 +55,21 @@ jobs:
             GRANT ALL PRIVILEGES ON \`$escaped_db_name\`.* TO '\''$escaped_db_user'\''@'\''%'\'';
             FLUSH PRIVILEGES;
             SQL
+              then
+                exit 0
+              fi
+
+              echo "Root MySQL login failed. Checking whether the configured app database user can connect..." >&2
+
+              if MYSQL_PWD="$db_password" mysql --protocol=TCP -h127.0.0.1 -u"$db_user" "$db_name" -e "SELECT 1" >/dev/null; then
+                echo "Root MySQL login failed, but app DB credentials are valid. Continuing deploy without user bootstrap." >&2
+                exit 0
+              fi
+
+              echo "MySQL credentials are invalid for both root and the app DB user." >&2
+              echo "On a reused mysql_data volume, MYSQL_ROOT_PASSWORD must match the password used when that volume was first initialized." >&2
+              echo "Fix packages/backend/.env on the VPS, or intentionally recreate the MySQL volume after backing up data." >&2
+              exit 1
             '
 
             if ! docker compose up -d --build backend frontend; then
