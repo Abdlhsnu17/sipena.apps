@@ -7,6 +7,9 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-sipena_db_local}
       MYSQL_USER: ${MYSQL_USER:-sipena_app}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      APP_DB_NAME: ${DB_NAME:-sipena_db_local}
+      APP_DB_USER: ${DB_USER:-sipena_app}
+      APP_DB_PASSWORD: ${DB_PASSWORD:-changeme}
     ports:
       - "3306:3306"
     volumes:

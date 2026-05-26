@@ -27,7 +27,34 @@ jobs:
             git reset --hard origin/main
 
             cd packages/backend
-            if ! docker compose up -d --build; then
+            docker compose up -d --build mysql redis phpmyadmin
+
+            docker compose exec -T mysql sh -eu -c '
+              escape_sql_string() {
+                printf "%s" "$1" | sed "s/'\''/'\'''\''/g"
+              }
+
+              escape_sql_identifier() {
+                printf "%s" "$1" | sed "s/\`/\`\`/g"
+              }
+
+              db_name="${APP_DB_NAME:-sipena_db_local}"
+              db_user="${APP_DB_USER:-sipena_app}"
+              db_password="${APP_DB_PASSWORD:-changeme}"
+              escaped_db_name="$(escape_sql_identifier "$db_name")"
+              escaped_db_user="$(escape_sql_string "$db_user")"
+              escaped_db_password="$(escape_sql_string "$db_password")"
+
+              mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+            CREATE DATABASE IF NOT EXISTS \`$escaped_db_name\`;
+            CREATE USER IF NOT EXISTS '\''$escaped_db_user'\''@'\''%'\'' IDENTIFIED BY '\''$escaped_db_password'\'';
+            ALTER USER '\''$escaped_db_user'\''@'\''%'\'' IDENTIFIED BY '\''$escaped_db_password'\'';
+            GRANT ALL PRIVILEGES ON \`$escaped_db_name\`.* TO '\''$escaped_db_user'\''@'\''%'\'';
+            FLUSH PRIVILEGES;
+            SQL
+            '
+
+            if ! docker compose up -d --build backend frontend; then
               docker compose ps
               docker compose logs --no-color --tail=200 backend mysql redis
               exit 1
