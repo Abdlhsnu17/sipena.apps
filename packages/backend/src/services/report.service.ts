@@ -1,4 +1,5 @@
 import fs, { promises as fsPromises } from 'fs';
+import ExcelJS from 'exceljs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
@@ -43,6 +44,23 @@ interface DashboardStats {
   totalMaintenance: number;
   scheduledMaintenance: number;
   totalUsers: number;
+  assetStatusSummary: Array<{ status: string; total: number }>;
+  borrowingStatusSummary: Array<{ status: string; total: number }>;
+  maintenanceStatusSummary: Array<{ status: string; total: number }>;
+  dueNotifications: DueNotification[];
+}
+
+type DueNotificationType = 'borrowing_overdue' | 'borrowing_due_soon' | 'maintenance_due_soon';
+
+interface DueNotification {
+  id: number;
+  type: DueNotificationType;
+  title: string;
+  description: string;
+  dueDate: string | null;
+  daysRemaining: number;
+  severity: 'danger' | 'warning' | 'info';
+  href: string;
 }
 
 export interface ReportUpload {
@@ -72,6 +90,59 @@ interface ReportUploadRow extends RowDataPacket {
 interface ColumnCountRow extends RowDataPacket {
   count: number;
 }
+
+interface SummaryRow extends RowDataPacket {
+  label: string;
+  total: number;
+}
+
+interface DueBorrowingRow extends RowDataPacket {
+  id: number;
+  borrowing_code: string | null;
+  due_date: Date | string | null;
+  status: string;
+  asset_name: string | null;
+  user_name: string | null;
+  days_remaining: number;
+}
+
+interface DueMaintenanceRow extends RowDataPacket {
+  id: number;
+  maintenance_code: string | null;
+  scheduled_date: Date | string | null;
+  status: string;
+  asset_name: string | null;
+  technician: string | null;
+  days_remaining: number;
+}
+
+const toIsoDate = (value: Date | string | null | undefined): string | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+const formatCellValue = (value: unknown): string | number | Date => {
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value;
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak';
+  return value as string | number;
+};
+
+const escapePdfText = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+
+const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' => {
+  if (value === 'borrowing' || value === 'maintenance') return value;
+  return 'assets';
+};
 
 export class ReportService {
   private uploadDir: string;
@@ -149,7 +220,11 @@ export class ReportService {
         SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
         SUM(CASE WHEN status = 'borrowed' THEN 1 ELSE 0 END) as borrowed,
         SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance
-      FROM medical_assets
+      FROM (
+        SELECT status, 'medical' as type FROM medical_assets
+        UNION ALL
+        SELECT status, 'non_medical' as type FROM non_medical_assets
+      ) assets
     `);
 
     const borrowingStatsQuery = hasBorrowingSanctionColumn
@@ -182,6 +257,29 @@ export class ReportService {
     `);
 
     const [userStats] = await pool.query<StatsRow[]>('SELECT COUNT(*) as total FROM users');
+    const [assetStatusRows] = await pool.query<SummaryRow[]>(`
+      SELECT status as label, COUNT(*) as total
+      FROM (
+        SELECT status FROM medical_assets
+        UNION ALL
+        SELECT status FROM non_medical_assets
+      ) assets
+      GROUP BY status
+      ORDER BY total DESC
+    `);
+    const [borrowingStatusRows] = await pool.query<SummaryRow[]>(`
+      SELECT status as label, COUNT(*) as total
+      FROM borrowing_records
+      GROUP BY status
+      ORDER BY total DESC
+    `);
+    const [maintenanceStatusRows] = await pool.query<SummaryRow[]>(`
+      SELECT status as label, COUNT(*) as total
+      FROM maintenance_records
+      GROUP BY status
+      ORDER BY total DESC
+    `);
+    const dueNotifications = await this.getDueNotifications();
 
     const assets = assetsStats[0];
     const borrowings = borrowingStats[0];
@@ -205,9 +303,91 @@ export class ReportService {
         activeSanctions: Number(borrowings.active_sanctions) || 0,
         totalMaintenance: Number(maintenance.total) || 0,
         scheduledMaintenance: Number(maintenance.scheduled) || 0,
-        totalUsers: Number(users.total) || 0
+        totalUsers: Number(users.total) || 0,
+        assetStatusSummary: assetStatusRows.map((row) => ({ status: row.label || 'unknown', total: Number(row.total) || 0 })),
+        borrowingStatusSummary: borrowingStatusRows.map((row) => ({ status: row.label || 'unknown', total: Number(row.total) || 0 })),
+        maintenanceStatusSummary: maintenanceStatusRows.map((row) => ({ status: row.label || 'unknown', total: Number(row.total) || 0 })),
+        dueNotifications,
       }
     };
+  }
+
+  async getDueNotifications(): Promise<DueNotification[]> {
+    const [borrowingRows] = await pool.query<DueBorrowingRow[]>(`
+      SELECT b.id,
+             b.borrowing_code,
+             b.due_date,
+             b.status,
+             COALESCE(b.asset_detail_name, ma.name, na.name) as asset_name,
+             u.name as user_name,
+             DATEDIFF(DATE(b.due_date), CURDATE()) as days_remaining
+      FROM borrowing_records b
+      LEFT JOIN medical_assets ma ON b.asset_id = ma.id AND (b.asset_type IS NULL OR b.asset_type = 'medical')
+      LEFT JOIN non_medical_assets na ON b.asset_id = na.id AND b.asset_type = 'non_medical'
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.due_date IS NOT NULL
+        AND b.status IN ('approved', 'borrowed', 'overdue')
+        AND DATEDIFF(DATE(b.due_date), CURDATE()) <= 3
+      ORDER BY days_remaining ASC, b.due_date ASC
+      LIMIT 8
+    `);
+
+    const [maintenanceRows] = await pool.query<DueMaintenanceRow[]>(`
+      SELECT m.id,
+             m.maintenance_code,
+             m.scheduled_date,
+             m.status,
+             COALESCE(m.asset_detail_name, ma.name, na.name) as asset_name,
+             m.technician,
+             DATEDIFF(DATE(m.scheduled_date), CURDATE()) as days_remaining
+      FROM maintenance_records m
+      LEFT JOIN medical_assets ma ON m.asset_id = ma.id AND (m.asset_type IS NULL OR m.asset_type = 'medical')
+      LEFT JOIN non_medical_assets na ON m.asset_id = na.id AND m.asset_type = 'non_medical'
+      WHERE m.scheduled_date IS NOT NULL
+        AND m.status NOT IN ('validated', 'cancelled')
+        AND DATEDIFF(DATE(m.scheduled_date), CURDATE()) BETWEEN 0 AND 7
+      ORDER BY days_remaining ASC, m.scheduled_date ASC
+      LIMIT 8
+    `);
+
+    const borrowingNotifications = borrowingRows.map<DueNotification>((row) => {
+      const daysRemaining = Number(row.days_remaining) || 0;
+      const overdue = daysRemaining < 0 || row.status === 'overdue';
+      const code = row.borrowing_code ? ` ${row.borrowing_code}` : '';
+      const assetName = row.asset_name || 'Aset';
+      const userName = row.user_name || 'Pengguna';
+      return {
+        id: Number(row.id),
+        type: overdue ? 'borrowing_overdue' : 'borrowing_due_soon',
+        title: overdue ? `Peminjaman terlambat${code}` : `Peminjaman jatuh tempo${code}`,
+        description: overdue
+          ? `${assetName} oleh ${userName} terlambat ${Math.abs(daysRemaining)} hari`
+          : `${assetName} oleh ${userName} jatuh tempo dalam ${daysRemaining} hari`,
+        dueDate: toIsoDate(row.due_date),
+        daysRemaining,
+        severity: overdue ? 'danger' : 'warning',
+        href: '/returns',
+      };
+    });
+
+    const maintenanceNotifications = maintenanceRows.map<DueNotification>((row) => {
+      const daysRemaining = Number(row.days_remaining) || 0;
+      const code = row.maintenance_code ? ` ${row.maintenance_code}` : '';
+      return {
+        id: Number(row.id),
+        type: 'maintenance_due_soon',
+        title: `Pemeliharaan terjadwal${code}`,
+        description: `${row.asset_name || 'Aset'} dijadwalkan dalam ${daysRemaining} hari${row.technician ? ` oleh ${row.technician}` : ''}`,
+        dueDate: toIsoDate(row.scheduled_date),
+        daysRemaining,
+        severity: daysRemaining <= 1 ? 'warning' : 'info',
+        href: '/maintenance',
+      };
+    });
+
+    return [...borrowingNotifications, ...maintenanceNotifications]
+      .sort((a, b) => a.daysRemaining - b.daysRemaining)
+      .slice(0, 10);
   }
 
   async saveUpload(file: Express.Multer.File, userId?: number | string, notes?: string): Promise<ApiResponse<ReportUpload>> {
@@ -272,9 +452,15 @@ export class ReportService {
     let query = `
       SELECT 
         a.*,
-        (SELECT COUNT(*) FROM borrowing_records b WHERE b.asset_id = a.id) as total_borrowings,
-        (SELECT COUNT(*) FROM maintenance_records m WHERE m.asset_id = a.id) as total_maintenance
-      FROM medical_assets a
+        (SELECT COUNT(*) FROM borrowing_records b WHERE b.asset_id = a.id AND COALESCE(b.asset_type, 'medical') = a.type) as total_borrowings,
+        (SELECT COUNT(*) FROM maintenance_records m WHERE m.asset_id = a.id AND COALESCE(m.asset_type, 'medical') = a.type) as total_maintenance
+      FROM (
+        SELECT id, asset_code, name, description, category, type, status, \`condition\`, location, purchase_date, purchase_price, warranty_expiry, specifications, image_url, created_at, updated_at
+        FROM medical_assets
+        UNION ALL
+        SELECT id, asset_code, name, NULL as description, category, 'non_medical' as type, status, \`condition\`, location, purchase_date, NULL as purchase_price, warranty_expiry, NULL as specifications, NULL as image_url, created_at, updated_at
+        FROM non_medical_assets
+      ) a
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -310,12 +496,13 @@ export class ReportService {
     let query = `
       SELECT 
         b.*,
-        a.name as asset_name,
-        a.asset_code,
+        COALESCE(b.asset_detail_name, ma.name, na.name) as asset_name,
+        COALESCE(b.asset_detail_code, ma.asset_code, na.asset_code) as asset_code,
         u.name as user_name,
         u.nip
       FROM borrowing_records b
-      JOIN medical_assets a ON b.asset_id = a.id
+      LEFT JOIN medical_assets ma ON b.asset_id = ma.id AND (b.asset_type IS NULL OR b.asset_type = 'medical')
+      LEFT JOIN non_medical_assets na ON b.asset_id = na.id AND b.asset_type = 'non_medical'
       JOIN users u ON b.user_id = u.id
       WHERE 1=1
     `;
@@ -347,10 +534,12 @@ export class ReportService {
     let query = `
       SELECT 
         m.*,
-        a.name as asset_name,
-        a.asset_code
+        COALESCE(m.asset_detail_name, ma.name, na.name) as asset_name,
+        COALESCE(m.asset_detail_code, ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(ma.location, na.location) as asset_location
       FROM maintenance_records m
-      JOIN medical_assets a ON m.asset_id = a.id
+      LEFT JOIN medical_assets ma ON m.asset_id = ma.id AND (m.asset_type IS NULL OR m.asset_type = 'medical')
+      LEFT JOIN non_medical_assets na ON m.asset_id = na.id AND m.asset_type = 'non_medical'
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -377,14 +566,165 @@ export class ReportService {
     return { success: true, message: 'Maintenance report generated successfully', data: rows };
   }
 
-  async exportToPdf(_filters: ReportFilters): Promise<Buffer> {
-    // TODO: Implementasi PDF export menggunakan library seperti pdfkit atau puppeteer
-    throw new Error('PDF export belum diimplementasikan. Silakan gunakan export Excel terlebih dahulu.');
+  private async getExportRows(filters: ReportFilters): Promise<RowDataPacket[]> {
+    const reportType = normalizeExportType(filters.reportType);
+    if (reportType === 'borrowing') {
+      const result = await this.getBorrowingReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
+    if (reportType === 'maintenance') {
+      const result = await this.getMaintenanceReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
+    const result = await this.getAssetReport(filters);
+    return (result.data ?? []) as RowDataPacket[];
   }
 
-  async exportToExcel(_filters: ReportFilters): Promise<Buffer> {
-    // TODO: Implementasi Excel export menggunakan library seperti exceljs
-    throw new Error('Excel export belum diimplementasikan. Fitur ini akan segera tersedia.');
+  private getExportTitle(reportType?: string): string {
+    switch (normalizeExportType(reportType)) {
+      case 'borrowing':
+        return 'Laporan Peminjaman';
+      case 'maintenance':
+        return 'Laporan Pemeliharaan';
+      default:
+        return 'Laporan Aset';
+    }
+  }
+
+  private getExportColumns(rows: RowDataPacket[], reportType?: string): string[] {
+    const preferred = [
+      'id',
+      'asset_code',
+      'asset_name',
+      'name',
+      'category',
+      'type',
+      'status',
+      'condition',
+      'location',
+      'user_name',
+      'nip',
+      'borrow_date',
+      'due_date',
+      'return_date',
+      'scheduled_date',
+      'completed_date',
+      'technician',
+      'cost',
+      'total_borrowings',
+      'total_maintenance',
+      'created_at',
+      'updated_at',
+    ];
+    const keys = rows.reduce<string[]>((acc, row) => {
+      Object.keys(row).forEach((key) => {
+        if (!acc.includes(key)) acc.push(key);
+      });
+      return acc;
+    }, []);
+    const columns = [...preferred.filter((key) => keys.includes(key)), ...keys.filter((key) => !preferred.includes(key))];
+    if (columns.length > 0) return columns;
+    switch (normalizeExportType(reportType)) {
+      case 'borrowing':
+        return ['id', 'borrowing_code', 'asset_name', 'user_name', 'status', 'borrow_date', 'due_date'];
+      case 'maintenance':
+        return ['id', 'maintenance_code', 'asset_name', 'type', 'status', 'scheduled_date', 'technician'];
+      default:
+        return ['id', 'asset_code', 'name', 'category', 'type', 'status', 'location'];
+    }
+  }
+
+  async exportToPdf(filters: ReportFilters): Promise<Buffer> {
+    const rows = await this.getExportRows(filters);
+    const title = this.getExportTitle(filters.reportType);
+    const columns = this.getExportColumns(rows, filters.reportType).slice(0, 6);
+    const lines = [
+      title,
+      `Dibuat: ${new Date().toLocaleString('id-ID')}`,
+      `Total data: ${rows.length}`,
+      '',
+      columns.join(' | '),
+      ...rows.map((row) =>
+        columns
+          .map((key) => String(formatCellValue(row[key])).replace(/\s+/g, ' ').slice(0, 32))
+          .join(' | ')
+      ),
+    ];
+
+    const pdfLines = lines.flatMap((line) => {
+      if (line.length <= 110) return [line];
+      const chunks: string[] = [];
+      for (let index = 0; index < line.length; index += 110) {
+        chunks.push(line.slice(index, index + 110));
+      }
+      return chunks;
+    });
+    const pageLineLimit = 56;
+    const pageChunks: string[][] = [];
+    for (let index = 0; index < pdfLines.length; index += pageLineLimit) {
+      pageChunks.push(pdfLines.slice(index, index + pageLineLimit));
+    }
+
+    const pageIds: number[] = [];
+    const objects: string[] = [
+      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+      '',
+      '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+    ];
+    let nextObjectId = 4;
+
+    pageChunks.forEach((pageLines) => {
+      const pageId = nextObjectId++;
+      const contentId = nextObjectId++;
+      pageIds.push(pageId);
+      const content = ['BT', '/F1 9 Tf', '40 790 Td'];
+      pageLines.forEach((line, index) => {
+        if (index > 0) content.push('0 -13 Td');
+        content.push(`(${escapePdfText(line)}) Tj`);
+      });
+      content.push('ET');
+      const stream = content.join('\n');
+      objects.push(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`);
+      objects.push(`${contentId} 0 obj\n<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream\nendobj\n`);
+    });
+
+    objects[1] = `2 0 obj\n<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>\nendobj\n`;
+    let offset = '%PDF-1.4\n'.length;
+    const xref = ['0000000000 65535 f '];
+    const body = objects.map((object) => {
+      xref.push(`${String(offset).padStart(10, '0')} 00000 n `);
+      offset += Buffer.byteLength(object);
+      return object;
+    }).join('');
+    const header = '%PDF-1.4\n';
+    const xrefOffset = Buffer.byteLength(header + body);
+    const trailer = `xref\n0 ${xref.length}\n${xref.join('\n')}\ntrailer\n<< /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+    return Buffer.from(header + body + trailer, 'utf8');
+  }
+
+  async exportToExcel(filters: ReportFilters): Promise<Buffer> {
+    const rows = await this.getExportRows(filters);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(this.getExportTitle(filters.reportType).slice(0, 31));
+    const columns = this.getExportColumns(rows, filters.reportType);
+
+    worksheet.columns = columns.map((key) => ({
+      header: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+      key,
+      width: Math.min(42, Math.max(14, key.length + 8)),
+    }));
+
+    rows.forEach((row) => {
+      worksheet.addRow(columns.reduce<Record<string, string | number | Date>>((acc, key) => {
+        acc[key] = formatCellValue(row[key]);
+        return acc;
+      }, {}));
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }
 

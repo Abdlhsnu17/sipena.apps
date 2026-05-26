@@ -1,11 +1,16 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { API_BASE_URL } from "@/services/api.service";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
+import { getAuthToken } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
+import reportService from "@/services/report.service";
 import { parseDateValue } from "@/utils/format";
+import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
     Bar,
@@ -38,6 +43,14 @@ export default function ReportsPage() {
   const [usageRoomData, setUsageRoomData] = useState<any[]>([])
   const [usageYearData, setUsageYearData] = useState<any[]>([])
   const [usageContextData, setUsageContextData] = useState<any[]>([])
+  const [exporting, setExporting] = useState<"pdf" | "excel" | null>(null)
+  const [exportFilters, setExportFilters] = useState({
+    reportType: "assets",
+    startDate: "",
+    endDate: "",
+    status: "",
+    type: "",
+  })
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
 
@@ -267,12 +280,134 @@ export default function ReportsPage() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 
+  const handleExport = async (format: "pdf" | "excel") => {
+    setExporting(format)
+    try {
+      const params = Object.fromEntries(
+        Object.entries(exportFilters).filter(([, value]) => value.trim())
+      )
+      const endpoint = reportService.getExportEndpoint(format, params)
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+          ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Gagal mengunduh laporan")
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get("content-disposition") ?? ""
+      const match = disposition.match(/filename="?([^"]+)"?/i)
+      const fileName = match?.[1] ?? `laporan-${exportFilters.reportType}-${new Date().toISOString().slice(0, 10)}.${format === "excel" ? "xlsx" : "pdf"}`
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to export report:", error)
+      alert(error instanceof Error ? error.message : "Gagal mengunduh laporan")
+    } finally {
+      setExporting(null)
+    }
+  }
+
   return (
     <div
       className="bg-white dark:bg-slate-950"
       data-main-scroll
     >
       <div className="mx-auto max-w-7xl space-y-4 page-gutter">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-4 py-3">
+            <CardTitle className="text-sm font-semibold text-slate-800">Export Laporan</CardTitle>
+            <CardDescription className="text-xs">Unduh data aset, peminjaman, atau pemeliharaan sesuai periode dan status</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-6">
+            <select
+              value={exportFilters.reportType}
+              onChange={(event) => setExportFilters((current) => ({ ...current, reportType: event.target.value, status: "", type: "" }))}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+            >
+              <option value="assets">Aset</option>
+              <option value="borrowing">Peminjaman</option>
+              <option value="maintenance">Pemeliharaan</option>
+            </select>
+            <input
+              type="date"
+              value={exportFilters.startDate}
+              onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+            />
+            <input
+              type="date"
+              value={exportFilters.endDate}
+              onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+            />
+            <select
+              value={exportFilters.status}
+              onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              disabled={exportFilters.reportType === "assets"}
+            >
+              <option value="">Semua status</option>
+              {exportFilters.reportType === "borrowing" ? (
+                <>
+                  <option value="pending">Menunggu</option>
+                  <option value="approved">Disetujui</option>
+                  <option value="borrowed">Dipinjam</option>
+                  <option value="returned">Dikembalikan</option>
+                  <option value="overdue">Terlambat</option>
+                </>
+              ) : (
+                <>
+                  <option value="requested">Request</option>
+                  <option value="scheduled">Terjadwal</option>
+                  <option value="in_progress">Proses</option>
+                  <option value="completed">Selesai</option>
+                  <option value="validated">Tervalidasi</option>
+                </>
+              )}
+            </select>
+            <select
+              value={exportFilters.type}
+              onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+            >
+              <option value="">Semua jenis</option>
+              {exportFilters.reportType === "maintenance" ? (
+                <>
+                  <option value="preventive">Preventive</option>
+                  <option value="corrective">Corrective</option>
+                  <option value="calibration">Calibration</option>
+                  <option value="inspection">Inspection</option>
+                </>
+              ) : (
+                <>
+                  <option value="medical">Medis</option>
+                  <option value="non_medical">Non Medis</option>
+                </>
+              )}
+            </select>
+            <div className="flex gap-2 md:col-span-1">
+              <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null} className="flex-1">
+                <Download className="mr-2 h-4 w-4" />
+                {exporting === "excel" ? "..." : "Excel"}
+              </Button>
+              <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null} className="flex-1">
+                <Download className="mr-2 h-4 w-4" />
+                {exporting === "pdf" ? "..." : "PDF"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <Card className="rounded-lg border-0 bg-linear-to-br from-cyan-50/80 via-sky-50/70 to-blue-50/80 shadow-sm">
             <CardHeader className="border-b border-cyan-200/50 px-4 py-3">

@@ -7,10 +7,11 @@ import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
+import reportService, { type DueNotification, type StatusSummary } from "@/services/report.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
-import { ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Building2, CalendarClock, ClipboardList, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
@@ -143,7 +144,18 @@ export default function DashboardPage() {
     nonMedicalRoomCount: 0,
     medicalRoomCount: 0,
     totalRoomCount: 0,
+    overdueBorrowings: 0,
+    pendingBorrowings: 0,
+    availableAssets: 0,
+    borrowedAssets: 0,
+    maintenanceAssets: 0,
   })
+  const [dueNotifications, setDueNotifications] = useState<DueNotification[]>([])
+  const [statusSummaries, setStatusSummaries] = useState<{
+    assets: StatusSummary[]
+    borrowing: StatusSummary[]
+    maintenance: StatusSummary[]
+  }>({ assets: [], borrowing: [], maintenance: [] })
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -179,17 +191,25 @@ export default function DashboardPage() {
         nonMedicalRoomCount: 0,
         medicalRoomCount: 0,
         totalRoomCount: 0,
+        overdueBorrowings: 0,
+        pendingBorrowings: 0,
+        availableAssets: 0,
+        borrowedAssets: 0,
+        maintenanceAssets: 0,
       })
+      setDueNotifications([])
+      setStatusSummaries({ assets: [], borrowing: [], maintenance: [] })
       return
     }
 
     try {
-      const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
+      const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse, usageResponse, reportResponse] = await Promise.all([
         assetService.getMedicalAssets({ page: 1, limit: 1000 }),
         assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
         maintenanceService.getAll({ page: 1, limit: 1000 }),
         borrowingService.getAll({ page: 1, limit: 1000 }),
         assetUsageService.getAll({ page: 1, limit: 1000 }),
+        reportService.getDashboard(),
       ])
 
       const medicalAssets = medicalResponse.success ? medicalResponse.data : []
@@ -246,7 +266,20 @@ export default function DashboardPage() {
         nonMedicalRoomCount: nonMedicalRoomSet.size,
         medicalRoomCount: medicalRoomSet.size,
         totalRoomCount,
+        overdueBorrowings: reportResponse.success ? reportResponse.data.overdueBorrowings : borrowingsData.filter((b) => b.status === "overdue").length,
+        pendingBorrowings: reportResponse.success ? reportResponse.data.pendingBorrowings : borrowingsData.filter((b) => b.status === "pending").length,
+        availableAssets: reportResponse.success ? reportResponse.data.availableAssets : 0,
+        borrowedAssets: reportResponse.success ? reportResponse.data.borrowedAssets : 0,
+        maintenanceAssets: reportResponse.success ? reportResponse.data.maintenanceAssets : 0,
       })
+      if (reportResponse.success) {
+        setDueNotifications(reportResponse.data.dueNotifications ?? [])
+        setStatusSummaries({
+          assets: reportResponse.data.assetStatusSummary ?? [],
+          borrowing: reportResponse.data.borrowingStatusSummary ?? [],
+          maintenance: reportResponse.data.maintenanceStatusSummary ?? [],
+        })
+      }
     } catch (error: any) {
       const status = error?.response?.status
       if (status === 401 || status === 403) {
@@ -272,6 +305,36 @@ export default function DashboardPage() {
       router.push(action.href)
     }
   }
+
+  const formatStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      available: "Tersedia",
+      borrowed: "Dipinjam",
+      maintenance: "Pemeliharaan",
+      disposed: "Nonaktif",
+      pending: "Menunggu",
+      approved: "Disetujui",
+      returned: "Kembali",
+      overdue: "Terlambat",
+      requested: "Request",
+      scheduled: "Terjadwal",
+      in_progress: "Proses",
+      completed: "Selesai",
+      validated: "Tervalidasi",
+      cancelled: "Batal",
+    }
+    return labels[status] ?? status
+  }
+
+  const renderSummaryPills = (items: StatusSummary[]) => (
+    <div className="flex flex-wrap gap-2">
+      {items.slice(0, 5).map((item) => (
+        <Badge key={item.status} variant="outline" className="border-slate-200 bg-white/70 text-[11px] text-slate-700">
+          {formatStatusLabel(item.status)}: {Number(item.total || 0).toLocaleString("id-ID")}
+        </Badge>
+      ))}
+    </div>
+  )
 
   if (!currentUser) return null
 
@@ -310,6 +373,75 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="rounded-[24px] border border-amber-200/70 bg-linear-to-br from-amber-50/90 via-white to-rose-50/70 shadow-[0_20px_45px_rgba(245,158,11,0.12)] xl:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-800">Notifikasi Jatuh Tempo</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">Peminjaman terlambat, peminjaman segera jatuh tempo, dan jadwal pemeliharaan dekat</p>
+              </div>
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {dueNotifications.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm text-muted-foreground">
+                  Tidak ada jatuh tempo mendesak.
+                </div>
+              ) : (
+                dueNotifications.slice(0, 5).map((item) => (
+                  <button
+                    key={`${item.type}-${item.id}`}
+                    type="button"
+                    onClick={() => router.push(item.href)}
+                    className="flex w-full items-start justify-between gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        item.severity === "danger"
+                          ? "border-red-300 bg-red-50 text-red-700"
+                          : item.severity === "warning"
+                            ? "border-amber-300 bg-amber-50 text-amber-700"
+                            : "border-sky-300 bg-sky-50 text-sky-700"
+                      }
+                    >
+                      {item.daysRemaining < 0 ? `${Math.abs(item.daysRemaining)} hari lewat` : `${item.daysRemaining} hari`}
+                    </Badge>
+                  </button>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[24px] border border-sky-200/70 bg-linear-to-br from-sky-50/80 via-white to-emerald-50/60 shadow-[0_20px_45px_rgba(14,165,233,0.12)]">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-800">Ringkasan Operasional</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">Status aset, peminjaman, dan pemeliharaan</p>
+              </div>
+              <CalendarClock className="h-5 w-5 shrink-0 text-sky-700" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Aset</p>
+                {renderSummaryPills(statusSummaries.assets)}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Peminjaman</p>
+                {renderSummaryPills(statusSummaries.borrowing)}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pemeliharaan</p>
+                {renderSummaryPills(statusSummaries.maintenance)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">

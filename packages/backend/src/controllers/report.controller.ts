@@ -54,6 +54,27 @@ export class ReportController {
   };
 
   /**
+   * Get due date notifications
+   * GET /api/reports/notifications
+   */
+  getNotifications = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const data = await this.reportService.getDueNotifications();
+      res.json({
+        success: true,
+        message: 'Due notifications retrieved successfully',
+        data
+      });
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
+  /**
    * Get asset report
    * GET /api/reports/assets
    */
@@ -132,12 +153,15 @@ export class ReportController {
    */
   exportPdf = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { reportType, startDate, endDate } = req.query;
+      const { reportType, startDate, endDate, category, type, status } = req.query;
 
       const pdfBuffer = await this.reportService.exportToPdf({
         reportType: reportType as string,
         startDate: startDate as string,
-        endDate: endDate as string
+        endDate: endDate as string,
+        category: category as string,
+        type: type as string,
+        status: status as string
       });
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -158,12 +182,15 @@ export class ReportController {
    */
   exportExcel = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { reportType, startDate, endDate } = req.query;
+      const { reportType, startDate, endDate, category, type, status } = req.query;
 
       const excelBuffer = await this.reportService.exportToExcel({
         reportType: reportType as string,
         startDate: startDate as string,
-        endDate: endDate as string
+        endDate: endDate as string,
+        category: category as string,
+        type: type as string,
+        status: status as string
       });
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

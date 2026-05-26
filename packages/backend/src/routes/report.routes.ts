@@ -69,6 +69,7 @@ const upload = multer({
 });
 
 router.get('/', reportController.getDashboard);
+router.get('/notifications', reportController.getNotifications);
 
 router.get(
   '/assets',
@@ -112,7 +113,10 @@ router.get(
   [
     query('reportType').optional().trim(),
     query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601()
+    query('endDate').optional().isISO8601(),
+    query('category').optional().trim(),
+    query('type').optional().trim(),
+    query('status').optional().trim()
   ],
   reportController.exportPdf
 );
@@ -122,7 +126,10 @@ router.get(
   [
     query('reportType').optional().trim(),
     query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601()
+    query('endDate').optional().isISO8601(),
+    query('category').optional().trim(),
+    query('type').optional().trim(),
+    query('status').optional().trim()
   ],
   reportController.exportExcel
 );

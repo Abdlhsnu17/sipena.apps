@@ -15,6 +15,28 @@ export interface DashboardStats {
   totalMaintenance: number
   scheduledMaintenance: number
   totalUsers: number
+  assetStatusSummary: StatusSummary[]
+  borrowingStatusSummary: StatusSummary[]
+  maintenanceStatusSummary: StatusSummary[]
+  dueNotifications: DueNotification[]
+}
+
+export interface StatusSummary {
+  status: string
+  total: number
+}
+
+export type DueNotificationSeverity = "danger" | "warning" | "info"
+
+export interface DueNotification {
+  id: number
+  type: "borrowing_overdue" | "borrowing_due_soon" | "maintenance_due_soon"
+  title: string
+  description: string
+  dueDate: string | null
+  daysRemaining: number
+  severity: DueNotificationSeverity
+  href: string
 }
 
 export interface ReportResponse<T = any> {
@@ -39,6 +61,10 @@ export interface ReportUpload {
 class ReportService {
   async getDashboard(): Promise<ReportResponse<DashboardStats>> {
     return apiService.get<ReportResponse<DashboardStats>>("/reports")
+  }
+
+  async getNotifications(): Promise<ReportResponse<DueNotification[]>> {
+    return apiService.get<ReportResponse<DueNotification[]>>("/reports/notifications")
   }
 
   async getAssetReport(params: Record<string, string> = {}): Promise<ReportResponse<any[]>> {
@@ -74,6 +100,11 @@ class ReportService {
 
   async deleteUpload(id: number): Promise<ReportResponse<null>> {
     return apiService.delete<ReportResponse<null>>(`/reports/uploads/${id}`)
+  }
+
+  getExportEndpoint(format: "pdf" | "excel", params: Record<string, string> = {}): string {
+    const query = new URLSearchParams(params).toString()
+    return `/reports/export/${format}${query ? `?${query}` : ""}`
   }
 }
 
