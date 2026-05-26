@@ -277,10 +277,10 @@ export default function AssetUsagePage() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [completeForm, setCompleteForm] = useState<CompleteFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
-  const sortedFunctionalUsageKeys = useMemo(
-    () => [...functionalUsageKeys, "own_room"].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id")),
-    []
-  );
+  const sortedFunctionalUsageKeys = useMemo<AssetUsageContext[]>(() => {
+    const usageKeys: AssetUsageContext[] = [...functionalUsageKeys, "own_room"];
+    return usageKeys.sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id"));
+  }, []);
 
   useEffect(() => {
     const user = getCurrentUser();
