@@ -1,4 +1,4 @@
-name: Test VPS SSH
+name: Deploy SiPeNa
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -19,6 +19,17 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
 
           script: |
-            whoami
-            hostname
-            pwd
+            set -eu
+
+            cd /var/www/sipena-rsup
+
+            git fetch origin
+            git reset --hard origin/main
+
+            cd packages/backend
+            docker compose up -d --build
+
+            cd ../frontend
+            docker compose up -d --build
+
+            docker ps
