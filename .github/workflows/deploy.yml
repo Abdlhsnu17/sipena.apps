@@ -1,4 +1,4 @@
-name: Deploy sim-sipena
+name: Test VPS SSH
 
 on:
   push:
@@ -10,88 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Validate VPS SSH secrets
-        shell: bash
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
-        run: |
-          set -euo pipefail
-
-          missing=0
-          for name in VPS_HOST VPS_USERNAME VPS_SSH_KEY; do
-            if [ -z "${!name}" ]; then
-              echo "::error::$name secret is empty or not configured"
-              missing=1
-            fi
-          done
-
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
-
-          key_file="$(mktemp)"
-          trap 'rm -f "$key_file"' EXIT
-          printf '%s\n' "$VPS_SSH_KEY" > "$key_file"
-          chmod 600 "$key_file"
-
-          if ! ssh-keygen -y -P "$VPS_SSH_PASSPHRASE" -f "$key_file" > /dev/null; then
-            echo "::error::VPS_SSH_KEY is not a valid private key, or VPS_SSH_PASSPHRASE is missing/incorrect"
-            exit 1
-          fi
-
-      - name: Deploy to VPS
+      - name: Test SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: ${{ secrets.VPS_PORT }}
 
           script: |
-            set -eu
-
-            wait_for_health() {
-              service_name="$1"
-              attempts=0
-              max_attempts=36
-
-              container_id="$(docker compose ps -q "$service_name")"
-
-              while [ "$attempts" -lt "$max_attempts" ]; do
-                health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id")"
-
-                if [ "$health_status" = "healthy" ] || [ "$health_status" = "running" ]; then
-                  echo "$service_name sehat"
-                  return 0
-                fi
-
-                attempts=$((attempts + 1))
-                sleep 5
-              done
-
-              docker compose logs --tail=200 "$service_name"
-              exit 1
-            }
-
-            cd /var/www/sipena-rsup
-
-            git fetch origin
-            git reset --hard origin/main
-
-            cd packages/backend
-
-            docker compose up -d --build
-
-            wait_for_health backend
-
-            cd ../frontend
-
-            docker compose up -d --build
-
-            wait_for_health frontend
-
-            docker ps
+            whoami
+            hostname
+            pwd
