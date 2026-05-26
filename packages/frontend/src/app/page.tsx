@@ -7,7 +7,7 @@ import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
-import reportService, { type DueNotification, type StatusSummary } from "@/services/report.service";
+import reportService, { type DueNotification } from "@/services/report.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
@@ -78,7 +78,7 @@ const quickActionLinks: QuickActionLink[] = [
   {
     key: "asset-usage",
     label: "Penggunaan Alat",
-    description: "Catat dan pantau pemakaian alat di tiap ruangan.",
+    description: "Penggunaan saja.",
     href: "/asset-usage",
     icon: ClipboardList,
     gradient: "from-emerald-500/80 via-teal-500/70 to-cyan-500/60",
@@ -86,7 +86,7 @@ const quickActionLinks: QuickActionLink[] = [
   {
     key: "borrowing",
     label: "Peminjaman",
-    description: "Kelola request peminjaman dengan timeline standar UML.",
+    description: "Peminjaman saja.",
     href: "/borrowing",
     icon: HandHelping,
     gradient: "from-orange-400/70 via-amber-500/70 to-yellow-400/60",
@@ -94,7 +94,7 @@ const quickActionLinks: QuickActionLink[] = [
   {
     key: "returns",
     label: "Pengembalian",
-    description: "Konfirmasi kondisi aset yang kembali.",
+    description: "Pengembalian saja.",
     href: "/returns",
     icon: RotateCcw,
     gradient: "from-emerald-500/70 via-lime-500/60 to-emerald-400/50",
@@ -198,7 +198,6 @@ export default function DashboardPage() {
         maintenanceAssets: 0,
       })
       setDueNotifications([])
-      setStatusSummaries({ assets: [], borrowing: [], maintenance: [] })
       return
     }
 
@@ -274,11 +273,6 @@ export default function DashboardPage() {
       })
       if (reportResponse.success) {
         setDueNotifications(reportResponse.data.dueNotifications ?? [])
-        setStatusSummaries({
-          assets: reportResponse.data.assetStatusSummary ?? [],
-          borrowing: reportResponse.data.borrowingStatusSummary ?? [],
-          maintenance: reportResponse.data.maintenanceStatusSummary ?? [],
-        })
       }
     } catch (error: any) {
       const status = error?.response?.status
@@ -375,7 +369,7 @@ export default function DashboardPage() {
         </Card>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-[24px] border border-amber-200/70 bg-linear-to-br from-amber-50/90 via-white to-rose-50/70 shadow-[0_20px_45px_rgba(245,158,11,0.12)] xl:col-span-2">
+          <Card className="rounded-3xl border border-amber-200/70 bg-linear-to-br from-amber-50/90 via-white to-rose-50/70 shadow-[0_20px_45px_rgba(245,158,11,0.12)] xl:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
               <div>
                 <CardTitle className="text-sm font-semibold text-slate-800">Notifikasi Jatuh Tempo</CardTitle>
@@ -418,7 +412,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[24px] border border-sky-200/70 bg-linear-to-br from-sky-50/80 via-white to-emerald-50/60 shadow-[0_20px_45px_rgba(14,165,233,0.12)]">
+          <Card className="rounded-3xl border border-sky-200/70 bg-linear-to-br from-sky-50/80 via-white to-emerald-50/60 shadow-[0_20px_45px_rgba(14,165,233,0.12)]">
             <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
               <div>
                 <CardTitle className="text-sm font-semibold text-slate-800">Ringkasan Operasional</CardTitle>
