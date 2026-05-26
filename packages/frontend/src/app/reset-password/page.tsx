@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
         <CardHeader className="pb-4 text-center">
           <AuthHeader
             title="Lupa Password"
-            description="Masukkan NIP untuk meminta kode verifikasi reset password. Di production, kode akan dikirim ke WhatsApp dan otomatis fallback ke SMS bila diperlukan."
+            description="Masukkan NIP untuk menerima kode verifikasi reset password."
             showRecoveryIcon
           />
         </CardHeader>

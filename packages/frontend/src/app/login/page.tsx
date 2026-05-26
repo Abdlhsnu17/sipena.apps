@@ -78,8 +78,8 @@ export default function LoginPage() {
           <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:p-8">
             <div className="mb-6">
               <AuthHeader
-                title="Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)"
-                description="SiPeNa"
+                title="SiPeNa"
+                description="Masuk untuk mengelola inventaris, pemeliharaan, dan peminjaman sarana."
               />
             </div>
 

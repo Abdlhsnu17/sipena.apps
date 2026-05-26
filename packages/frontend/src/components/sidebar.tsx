@@ -540,18 +540,19 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="p-4 border-b border-border">
+      <div className="border-b border-teal-100/80 bg-gradient-to-b from-teal-50/70 to-transparent px-4 py-4 dark:border-slate-800/70 dark:from-teal-950/20">
         {isCollapsed ? (
           <div className="hidden flex-col items-center gap-3 xl:flex">
-            <Image
-              src="/images/logo-RS.png"
-              alt="Logo Kemenkes RS Persahabatan"
-              width={40}
-              height={40}
-              className="object-contain drop-shadow-sm"
-              style={{ width: "auto", height: "auto" }}
-              priority
-            />
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
+              <Image
+                src="/images/logo-RS.png"
+                alt="Logo SiPeNa"
+                width={48}
+                height={28}
+                className="h-auto w-12 object-contain"
+                priority
+              />
+            </div>
             <button
               onClick={toggleSidebar}
               className="rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted"
@@ -562,32 +563,28 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/images/logo-RS.png"
-                alt="Logo Kemenkes RS Persahabatan"
-                width={150}
-                height={60}
-                className="object-contain drop-shadow-sm"
-                style={{ width: "auto", height: "auto" }}
-                priority
-              />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-center">
+              <div className="relative h-14 min-w-0 flex-1 overflow-hidden">
+                <Image
+                  src="/images/logo-RS.png"
+                  alt="Logo SiPeNa"
+                  width={170}
+                  height={96}
+                  className="h-full w-full object-contain object-left"
+                  priority
+                />
+              </div>
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
+              className="hidden shrink-0 rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
               <PanelLeftClose className="h-5 w-5" />
             </button>
           </div>
-        )}
-        {!isCollapsed && (
-            <p className="text-xs text-muted-foreground mt-2 px-4 font-bold">
-            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
-          </p>
         )}
       </div>
 

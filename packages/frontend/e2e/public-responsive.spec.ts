@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 import { expectElementToFitViewport, expectNoHorizontalOverflow } from "./responsive.helpers";
 
 const publicRoutes = [
-  { path: "/login", heading: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)", cardSelector: "[data-auth-card]" },
-  { path: "/register", heading: "Pendaftaran Akun", cardSelector: "[data-auth-card]" },
+  { path: "/login", heading: "SiPeNa", cardSelector: "[data-auth-card]" },
+  { path: "/register", heading: "Daftar Akun", cardSelector: "[data-auth-card]" },
   { path: "/reset-password", heading: "Lupa Password", cardSelector: "[data-auth-card]" },
 ]
 

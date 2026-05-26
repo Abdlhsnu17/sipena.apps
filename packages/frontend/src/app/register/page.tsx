@@ -85,8 +85,8 @@ export default function RegisterPage() {
       >
         <CardHeader className="pb-4 text-center">
           <AuthHeader
-            title="Pendaftaran Akun"
-            description="Isi data dasar akun dengan benar setelah akun berhasil dibuat lalu lakukan login."
+            title="Daftar Akun"
+            description="Buat akun baru untuk mulai menggunakan SiPeNa."
           />
         </CardHeader>
         <CardContent>
