@@ -266,9 +266,20 @@ export async function ensureUserPhoneNumberColumn(): Promise<void> {
   );
 
   if (rows.length === 0) {
+    const [homeAddressRows] = await pool.query<RowDataPacket[]>(
+      `
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'home_address'
+      `
+    );
+    const afterClause = homeAddressRows.length > 0 ? ' AFTER home_address' : '';
+
     await pool.query(`
       ALTER TABLE users
-      ADD COLUMN phone_number VARCHAR(25) DEFAULT NULL AFTER home_address
+      ADD COLUMN phone_number VARCHAR(25) DEFAULT NULL${afterClause}
     `);
   }
 
