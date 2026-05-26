@@ -536,7 +536,7 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-semibold text-foreground">Nama Sistem</p>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+                      Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
                     </p>
                   </div>
                 </div>

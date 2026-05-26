@@ -526,7 +526,7 @@ export default function ReportsPage() {
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">
-            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+            Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
         </div>
       </div>

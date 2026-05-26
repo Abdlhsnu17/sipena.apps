@@ -52,7 +52,7 @@ export default function UMLPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Dokumentasi UML Diagram Use Case & Unggahan </h1>
-          <p className="text-muted-foreground text-sm">Diagram Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)</p>
+          <p className="text-muted-foreground text-sm">Diagram Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)</p>
           <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <p className="text-sm text-teal-800">
               <strong>Dokumentasi ini menjelaskan:</strong> Arsitektur sistem, hubungan antar entitas, alur kerja proses peminjaman dan pemeliharaan inventaris. 
@@ -254,7 +254,7 @@ export default function UMLPage() {
             <CardHeader>
               <CardTitle>Class Diagram - Struktur Kelas & Entitas</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Struktur kelas dan hubungan antar entitas dalam Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+                Struktur kelas dan hubungan antar entitas dalam Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
               </p>
             </CardHeader>
             <CardContent>
@@ -1821,7 +1821,7 @@ export default function UMLPage() {
         {/* Copyright */}
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">
-            Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+            Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>
         </div>
       </div>
