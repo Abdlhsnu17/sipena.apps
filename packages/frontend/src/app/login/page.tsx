@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div
           className="h-full w-full bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/images/gedung-layanan-respirasi-ibu-dan-anak-rsup-persahabatan.png')`,
+            backgroundImage: `url('/images/gedung-layanan-respirasi-ibu-dan-anak-persahabatan.png')`,
           }}
         />
         <div className="absolute inset-0 bg-black/50" />

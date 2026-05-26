@@ -258,7 +258,7 @@ Untuk deploy di Hostinger VPS, Railway, AWS, atau platform serupa:
 - sesuaikan `TRUST_PROXY_HOPS` dengan jumlah hop proxy yang dipercaya
 - atur `GENERAL_RATE_LIMIT_MAX` dan `LOGIN_RATE_LIMIT_MAX` sesuai beban
 
-Checklist ringkas tersedia di [docs/production-checklist.md](/Users/abdillah/sipena-rsup/docs/production-checklist.md).
+Checklist ringkas tersedia di [docs/production-checklist.md](/Users/abdillah/sipena/docs/production-checklist.md).
 
 Untuk simulasi login serentak, jalankan:
 

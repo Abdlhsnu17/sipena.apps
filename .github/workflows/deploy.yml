@@ -21,7 +21,7 @@ jobs:
           script: |
             set -eu
 
-            cd /var/www/sipena-rsup
+            cd /var/www/sipena
 
             git fetch origin
             git reset --hard origin/main

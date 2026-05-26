@@ -7,7 +7,7 @@ import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
   title: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)",
-  description: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa) - RSUP Persahabatan",
+  description: "Sistem Informasi Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)",
   generator: 'Next.js',
 }
 
