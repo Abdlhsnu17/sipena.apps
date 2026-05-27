@@ -376,9 +376,9 @@ export default function Topbar() {
                 <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background bg-red-500 sm:h-3 sm:w-3" />
               )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(70vh,36rem)] w-[min(calc(100vw-1rem),22rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-border/70 bg-white text-slate-950 shadow-lg sm:w-92 md:w-96 lg:w-100">
-              <div className="flex items-center justify-between px-2.5 pt-1 pb-0.5 sm:px-3">
-                <DropdownMenuLabel className="p-0 text-xs tracking-[0.2em] uppercase text-muted-foreground sm:text-sm">
+            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(62vh,30rem)] w-[min(calc(100vw-1rem),20rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-white text-slate-950 shadow-lg sm:w-84">
+              <div className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-0.5">
+                <DropdownMenuLabel className="p-0 text-[11px] tracking-[0.16em] uppercase text-muted-foreground">
                   Pemberitahuan
                 </DropdownMenuLabel>
                 <button
@@ -387,15 +387,15 @@ export default function Topbar() {
                     event.stopPropagation()
                     setNotificationDensity(isCompactNotification ? "normal" : "compact")
                   }}
-                  className="rounded-md border border-slate-200 px-2 py-0.5 text-xs transition sm:text-sm bg-white text-slate-900 shadow-sm"
+                  className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-900 shadow-sm transition"
                   aria-label={isCompactNotification ? "Tampilan notifikasi normal" : "Tampilan notifikasi ringkas"}
                 >
                   {isCompactNotification ? "Normal" : "Ringkas"}
                 </button>
               </div>
-              <div className="px-2.5 pb-2 sm:px-3">
+              <div className="px-2.5 pb-2">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-400 sm:size-5" />
+                  <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     value={notificationQuery}
                     onChange={(event) => setNotificationQuery(event.target.value)}
@@ -403,25 +403,25 @@ export default function Topbar() {
                       event.stopPropagation()
                     }}
                     placeholder="Cari notifikasi..."
-                    className="h-8 border-slate-200 bg-white pl-9 text-sm text-slate-900 placeholder:text-slate-400 sm:h-9 sm:text-base"
+                    className="h-8 border-slate-200 bg-white pl-9 text-sm text-slate-900 placeholder:text-slate-400"
                     aria-label="Cari pemberitahuan"
                   />
                 </div>
               </div>
               <DropdownMenuSeparator />
               {isCheckingNotifications ? (
-                <div className="px-3 py-2.5 text-sm text-muted-foreground sm:px-4 sm:py-3 sm:text-base">Memeriksa kendala…</div>
+                <div className="px-3 py-2.5 text-sm text-muted-foreground">Memeriksa kendala…</div>
               ) : notifications.length === 0 ? (
-                <div className="px-3 py-2.5 text-sm text-muted-foreground sm:px-4 sm:py-3 sm:text-base">Semua kendala telah terselesaikan.</div>
+                <div className="px-3 py-2.5 text-sm text-muted-foreground">Semua kendala telah terselesaikan.</div>
               ) : filteredNotifications.length === 0 ? (
-                <div className="px-3 py-2.5 text-sm text-muted-foreground sm:px-4 sm:py-3 sm:text-base">
+                <div className="px-3 py-2.5 text-sm text-muted-foreground">
                   Tidak ada pemberitahuan yang cocok dengan pencarian.
                 </div>
               ) : (
                 filteredNotifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`${isCompactNotification ? "mt-1" : "mt-1.5 sm:mt-2"} block cursor-pointer rounded-xl p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
+                    className={`${isCompactNotification ? "mt-1" : "mt-1.5"} block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
                     onSelect={(event) => {
                       event.preventDefault()
                       if (notification.href) {
@@ -429,29 +429,29 @@ export default function Topbar() {
                       }
                     }}
                   >
-                    <div className="overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm transition hover:shadow-md">
-                      <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2" : "gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5"} flex items-center justify-between bg-linear-to-r from-blue-700 to-blue-500 text-white`}>
-                        <span className={`${isCompactNotification ? "text-xs sm:text-sm" : "text-sm sm:text-base"} font-semibold`}>Informasi Dasar Alat</span>
-                        <span className={`${isCompactNotification ? "px-2 text-[9px] sm:text-xs" : "px-2.5 text-xs sm:text-sm"} rounded-full border border-white/50 bg-white/15 py-1 font-medium`}>
+                    <div className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm transition hover:shadow-md">
+                      <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5" : "gap-2 px-3 py-2"} flex items-center justify-between bg-linear-to-r from-blue-700 to-blue-500 text-white`}>
+                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} font-semibold`}>Informasi Dasar Alat</span>
+                        <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-xs"} rounded-full border border-white/50 bg-white/15 py-0.5 font-medium`}>
                           {categoryLabelByKey[notification.category]}
                         </span>
                       </div>
-                      <div className={`${isCompactNotification ? "space-y-0 px-2.5 py-2 sm:px-3 sm:py-2.5" : "space-y-0.5 px-3 py-2.5 sm:space-y-1 sm:px-4 sm:py-3"} text-slate-900`}>
-                        <p className={`${isCompactNotification ? "text-sm sm:text-base" : "text-base sm:text-lg"} min-w-0 wrap-break-word leading-snug font-semibold`}>{notification.assetName}</p>
-                        <p className={`${isCompactNotification ? "text-xs sm:text-sm" : "text-sm sm:text-base"} min-w-0 break-all text-slate-700`}>{notification.assetCode}</p>
-                        <p className={`${isCompactNotification ? "text-xs sm:text-sm" : "text-sm sm:text-base"} min-w-0 break-all text-slate-700`}>No ID: {notification.recordNoId}</p>
-                        <p className={`${isCompactNotification ? "text-xs sm:text-sm" : "text-sm sm:text-base"} min-w-0 wrap-break-word text-slate-700`}>Identitas: {notification.identity}</p>
-                        <div className={`${isCompactNotification ? "pt-1" : "pt-1.5 sm:pt-2"}`}>
-                          <div className="flex flex-wrap gap-2">
-                            <span className={`${isCompactNotification ? "px-2 py-1 text-xs sm:text-sm" : "px-2.5 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-base"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                      <div className={`${isCompactNotification ? "space-y-0 px-2.5 py-2" : "space-y-0.5 px-3 py-2.5"} text-slate-900`}>
+                        <p className={`${isCompactNotification ? "text-sm" : "text-[15px]"} min-w-0 wrap-break-word leading-snug font-semibold`}>{notification.assetName}</p>
+                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 break-all text-slate-700`}>{notification.assetCode}</p>
+                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 break-all text-slate-700`}>No ID: {notification.recordNoId}</p>
+                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 wrap-break-word text-slate-700`}>Identitas: {notification.identity}</p>
+                        <div className={`${isCompactNotification ? "pt-1" : "pt-1.5"}`}>
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
                               {notification.sourceLabel}
                             </span>
-                            <span className={`${isCompactNotification ? "px-2 py-1 text-xs sm:text-sm" : "px-2.5 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-base"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
                               {notification.roomLabel}
                             </span>
                           </div>
                         </div>
-                        <div className={`${isCompactNotification ? "pt-0.5 text-xs sm:text-sm" : "pt-1 text-sm sm:text-base"} text-slate-500`}>
+                        <div className={`${isCompactNotification ? "pt-0.5 text-xs" : "pt-1 text-sm"} text-slate-500`}>
                           <p>{notification.title}</p>
                           <p>{notification.subtitle}</p>
                           {!isCompactNotification && notification.description ? <p>{notification.description}</p> : null}
