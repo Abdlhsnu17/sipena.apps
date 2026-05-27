@@ -630,7 +630,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   {isCollapsed ? (
                     <span className="sr-only">{link.label}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-[13px] font-semibold">{link.label}</span>
+                    <span className="min-w-0 truncate text-sm font-semibold">{link.label}</span>
                   )}
                 </div>
               </Link>
@@ -644,8 +644,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             <div className="w-full border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Clock3 className="h-3.5 w-3.5 text-teal-600" />
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
+                  <Clock3 className="h-4 w-4 text-teal-600" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
                     Riwayat Aktivitas
                   </p>
                 </div>
@@ -657,7 +657,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                 >
                   <ChevronDown
                     className={cn(
-                      "h-3.5 w-3.5 transition-transform duration-300",
+                      "h-4 w-4 transition-transform duration-300",
                       isActivityHistoryExpanded ? "rotate-0" : "-rotate-90"
                     )}
                   />
@@ -672,34 +672,34 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             >
               <div className="px-2 py-1.5">
                 {recentActivities.length === 0 ? (
-                  <p className="py-2 text-center text-[11px] text-muted-foreground">Belum ada aktivitas tercatat.</p>
+                  <p className="py-2 text-center text-xs text-muted-foreground">Belum ada aktivitas tercatat.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {recentActivities.map((activity) => (
                       <div
                         key={activity.id}
-                        className="rounded-xl border border-slate-200/70 bg-white/90 px-2 py-1.5 dark:border-slate-800/70 dark:bg-slate-900/60"
+                        className="rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 dark:border-slate-800/70 dark:bg-slate-900/60"
                       >
-                        <p className="text-[10px] font-semibold text-teal-700 dark:text-teal-300">
+                        <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">
                           {getFeatureLabel(activity.feature)}
                         </p>
-                        <p className="text-xs leading-snug text-foreground">{formatActivityDescription(activity)}</p>
+                        <p className="text-sm leading-snug text-foreground">{formatActivityDescription(activity)}</p>
                         {getActivityItemName(activity) ? (
-                          <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300">
+                          <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">
                             Nama Alat: {getActivityItemName(activity)}
                           </p>
                         ) : null}
                         {getActivityItemCode(activity) ? (
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                             Kode Barang: {getActivityItemCode(activity)}
                           </p>
                         ) : null}
                         {getActivityTransactionId(activity) ? (
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                             No ID: {getActivityTransactionId(activity)}
                           </p>
                         ) : null}
-                        <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
                           {formatActivityTime(activity.createdAt)}
                         </p>
                       </div>
@@ -720,12 +720,12 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               onClick={() => setIsProfileExpanded(!isProfileExpanded)}
               className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-lg cursor-pointer"
             >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
                 Profil Akun
               </p>
               <ChevronDown
                 className={cn(
-                  "h-3.5 w-3.5 text-teal-600 transition-transform duration-300",
+                  "h-4 w-4 text-teal-600 transition-transform duration-300",
                   isProfileExpanded ? "rotate-0" : "-rotate-90"
                 )}
               />
@@ -737,19 +737,19 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               )}
             >
               <div className="px-3 py-2.5">
-                <div className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60">
+                <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-13 w-13 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
+                    <Avatar className="h-14 w-14 shrink-0 rounded-full border border-slate-200/70 shadow-sm dark:border-slate-700/70">
                       {profileImageUrl && !profileImageError ? (
                         <AvatarImage src={profileImageUrl} alt={`${currentUser.name} photo`} onError={handleProfileImageError} />
                       ) : null}
-                      <AvatarFallback className="text-sm font-semibold uppercase text-white dark:text-slate-100">
+                      <AvatarFallback className="text-base font-semibold uppercase text-white dark:text-slate-100">
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
-                      <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-0.5 text-[11px] leading-tight">
+                      <p className="text-base font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
+                      <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-0.5 text-xs leading-tight">
                         <span className="text-muted-foreground">NIP</span>
                         <span className="min-w-0 font-semibold text-slate-700 break-all dark:text-slate-200">{currentUser.nip}</span>
                         <span className="text-muted-foreground">Role</span>
@@ -769,10 +769,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                className="w-full justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]"
                 onClick={handleLogout}
               >
-                <LogOut className="h-3.5 w-3.5" />
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
             </div>
@@ -805,11 +805,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               className="flex items-center justify-center w-8 h-8 bg-teal-100 text-teal-700 rounded-full cursor-pointer hover:bg-teal-200 transition"
               title="SiPeNa"
             >
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-6 h-6" />
             </span>
           ) : (
-            <span className="flex items-center gap-1 px-2 py-0.5 bg-teal-100 text-teal-700 text-xs font-medium rounded-full cursor-pointer hover:bg-teal-200 transition">
-              <Sparkles className="w-4 h-4" />
+            <span className="flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 text-sm font-medium rounded-full cursor-pointer hover:bg-teal-200 transition">
+              <Sparkles className="w-4.5 h-4.5" />
               SiPeNa
             </span>
           )}
