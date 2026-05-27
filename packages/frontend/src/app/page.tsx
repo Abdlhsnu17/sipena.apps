@@ -77,7 +77,7 @@ const quickActionLinks: QuickActionLink[] = [
   },
   {
     key: "asset-usage",
-    label: "Penggunaan Alat",
+    label: "Penggunaan",
     description: "Penggunaan saja.",
     href: "/asset-usage",
     icon: ClipboardList,
@@ -489,7 +489,7 @@ export default function DashboardPage() {
 
           <Card className={`${statCardClass} bg-linear-to-br from-emerald-50/65 via-white to-teal-50/45`}>
             <CardHeader className="flex items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Penggunaan Alat</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Penggunaan</CardTitle>
               <div className="rounded-2xl bg-linear-to-br from-emerald-100 to-teal-100 p-2 text-emerald-700 shadow-inner">
                 <ClipboardList className="w-5 h-5" />
               </div>
@@ -516,7 +516,7 @@ export default function DashboardPage() {
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">
-            Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+            Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
           </p>
         </div>
       </div>

@@ -1648,7 +1648,7 @@ export default function MaintenancePage() {
 
             <div className="mt-8 pt-6 border-t border-border text-center">
               <p className="text-[13px] text-muted-foreground">
-                Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+                Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
               </p>
             </div>
 	      </div>

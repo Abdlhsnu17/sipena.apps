@@ -850,7 +850,7 @@ export default function AssetUsagePage() {
             <ClipboardList className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Penggunaan Alat</h1>
+            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Penggunaan</h1>
             <p className="mt-1 text-[12px] text-muted-foreground">Catat pemakaian alat untuk melihat frekuensi dan beban pemakaian.</p>
           </div>
         </div>
@@ -1399,7 +1399,7 @@ export default function AssetUsagePage() {
 
       <div className="mt-8 pt-6 border-t border-border text-center">
         <p className="text-[13px] text-muted-foreground">
-          Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+          Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
         </p>
       </div>
     </div>

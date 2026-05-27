@@ -39,6 +39,19 @@ import {
 // usageContextLabels removed — reports now aggregate into broader categories
 
 type IconComponent = ComponentType<{ className?: string }>
+type ExportReportType = "assets" | "borrowing" | "maintenance" | "all"
+type ExportFilters = {
+  reportType: ExportReportType
+  startDate: string
+  endDate: string
+  status: string
+  type: string
+}
+
+type FilterOption = {
+  value: string
+  label: string
+}
 
 const chartColors = {
   assets: "#0284c7",
@@ -56,6 +69,90 @@ const formatCurrency = (value: number) =>
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value)
+
+const reportTypeOptions: Array<FilterOption & { value: ExportReportType; description: string }> = [
+  { value: "assets", label: "Aset", description: "Data inventaris medis dan non medis" },
+  { value: "borrowing", label: "Peminjaman", description: "Transaksi pinjam pakai alat" },
+  { value: "maintenance", label: "Pemeliharaan", description: "Jadwal dan riwayat pemeliharaan" },
+  { value: "all", label: "Semua Modul", description: "Ringkasan terpadu semua laporan" },
+]
+
+const borrowingStatusOptions: FilterOption[] = [
+  { value: "pending", label: "Menunggu" },
+  { value: "approved", label: "Disetujui" },
+  { value: "borrowed", label: "Dipinjam" },
+  { value: "returned", label: "Dikembalikan" },
+  { value: "overdue", label: "Terlambat" },
+]
+
+const maintenanceStatusOptions: FilterOption[] = [
+  { value: "requested", label: "Request" },
+  { value: "scheduled", label: "Terjadwal" },
+  { value: "in_progress", label: "Proses" },
+  { value: "completed", label: "Selesai" },
+  { value: "validated", label: "Tervalidasi" },
+]
+
+const assetTypeOptions: FilterOption[] = [
+  { value: "medical", label: "Medis" },
+  { value: "non_medical", label: "Non Medis" },
+]
+
+const maintenanceTypeOptions: FilterOption[] = [
+  { value: "preventive", label: "Preventive" },
+  { value: "corrective", label: "Corrective" },
+  { value: "calibration", label: "Calibration" },
+  { value: "inspection", label: "Inspection" },
+]
+
+const initialExportFilters: ExportFilters = {
+  reportType: "assets",
+  startDate: "",
+  endDate: "",
+  status: "",
+  type: "",
+}
+
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+const getDateRangePreset = (preset: "all" | "today" | "month" | "last30" | "year") => {
+  const today = new Date()
+
+  if (preset === "all") {
+    return { startDate: "", endDate: "" }
+  }
+
+  if (preset === "today") {
+    const date = toDateInputValue(today)
+    return { startDate: date, endDate: date }
+  }
+
+  if (preset === "month") {
+    return {
+      startDate: toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)),
+      endDate: toDateInputValue(today),
+    }
+  }
+
+  if (preset === "year") {
+    return {
+      startDate: toDateInputValue(new Date(today.getFullYear(), 0, 1)),
+      endDate: toDateInputValue(today),
+    }
+  }
+
+  const startDate = new Date(today)
+  startDate.setDate(today.getDate() - 29)
+  return {
+    startDate: toDateInputValue(startDate),
+    endDate: toDateInputValue(today),
+  }
+}
 
 function MetricCard({
   title,
@@ -125,13 +222,7 @@ export default function ReportsPage() {
   const [usageYearData, setUsageYearData] = useState<any[]>([])
   const [usageContextData, setUsageContextData] = useState<any[]>([])
   const [exporting, setExporting] = useState<"pdf" | "excel" | null>(null)
-  const [exportFilters, setExportFilters] = useState({
-    reportType: "assets",
-    startDate: "",
-    endDate: "",
-    status: "",
-    type: "",
-  })
+  const [exportFilters, setExportFilters] = useState<ExportFilters>(initialExportFilters)
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
 
@@ -362,7 +453,63 @@ export default function ReportsPage() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 
+  const selectedReportType = reportTypeOptions.find((option) => option.value === exportFilters.reportType) ?? reportTypeOptions[0]
+  const availableStatusOptions =
+    exportFilters.reportType === "borrowing"
+      ? borrowingStatusOptions
+      : exportFilters.reportType === "maintenance"
+        ? maintenanceStatusOptions
+        : []
+  const availableTypeOptions =
+    exportFilters.reportType === "assets"
+      ? assetTypeOptions
+      : exportFilters.reportType === "maintenance"
+        ? maintenanceTypeOptions
+        : []
+  const showStatusFilter = availableStatusOptions.length > 0
+  const showTypeFilter = availableTypeOptions.length > 0
+  const dateRangeInvalid = Boolean(
+    exportFilters.startDate && exportFilters.endDate && exportFilters.startDate > exportFilters.endDate
+  )
+  const selectedStatusLabel = availableStatusOptions.find((option) => option.value === exportFilters.status)?.label
+  const selectedTypeLabel = availableTypeOptions.find((option) => option.value === exportFilters.type)?.label
+  const periodLabel =
+    exportFilters.startDate && exportFilters.endDate
+      ? `${exportFilters.startDate} s/d ${exportFilters.endDate}`
+      : exportFilters.startDate
+        ? `Mulai ${exportFilters.startDate}`
+        : exportFilters.endDate
+          ? `Sampai ${exportFilters.endDate}`
+          : "Semua periode"
+  const activeExportFilterLabels = [
+    selectedReportType.label,
+    periodLabel,
+    selectedStatusLabel ? `Status: ${selectedStatusLabel}` : null,
+    selectedTypeLabel ? `Jenis: ${selectedTypeLabel}` : null,
+  ].filter(Boolean)
+
+  const setReportType = (reportType: ExportReportType) => {
+    setExportFilters((current) => ({
+      ...current,
+      reportType,
+      status: "",
+      type: "",
+    }))
+  }
+
+  const setDatePreset = (preset: "all" | "today" | "month" | "last30" | "year") => {
+    setExportFilters((current) => ({
+      ...current,
+      ...getDateRangePreset(preset),
+    }))
+  }
+
   const handleExport = async (format: "pdf" | "excel") => {
+    if (dateRangeInvalid) {
+      alert("Tanggal mulai tidak boleh lebih besar dari tanggal akhir")
+      return
+    }
+
     setExporting(format)
     try {
       const params = Object.fromEntries(
@@ -411,105 +558,150 @@ export default function ReportsPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null}>
+            <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null || dateRangeInvalid}>
               <FileSpreadsheet className="mr-2 size-4" />
-              {exporting === "excel" ? "Menyiapkan..." : exportFilters.reportType === "all" ? "Excel Semua" : "Export Excel"}
+              {exporting === "excel" ? "Menyiapkan..." : "Excel"}
             </Button>
-            <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null}>
+            <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null || dateRangeInvalid}>
               <Download className="mr-2 size-4" />
-              {exporting === "pdf" ? "Menyiapkan..." : exportFilters.reportType === "all" ? "PDF Semua" : "Export PDF"}
+              {exporting === "pdf" ? "Menyiapkan..." : "PDF"}
             </Button>
           </div>
         </div>
 
         <Card className="rounded-lg border-slate-200 py-0 shadow-sm">
           <CardHeader className="border-b border-slate-100 px-4 py-3">
-            <CardTitle className="text-sm font-semibold text-slate-900">Filter Export</CardTitle>
-            <CardDescription className="text-xs">Atur jenis laporan, periode, status, dan jenis aset sebelum mengunduh file.</CardDescription>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-900">Export Laporan</CardTitle>
+                <CardDescription className="text-xs">Pilih modul, periode, lalu unduh tanpa mengatur field yang tidak relevan.</CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activeExportFilterLabels.map((label) => (
+                  <span key={String(label)} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-6">
-            <select
-              aria-label="Jenis laporan"
-              value={exportFilters.reportType}
-              onChange={(event) => setExportFilters((current) => ({ ...current, reportType: event.target.value, status: "", type: "" }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
-            >
-              <option value="assets">Aset</option>
-              <option value="borrowing">Peminjaman</option>
-              <option value="maintenance">Pemeliharaan</option>
-              <option value="all">Semua Modul</option>
-            </select>
-            <input
-              aria-label="Tanggal mulai"
-              type="date"
-              value={exportFilters.startDate}
-              onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
-            />
-            <input
-              aria-label="Tanggal akhir"
-              type="date"
-              value={exportFilters.endDate}
-              onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
-            />
-            <select
-              aria-label="Status laporan"
-              value={exportFilters.status}
-              onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400 md:col-span-1"
-              disabled={exportFilters.reportType === "assets" || exportFilters.reportType === "all"}
-            >
-              <option value="">Semua status</option>
-              {exportFilters.reportType === "borrowing" ? (
-                <>
-                  <option value="pending">Menunggu</option>
-                  <option value="approved">Disetujui</option>
-                  <option value="borrowed">Dipinjam</option>
-                  <option value="returned">Dikembalikan</option>
-                  <option value="overdue">Terlambat</option>
-                </>
-              ) : (
-                <>
-                  <option value="requested">Request</option>
-                  <option value="scheduled">Terjadwal</option>
-                  <option value="in_progress">Proses</option>
-                  <option value="completed">Selesai</option>
-                  <option value="validated">Tervalidasi</option>
-                </>
-              )}
-            </select>
-            <select
-              aria-label="Jenis aset"
-              value={exportFilters.type}
-              onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400 md:col-span-1"
-              disabled={exportFilters.reportType === "all"}
-            >
-              <option value="">Semua jenis</option>
-              {exportFilters.reportType === "maintenance" ? (
-                <>
-                  <option value="preventive">Preventive</option>
-                  <option value="corrective">Corrective</option>
-                  <option value="calibration">Calibration</option>
-                  <option value="inspection">Inspection</option>
-                </>
-              ) : exportFilters.reportType === "all" ? null : (
-                <>
-                  <option value="medical">Medis</option>
-                  <option value="non_medical">Non Medis</option>
-                </>
-              )}
-            </select>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 md:col-span-1"
-              onClick={() => setExportFilters({ reportType: "assets", startDate: "", endDate: "", status: "", type: "" })}
-            >
-              <RotateCcw className="mr-2 size-4" />
-              Reset
-            </Button>
+          <CardContent className="space-y-4 px-4 py-4">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {reportTypeOptions.map((option) => {
+                const active = exportFilters.reportType === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setReportType(option.value)}
+                    className={`min-h-20 rounded-md border px-3 py-2 text-left transition ${
+                      active
+                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span className={`mt-1 block text-xs ${active ? "text-slate-200" : "text-slate-500"}`}>{option.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Periode</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    ["all", "Semua"],
+                    ["today", "Hari ini"],
+                    ["month", "Bulan ini"],
+                    ["last30", "30 hari"],
+                    ["year", "Tahun ini"],
+                  ] as const).map(([preset, label]) => (
+                    <Button key={preset} type="button" variant="outline" size="sm" onClick={() => setDatePreset(preset)}>
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>Tanggal mulai</span>
+                  <input
+                    aria-label="Tanggal mulai"
+                    type="date"
+                    value={exportFilters.startDate}
+                    onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
+                    className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
+                      dateRangeInvalid ? "border-red-300" : "border-slate-200"
+                    }`}
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>Tanggal akhir</span>
+                  <input
+                    aria-label="Tanggal akhir"
+                    type="date"
+                    value={exportFilters.endDate}
+                    onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
+                    className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
+                      dateRangeInvalid ? "border-red-300" : "border-slate-200"
+                    }`}
+                  />
+                </label>
+                {dateRangeInvalid ? (
+                  <p className="text-xs font-medium text-red-600 sm:col-span-2">Tanggal mulai harus sebelum atau sama dengan tanggal akhir.</p>
+                ) : null}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={() => setExportFilters(initialExportFilters)}
+              >
+                <RotateCcw className="mr-2 size-4" />
+                Reset
+              </Button>
+            </div>
+
+            {(showStatusFilter || showTypeFilter) ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {showStatusFilter ? (
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    <span>Status</span>
+                    <select
+                      aria-label="Status laporan"
+                      value={exportFilters.status}
+                      onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
+                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
+                    >
+                      <option value="">Semua status</option>
+                      {availableStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {showTypeFilter ? (
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    <span>{exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}</span>
+                    <select
+                      aria-label={exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}
+                      value={exportFilters.type}
+                      onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
+                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
+                    >
+                      <option value="">Semua jenis</option>
+                      {availableTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -732,7 +924,7 @@ export default function ReportsPage() {
 
         <div className="mt-8 border-t border-border pt-6 text-center">
           <p className="text-[13px] text-muted-foreground">
-            Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
+            Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
           </p>
         </div>
       </div>
