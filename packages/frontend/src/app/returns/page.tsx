@@ -1570,21 +1570,21 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 w-6 rounded-lg p-0 text-emerald-600 hover:bg-emerald-50"
+                                    className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                     onClick={() => openReturnEditDialog(b)}
                                     title="Edit pengembalian"
                                   >
-                                    <Pencil className="w-3 h-3" />
+                                    <Pencil className="w-4 h-4" />
                                   </Button>
                                   {canDeleteReturns && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleDeleteReturn(b)}
                                       title="Hapus"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   )}
                                   {b.status === "returned" &&

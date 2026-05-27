@@ -63,7 +63,7 @@ export default function Topbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isCheckingNotifications, setIsCheckingNotifications] = useState(true)
   const [notificationQuery, setNotificationQuery] = useState("")
-  const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("normal")
+  const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const isCompactNotification = notificationDensity === "compact"
 
   useEffect(() => {
@@ -385,12 +385,12 @@ export default function Topbar() {
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
-                    setNotificationDensity("compact")
+                    setNotificationDensity(isCompactNotification ? "normal" : "compact")
                   }}
                   className="rounded-md border border-slate-200 px-2 py-0.5 text-xs transition sm:text-sm bg-white text-slate-900 shadow-sm"
-                  aria-label="Tampilan notifikasi ringkas"
+                  aria-label={isCompactNotification ? "Tampilan notifikasi normal" : "Tampilan notifikasi ringkas"}
                 >
-                  Ringkas
+                  {isCompactNotification ? "Normal" : "Ringkas"}
                 </button>
               </div>
               <div className="px-2.5 pb-2 sm:px-3">

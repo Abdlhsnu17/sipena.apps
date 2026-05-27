@@ -1068,28 +1068,28 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 rounded-lg p-0 text-emerald-600 hover:bg-emerald-50"
+                            className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                             onClick={() => openEdit(h)}
                             title="Edit"
                           >
-                            <Pencil className="w-3 h-3" />
+                            <Pencil className="w-4 h-4" />
                           </Button>
                         )}
                         {canDelete && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 rounded-lg p-0 text-red-600 hover:bg-red-50"
+                            className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                             onClick={() => handleDelete(h.id)}
                             title="Hapus"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0">
-                              <Download className="w-3 h-3" />
+                            <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
+                              <Download className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
