@@ -874,10 +874,10 @@ export default function ReturnsPage() {
         sections.push({ title: "Pemilik / PJ Inventaris", lines: ownerLines })
       }
       if (returnLogLines.length) {
-        sections.push({ title: "Pengembalian Inventaris", lines: returnLogLines })
+        sections.push({ title: "Pengembalian", lines: returnLogLines })
       }
       if (validationLines.length) {
-        sections.push({ title: "Validasi Pengembalian Inventaris", lines: validationLines })
+        sections.push({ title: "Validasi Pengembalian", lines: validationLines })
       }
       if (statusLines.length) {
         sections.push({ title: "Status Akhir Alat", lines: statusLines })
@@ -932,7 +932,7 @@ export default function ReturnsPage() {
   const handleActiveExport = (format: ExportFormat) => {
     if (!activeReturnRowsToExport.length) return
     void exportNarrativeReport(format, {
-      title: "Daftar Pengembalian Inventaris (Aktif)",
+      title: "Daftar Pengembalian (Aktif)",
       subtitle: "LAPORAN PENGEMBALIAN AKTIF",
       entries: activeReturnRowsToExport,
       filePrefix: "pengembalian-aktif",
@@ -944,7 +944,7 @@ export default function ReturnsPage() {
   const handleHistoryExport = (format: ExportFormat) => {
     if (!historyReturnRowsToExport.length) return
     void exportNarrativeReport(format, {
-      title: "Riwayat Pengembalian Inventaris",
+      title: "Riwayat Pengembalian",
       subtitle: "LAPORAN PENGEMBALIAN",
       entries: historyReturnRowsToExport,
       filePrefix: "riwayat-pengembalian",
@@ -998,7 +998,7 @@ export default function ReturnsPage() {
                   <RotateCcw className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengembalian Inventaris</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengembalian</h1>
                   <p className="mt-1 text-[12px] text-muted-foreground">
                     Validasi dan pengecekan kondisi inventaris dapat dilihat oleh admin/leader.
                   </p>
@@ -1274,13 +1274,13 @@ export default function ReturnsPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian Inventaris")}>
+                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian")}>
                                       PDF
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian Inventaris")}>
+                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian")}>
                                       Word
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("excel", b, "Pengembalian Inventaris")}>
+                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("excel", b, "Pengembalian")}>
                                       Excel
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -1655,7 +1655,7 @@ export default function ReturnsPage() {
                         selectedBorrowing.assetDetailName ||
                         selectedBorrowing.assetName ||
                         "-"
-                      return `Pengembalian inventaris: ${assetName}`
+                      return `Pengembalian: ${assetName}`
                     })()}
                   </CardDescription>
                 </CardHeader>

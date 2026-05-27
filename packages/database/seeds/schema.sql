@@ -67,7 +67,7 @@ CREATE TABLE `user_activity_logs` (
 
 --
 -- Struktur dari tabel `borrowing_records`
--- Sinkron dengan pembaruan formulir peminjaman inventaris
+-- Sinkron dengan pembaruan formulir peminjaman
 -- Berlaku untuk inventaris medis dan non-medis
 --
 

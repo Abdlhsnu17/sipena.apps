@@ -1540,13 +1540,16 @@ export default function MaintenancePage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => void exportSingleNarrative("pdf", m)}>
-                              PDF
+                              Form PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("pdf", m)}>
-                              Surat
+                              Surat PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("word", m)}>
+                              Surat Word
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleNarrative("word", m)}>
-                              Word
+                              Form Word
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleNarrative("excel", m)}>
                               Excel

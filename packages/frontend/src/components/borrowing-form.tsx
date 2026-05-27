@@ -135,7 +135,7 @@ export default function BorrowingForm({
   return (
     <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700 dark:bg-slate-900/70">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Tambah Data Peminjaman Inventaris</CardTitle>
+        <CardTitle className="text-lg">Tambah Data Peminjaman</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           Daftar penambahan inventaris sudah menyediakan pemilihan tanggal pinjaman seperti jadwal pemeliharaan.
         </CardDescription>

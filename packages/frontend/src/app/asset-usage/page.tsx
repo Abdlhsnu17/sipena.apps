@@ -14,13 +14,19 @@ import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Pencil, Search, Trash2 } from "lucide-react";
+import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -1233,9 +1239,27 @@ export default function AssetUsagePage() {
                               >
                                 <Pencil className="h-3 w-3 text-slate-700" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-6 rounded-full px-2 text-[12px]" onClick={() => exportSingleUsageLetter("pdf", log)}>
-                                Surat
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 rounded-lg p-0"
+                                    aria-label="Unduh surat penggunaan"
+                                    title="Unduh surat"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
+                                    Surat PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("word", log)}>
+                                    Surat Word
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                 <Trash2 className="h-3 w-3 text-red-600" />
                               </Button>

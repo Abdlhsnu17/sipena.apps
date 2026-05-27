@@ -1290,7 +1290,7 @@ export default function BorrowingPage() {
     const rowsToExport = selectedBorrowings.length ? selectedBorrowings : filteredBorrowings
     if (!rowsToExport.length) return
     void exportNarrativeReport(format, {
-      title: "Daftar Peminjaman Inventaris",
+      title: "Daftar Peminjaman",
       subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
       entries: rowsToExport,
       filePrefix: "daftar-peminjaman",
@@ -1301,7 +1301,7 @@ export default function BorrowingPage() {
 
   const exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
     void exportNarrativeReport(format, {
-      title: "Formulir Peminjaman Inventaris",
+      title: "Formulir Peminjaman",
       subtitle: "RINGKASAN FORMULIR PEMINJAMAN",
       entries: [borrowing],
       filePrefix: `formulir-peminjaman-${borrowing.id}`,
@@ -1675,7 +1675,7 @@ export default function BorrowingPage() {
                   <HandHelping className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman Inventaris</h1>
+                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Audit, validasi, dan monitoring status inventaris dalam satu halaman.
                   </p>
@@ -2386,13 +2386,16 @@ export default function BorrowingPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("pdf", b)}>
-                                    PDF
+                                    Form PDF
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("pdf", b)}>
-                                    Surat
+                                    Surat PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("word", b)}>
+                                    Surat Word
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("word", b)}>
-                                    Word
+                                    Form Word
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("excel", b)}>
                                     Excel
