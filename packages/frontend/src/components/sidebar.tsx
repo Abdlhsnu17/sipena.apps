@@ -329,7 +329,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   useEffect(() => {
     if (typeof window === "undefined") return
     const handleResize = () => {
-      if (window.innerWidth >= 1280) {
+      if (window.innerWidth >= 1024) {
         closeMobileMenu()
       }
     }
@@ -347,23 +347,6 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     window.addEventListener("orientationchange", handleOrientationChange)
     return () => window.removeEventListener("orientationchange", handleOrientationChange)
   }, [closeMobileMenu])
-
-  useEffect(() => {
-    if (!isMobileMenuOpen || typeof window === "undefined") return
-    const previousOverflow = document.body.style.overflow
-    const previousPaddingRight = document.body.style.paddingRight
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-    document.body.style.overflow = "hidden"
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-    }
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      document.body.style.paddingRight = previousPaddingRight
-    }
-  }, [isMobileMenuOpen])
 
   useEffect(() => {
     if (!isMobileMenuOpen || typeof window === "undefined") return
@@ -540,9 +523,9 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+      <div className="border-b border-border bg-[var(--app-shell-background)] px-4 py-3">
         {isCollapsed ? (
-          <div className="hidden flex-col items-center gap-3 xl:flex">
+          <div className="hidden flex-col items-center gap-3 lg:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
               <Image
                 src="/images/logo-sipena-transparent.png"
@@ -578,7 +561,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
+              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted lg:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
@@ -823,7 +806,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "xl:hidden fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-white/95 text-slate-900 shadow-sm backdrop-blur-sm transition hover:bg-teal-50",
+          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-[var(--app-shell-background)] text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted lg:hidden",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Buka menu navigasi"
@@ -834,10 +817,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         </span>
       </button>
 
-      <div className={cn("xl:hidden fixed inset-0 z-40 flex", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
+      <div className={cn("fixed inset-0 z-40 flex lg:hidden", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
       >
         <div
-          className={cn("absolute inset-0 bg-black/60 z-40 transition-opacity duration-300", 
+          className={cn("absolute inset-0 z-40 bg-black/60 transition-opacity duration-300",
             isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
           onClick={closeMobileMenu}
@@ -845,7 +828,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         />
         <aside
           className={cn(
-            "relative h-svh min-h-svh w-[min(88vw,21rem)] max-w-84 overflow-hidden bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+            "fixed inset-y-0 left-0 z-50 flex h-[100dvh] min-h-screen w-[min(88vw,21rem)] max-w-84 transform flex-col overflow-hidden bg-[var(--app-shell-background)] transition-transform duration-300 ease-in-out",
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           )}
           style={{ minWidth: 0 }}
@@ -866,8 +849,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <aside
         className={cn(
-          "relative shrink-0 border-r border-border bg-card h-dvh flex-col overflow-hidden overscroll-contain transition-all duration-300 ease-in-out xl:fixed xl:inset-y-0 xl:left-0 xl:z-40",
-          "hidden xl:flex",
+          "fixed inset-y-0 left-0 z-40 hidden h-[100dvh] min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-[var(--app-shell-background)] overscroll-contain transition-all duration-300 ease-in-out lg:flex",
           isCollapsed ? "w-20" : "w-64"
         )}
       >

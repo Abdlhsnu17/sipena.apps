@@ -46,6 +46,7 @@
   --grid-overlay: radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
   --glass-border: rgba(0, 0, 0, 0.12);
   --surface: rgba(255, 255, 255, 0.8);
+  --app-shell-background: #020617;
 }
 
 .dark {
@@ -69,6 +70,7 @@
   --input: rgba(255, 255, 255, 0.08);
   --ring: rgba(255, 255, 255, 0.2);
   --surface: rgba(0, 0, 0, 0.85);
+  --app-shell-background: #020617;
 }
 
 @theme inline {
@@ -121,7 +123,7 @@
     min-height: 100dvh;
     min-height: 100svh;
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation;
@@ -136,17 +138,17 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
+    @apply min-h-screen overflow-x-hidden overflow-y-scroll bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(255, 255, 255, 0));
+    background-color: var(--app-shell-background);
+    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(2, 6, 23, 0));
     background-size: cover;
     background-position: center, center;
     background-attachment: scroll;
   }
 
   body:has([data-app-shell="authenticated"]) {
-    height: 100dvh;
-    overflow: hidden;
+    background: var(--app-shell-background);
   }
 
   ::selection {

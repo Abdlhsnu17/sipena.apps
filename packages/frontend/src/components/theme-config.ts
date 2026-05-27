@@ -1,5 +1,5 @@
 export const THEME_STORAGE_KEY = "theme"
-export const THEME_DEFAULT_THEME = "light"
+export const THEME_DEFAULT_THEME = "dark"
 export const THEME_ATTRIBUTE = "class"
 export const THEME_THEMES = ["light", "dark"] as const
 export const THEME_ENABLE_SYSTEM = true
