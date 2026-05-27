@@ -1059,20 +1059,20 @@ export default function MaintenancePage() {
 
   const buildMaintenanceLetterSections = (entry: Maintenance): DocumentSection[] => {
     const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', entry.maintenanceCode || `M-${entry.id}`)
-    appendLine(main, 'Pemohon', entry.requesterName || '-')
-    appendLine(main, 'NIP', entry.requesterNip || '-')
-    appendLine(main, 'Unit', entry.assetLocation || '-')
-    appendLine(main, 'Nama Alat', entry.assetName || '-')
-    appendLine(main, 'Kode Alat', entry.assetCode || '-')
-    appendLine(main, 'Jadwal Pemeliharaan', entry.scheduledDate || '-')
-    appendLine(main, 'Jenis Pemeliharaan', entry.type || '-')
-    appendLine(main, 'Catatan', entry.notes || entry.description || '-')
+    appendLine(main, 'Nomor Surat', '')
+    appendLine(main, 'Pemohon', '')
+    appendLine(main, 'NIP', '')
+    appendLine(main, 'Unit', '')
+    appendLine(main, 'Nama Alat', '')
+    appendLine(main, 'Kode Alat', '')
+    appendLine(main, 'Jadwal Pemeliharaan', '')
+    appendLine(main, 'Jenis Pemeliharaan', '')
+    appendLine(main, 'Catatan', '')
 
     const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', entry.createdAt || '-')
-    appendLine(sign, 'Penanggung Jawab', entry.technician || entry.validatorName || '-')
-    appendLine(sign, 'NIP Penanggung Jawab', entry.validatorNip || '-')
+    appendLine(sign, 'Tempat, Tanggal', '')
+    appendLine(sign, 'Penanggung Jawab', '')
+    appendLine(sign, 'NIP Penanggung Jawab', '')
 
     return [
       { title: 'SURAT PEMELIHARAAN', lines: main },

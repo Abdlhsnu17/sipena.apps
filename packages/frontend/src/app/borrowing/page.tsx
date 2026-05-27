@@ -1314,22 +1314,22 @@ export default function BorrowingPage() {
 
   const buildBorrowingLetterSections = (entry: ApiBorrowing): DocumentSection[] => {
     const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', entry.borrowingCode || `P-${entry.id}`)
-    appendLine(main, 'Pengaju', entry.userName || '-')
-    appendLine(main, 'NIP', entry.userNip || '-')
-    appendLine(main, 'Jabatan', entry.borrowerPosition || '-')
-    appendLine(main, 'Unit', entry.borrowerWorkUnit || '-')
-    appendLine(main, 'Nama Alat', entry.assetName || '-')
-    appendLine(main, 'Kode Alat', entry.assetCode || '-')
-    appendLine(main, 'No ID', entry.assetDetailId || entry.assetDetailCode || entry.borrowingCode || String(entry.id))
-    appendLine(main, 'Tanggal Pinjam', entry.borrowDate || '-')
-    appendLine(main, 'Batas Pengembalian', entry.dueDate || '-')
-    appendLine(main, 'Tujuan / Alasan', entry.purpose || entry.destinationRoom || '-')
+    appendLine(main, 'Nomor Surat', '')
+    appendLine(main, 'Pengaju', '')
+    appendLine(main, 'NIP', '')
+    appendLine(main, 'Jabatan', '')
+    appendLine(main, 'Unit', '')
+    appendLine(main, 'Nama Alat', '')
+    appendLine(main, 'Kode Alat', '')
+    appendLine(main, 'No ID', '')
+    appendLine(main, 'Tanggal Pinjam', '')
+    appendLine(main, 'Batas Pengembalian', '')
+    appendLine(main, 'Tujuan / Alasan', '')
 
     const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', entry.createdAt || '-')
-    appendLine(sign, 'Penanggung Jawab', entry.ownerName || entry.ownerPosition || '-')
-    appendLine(sign, 'Jabatan Penanggung Jawab', entry.ownerPosition || '-')
+    appendLine(sign, 'Tempat, Tanggal', '')
+    appendLine(sign, 'Penanggung Jawab', '')
+    appendLine(sign, 'Jabatan Penanggung Jawab', '')
 
     const sections: DocumentSection[] = []
     sections.push({ title: 'SURAT PEMINJAMAN', lines: main })

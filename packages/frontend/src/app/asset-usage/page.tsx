@@ -22,10 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -804,20 +804,20 @@ export default function AssetUsagePage() {
 
   const buildUsageLetterSections = (log: AssetUsageLog): DocumentSection[] => {
     const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', getUsageNoId(log))
-    appendLine(main, 'Operator', log.operatorName || log.createdByName || '-')
-    appendLine(main, 'NIP Operator', log.operatorNip || '-')
-    appendLine(main, 'Nama Alat', log.assetDetailName || log.assetName || '-')
-    appendLine(main, 'Kode Alat', log.assetDetailCode || log.assetCode || '-')
-    appendLine(main, 'Ruangan Pengguna', getUsageRoomDisplay(log).primary)
-    appendLine(main, 'Waktu Mulai', formatDayTimeLabel(log.startedAt) || '-')
-    appendLine(main, 'Waktu Selesai', formatDayTimeLabel(log.endedAt) || '-')
-    appendLine(main, 'Tujuan / Keterangan', log.notes?.trim() || '-')
+    appendLine(main, 'Nomor Surat', '')
+    appendLine(main, 'Operator', '')
+    appendLine(main, 'NIP Operator', '')
+    appendLine(main, 'Nama Alat', '')
+    appendLine(main, 'Kode Alat', '')
+    appendLine(main, 'Ruangan Pengguna', '')
+    appendLine(main, 'Waktu Mulai', '')
+    appendLine(main, 'Waktu Selesai', '')
+    appendLine(main, 'Tujuan / Keterangan', '')
 
     const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', formatDayTimeLabel(log.startedAt) || '-')
-    appendLine(sign, 'Penanggung Jawab', log.createdByName || '-')
-    appendLine(sign, 'Keterangan', '-')
+    appendLine(sign, 'Tempat, Tanggal', '')
+    appendLine(sign, 'Penanggung Jawab', '')
+    appendLine(sign, 'Keterangan', '')
 
     return [
       { title: 'SURAT PENGGUNAAN', lines: main },
