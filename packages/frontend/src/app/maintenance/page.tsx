@@ -3,7 +3,10 @@
 import { buildLoginRedirectUrl } from "@/services/auth-utils";
 import {
     AlertCircle,
+    CalendarDays,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     Download,
     Edit2,
@@ -128,6 +131,21 @@ const getSelectableStatuses = (currentStatus: string) => [
   ...(MAINTENANCE_STATUS_TRANSITIONS[currentStatus] || []),
 ]
 
+const calendarWeekDays = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+
+const parseCalendarDate = (value?: string | null) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const isSameCalendarDate = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate()
+
+const getCalendarStartOffset = (date: Date) => (date.getDay() + 6) % 7
+
 export default function MaintenancePage() {
   const router = useRouter()
   const { confirm } = useConfirm()
@@ -149,6 +167,7 @@ export default function MaintenancePage() {
   const [filterStatus, setFilterStatus] = useState("Semua")
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
+  const [calendarMonthDate, setCalendarMonthDate] = useState(() => new Date())
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     maintenanceId: number | string
     previousStatus: string
@@ -875,6 +894,47 @@ export default function MaintenancePage() {
     },
     [maintenance, maintenanceHistory]
   )
+  const calendarEntries = useMemo(() => {
+    const year = calendarMonthDate.getFullYear()
+    const month = calendarMonthDate.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const startOffset = getCalendarStartOffset(firstDay)
+    const startDate = new Date(year, month, 1 - startOffset)
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + index)
+
+      const items = allMaintenanceForMetrics
+        .filter((item) => {
+          const scheduledDate = parseCalendarDate(item.scheduledDate)
+          return scheduledDate ? isSameCalendarDate(date, scheduledDate) : false
+        })
+        .sort((a, b) => String(a.scheduledDate).localeCompare(String(b.scheduledDate)))
+
+      return {
+        date,
+        isCurrentMonth: date.getMonth() === month,
+        items,
+      }
+    })
+  }, [allMaintenanceForMetrics, calendarMonthDate])
+  const calendarMonthLabel = calendarMonthDate.toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  })
+  const upcomingCalendarItems = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return allMaintenanceForMetrics
+      .filter((item) => !["validated", "cancelled"].includes(item.status))
+      .map((item) => ({ item, scheduledDate: parseCalendarDate(item.scheduledDate) }))
+      .filter((entry): entry is { item: Maintenance; scheduledDate: Date } => Boolean(entry.scheduledDate))
+      .filter((entry) => entry.scheduledDate >= today)
+      .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime())
+      .slice(0, 5)
+  }, [allMaintenanceForMetrics])
   const getMaintenanceNoId = (item: Maintenance) => formatNoId("JDW", item.id, item.maintenanceCode)
 
   const filteredMaintenance = maintenance.filter((m) => {
@@ -1127,6 +1187,29 @@ export default function MaintenancePage() {
     }
   }
 
+  const getCalendarStatusClass = (status: string) => {
+    switch (status) {
+      case "requested":
+        return "border-slate-200 bg-slate-50 text-slate-700"
+      case "scheduled":
+        return "border-sky-200 bg-sky-50 text-sky-700"
+      case "in_progress":
+        return "border-teal-200 bg-teal-50 text-teal-700"
+      case "completed":
+        return "border-amber-200 bg-amber-50 text-amber-700"
+      case "validated":
+        return "border-indigo-200 bg-indigo-50 text-indigo-700"
+      case "cancelled":
+        return "border-rose-200 bg-rose-50 text-rose-700"
+      default:
+        return "border-slate-200 bg-slate-50 text-slate-700"
+    }
+  }
+
+  const shiftCalendarMonth = (offset: number) => {
+    setCalendarMonthDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
+  }
+
   return (
     <main
       className="min-h-full bg-linear-to-br from-slate-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40"
@@ -1204,6 +1287,148 @@ export default function MaintenancePage() {
                     <p className="text-xl font-semibold text-rose-600 mt-1">{cancelledCount.toLocaleString("id-ID")}</p>
                   </div>
                   <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70" data-maintenance-calendar>
+            <CardHeader className="space-y-3 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-sky-50 p-2 text-sky-700">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Kalender Pemeliharaan</CardTitle>
+                    <CardDescription className="text-[13px] text-muted-foreground">
+                      Jadwal bulanan untuk memantau pengajuan, proses, dan validasi.
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(-1)} aria-label="Bulan sebelumnya">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="min-w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-semibold capitalize text-slate-800">
+                    {calendarMonthLabel}
+                  </div>
+                  <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(1)} aria-label="Bulan berikutnya">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-9 rounded-xl px-3" onClick={() => setCalendarMonthDate(new Date())}>
+                    Hari ini
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="overflow-x-auto">
+                  <div className="min-w-[720px] overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+                      {calendarWeekDays.map((day) => (
+                        <div key={day} className="px-2 py-2 text-center text-[11px] font-semibold uppercase text-slate-500">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7">
+                      {calendarEntries.map(({ date, isCurrentMonth, items }) => (
+                        <div
+                          key={date.toISOString()}
+                          className={`min-h-28 border-b border-r border-slate-200 p-2 last:border-r-0 ${
+                            isCurrentMonth ? "bg-white" : "bg-slate-50/70 text-slate-400"
+                          }`}
+                        >
+                          <div className="mb-2 flex items-center justify-between">
+                            <span
+                              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                                isSameCalendarDate(date, new Date())
+                                  ? "bg-teal-600 text-white"
+                                  : isCurrentMonth
+                                    ? "text-slate-700"
+                                    : "text-slate-400"
+                              }`}
+                            >
+                              {date.getDate()}
+                            </span>
+                            {items.length > 0 ? (
+                              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                                {items.length}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="space-y-1">
+                            {items.slice(0, 2).map((item) => {
+                              const detail = resolveDetailForMaintenance(item)
+                              const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "Aset"
+                              return (
+                                <button
+                                  key={`${date.toISOString()}-${item.id}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchTerm(getMaintenanceNoId(item))
+                                    setFilterStatus("Semua")
+                                    setIsMaintenanceMinimized(false)
+                                  }}
+                                  className={`block w-full truncate rounded-md border px-2 py-1 text-left text-[11px] font-medium ${getCalendarStatusClass(item.status)}`}
+                                  title={`${getMaintenanceNoId(item)} - ${assetName}`}
+                                >
+                                  {assetName}
+                                </button>
+                              )
+                            })}
+                            {items.length > 2 ? (
+                              <div className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                +{items.length - 2} jadwal
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-semibold uppercase text-slate-500">Jadwal terdekat</p>
+                  </div>
+                  {upcomingCalendarItems.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4 text-sm text-muted-foreground">
+                      Tidak ada jadwal aktif mendatang.
+                    </div>
+                  ) : (
+                    upcomingCalendarItems.map(({ item, scheduledDate }) => {
+                      const detail = resolveDetailForMaintenance(item)
+                      const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
+                      return (
+                        <button
+                          key={`upcoming-${item.id}`}
+                          type="button"
+                          onClick={() => {
+                            setSearchTerm(getMaintenanceNoId(item))
+                            setFilterStatus("Semua")
+                            setIsMaintenanceMinimized(false)
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:bg-slate-50"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800">{assetName}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{formatDayTimeLabel(item.scheduledDate, { showWeekday: true })}</p>
+                            </div>
+                            <Badge variant={getStatusColor(item.status)} className="shrink-0 text-[10px]">
+                              {maintenanceStatusLabel(item.status)}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 text-xs font-medium text-slate-500">
+                            {scheduledDate.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                          </p>
+                        </button>
+                      )
+                    })
+                  )}
                 </div>
               </div>
             </CardContent>

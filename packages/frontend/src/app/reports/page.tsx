@@ -39,7 +39,7 @@ import {
 // usageContextLabels removed — reports now aggregate into broader categories
 
 type IconComponent = ComponentType<{ className?: string }>
-type ExportReportType = "assets" | "borrowing" | "maintenance" | "all"
+type ExportReportType = "assets" | "borrowing" | "maintenance" | "usage" | "all"
 type ExportFilters = {
   reportType: ExportReportType
   startDate: string
@@ -74,6 +74,7 @@ const reportTypeOptions: Array<FilterOption & { value: ExportReportType; descrip
   { value: "assets", label: "Aset", description: "Data inventaris medis dan non medis" },
   { value: "borrowing", label: "Peminjaman", description: "Transaksi pinjam pakai alat" },
   { value: "maintenance", label: "Pemeliharaan", description: "Jadwal dan riwayat pemeliharaan" },
+  { value: "usage", label: "Penggunaan", description: "Log pemakaian alat per ruangan dan konteks" },
   { value: "all", label: "Semua Modul", description: "Ringkasan terpadu semua laporan" },
 ]
 
@@ -103,6 +104,16 @@ const maintenanceTypeOptions: FilterOption[] = [
   { value: "corrective", label: "Corrective" },
   { value: "calibration", label: "Calibration" },
   { value: "inspection", label: "Inspection" },
+]
+
+const usageContextOptions: FilterOption[] = [
+  { value: "own_room", label: "Ruangan" },
+  { value: "same_unit_cross_room", label: "Antar Sub Ruangan" },
+  { value: "cross_room", label: "Antar Instalasi" },
+  { value: "emergency", label: "Emergency" },
+  { value: "procedure", label: "Prosedur" },
+  { value: "rounding", label: "Rounding" },
+  { value: "other", label: "Lainnya" },
 ]
 
 const initialExportFilters: ExportFilters = {
@@ -459,9 +470,11 @@ export default function ReportsPage() {
       ? borrowingStatusOptions
       : exportFilters.reportType === "maintenance"
         ? maintenanceStatusOptions
-        : []
+        : exportFilters.reportType === "usage"
+          ? usageContextOptions
+          : []
   const availableTypeOptions =
-    exportFilters.reportType === "assets"
+    exportFilters.reportType === "assets" || exportFilters.reportType === "usage"
       ? assetTypeOptions
       : exportFilters.reportType === "maintenance"
         ? maintenanceTypeOptions
@@ -484,7 +497,7 @@ export default function ReportsPage() {
   const activeExportFilterLabels = [
     selectedReportType.label,
     periodLabel,
-    selectedStatusLabel ? `Status: ${selectedStatusLabel}` : null,
+    selectedStatusLabel ? `${exportFilters.reportType === "usage" ? "Konteks" : "Status"}: ${selectedStatusLabel}` : null,
     selectedTypeLabel ? `Jenis: ${selectedTypeLabel}` : null,
   ].filter(Boolean)
 
@@ -586,7 +599,7 @@ export default function ReportsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 px-4 py-4">
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
               {reportTypeOptions.map((option) => {
                 const active = exportFilters.reportType === option.value
                 return (
@@ -670,9 +683,9 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 {showStatusFilter ? (
                   <label className="space-y-1 text-xs font-medium text-slate-600">
-                    <span>Status</span>
+                    <span>{exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status"}</span>
                     <select
-                      aria-label="Status laporan"
+                      aria-label={exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status laporan"}
                       value={exportFilters.status}
                       onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
                       className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"

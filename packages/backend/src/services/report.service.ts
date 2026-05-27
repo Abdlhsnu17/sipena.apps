@@ -145,8 +145,8 @@ const formatCellValue = (value: unknown): string | number | Date => {
 const escapePdfText = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'all' => {
-  if (value === 'borrowing' || value === 'maintenance' || value === 'all') return value;
+const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'usage' | 'all' => {
+  if (value === 'borrowing' || value === 'maintenance' || value === 'usage' || value === 'all') return value;
   return 'assets';
 };
 
@@ -600,6 +600,16 @@ export class ReportService {
       params.push(`${filters.endDate} 23:59:59`);
     }
 
+    if (filters.type) {
+      query += ' AND l.asset_type = ?';
+      params.push(filters.type);
+    }
+
+    if (filters.status) {
+      query += ' AND l.usage_context = ?';
+      params.push(filters.status);
+    }
+
     query += ' ORDER BY l.started_at DESC, l.created_at DESC';
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
@@ -694,7 +704,7 @@ export class ReportService {
       {
         title: 'Penggunaan',
         rows: ((usageResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
-        columns: this.getExportColumns((usageResult.data ?? []) as RowDataPacket[], 'assets'),
+        columns: this.getExportColumns((usageResult.data ?? []) as RowDataPacket[], 'usage'),
       },
       {
         title: 'Unggahan',
@@ -714,6 +724,10 @@ export class ReportService {
       const result = await this.getMaintenanceReport(filters);
       return (result.data ?? []) as RowDataPacket[];
     }
+    if (reportType === 'usage') {
+      const result = await this.getUsageReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
     const result = await this.getAssetReport(filters);
     return (result.data ?? []) as RowDataPacket[];
   }
@@ -724,6 +738,8 @@ export class ReportService {
         return 'Laporan Peminjaman';
       case 'maintenance':
         return 'Laporan Pemeliharaan';
+      case 'usage':
+        return 'Laporan Penggunaan';
       case 'all':
         return 'Laporan Terpadu';
       default:
@@ -736,10 +752,22 @@ export class ReportService {
       'id',
       'asset_code',
       'asset_name',
+      'asset_detail_name',
+      'asset_detail_code',
       'name',
       'category',
       'type',
+      'asset_type',
       'status',
+      'usage_context',
+      'room_name',
+      'operator_name',
+      'operator_nip',
+      'started_at',
+      'ended_at',
+      'usage_count',
+      'condition_before',
+      'condition_after',
       'condition',
       'location',
       'user_name',
@@ -769,6 +797,8 @@ export class ReportService {
         return ['id', 'borrowing_code', 'asset_name', 'user_name', 'status', 'borrow_date', 'due_date'];
       case 'maintenance':
         return ['id', 'maintenance_code', 'asset_name', 'type', 'status', 'scheduled_date', 'technician'];
+      case 'usage':
+        return ['id', 'asset_name', 'asset_code', 'room_name', 'usage_context', 'started_at', 'ended_at', 'usage_count'];
       default:
         return ['id', 'asset_code', 'name', 'category', 'type', 'status', 'location'];
     }

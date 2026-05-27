@@ -85,6 +85,12 @@ class ReportService {
     return apiService.get<ReportResponse<any[]>>(endpoint)
   }
 
+  async getUsageReport(params: Record<string, string> = {}): Promise<ReportResponse<any[]>> {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/reports/usage${query ? `?${query}` : ""}`
+    return apiService.get<ReportResponse<any[]>>(endpoint)
+  }
+
   async getUploadedReports(): Promise<ReportResponse<ReportUpload[]>> {
     return apiService.get<ReportResponse<ReportUpload[]>>("/reports/uploads")
   }

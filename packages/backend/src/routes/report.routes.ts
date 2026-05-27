@@ -102,6 +102,17 @@ router.get(
   reportController.getMaintenanceReport
 );
 
+router.get(
+  '/usage',
+  [
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('type').optional().trim(),
+    query('status').optional().trim()
+  ],
+  reportController.getUsageReport
+);
+
 router.get('/uploads', reportController.getUploads);
 router.post('/uploads', upload.single('file'), reportController.uploadReport);
 router.get('/uploads/:id/download', reportController.downloadUpload);

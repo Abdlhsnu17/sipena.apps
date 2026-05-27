@@ -148,6 +148,31 @@ export class ReportController {
   };
 
   /**
+   * Get usage report
+   * GET /api/reports/usage
+   */
+  getUsageReport = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { startDate, endDate, type, status } = req.query;
+
+      const result = await this.reportService.getUsageReport({
+        startDate: startDate as string,
+        endDate: endDate as string,
+        type: type as string,
+        status: status as string
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Get usage report error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
+  /**
    * Export report to PDF
    * GET /api/reports/export/pdf
    */

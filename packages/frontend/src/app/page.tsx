@@ -11,7 +11,7 @@ import reportService, { type DueNotification } from "@/services/report.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
-import { AlertTriangle, ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Bell, Building2, CalendarClock, ClipboardList, FileText, HandHelping, RotateCcw, Settings, Stethoscope, UploadCloud, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
@@ -288,6 +288,10 @@ export default function DashboardPage() {
     return quickActionLinks.filter((action) => canAccessRoute(normalizedRole, action.href))
   }, [currentUser?.role])
 
+  const overdueNotificationCount = dueNotifications.filter((item) => item.type === "borrowing_overdue").length
+  const dueSoonNotificationCount = dueNotifications.filter((item) => item.type === "borrowing_due_soon").length
+  const maintenanceNotificationCount = dueNotifications.filter((item) => item.type === "maintenance_due_soon").length
+
   const handleQuickActionClick = (action: QuickActionLink) => {
     if (canAccessRoute(currentUser?.role, action.href)) {
       router.push(action.href)
@@ -339,9 +343,45 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-semibold text-slate-800">Notifikasi Jatuh Tempo</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">Peminjaman terlambat, peminjaman segera jatuh tempo, dan jadwal pemeliharaan dekat</p>
               </div>
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <Bell className="h-5 w-5" />
+                {dueNotifications.length > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                    {dueNotifications.length}
+                  </span>
+                ) : null}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => router.push("/returns")}
+                  className="flex items-center justify-between rounded-2xl border border-red-100 bg-red-50/80 px-3 py-2 text-left"
+                >
+                  <span className="text-xs font-medium text-red-800">Terlambat</span>
+                  <span className="text-lg font-semibold text-red-700">{overdueNotificationCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/returns")}
+                  className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/80 px-3 py-2 text-left"
+                >
+                  <span className="text-xs font-medium text-amber-800">Jatuh tempo</span>
+                  <span className="text-lg font-semibold text-amber-700">{dueSoonNotificationCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/maintenance")}
+                  className="flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-left"
+                >
+                  <span className="flex items-center gap-1 text-xs font-medium text-sky-800">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Maintenance
+                  </span>
+                  <span className="text-lg font-semibold text-sky-700">{maintenanceNotificationCount}</span>
+                </button>
+              </div>
               {dueNotifications.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm text-muted-foreground">
                   Tidak ada jatuh tempo mendesak.
