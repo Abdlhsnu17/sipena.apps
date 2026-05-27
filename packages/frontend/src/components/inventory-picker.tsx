@@ -194,13 +194,17 @@ export function InventoryPicker<T>({
           setOpen(false)
           return
         }
-        value ? setOpen(true) : handleClose()
+        if (value) {
+          setOpen(true)
+        } else {
+          handleClose()
+        }
       }}
     >
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`flex h-12 w-full items-center justify-between rounded-2xl border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+          className={`flex h-12 w-full items-center justify-between rounded-lg border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
             buttonClassName ?? ''
           } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
           aria-label={ariaLabel ?? buttonLabel ?? 'Pilih inventaris'}

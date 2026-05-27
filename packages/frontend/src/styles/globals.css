@@ -134,11 +134,10 @@
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    background-image: var(--grid-overlay), var(--hero-gradient);
-    background-size: 120px 120px, cover;
+    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(255, 255, 255, 0));
+    background-size: cover;
     background-position: center, center;
     background-attachment: scroll;
-    background-blend-mode: soft-light, normal;
   }
 
   ::selection {
@@ -149,6 +148,26 @@
   [data-main-scroll] {
     scrollbar-gutter: stable both-edges;
     overscroll-behavior-y: contain;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .validator-name-normal {
+    font-weight: 400 !important;
   }
 }
 
@@ -175,6 +194,7 @@
 
   .mobile-table-scroll {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
@@ -306,15 +326,35 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-.font-loading {
-  font-display: swap;
-}
-
-@layer components {
-  .validator-name-normal {
-    font-weight: 400 !important;
+  .font-loading {
+    font-display: swap;
   }
-}
+
+  [data-app-content] > * {
+    min-width: 0;
+  }
+
+  [data-app-content] [data-slot="card"],
+  [data-app-content] [role="dialog"],
+  [data-app-content] form,
+  [data-app-content] section,
+  [data-app-content] article {
+    min-width: 0;
+  }
+
+  [data-app-content] h1,
+  [data-app-content] h2,
+  [data-app-content] h3,
+  [data-app-content] p,
+  [data-app-content] span,
+  [data-app-content] td {
+    overflow-wrap: anywhere;
+  }
+
+  [data-app-content] .recharts-responsive-container {
+    min-width: 0;
+  }
+
   .rtl {
     direction: rtl;
     text-align: right;
@@ -446,8 +486,16 @@
   [data-page-width="responsive"] {
     max-width: 100%;
     min-width: 0;
-    padding-left: max(0.75rem, env(safe-area-inset-left));
-    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-left: max(0.625rem, env(safe-area-inset-left));
+    padding-right: max(0.625rem, env(safe-area-inset-right));
+  }
+
+  [data-app-content] {
+    padding-top: 0.75rem;
+  }
+
+  [data-app-content] [data-slot="card"] {
+    border-radius: 0.5rem;
   }
 
   body.auth-mobile-form .auth-safe-area {

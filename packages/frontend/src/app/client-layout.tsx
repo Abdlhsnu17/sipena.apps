@@ -28,7 +28,10 @@ export default function ClientLayout({
   const { toast } = useToast()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true
+    return window.localStorage.getItem("sipena-sidebar-collapsed") !== "false"
+  })
   const isMobile = useIsMobile()
 
   useEffect(() => {
@@ -117,6 +120,11 @@ export default function ClientLayout({
     document.body.classList.remove(bodyClass)
   }, [isAuthPage])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("sipena-sidebar-collapsed", String(isSidebarCollapsed))
+  }, [isSidebarCollapsed])
+
   const shouldBlockProtectedPage = showLayout && (!user || (user && !isAllowedPath))
 
   if (loading) {
@@ -145,7 +153,7 @@ export default function ClientLayout({
       <ConfirmProvider>
         {showLayout ? (
           <div
-            className="relative min-h-svh overflow-x-clip bg-background xl:h-svh xl:overflow-hidden"
+            className="relative min-h-svh overflow-x-clip bg-slate-50/80 xl:h-svh xl:overflow-hidden dark:bg-background"
             data-app-shell="authenticated"
           >
             <Sidebar
@@ -161,15 +169,16 @@ export default function ClientLayout({
               <Topbar />
               <main
                 className={cn(
-                  "flex flex-1 flex-col overflow-x-hidden xl:min-h-0 xl:overflow-y-scroll",
+                  "flex flex-1 flex-col overflow-x-clip xl:min-h-0 xl:overflow-y-scroll",
                   isMobile && "overscroll-contain",
                 )}
                 data-main-scroll
               >
                 <div
                   className={cn(
-                    "mx-auto min-h-full w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 xl:px-8",
+                    "mx-auto min-h-full w-full max-w-[92rem] min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 xl:px-6",
                   )}
+                  data-app-content
                   data-page-width="responsive"
                 >
                   {children}

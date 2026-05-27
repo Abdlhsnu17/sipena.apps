@@ -275,14 +275,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const [profileImageError, setProfileImageError] = useState(false)
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
   const [isActivityHistoryExpanded, setIsActivityHistoryExpanded] = useState(() => {
-    if (typeof window === "undefined") return true
+    if (typeof window === "undefined") return false
     const saved = localStorage.getItem("sidebar-activity-expanded")
-    return saved !== null ? JSON.parse(saved) : true
+    return saved !== null ? JSON.parse(saved) : false
   })
   const [isProfileExpanded, setIsProfileExpanded] = useState(() => {
-    if (typeof window === "undefined") return true
+    if (typeof window === "undefined") return false
     const saved = localStorage.getItem("sidebar-profile-expanded")
-    return saved !== null ? JSON.parse(saved) : true
+    return saved !== null ? JSON.parse(saved) : false
   })
   const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false)
@@ -540,7 +540,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="border-b border-teal-100/80 bg-linear-to-b from-teal-50/70 to-transparent px-4 py-4 dark:border-slate-800/70 dark:from-teal-950/20">
+      <div className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
         {isCollapsed ? (
           <div className="hidden flex-col items-center gap-3 xl:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
@@ -555,7 +555,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted"
+              className="rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted"
               aria-label="Buka sidebar"
               title="Buka sidebar"
             >
@@ -567,18 +567,18 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             <div className="flex min-w-0 flex-1 items-center">
               <div className="relative h-14 min-w-0 flex-1 overflow-hidden">
                 <Image
-                  src="/images/logo-sipena-transparent.png"
-                  alt="Logo SiPeNa"
-                  width={170}
-                  height={96}
-                  className="h-full w-full object-contain object-left"
-                  priority
-                />
+                src="/images/logo-sipena-transparent.png"
+                alt="Logo SiPeNa"
+                width={170}
+                height={96}
+                  className="h-auto max-h-14 w-full object-contain object-left"
+                priority
+              />
               </div>
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden shrink-0 rounded-xl border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
+              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted xl:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
@@ -590,8 +590,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <nav
         className={cn(
-          "flex-1 min-h-0 space-y-2 overflow-y-scroll [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
-          isCollapsed ? "p-2" : "p-4",
+          "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
+          isCollapsed ? "p-2" : "p-3",
         )}
       >
         {visibleLinks.map((link) => {
@@ -617,7 +617,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                 <div
                   className={cn(
                     "flex items-center rounded-lg transition-colors cursor-pointer select-none",
-                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-4 py-2",
+                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
                     isActive ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted",
                   )}
                   title={link.label}
@@ -630,7 +630,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   {isCollapsed ? (
                     <span className="sr-only">{link.label}</span>
                   ) : (
-                    <span className="text-sm font-bold">{link.label}</span>
+                    <span className="min-w-0 truncate text-[13px] font-semibold">{link.label}</span>
                   )}
                 </div>
               </Link>
@@ -639,13 +639,13 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       </nav>
 
       {currentUser && !isCollapsed && (
-        <div className="px-4 pb-0 z-0">
-          <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_10px_25px_rgba(15,23,42,0.06)] dark:border-slate-800/70 dark:bg-slate-900/70">
+        <div className="px-3 pb-0 z-0">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
             <div className="w-full border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Clock3 className="h-3.5 w-3.5 text-teal-600" />
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
                     Riwayat Aktivitas
                   </p>
                 </div>
@@ -714,13 +714,13 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
 
       {currentUser && !isCollapsed && (
-        <div className="px-4 py-2 z-0">
-          <div className="rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_15px_30px_rgba(15,23,42,0.08)] dark:border-slate-800/70 dark:bg-slate-900/70">
+        <div className="px-3 py-2 z-0">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
             <button
               onClick={() => setIsProfileExpanded(!isProfileExpanded)}
-              className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-2xl cursor-pointer"
+              className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-lg cursor-pointer"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
                 Profil Akun
               </p>
               <ChevronDown
@@ -823,22 +823,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "xl:hidden fixed left-[max(0.875rem,env(safe-area-inset-left))] top-[max(0.875rem,env(safe-area-inset-top))] z-50 flex items-center gap-3 rounded-2xl border border-teal-200 bg-white/95 px-3.5 py-2.5 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.18)] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:bg-teal-50 active:translate-y-0",
+          "xl:hidden fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-white/95 text-slate-900 shadow-sm backdrop-blur-sm transition hover:bg-teal-50",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Buka menu navigasi"
         title="Buka menu navigasi"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-600 text-white shadow-sm">
           <Menu className="h-5 w-5" />
-        </span>
-        <span className="flex flex-col items-start leading-none">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700">
-            Navigasi
-          </span>
-          <span className="text-sm font-semibold text-slate-900">
-            Menu
-          </span>
         </span>
       </button>
 
@@ -853,7 +845,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         />
         <aside
           className={cn(
-            "relative h-svh min-h-svh w-[min(88vw,22rem)] max-w-88 overflow-y-auto bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+            "relative h-svh min-h-svh w-[min(88vw,21rem)] max-w-84 overflow-hidden bg-card flex flex-col transform transition-transform duration-300 ease-in-out z-50",
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           )}
           style={{ minWidth: 0 }}
@@ -874,7 +866,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <aside
         className={cn(
-          "relative shrink-0 border-r border-border bg-card h-dvh flex-col overflow-y-scroll overscroll-contain [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent transition-all duration-300 ease-in-out xl:fixed xl:inset-y-0 xl:left-0 xl:z-40",
+          "relative shrink-0 border-r border-border bg-card h-dvh flex-col overflow-hidden overscroll-contain transition-all duration-300 ease-in-out xl:fixed xl:inset-y-0 xl:left-0 xl:z-40",
           "hidden xl:flex",
           isCollapsed ? "w-20" : "w-64"
         )}
