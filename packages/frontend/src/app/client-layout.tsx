@@ -153,7 +153,7 @@ export default function ClientLayout({
       <ConfirmProvider>
         {showLayout ? (
           <div
-            className="relative min-h-svh overflow-x-clip bg-slate-50/80 xl:h-svh xl:overflow-hidden dark:bg-background"
+            className="relative flex h-dvh min-h-svh w-full overflow-hidden bg-slate-50/80 dark:bg-background"
             data-app-shell="authenticated"
           >
             <Sidebar
@@ -162,14 +162,14 @@ export default function ClientLayout({
             />
             <div
               className={cn(
-                "flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden transition-[padding] duration-300 ease-in-out xl:h-svh xl:min-h-0 xl:overflow-hidden",
+                "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300 ease-in-out",
                 isSidebarCollapsed ? "xl:pl-20" : "xl:pl-64",
               )}
             >
               <Topbar />
               <main
                 className={cn(
-                  "flex flex-1 flex-col overflow-x-clip xl:min-h-0 xl:overflow-y-scroll",
+                  "flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto",
                   isMobile && "overscroll-contain",
                 )}
                 data-main-scroll

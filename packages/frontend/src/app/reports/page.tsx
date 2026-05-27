@@ -560,7 +560,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="bg-slate-50/70 dark:bg-slate-950" data-main-scroll>
+    <div className="min-w-0 bg-slate-50/70 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl space-y-5 page-gutter">
         <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

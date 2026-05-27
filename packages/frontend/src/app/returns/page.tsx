@@ -986,7 +986,7 @@ export default function ReturnsPage() {
 
   return (
     <main
-      className="min-h-full bg-white"
+      className="min-h-full min-w-0 bg-slate-50/70 dark:bg-slate-950"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
     >
       <div className="page-gutter">

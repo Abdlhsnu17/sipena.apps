@@ -351,7 +351,7 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="z-30 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
+    <header className="z-30 w-full min-w-0 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
       <div className="border-b border-border/70 bg-muted/40 px-3 py-1 xl:px-6">
         <div className="overflow-hidden">
           <div className="animate-topbar-marquee flex w-max items-center text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground will-change-transform">
@@ -360,12 +360,12 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-      <div className="flex items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 lg:pr-6 xl:px-8">
-        <div className="min-w-0">
+      <div className="flex min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 lg:pr-6 xl:px-8">
+        <div className="min-w-0 flex-1">
           <p className="min-w-0 truncate text-[14px] font-bold sm:hidden">{formattedCompactDate}</p>
           <p className="hidden min-w-0 truncate font-bold sm:block" style={{ fontSize: 16 }}>{formattedDate}</p>
         </div>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:h-9 sm:w-9 md:h-10 md:w-10"
@@ -376,7 +376,7 @@ export default function Topbar() {
                 <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5 rounded-full border border-background bg-red-500 sm:h-2 sm:w-2" />
               )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="w-[min(94vw,22rem)] sm:w-92 md:w-96 lg:w-100 max-h-[70vh] overflow-y-auto rounded-xl border border-border/70 bg-white text-slate-950 shadow-lg">
+            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(70vh,36rem)] w-[min(calc(100vw-1rem),22rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-border/70 bg-white text-slate-950 shadow-lg sm:w-92 md:w-96 lg:w-100">
               <div className="flex items-center justify-between px-2.5 pt-1 pb-0.5 sm:px-3">
                 <DropdownMenuLabel className="p-0 text-[10px] tracking-[0.2em] uppercase text-muted-foreground sm:text-[11px]">
                   Pemberitahuan
@@ -437,16 +437,16 @@ export default function Topbar() {
                         </span>
                       </div>
                       <div className={`${isCompactNotification ? "space-y-0 px-2.5 py-2 sm:px-3 sm:py-2.5" : "space-y-0.5 px-3 py-2.5 sm:space-y-1 sm:px-4 sm:py-3"} text-slate-900`}>
-                        <p className={`${isCompactNotification ? "text-[12px] sm:text-[13px]" : "text-[13px] sm:text-[14px]"} leading-snug`}>{notification.assetName}</p>
-                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} text-slate-700`}>{notification.assetCode}</p>
-                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} text-slate-700`}>No ID: {notification.recordNoId}</p>
-                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} text-slate-700`}>Identitas: {notification.identity}</p>
+                        <p className={`${isCompactNotification ? "text-[12px] sm:text-[13px]" : "text-[13px] sm:text-[14px]"} min-w-0 wrap-break-word leading-snug`}>{notification.assetName}</p>
+                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} min-w-0 break-all text-slate-700`}>{notification.assetCode}</p>
+                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} min-w-0 break-all text-slate-700`}>No ID: {notification.recordNoId}</p>
+                        <p className={`${isCompactNotification ? "text-[11px] sm:text-[12px]" : "text-[12px] sm:text-[13px]"} min-w-0 wrap-break-word text-slate-700`}>Identitas: {notification.identity}</p>
                         <div className={`${isCompactNotification ? "pt-1" : "pt-1.5 sm:pt-2"}`}>
                           <div className="flex flex-wrap gap-2">
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px] sm:text-[11px]" : "px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-[12px]"} rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px] sm:text-[11px]" : "px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-[12px]"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
                               {notification.sourceLabel}
                             </span>
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px] sm:text-[11px]" : "px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-[12px]"} rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px] sm:text-[11px]" : "px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-[12px]"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
                               {notification.roomLabel}
                             </span>
                           </div>

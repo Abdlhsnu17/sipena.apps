@@ -116,6 +116,7 @@
   html,
   body {
     width: 100%;
+    height: 100%;
     min-height: 100%;
     min-height: 100dvh;
     min-height: 100svh;
@@ -140,6 +141,11 @@
     background-attachment: scroll;
   }
 
+  body:has([data-app-shell="authenticated"]) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
   ::selection {
     color: var(--background);
     background: var(--foreground);
@@ -154,6 +160,10 @@
   video,
   canvas,
   svg {
+    max-width: 100%;
+  }
+
+  table {
     max-width: 100%;
   }
 
