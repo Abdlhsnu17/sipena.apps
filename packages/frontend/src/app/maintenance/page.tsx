@@ -1539,20 +1539,11 @@ export default function MaintenancePage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => void exportSingleNarrative("pdf", m)}>
-                              Form PDF
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("pdf", m)}>
                               Surat PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("word", m)}>
                               Surat Word
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void exportSingleNarrative("word", m)}>
-                              Form Word
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void exportSingleNarrative("excel", m)}>
-                              Excel
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

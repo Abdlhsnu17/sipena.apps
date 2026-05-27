@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API_BASE_URL } from "@/services/api.service";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
@@ -10,8 +11,18 @@ import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
 import { parseDateValue } from "@/utils/format";
-import { Download } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+    Boxes,
+    CalendarCheck2,
+    Download,
+    FileSpreadsheet,
+    Hammer,
+    PackageCheck,
+    RotateCcw,
+    Stethoscope,
+    TrendingUp
+} from "lucide-react";
+import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
     Bar,
     BarChart,
@@ -26,6 +37,76 @@ import {
 } from "recharts";
 
 // usageContextLabels removed — reports now aggregate into broader categories
+
+type IconComponent = ComponentType<{ className?: string }>
+
+const chartColors = {
+  assets: "#0284c7",
+  maintenance: "#f97316",
+  borrowing: "#e11d48",
+  usage: "#059669",
+  neutral: "#475569",
+}
+
+const formatNumber = (value: number) => new Intl.NumberFormat("id-ID").format(value)
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value)
+
+function MetricCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  accentClassName,
+}: {
+  title: string
+  value: string
+  description: string
+  icon: IconComponent
+  accentClassName: string
+}) {
+  return (
+    <Card className="rounded-lg border-slate-200 py-0 shadow-sm">
+      <CardContent className="flex min-h-28 items-center justify-between gap-3 px-4 py-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">{title}</p>
+          <p className="mt-2 truncate text-2xl font-semibold text-slate-900">{value}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
+        </div>
+        <div className={`flex size-10 shrink-0 items-center justify-center rounded-md ${accentClassName}`}>
+          <Icon className="size-5" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ChartCard({
+  title,
+  description,
+  children,
+  className = "",
+}: {
+  title: string
+  description: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <Card className={`rounded-lg border-slate-200 py-0 shadow-sm ${className}`}>
+      <CardHeader className="border-b border-slate-100 px-4 py-3">
+        <CardTitle className="text-sm font-semibold text-slate-900">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 py-3">{children}</CardContent>
+    </Card>
+  )
+}
 
 /**
  * Komponen Halaman Laporan & Analitik.
@@ -319,21 +400,39 @@ export default function ReportsPage() {
   }
 
   return (
-    <div
-      className="bg-white dark:bg-slate-950"
-      data-main-scroll
-    >
-      <div className="mx-auto max-w-7xl space-y-4 page-gutter">
-        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="bg-slate-50/70 dark:bg-slate-950" data-main-scroll>
+      <div className="mx-auto max-w-7xl space-y-5 page-gutter">
+        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-950">Laporan & Analitik</h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Pantau aset, pemeliharaan, peminjaman, dan penggunaan alat dalam satu tampilan ringkas.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null}>
+              <FileSpreadsheet className="mr-2 size-4" />
+              {exporting === "excel" ? "Menyiapkan..." : exportFilters.reportType === "all" ? "Excel Semua" : "Export Excel"}
+            </Button>
+            <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null}>
+              <Download className="mr-2 size-4" />
+              {exporting === "pdf" ? "Menyiapkan..." : exportFilters.reportType === "all" ? "PDF Semua" : "Export PDF"}
+            </Button>
+          </div>
+        </div>
+
+        <Card className="rounded-lg border-slate-200 py-0 shadow-sm">
           <CardHeader className="border-b border-slate-100 px-4 py-3">
-            <CardTitle className="text-sm font-semibold text-slate-800">Export Laporan</CardTitle>
-            <CardDescription className="text-xs">Unduh data lintas modul sesuai periode, status, dan jenis laporan</CardDescription>
+            <CardTitle className="text-sm font-semibold text-slate-900">Filter Export</CardTitle>
+            <CardDescription className="text-xs">Atur jenis laporan, periode, status, dan jenis aset sebelum mengunduh file.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-6">
             <select
+              aria-label="Jenis laporan"
               value={exportFilters.reportType}
               onChange={(event) => setExportFilters((current) => ({ ...current, reportType: event.target.value, status: "", type: "" }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
             >
               <option value="assets">Aset</option>
               <option value="borrowing">Peminjaman</option>
@@ -341,21 +440,24 @@ export default function ReportsPage() {
               <option value="all">Semua Modul</option>
             </select>
             <input
+              aria-label="Tanggal mulai"
               type="date"
               value={exportFilters.startDate}
               onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
             />
             <input
+              aria-label="Tanggal akhir"
               type="date"
               value={exportFilters.endDate}
               onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 md:col-span-1"
             />
             <select
+              aria-label="Status laporan"
               value={exportFilters.status}
               onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400 md:col-span-1"
               disabled={exportFilters.reportType === "assets" || exportFilters.reportType === "all"}
             >
               <option value="">Semua status</option>
@@ -378,9 +480,10 @@ export default function ReportsPage() {
               )}
             </select>
             <select
+              aria-label="Jenis aset"
               value={exportFilters.type}
               onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 md:col-span-1"
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400 md:col-span-1"
               disabled={exportFilters.reportType === "all"}
             >
               <option value="">Semua jenis</option>
@@ -398,271 +501,236 @@ export default function ReportsPage() {
                 </>
               )}
             </select>
-            <div className="flex gap-2 md:col-span-1">
-              <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null} className="flex-1">
-                <Download className="mr-2 h-4 w-4" />
-                {exporting === "excel" ? "..." : exportFilters.reportType === "all" ? "Excel Semua" : "Excel"}
-              </Button>
-              <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null} className="flex-1">
-                <Download className="mr-2 h-4 w-4" />
-                {exporting === "pdf" ? "..." : exportFilters.reportType === "all" ? "PDF Semua" : "PDF"}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 md:col-span-1"
+              onClick={() => setExportFilters({ reportType: "assets", startDate: "", endDate: "", status: "", type: "" })}
+            >
+              <RotateCcw className="mr-2 size-4" />
+              Reset
+            </Button>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-cyan-50/80 via-sky-50/70 to-blue-50/80 shadow-sm">
-            <CardHeader className="border-b border-cyan-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-cyan-800">Komposisi Ruangan Aktif</CardTitle>
-              <CardDescription className="text-xs">Total, medis, dan non medis</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={230}>
-                <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#bae6fd" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#0284c7" name="Jumlah Ruangan" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border-0 bg-linear-to-br from-emerald-50/80 via-teal-50/70 to-cyan-50/80 shadow-sm xl:col-span-2">
-            <CardHeader className="border-b border-emerald-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-emerald-800">Aktivitas Operasional</CardTitle>
-              <CardDescription className="text-xs">Pemeliharaan, peminjaman, penggunaan, dan alat terpakai</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={230}>
-                <BarChart data={operationalSummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#a7f3d0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#059669" name="Total" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <MetricCard title="Total Aset" value={formatNumber(totalAssets)} description="Medis dan non medis" icon={Boxes} accentClassName="bg-sky-50 text-sky-700" />
+          <MetricCard title="Aset Medis" value={formatNumber(totalMedicalAssets)} description="Inventaris klinis" icon={Stethoscope} accentClassName="bg-cyan-50 text-cyan-700" />
+          <MetricCard title="Aset Non Medis" value={formatNumber(totalNonMedicalAssets)} description="Sarana pendukung" icon={PackageCheck} accentClassName="bg-indigo-50 text-indigo-700" />
+          <MetricCard title="Pemeliharaan" value={formatNumber(maintenance.length)} description="Semua jadwal tercatat" icon={Hammer} accentClassName="bg-amber-50 text-amber-700" />
+          <MetricCard title="Peminjaman" value={formatNumber(borrowings.length)} description="Sesi pinjam pakai" icon={CalendarCheck2} accentClassName="bg-rose-50 text-rose-700" />
+          <MetricCard title="Penggunaan" value={formatNumber(totalUsageCount)} description="Akumulasi pemakaian" icon={TrendingUp} accentClassName="bg-emerald-50 text-emerald-700" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-blue-50/80 via-indigo-50/70 to-slate-50/80 shadow-sm xl:col-span-2">
-            <CardHeader className="border-b border-blue-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-blue-800">Pemeliharaan Per Bulan</CardTitle>
-              <CardDescription className="text-xs">Perbandingan jadwal tervalidasi dan belum validasi</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={monthlyData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#bfdbfe" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="completed" stackId="maintenance" fill="#2563eb" name="Tervalidasi" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="pending" stackId="maintenance" fill="#f97316" name="Belum Validasi" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="overview" className="gap-4">
+          <div className="overflow-x-auto">
+            <TabsList className="h-10 min-w-max bg-white p-1 shadow-sm">
+              <TabsTrigger value="overview" className="px-3">Ringkasan</TabsTrigger>
+              <TabsTrigger value="assets" className="px-3">Aset</TabsTrigger>
+              <TabsTrigger value="maintenance" className="px-3">Pemeliharaan</TabsTrigger>
+              <TabsTrigger value="borrowing" className="px-3">Peminjaman</TabsTrigger>
+              <TabsTrigger value="usage" className="px-3">Penggunaan</TabsTrigger>
+            </TabsList>
+          </div>
 
-          <Card className="rounded-lg border-0 bg-linear-to-br from-orange-50/80 via-amber-50/70 to-yellow-50/80 shadow-sm">
-            <CardHeader className="border-b border-orange-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-orange-800">Status Pemeliharaan</CardTitle>
-              <CardDescription className="text-xs">Distribusi validasi jadwal</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={maintenanceStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" />
-                  <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#f97316" name="Jumlah" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-cyan-50/80 via-teal-50/70 to-emerald-50/80 shadow-sm">
-            <CardHeader className="border-b border-cyan-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-cyan-800">Pemeliharaan Per Ruangan</CardTitle>
-              <CardDescription className="text-xs">Sepuluh ruangan dengan aktivitas terbanyak</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={maintenanceRoomData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#99f6e4" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#0891b2" name="Total Pemeliharaan" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border-0 bg-linear-to-br from-indigo-50/80 via-blue-50/70 to-cyan-50/80 shadow-sm">
-            <CardHeader className="border-b border-indigo-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-indigo-800">Inventaris Sering Dipelihara</CardTitle>
-              <CardDescription className="text-xs">Delapan inventaris teratas</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={maintenanceAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#c7d2fe" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#4f46e5" name="Frekuensi" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-emerald-50/80 via-green-50/70 to-teal-50/80 shadow-sm xl:col-span-2">
-            <CardHeader className="border-b border-emerald-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-emerald-800">Penggunaan Alat Per Bulan</CardTitle>
-              <CardDescription className="text-xs">Tren pemakaian alat sepanjang tahun</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={usageMonthlyData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#a7f3d0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="total" stroke="#059669" strokeWidth={2} name="Total Pemakaian" dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border-0 bg-linear-to-br from-violet-50/80 via-purple-50/70 to-fuchsia-50/80 shadow-sm">
-            <CardHeader className="border-b border-violet-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-violet-800">Konteks Penggunaan</CardTitle>
-              <CardDescription className="text-xs">Kategori penggunaan alat</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={usageContextData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ddd6fe" />
-                  <XAxis dataKey="context" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#7c3aed" name="Total" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-teal-50/80 via-emerald-50/70 to-green-50/80 shadow-sm xl:col-span-2">
-            <CardHeader className="border-b border-teal-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-teal-800">Penggunaan Alat Per Ruangan</CardTitle>
-              <CardDescription className="text-xs">Sepuluh ruangan dengan pemakaian terbanyak</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={310}>
-                <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#99f6e4" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#0d9488" name="Total Pemakaian" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border-0 bg-linear-to-br from-fuchsia-50/80 via-pink-50/70 to-rose-50/80 shadow-sm">
-            <CardHeader className="border-b border-fuchsia-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-fuchsia-800">Penggunaan Tahunan</CardTitle>
-              <CardDescription className="text-xs">Akumulasi pemakaian per tahun</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={310}>
-                <BarChart data={usageYearData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f5d0fe" />
-                  <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#c026d3" name="Total Tahunan" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-sky-50/80 via-blue-50/70 to-indigo-50/80 shadow-sm xl:col-span-2">
-            <CardHeader className="border-b border-sky-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-sky-800">Alat Paling Sering Dipakai</CardTitle>
-              <CardDescription className="text-xs">Delapan alat dengan frekuensi pemakaian tertinggi</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={usedAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#bae6fd" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#0284c7" name="Total Pemakaian" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border-0 bg-linear-to-br from-rose-50/80 via-red-50/70 to-orange-50/80 shadow-sm">
-            <CardHeader className="border-b border-rose-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-rose-800">Status Peminjaman</CardTitle>
-              <CardDescription className="text-xs">Distribusi status sesi peminjaman</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={borrowingStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#fecdd3" />
-                  <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#e11d48" name="Jumlah" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="rounded-lg border-0 bg-linear-to-br from-slate-50/80 via-zinc-50/70 to-stone-50/80 shadow-sm xl:col-span-3">
-            <CardHeader className="border-b border-slate-200/50 px-4 py-3">
-              <CardTitle className="text-sm font-semibold text-slate-800">Biaya Pemeliharaan</CardTitle>
-              <CardDescription className="text-xs">Total nilai biaya perawatan tersimpan</CardDescription>
-            </CardHeader>
-            <CardContent className="px-3 py-3">
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Aktivitas Operasional" description="Perbandingan aktivitas lintas modul" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={operationalSummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.usage} name="Total" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Komposisi Aset" description="Total, medis, dan non medis">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.assets} name="Jumlah Aset" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+            <ChartCard title="Biaya Pemeliharaan" description={`Total biaya tercatat: ${formatCurrency(totalCost)}`}>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={maintenanceCostData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="total" fill="#475569" name="Rupiah" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="total" fill={chartColors.neutral} name="Rupiah" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+            </ChartCard>
+          </TabsContent>
 
-        <div className="mt-8 pt-6 border-t border-border text-center">
+          <TabsContent value="assets" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Komposisi Ruangan Aktif" description="Perbandingan total, medis, dan non medis" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.assets} name="Jumlah Ruangan" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Aset Paling Sering Dipakai" description="Delapan alat dengan frekuensi pemakaian tertinggi">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={usedAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.assets} name="Total Pemakaian" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Pemeliharaan Per Bulan" description="Perbandingan jadwal tervalidasi dan belum validasi" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="completed" stackId="maintenance" fill="#2563eb" name="Tervalidasi" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="pending" stackId="maintenance" fill={chartColors.maintenance} name="Belum Validasi" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Status Pemeliharaan" description="Distribusi validasi jadwal">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={maintenanceStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.maintenance} name="Jumlah" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <ChartCard title="Pemeliharaan Per Ruangan" description="Sepuluh ruangan dengan aktivitas terbanyak">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={maintenanceRoomData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.maintenance} name="Total Pemeliharaan" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Inventaris Sering Dipelihara" description="Delapan inventaris teratas">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={maintenanceAssetData} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="name" type="category" width={118} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.maintenance} name="Frekuensi" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="borrowing" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Status Peminjaman" description="Distribusi status sesi peminjaman" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={borrowingStatusData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.borrowing} name="Jumlah" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Ringkasan Peminjaman" description="Jumlah sesi berdasarkan status utama">
+                <div className="grid min-h-75 content-center gap-3 px-2">
+                  {borrowingStatusData.map((item) => (
+                    <div key={item.status} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+                      <span className="text-sm text-slate-600">{item.status}</span>
+                      <span className="text-sm font-semibold text-slate-950">{formatNumber(item.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="usage" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Penggunaan Alat Per Bulan" description="Tren pemakaian alat sepanjang tahun" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={usageMonthlyData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="total" stroke={chartColors.usage} strokeWidth={2} name="Total Pemakaian" dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Konteks Penggunaan" description="Kategori penggunaan alat">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={usageContextData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="context" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.usage} name="Total" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <ChartCard title="Penggunaan Alat Per Ruangan" description="Sepuluh ruangan dengan pemakaian terbanyak" className="xl:col-span-2">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={usageRoomData.slice(0, 10)} layout="vertical" margin={{ top: 8, right: 8, left: 18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="room" type="category" width={118} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.usage} name="Total Pemakaian" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+              <ChartCard title="Penggunaan Tahunan" description="Akumulasi pemakaian per tahun">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={usageYearData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" fill={chartColors.usage} name="Total Tahunan" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-8 border-t border-border pt-6 text-center">
           <p className="text-[13px] text-muted-foreground">
             Sistem Inventaris dan Pemeliharaan Sarana Prasarana Peminjaman (SiPeNa)
           </p>

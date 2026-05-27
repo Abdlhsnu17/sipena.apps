@@ -2385,20 +2385,11 @@ export default function BorrowingPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("pdf", b)}>
-                                    Form PDF
-                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("pdf", b)}>
                                     Surat PDF
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("word", b)}>
                                     Surat Word
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("word", b)}>
-                                    Form Word
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingNarrative("excel", b)}>
-                                    Excel
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
