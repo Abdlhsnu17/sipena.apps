@@ -123,10 +123,13 @@
     max-width: 100%;
     overflow-x: clip;
     scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
   }
 
   html {
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   * {
@@ -487,10 +490,12 @@
     height: auto;
     min-height: 0;
     overflow-x: clip;
-    overflow-y: visible;
+    overflow-y: auto;
     overscroll-behavior-x: none;
     overscroll-behavior-y: auto;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   [data-page-width="responsive"] {

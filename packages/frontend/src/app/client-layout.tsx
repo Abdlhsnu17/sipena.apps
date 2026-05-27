@@ -176,7 +176,7 @@ export default function ClientLayout({
               >
                 <div
                   className={cn(
-                    "mx-auto min-h-full w-full max-w-[92rem] min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 xl:px-6",
+                    "mx-auto min-h-full w-full max-w-368 min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 xl:px-6",
                   )}
                   data-app-content
                   data-page-width="responsive"

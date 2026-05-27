@@ -10,6 +10,7 @@ import { getAuthToken } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
+import { getSpecificationDetails } from "@/utils/api-mappers";
 import { parseDateValue } from "@/utils/format";
 import {
     Boxes,
@@ -404,9 +405,18 @@ export default function ReportsPage() {
     loadReportData()
   }, [generateMonthlyData, generateUsageData])
 
-  const totalNonMedicalAssets = nonMedicalRooms.length
-  const totalMedicalAssets = medicalRooms.length
-  const totalAssets = totalNonMedicalAssets + totalMedicalAssets
+  const totalNonMedicalRooms = nonMedicalRooms.length
+  const totalMedicalRooms = medicalRooms.length
+  const totalRooms = totalNonMedicalRooms + totalMedicalRooms
+  const totalNonMedicalInventoryDetails = nonMedicalRooms.reduce(
+    (sum, room) => sum + getSpecificationDetails(room.specifications).length,
+    0
+  )
+  const totalMedicalInventoryDetails = medicalRooms.reduce(
+    (sum, room) => sum + getSpecificationDetails(room.specifications).length,
+    0
+  )
+  const totalInventoryDetails = totalNonMedicalInventoryDetails + totalMedicalInventoryDetails
 
   const totalCost = maintenance.reduce((sum, m) => sum + (Number.parseInt(m.cost) || 0), 0)
   const totalUsageCount = assetUsageLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0)
@@ -414,14 +424,15 @@ export default function ReportsPage() {
     ? new Set(assetUsageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))).size
     : 0
   const inventorySummaryData = [
-    { name: "Total", total: totalAssets },
-    { name: "Non Medis", total: totalNonMedicalAssets },
-    { name: "Medis", total: totalMedicalAssets },
+    { name: "Total", ruangan: totalRooms, inventaris: totalInventoryDetails },
+    { name: "Medis", ruangan: totalMedicalRooms, inventaris: totalMedicalInventoryDetails },
+    { name: "Non Medis", ruangan: totalNonMedicalRooms, inventaris: totalNonMedicalInventoryDetails },
   ]
   const operationalSummaryData = [
     { name: "Pemeliharaan", total: maintenance.length },
     { name: "Peminjaman", total: borrowings.length },
     { name: "Penggunaan", total: totalUsageCount },
+    { name: "Inventaris", total: totalInventoryDetails },
     { name: "Alat Terpakai", total: uniqueUsedAssets },
   ]
   const maintenanceStatusData = [
@@ -562,7 +573,7 @@ export default function ReportsPage() {
   return (
     <div className="min-w-0 bg-slate-50/70 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl space-y-5 page-gutter">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="border-b border-slate-200 pb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">Laporan & Analitik</h1>
@@ -570,158 +581,164 @@ export default function ReportsPage() {
               Pantau aset, pemeliharaan, peminjaman, dan penggunaan alat dalam satu tampilan ringkas.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => void handleExport("excel")} disabled={exporting !== null || dateRangeInvalid}>
-              <FileSpreadsheet className="mr-2 size-4" />
-              {exporting === "excel" ? "Menyiapkan..." : "Excel"}
-            </Button>
-            <Button type="button" onClick={() => void handleExport("pdf")} disabled={exporting !== null || dateRangeInvalid}>
-              <Download className="mr-2 size-4" />
-              {exporting === "pdf" ? "Menyiapkan..." : "PDF"}
-            </Button>
-          </div>
         </div>
 
         <Card className="rounded-lg border-slate-200 py-0 shadow-sm">
           <CardHeader className="border-b border-slate-100 px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle className="text-sm font-semibold text-slate-900">Export Laporan</CardTitle>
-                <CardDescription className="text-xs">Pilih modul, periode, lalu unduh tanpa mengatur field yang tidak relevan.</CardDescription>
+            <CardTitle className="text-sm font-semibold text-slate-900">Ekspor Laporan</CardTitle>
+            <CardDescription className="text-xs">Pilih modul dan filter laporan, lalu unduh file dari ringkasan di sisi kanan.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                {reportTypeOptions.map((option) => {
+                  const active = exportFilters.reportType === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setReportType(option.value)}
+                      className={`min-h-20 rounded-md border px-3 py-2 text-left transition ${
+                        active
+                          ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{option.label}</span>
+                      <span className={`mt-1 block text-xs ${active ? "text-slate-200" : "text-slate-500"}`}>{option.description}</span>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Periode</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ["all", "Semua"],
+                      ["today", "Hari ini"],
+                      ["month", "Bulan ini"],
+                      ["last30", "30 hari"],
+                      ["year", "Tahun ini"],
+                    ] as const).map(([preset, label]) => (
+                      <Button key={preset} type="button" variant="outline" size="sm" onClick={() => setDatePreset(preset)}>
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    <span>Tanggal mulai</span>
+                    <input
+                      aria-label="Tanggal mulai"
+                      type="date"
+                      value={exportFilters.startDate}
+                      onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
+                      className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
+                        dateRangeInvalid ? "border-red-300" : "border-slate-200"
+                      }`}
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    <span>Tanggal akhir</span>
+                    <input
+                      aria-label="Tanggal akhir"
+                      type="date"
+                      value={exportFilters.endDate}
+                      onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
+                      className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
+                        dateRangeInvalid ? "border-red-300" : "border-slate-200"
+                      }`}
+                    />
+                  </label>
+                  {dateRangeInvalid ? (
+                    <p className="text-xs font-medium text-red-600 sm:col-span-2">Tanggal mulai harus sebelum atau sama dengan tanggal akhir.</p>
+                  ) : null}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10"
+                  onClick={() => setExportFilters(initialExportFilters)}
+                >
+                  <RotateCcw className="mr-2 size-4" />
+                  Reset
+                </Button>
+              </div>
+
+              {(showStatusFilter || showTypeFilter) ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {showStatusFilter ? (
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      <span>{exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status"}</span>
+                      <select
+                        aria-label={exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status laporan"}
+                        value={exportFilters.status}
+                        onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
+                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
+                      >
+                        <option value="">Semua status</option>
+                        {availableStatusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {showTypeFilter ? (
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      <span>{exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}</span>
+                      <select
+                        aria-label={exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}
+                        value={exportFilters.type}
+                        onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
+                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
+                      >
+                        <option value="">Semua jenis</option>
+                        {availableTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-slate-200 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Unduh file</p>
+              <p className="mt-1 text-sm font-semibold text-slate-950">{selectedReportType.label}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {activeExportFilterLabels.map((label) => (
-                  <span key={String(label)} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <span key={String(label)} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
                     {label}
                   </span>
                 ))}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 px-4 py-4">
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-              {reportTypeOptions.map((option) => {
-                const active = exportFilters.reportType === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setReportType(option.value)}
-                    className={`min-h-20 rounded-md border px-3 py-2 text-left transition ${
-                      active
-                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold">{option.label}</span>
-                    <span className={`mt-1 block text-xs ${active ? "text-slate-200" : "text-slate-500"}`}>{option.description}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Periode</p>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    ["all", "Semua"],
-                    ["today", "Hari ini"],
-                    ["month", "Bulan ini"],
-                    ["last30", "30 hari"],
-                    ["year", "Tahun ini"],
-                  ] as const).map(([preset, label]) => (
-                    <Button key={preset} type="button" variant="outline" size="sm" onClick={() => setDatePreset(preset)}>
-                      {label}
-                    </Button>
-                  ))}
-                </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                <Button type="button" variant="outline" className="justify-start bg-white" onClick={() => void handleExport("excel")} disabled={exporting !== null || dateRangeInvalid}>
+                  <FileSpreadsheet className="mr-2 size-4" />
+                  {exporting === "excel" ? "Menyiapkan Excel..." : "Unduh Excel"}
+                </Button>
+                <Button type="button" className="justify-start" onClick={() => void handleExport("pdf")} disabled={exporting !== null || dateRangeInvalid}>
+                  <Download className="mr-2 size-4" />
+                  {exporting === "pdf" ? "Menyiapkan PDF..." : "Unduh PDF"}
+                </Button>
               </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="space-y-1 text-xs font-medium text-slate-600">
-                  <span>Tanggal mulai</span>
-                  <input
-                    aria-label="Tanggal mulai"
-                    type="date"
-                    value={exportFilters.startDate}
-                    onChange={(event) => setExportFilters((current) => ({ ...current, startDate: event.target.value }))}
-                    className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
-                      dateRangeInvalid ? "border-red-300" : "border-slate-200"
-                    }`}
-                  />
-                </label>
-                <label className="space-y-1 text-xs font-medium text-slate-600">
-                  <span>Tanggal akhir</span>
-                  <input
-                    aria-label="Tanggal akhir"
-                    type="date"
-                    value={exportFilters.endDate}
-                    onChange={(event) => setExportFilters((current) => ({ ...current, endDate: event.target.value }))}
-                    className={`h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 ${
-                      dateRangeInvalid ? "border-red-300" : "border-slate-200"
-                    }`}
-                  />
-                </label>
-                {dateRangeInvalid ? (
-                  <p className="text-xs font-medium text-red-600 sm:col-span-2">Tanggal mulai harus sebelum atau sama dengan tanggal akhir.</p>
-                ) : null}
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10"
-                onClick={() => setExportFilters(initialExportFilters)}
-              >
-                <RotateCcw className="mr-2 size-4" />
-                Reset
-              </Button>
             </div>
-
-            {(showStatusFilter || showTypeFilter) ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                {showStatusFilter ? (
-                  <label className="space-y-1 text-xs font-medium text-slate-600">
-                    <span>{exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status"}</span>
-                    <select
-                      aria-label={exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status laporan"}
-                      value={exportFilters.status}
-                      onChange={(event) => setExportFilters((current) => ({ ...current, status: event.target.value }))}
-                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
-                    >
-                      <option value="">Semua status</option>
-                      {availableStatusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                {showTypeFilter ? (
-                  <label className="space-y-1 text-xs font-medium text-slate-600">
-                    <span>{exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}</span>
-                    <select
-                      aria-label={exportFilters.reportType === "maintenance" ? "Jenis pemeliharaan" : "Jenis aset"}
-                      value={exportFilters.type}
-                      onChange={(event) => setExportFilters((current) => ({ ...current, type: event.target.value }))}
-                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
-                    >
-                      <option value="">Semua jenis</option>
-                      {availableTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-              </div>
-            ) : null}
           </CardContent>
         </Card>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-          <MetricCard title="Total Aset" value={formatNumber(totalAssets)} description="Medis dan non medis" icon={Boxes} accentClassName="bg-sky-50 text-sky-700" />
-          <MetricCard title="Aset Medis" value={formatNumber(totalMedicalAssets)} description="Inventaris klinis" icon={Stethoscope} accentClassName="bg-cyan-50 text-cyan-700" />
-          <MetricCard title="Aset Non Medis" value={formatNumber(totalNonMedicalAssets)} description="Sarana pendukung" icon={PackageCheck} accentClassName="bg-indigo-50 text-indigo-700" />
+          <MetricCard title="Total Ruangan" value={formatNumber(totalRooms)} description="Ruangan medis dan non medis" icon={Boxes} accentClassName="bg-sky-50 text-sky-700" />
+          <MetricCard title="Ruangan Medis" value={formatNumber(totalMedicalRooms)} description="Ruangan inventaris klinis" icon={Stethoscope} accentClassName="bg-cyan-50 text-cyan-700" />
+          <MetricCard title="Ruangan Non Medis" value={formatNumber(totalNonMedicalRooms)} description="Ruangan sarana pendukung" icon={PackageCheck} accentClassName="bg-indigo-50 text-indigo-700" />
+          <MetricCard title="Inventaris Terinput" value={formatNumber(totalInventoryDetails)} description="Detail aset di semua ruangan" icon={Boxes} accentClassName="bg-violet-50 text-violet-700" />
+          <MetricCard title="Inventaris Medis" value={formatNumber(totalMedicalInventoryDetails)} description="Detail aset klinis terinput" icon={Stethoscope} accentClassName="bg-teal-50 text-teal-700" />
+          <MetricCard title="Inventaris Non Medis" value={formatNumber(totalNonMedicalInventoryDetails)} description="Detail sarana terinput" icon={PackageCheck} accentClassName="bg-blue-50 text-blue-700" />
           <MetricCard title="Pemeliharaan" value={formatNumber(maintenance.length)} description="Semua jadwal tercatat" icon={Hammer} accentClassName="bg-amber-50 text-amber-700" />
           <MetricCard title="Peminjaman" value={formatNumber(borrowings.length)} description="Sesi pinjam pakai" icon={CalendarCheck2} accentClassName="bg-rose-50 text-rose-700" />
           <MetricCard title="Penggunaan" value={formatNumber(totalUsageCount)} description="Akumulasi pemakaian" icon={TrendingUp} accentClassName="bg-emerald-50 text-emerald-700" />
@@ -751,14 +768,16 @@ export default function ReportsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
-              <ChartCard title="Komposisi Aset" description="Total, medis, dan non medis">
+              <ChartCard title="Komposisi Data Inventaris" description="Ruangan dibanding detail inventaris terinput">
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    <Bar dataKey="total" fill={chartColors.assets} name="Jumlah Aset" radius={[6, 6, 0, 0]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="ruangan" fill={chartColors.assets} name="Ruangan" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="inventaris" fill="#7c3aed" name="Inventaris Terinput" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -778,14 +797,16 @@ export default function ReportsPage() {
 
           <TabsContent value="assets" className="space-y-4">
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <ChartCard title="Komposisi Ruangan Aktif" description="Perbandingan total, medis, dan non medis" className="xl:col-span-2">
+              <ChartCard title="Komposisi Ruangan dan Inventaris" description="Pisahkan jumlah ruangan dari detail aset terinput" className="xl:col-span-2">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={inventorySummaryData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    <Bar dataKey="total" fill={chartColors.assets} name="Jumlah Ruangan" radius={[6, 6, 0, 0]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="ruangan" fill={chartColors.assets} name="Ruangan" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="inventaris" fill="#7c3aed" name="Inventaris Terinput" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
