@@ -170,6 +170,9 @@ export function ThemeProvider({
     activeTheme === 'system' && enableSystem ? systemTheme : activeTheme
 
   React.useEffect(() => {
+    // Only apply theme if a valid theme is set (not empty string)
+    if (!resolvedTheme) return
+
     applyTheme({
       attribute,
       disableTransitionOnChange,
