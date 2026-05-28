@@ -127,7 +127,7 @@ export default function ClientLayout({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-[var(--app-shell-background)]">
+      <div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-(--app-shell-background)">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     )
@@ -135,7 +135,7 @@ export default function ClientLayout({
 
   if (shouldBlockProtectedPage) {
     return (
-      <div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-[var(--app-shell-background)]">
+      <div className="flex min-h-screen items-center justify-center overflow-x-hidden bg-(--app-shell-background)">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     )
@@ -151,7 +151,7 @@ export default function ClientLayout({
       <ConfirmProvider>
         {showLayout ? (
           <div
-            className="relative flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[var(--app-shell-background)] text-foreground"
+            className="relative flex h-dvh min-h-screen w-full flex-col overflow-hidden bg-(--app-shell-background) text-foreground"
             data-app-shell="authenticated"
           >
             <Sidebar
@@ -159,16 +159,16 @@ export default function ClientLayout({
               toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             />
             <div
-              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--app-shell-background)] transition-[padding] duration-300 ease-in-out lg:pl-64"
+              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-(--app-shell-background) transition-[padding] duration-300 ease-in-out lg:pl-64"
             >
               <Topbar />
               <main
-                className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll bg-[var(--app-shell-background)] overscroll-contain"
+                className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll bg-(--app-shell-background) overscroll-contain"
                 data-main-scroll
               >
                 <div
                   className={cn(
-                    "mx-auto min-h-full w-full max-w-368 min-w-0 bg-[var(--app-shell-background)] px-3 py-3 sm:px-4 sm:py-4 lg:px-5 xl:px-6",
+                    "mx-auto min-h-full w-full max-w-368 min-w-0 bg-(--app-shell-background) px-3 py-3 sm:px-4 sm:py-4 lg:px-5 xl:px-6",
                   )}
                   data-app-content
                   data-page-width="responsive"
@@ -179,7 +179,7 @@ export default function ClientLayout({
             </div>
           </div>
         ) : (
-          <div className="min-h-screen overflow-x-hidden bg-[var(--app-shell-background)]" data-app-shell="auth">
+          <div className="min-h-screen overflow-x-hidden bg-(--app-shell-background)" data-app-shell="auth">
             {children}
           </div>
         )}

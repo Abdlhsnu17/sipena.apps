@@ -32,7 +32,7 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body
-        className="min-h-screen overflow-x-hidden overflow-y-scroll bg-[var(--app-shell-background)] text-foreground antialiased"
+        className="min-h-screen overflow-x-hidden overflow-y-scroll bg-(--app-shell-background) text-foreground antialiased"
         suppressHydrationWarning
       >
         <ClientLayout>{children}</ClientLayout>

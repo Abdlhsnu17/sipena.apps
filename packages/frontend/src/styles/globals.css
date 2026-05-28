@@ -46,7 +46,7 @@
   --grid-overlay: radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
   --glass-border: rgba(0, 0, 0, 0.12);
   --surface: rgba(255, 255, 255, 0.8);
-  --app-shell-background: #020617;
+  --app-shell-background: #f8fafc;
 }
 
 .dark {
@@ -71,6 +71,9 @@
   --ring: rgba(255, 255, 255, 0.2);
   --surface: rgba(0, 0, 0, 0.85);
   --app-shell-background: #020617;
+  --hero-gradient: radial-gradient(circle at 20% -10%, rgba(255, 255, 255, 0.08), transparent 55%), radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.05), transparent 50%);
+  --grid-overlay: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  --glass-border: rgba(255, 255, 255, 0.12);
 }
 
 @theme inline {
@@ -141,10 +144,14 @@
     @apply min-h-screen overflow-x-hidden overflow-y-scroll bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     background-color: var(--app-shell-background);
-    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(2, 6, 23, 0));
+    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(248, 250, 252, 0));
     background-size: cover;
     background-position: center, center;
     background-attachment: scroll;
+  }
+
+  .dark body {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(2, 6, 23, 0));
   }
 
   body:has([data-app-shell="authenticated"]) {
@@ -308,8 +315,14 @@
     pointer-events: none;
     background: radial-gradient(circle, rgba(0, 0, 0, 0.35), transparent 55%);
   }
+  .dark .floating-blob {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15), transparent 55%);
+  }
   .floating-blob--accent {
     background: radial-gradient(circle, rgba(0, 0, 0, 0.25), transparent 60%);
+  }
+  .dark .floating-blob--accent {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 60%);
   }
   .soft-shadow {
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
@@ -321,6 +334,9 @@
     height: 2px;
     border-radius: 999px;
     background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.15));
+  }
+  .dark .section-divider {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
   }
   .accent-pulse {
     position: relative;
@@ -334,6 +350,9 @@
     opacity: 0.4;
     filter: blur(1px);
     pointer-events: none;
+  }
+  .dark .accent-pulse::after {
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
   .font-multilingual {
     font-feature-settings: "kern" 1, "liga" 1, "clig" 1, "calt" 1;

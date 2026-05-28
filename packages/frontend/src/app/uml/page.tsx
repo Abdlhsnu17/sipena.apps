@@ -3,10 +3,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/services/auth-utils";
+import { cn } from "@/utils";
 import { normalizeUserRole } from "@/utils/role";
 import { ArrowRight, Box, Database, UploadCloud, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
 
@@ -19,14 +20,6 @@ const umlSections: { id: DiagramSectionId; label: string }[] = [
   {
     id: "activity",
     label: "Activity Diagram",
-  },
-  {
-    id: "class",
-    label: "Class Diagram",
-  },
-  {
-    id: "erd",
-    label: "Entity Relationship Diagram",
   },
   {
     id: "use-case",
@@ -471,7 +464,10 @@ export default function UMLPage() {
           <button
             type="button"
             onClick={() => setActiveSection("activity")}
-            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+            className={cn(
+              "group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500",
+              activeSection === "activity" && "ring-2 ring-orange-400 ring-offset-2 ring-offset-[var(--app-shell-background)]",
+            )}
             aria-label="Lihat Activity Diagram"
           >
             <div className="flex items-start gap-3">
@@ -491,7 +487,10 @@ export default function UMLPage() {
           <button
             type="button"
             onClick={() => setActiveSection("use-case")}
-            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-purple-500/70 via-fuchsia-500/70 to-pink-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
+            className={cn(
+              "group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-purple-500/70 via-fuchsia-500/70 to-pink-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500",
+              activeSection === "use-case" && "ring-2 ring-purple-400 ring-offset-2 ring-offset-[var(--app-shell-background)]",
+            )}
             aria-label="Lihat Use Case Diagram"
           >
             <div className="flex items-start gap-3">
@@ -663,48 +662,6 @@ export default function UMLPage() {
         </div>
       </div>
     </div>
-  )
-}
-
-function FeatureCard({
-  title,
-  description,
-  href,
-  buttonLabel,
-  icon,
-  iconContainerClass,
-  items,
-}: {
-  title: string
-  description: string
-  href: string
-  buttonLabel: string
-  icon: ReactNode
-  iconContainerClass: string
-  items?: string[]
-}) {
-  return (
-    <Card className="border-slate-200/70 bg-white/90 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/70">
-      <CardHeader className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className={`rounded-2xl bg-linear-to-br p-3 shadow-sm ${iconContainerClass}`}>{icon}</div>
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription className="mt-1 leading-6">{description}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-
-        <Link
-          href={href}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
-        >
-          {buttonLabel}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </CardContent>
-    </Card>
   )
 }
 
