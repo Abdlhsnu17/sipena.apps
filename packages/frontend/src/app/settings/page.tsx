@@ -146,6 +146,10 @@ export default function SettingsPage() {
     try {
       const result = await userService.changePassword(user.id, currentPassword, newPassword)
       if (result.success) {
+        const currentUser = getCurrentUser()
+        if (currentUser?.mustChangePassword) {
+          setCurrentUser({ ...currentUser, mustChangePassword: false })
+        }
         toast({
           title: "Berhasil",
           description: "Password berhasil diubah",
@@ -263,6 +267,7 @@ export default function SettingsPage() {
   }
 
   const profileImageSrc = localPhotoPreview || remotePhotoUrl
+  const currentUser = getCurrentUser()
 
   return (
     <div className="bg-slate-50/60 dark:bg-slate-950/80">
@@ -280,6 +285,12 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {currentUser?.mustChangePassword && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Akun Anda wajib mengganti password sebelum menggunakan modul lain.
+          </div>
+        )}
 
         <div className="space-y-6">
           <Card>

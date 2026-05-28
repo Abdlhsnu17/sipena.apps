@@ -283,9 +283,11 @@ export function initializeDefaultAdmin(): void {
       nip: "199803172025211031",
       name: "Administrator",
       email: "admin@hospital.com",
-      password: hashPassword("170398"),
-      role: "admin",
-      createdAt: new Date().toISOString(),
+    password: hashPassword("170398"),
+    role: "admin",
+    accountStatus: "active",
+    mustChangePassword: false,
+    createdAt: new Date().toISOString(),
     }
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([adminUser]))
   }

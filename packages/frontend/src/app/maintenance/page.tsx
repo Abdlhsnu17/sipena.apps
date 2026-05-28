@@ -1101,7 +1101,7 @@ export default function MaintenancePage() {
     }
   }
 
-  const exportSingleNarrative = async (format: ExportFormat, item: Maintenance) => {
+  const _exportSingleNarrative = async (format: ExportFormat, item: Maintenance) => {
     const columnKeys =
       maintenanceColumnsForExport.length > 0
         ? maintenanceColumnsForExport.map((column) => column.key)
@@ -1117,7 +1117,7 @@ export default function MaintenancePage() {
     })
   }
 
-  const buildMaintenanceLetterSections = (entry: Maintenance): DocumentSection[] => {
+  const buildMaintenanceLetterSections = (_entry: Maintenance): DocumentSection[] => {
     const main: SectionLine[] = []
     appendLine(main, 'Nomor Surat', '')
     appendLine(main, 'Pemohon', '')
@@ -1325,7 +1325,7 @@ export default function MaintenancePage() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="overflow-x-auto">
-                  <div className="min-w-[720px] overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="min-w-180 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
                       {calendarWeekDays.map((day) => (
                         <div key={day} className="px-2 py-2 text-center text-[11px] font-semibold uppercase text-slate-500">
@@ -1616,11 +1616,11 @@ export default function MaintenancePage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                          className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
                           onClick={() => toggleCardCollapse(m.id)}
                           aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
                         >
-                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </Button>
                       </div>
                     </div>

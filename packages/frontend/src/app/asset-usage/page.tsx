@@ -900,12 +900,12 @@ export default function AssetUsagePage() {
               >
                 {isUsageFormMinimized ? (
                   <>
-                    <ChevronDown className="mr-2 h-4 w-4" />
+                    <ChevronDown className="mr-2 h-5 w-5" />
                     Tampilkan
                   </>
                 ) : (
                   <>
-                    <ChevronUp className="mr-2 h-4 w-4" />
+                    <ChevronUp className="mr-2 h-5 w-5" />
                     Sembunyikan
                   </>
                 )}
@@ -1146,11 +1146,11 @@ export default function AssetUsagePage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                              className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
                               onClick={() => toggleUsageHistoryCard(log.id)}
                               aria-label={isExpanded ? "Sembunyikan detail pemakaian" : "Tampilkan detail pemakaian"}
                             >
-                              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </Button>
                           </div>
 
@@ -1232,23 +1232,23 @@ export default function AssetUsagePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 w-6 rounded-lg p-0"
+                                className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => openEditDialog(log)}
                                 aria-label="Edit log penggunaan"
                                 title="Edit"
                               >
-                                <Pencil className="h-3 w-3 text-slate-700" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 w-6 rounded-lg p-0"
+                                    className="h-9 w-9 rounded-lg p-1.5"
                                     aria-label="Unduh surat penggunaan"
                                     title="Unduh surat"
                                   >
-                                    <Download className="h-3 w-3" />
+                                    <Download className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -1260,8 +1260,8 @@ export default function AssetUsagePage() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                                <Trash2 className="h-3 w-3 text-red-600" />
+                              <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>

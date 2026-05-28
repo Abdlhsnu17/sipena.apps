@@ -18,6 +18,8 @@ interface AuthUserRow extends RowDataPacket {
   phone_number: string | null;
   photo_path: string | null;
   session_version: number;
+  account_status: 'active' | 'inactive' | 'suspended' | null;
+  must_change_password: number | boolean;
   uml_access: boolean;
 }
 
@@ -50,7 +52,7 @@ export const authMiddleware = async (
     
     const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
     const [rows] = await pool.query<AuthUserRow[]>(
-      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, session_version, uml_access
+      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -74,6 +76,16 @@ export const authMiddleware = async (
       return;
     }
 
+    if ((user.account_status || 'active') !== 'active') {
+      res.status(403).json({
+        success: false,
+        message: user.account_status === 'suspended'
+          ? 'Akun Anda sedang ditangguhkan'
+          : 'Akun Anda sedang nonaktif'
+      });
+      return;
+    }
+
     req.user = {
       id: user.id,
       nip: user.nip,
@@ -87,8 +99,23 @@ export const authMiddleware = async (
       phoneNumber: user.phone_number ?? undefined,
       photoPath: user.photo_path ?? undefined,
       sessionVersion: Number(user.session_version) || 0,
+      accountStatus: user.account_status || 'active',
+      mustChangePassword: Boolean(user.must_change_password),
       umlAccess: user.uml_access,
     } as User;
+
+    const canProceedDuringPasswordChange =
+      req.originalUrl === '/api/auth/me' ||
+      req.originalUrl === '/api/auth/logout' ||
+      /^\/api\/users\/\d+\/password$/.test(req.originalUrl);
+
+    if (Boolean(user.must_change_password) && !canProceedDuringPasswordChange) {
+      res.status(403).json({
+        success: false,
+        message: 'Anda wajib mengganti password sebelum menggunakan modul lain'
+      });
+      return;
+    }
     
     next();
   } catch {

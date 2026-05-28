@@ -38,6 +38,8 @@ interface UserRow extends RowDataPacket {
   created_at: Date;
   last_login: Date;
   session_version: number;
+  account_status: 'active' | 'inactive' | 'suspended' | null;
+  must_change_password: number | boolean;
   uml_access: boolean;
 }
 
@@ -84,6 +86,8 @@ export class AuthService {
       createdAt: row.created_at,
       lastLogin: row.last_login,
       sessionVersion: Number(row.session_version) || 0,
+      accountStatus: row.account_status || 'active',
+      mustChangePassword: Boolean(row.must_change_password),
       umlAccess: row.uml_access
     };
   }
@@ -107,7 +111,7 @@ export class AuthService {
     const identifier = nip.trim();
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
+      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
       [identifier, identifier]
     );
 
@@ -119,6 +123,15 @@ export class AuthService {
     }
 
     const user = rows[0];
+
+    if ((user.account_status || 'active') !== 'active') {
+      return {
+        success: false,
+        message: user.account_status === 'suspended'
+          ? 'Akun Anda sedang ditangguhkan. Hubungi admin.'
+          : 'Akun Anda sedang nonaktif. Hubungi admin.'
+      };
+    }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
@@ -172,7 +185,7 @@ export class AuthService {
     );
 
     const [newUserRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -308,7 +321,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await pool.query(
-      'UPDATE users SET password = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      'UPDATE users SET password = ?, must_change_password = 0, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
       [hashedPassword, user.id],
     );
     await deletePasswordResetSession(nip);
@@ -318,7 +331,7 @@ export class AuthService {
 
   async getProfile(userId: number): Promise<AuthResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -410,7 +423,7 @@ export class AuthService {
     }
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -453,6 +466,8 @@ export class AuthService {
       phoneNumber: user.phone_number,
       photoPath: user.photo_path,
       sessionVersion: Number(user.session_version) || 0,
+      accountStatus: user.account_status || 'active',
+      mustChangePassword: Boolean(user.must_change_password),
     };
 
     const secret = process.env.JWT_SECRET;

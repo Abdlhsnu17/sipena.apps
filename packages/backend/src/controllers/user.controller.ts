@@ -13,6 +13,12 @@ const getAuthenticatedUserId = (req: Request): number | null => {
   return Number.isFinite(parsedUserId) && parsedUserId > 0 ? parsedUserId : null;
 };
 
+const PRIVILEGED_ROLES = new Set(['admin', 'leader']);
+
+const isPrivilegedRole = (role?: string | null): boolean => {
+  return PRIVILEGED_ROLES.has(normalizeRole(role));
+};
+
 export class UserController {
   private userService: UserService;
 
@@ -90,6 +96,14 @@ export class UserController {
         return;
       }
 
+      if (normalizeRole(req.user?.role) === 'leader' && isPrivilegedRole(req.body.role)) {
+        res.status(403).json({
+          success: false,
+          message: 'Leader tidak dapat membuat pengguna admin atau leader'
+        });
+        return;
+      }
+
       const result = await this.userService.create(req.body);
 
       if (!result.success) {
@@ -124,6 +138,22 @@ export class UserController {
       }
 
       const { id } = req.params;
+      const actorRole = normalizeRole(req.user?.role);
+      if (actorRole === 'leader') {
+        const existing = await this.userService.getById(id);
+        if (!existing.success || !existing.data) {
+          res.status(404).json(existing);
+          return;
+        }
+
+        if (isPrivilegedRole(existing.data.role) || isPrivilegedRole(req.body.role)) {
+          res.status(403).json({
+            success: false,
+            message: 'Leader tidak dapat mengubah pengguna admin atau leader'
+          });
+          return;
+        }
+      }
 
       const result = await this.userService.update(id, req.body);
 
@@ -149,6 +179,25 @@ export class UserController {
   delete = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      const actorId = getAuthenticatedUserId(req);
+      const targetUserId = Number(id);
+
+      if (!actorId || !Number.isFinite(targetUserId)) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+        return;
+      }
+
+      if (actorId === targetUserId) {
+        res.status(400).json({
+          success: false,
+          message: 'Tidak bisa menghapus akun sendiri'
+        });
+        return;
+      }
+
       const result = await this.userService.delete(id);
 
       if (!result.success) {
@@ -197,7 +246,19 @@ export class UserController {
 
       if (actorId !== targetUserId && !hasAnyRole(req.user?.role, ['admin'])) {
         if (normalizeRole(req.user?.role) === 'leader') {
-          // Leader dapat mengubah password semua pengguna
+          const target = await this.userService.getById(id);
+          if (!target.success || !target.data) {
+            res.status(404).json(target);
+            return;
+          }
+
+          if (isPrivilegedRole(target.data.role)) {
+            res.status(403).json({
+              success: false,
+              message: 'Leader tidak dapat mengubah password admin atau leader'
+            });
+            return;
+          }
         } else {
           res.status(403).json({
             success: false,
@@ -217,6 +278,75 @@ export class UserController {
       res.json(result);
     } catch (error) {
       console.error('Change password error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
+  /**
+   * Reset user password without requiring the old password.
+   * PATCH /api/users/:id/password/reset
+   */
+  resetPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { newPassword } = req.body;
+      const actorId = getAuthenticatedUserId(req);
+      const targetUserId = Number(id);
+      const actorRole = normalizeRole(req.user?.role);
+
+      if (!actorId || !Number.isFinite(targetUserId)) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+        return;
+      }
+
+      if (!hasAnyRole(actorRole, ['admin', 'leader'])) {
+        res.status(403).json({
+          success: false,
+          message: 'Anda tidak memiliki izin untuk reset password pengguna'
+        });
+        return;
+      }
+
+      const target = await this.userService.getById(id);
+      if (!target.success || !target.data) {
+        res.status(404).json(target);
+        return;
+      }
+
+      if (actorRole === 'leader' && isPrivilegedRole(target.data.role)) {
+        res.status(403).json({
+          success: false,
+          message: 'Leader tidak dapat reset password admin atau leader'
+        });
+        return;
+      }
+
+      const result = await this.userService.resetPassword(id, newPassword);
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Reset user password error:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error'

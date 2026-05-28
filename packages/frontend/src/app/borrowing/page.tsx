@@ -2380,8 +2380,8 @@ export default function BorrowingPage() {
                               )}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0">
-                                    <Download className="w-3 h-3" />
+                                  <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
+                                    <Download className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">

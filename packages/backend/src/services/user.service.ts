@@ -25,9 +25,12 @@ interface UserRow extends RowDataPacket {
   uml_access: boolean;
   gender: string | null;
   work_unit: string | null;
+  sub_work_unit: string | null;
   home_address: string | null;
   phone_number: string | null;
   photo_path: string | null;
+  account_status: 'active' | 'inactive' | 'suspended' | null;
+  must_change_password: number | boolean;
 }
 
 interface CountRow extends RowDataPacket {
@@ -39,7 +42,7 @@ export class UserService {
     const { page, limit, search, role } = filters;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE 1=1';
+    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE 1=1';
     let countQuery = 'SELECT COUNT(*) as count FROM users WHERE 1=1';
     const params: any[] = [];
 
@@ -75,7 +78,7 @@ export class UserService {
 
   async getById(id: string): Promise<ApiResponse<User>> {
     const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
+        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE id = ?',
       [id]
     );
 
@@ -103,12 +106,15 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
-    const { gender, workUnit, homeAddress, phoneNumber, photoPath } = data;
+    const { gender, workUnit, subWorkUnit, homeAddress, photoPath } = data;
 
     const normalizedRole = data.role ? normalizeRole(data.role) : 'user';
 
+    const accountStatus = data.accountStatus || 'active';
+    const mustChangePassword = data.mustChangePassword ?? true;
+
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (nip, name, email, password, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, is_active, account_status, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         data.nip,
         data.name,
@@ -118,14 +124,18 @@ export class UserService {
         data.staffAccessType || null,
         gender || null,
         workUnit || null,
+        subWorkUnit || null,
         homeAddress || null,
         normalizedPhoneNumber,
-        photoPath || null
+        photoPath || null,
+        accountStatus === 'active' ? 1 : 0,
+        accountStatus,
+        mustChangePassword ? 1 : 0
       ]
     );
 
     const [newRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, phone_number, created_at FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, created_at, account_status, must_change_password FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -162,11 +172,18 @@ export class UserService {
           ? normalizeRole(value)
           : key === 'phoneNumber' && typeof value === 'string'
             ? normalizePhoneNumberForStorage(value)
+          : key === 'mustChangePassword'
+            ? value ? 1 : 0
           : value;
         fields.push(`${snakeKey} = ?`);
         values.push(normalizedValue);
       }
     });
+
+    if (data.accountStatus !== undefined) {
+      fields.push('is_active = ?');
+      values.push(data.accountStatus === 'active' ? 1 : 0);
+    }
 
     if (fields.length === 0) {
       return { success: false, message: 'No fields to update' };
@@ -178,7 +195,7 @@ export class UserService {
     await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE id = ?',
       [id]
     );
 
@@ -210,11 +227,28 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     await pool.query(
-      'UPDATE users SET password = ?, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      'UPDATE users SET password = ?, must_change_password = 0, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
       [hashedPassword, id],
     );
 
     return { success: true, message: 'Password changed successfully' };
+  }
+
+  async resetPassword(id: string, newPassword: string): Promise<ApiResponse> {
+    const [rows] = await pool.query<UserRow[]>('SELECT id FROM users WHERE id = ?', [id]);
+
+    if (rows.length === 0) {
+      return { success: false, message: 'User not found' };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await pool.query(
+      'UPDATE users SET password = ?, must_change_password = 1, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
+      [hashedPassword, id],
+    );
+
+    return { success: true, message: 'Password pengguna berhasil direset' };
   }
 }
 

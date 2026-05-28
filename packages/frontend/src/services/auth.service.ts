@@ -69,6 +69,8 @@ export interface User {
   photoPath?: string;
   createdAt?: string;
   lastLogin?: string;
+  accountStatus?: "active" | "inactive" | "suspended";
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {

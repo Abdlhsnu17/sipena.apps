@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "leader" | "staff" | "staff_pj" | "teknisi" | "user"
 export type StaffAccessType = "medis" | "non-medis" | "all"
+export type AccountStatus = "active" | "inactive" | "suspended"
 
 
 
@@ -19,6 +20,8 @@ export interface User {
   photoPath?: string
   createdAt?: string
   lastLogin?: string
+  accountStatus?: AccountStatus
+  mustChangePassword?: boolean
 }
 
 

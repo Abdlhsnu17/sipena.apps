@@ -16,11 +16,14 @@ export interface User {
   updatedAt?: Date;
   lastLogin?: Date;
   umlAccess?: boolean;
+  accountStatus?: AccountStatus;
+  mustChangePassword?: boolean;
 }
 
 export type UserRole = 'admin' | 'leader' | 'staff' | 'staff_pj' | 'teknisi' | 'user';
 
 export type StaffAccessType = 'medical' | 'non_medical' | 'both' | 'medis' | 'non-medis' | 'all' | null;
+export type AccountStatus = 'active' | 'inactive' | 'suspended';
 
 export interface CreateUserDTO {
   nip: string;
@@ -35,6 +38,8 @@ export interface CreateUserDTO {
   homeAddress?: string;
   phoneNumber?: string;
   photoPath?: string;
+  accountStatus?: AccountStatus;
+  mustChangePassword?: boolean;
 }
 
 export interface UpdateUserDTO {
@@ -49,6 +54,8 @@ export interface UpdateUserDTO {
   homeAddress?: string;
   phoneNumber?: string;
   photoPath?: string;
+  accountStatus?: AccountStatus;
+  mustChangePassword?: boolean;
 }
 
 export interface UserFilters {

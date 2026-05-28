@@ -17,6 +17,7 @@ let ensuredScheduleAssetFkRemoved = false;
 let ensuredUserActivityLogsTable = false;
 let ensuredBorrowingWorkflowColumns = false;
 let ensuredAssetUsageLogsTable = false;
+let ensuredUserAccessControlColumns = false;
 let attemptedCoreSchemaBootstrap = false;
 
 const tableExists = async (tableName: string): Promise<boolean> => {
@@ -348,6 +349,48 @@ export async function ensureUserProfileColumns(): Promise<void> {
   }
 
   ensuredUserProfileColumns = true;
+}
+
+export async function ensureUserAccessControlColumns(): Promise<void> {
+  if (ensuredUserAccessControlColumns) return;
+
+  if (!(await tableExists('users'))) return;
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME IN ('account_status', 'must_change_password')
+    `
+  );
+  const existingColumns = new Set(rows.map((row) => row.COLUMN_NAME));
+
+  if (!existingColumns.has('account_status')) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'active' AFTER is_active
+    `);
+  }
+
+  if (!existingColumns.has('must_change_password')) {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER account_status
+    `);
+  }
+
+  await pool.query(`
+    UPDATE users
+    SET account_status = CASE
+      WHEN COALESCE(is_active, 1) = 1 THEN 'active'
+      ELSE 'inactive'
+    END
+    WHERE account_status IS NULL OR account_status = ''
+  `);
+
+  ensuredUserAccessControlColumns = true;
 }
 
 export async function withSchemaLock<T>(task: () => Promise<T>): Promise<T> {

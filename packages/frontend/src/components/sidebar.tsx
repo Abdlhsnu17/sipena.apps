@@ -523,7 +523,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="border-b border-border bg-[var(--app-shell-background)] px-4 py-3">
+      <div className="border-b border-border bg-(--app-shell-background) px-4 py-3">
         {isCollapsed ? (
           <div className="hidden flex-col items-center gap-3 lg:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
@@ -640,7 +640,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                 >
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 transition-transform duration-300",
+                      "h-5 w-5 transition-transform duration-300",
                       isActivityHistoryExpanded ? "rotate-0" : "-rotate-90"
                     )}
                   />
@@ -708,7 +708,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               </p>
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-teal-600 transition-transform duration-300",
+                  "h-5 w-5 text-teal-600 transition-transform duration-300",
                   isProfileExpanded ? "rotate-0" : "-rotate-90"
                 )}
               />
@@ -806,7 +806,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-[var(--app-shell-background)] text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted lg:hidden",
+          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-(--app-shell-background) text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted lg:hidden",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Buka menu navigasi"
@@ -828,7 +828,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         />
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-[100dvh] min-h-screen w-[min(88vw,21rem)] max-w-84 transform flex-col overflow-hidden bg-[var(--app-shell-background)] transition-transform duration-300 ease-in-out",
+            "fixed inset-y-0 left-0 z-50 flex h-dvh min-h-screen w-[min(88vw,21rem)] max-w-84 transform flex-col overflow-hidden bg-(--app-shell-background) transition-transform duration-300 ease-in-out",
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           )}
           style={{ minWidth: 0 }}
@@ -849,7 +849,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden h-[100dvh] min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-[var(--app-shell-background)] overscroll-contain transition-all duration-300 ease-in-out lg:flex",
+          "fixed inset-y-0 left-0 z-40 hidden h-dvh min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-(--app-shell-background) overscroll-contain transition-all duration-300 ease-in-out lg:flex",
           isCollapsed ? "w-20" : "w-64"
         )}
       >

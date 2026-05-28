@@ -13,9 +13,12 @@ export interface User {
   umlAccess?: boolean
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string
+  accountStatus?: "active" | "inactive" | "suspended"
+  mustChangePassword?: boolean
 }
 
 export interface PaginationMeta {
@@ -41,12 +44,15 @@ const normalizeUser = (user: any): User => ({
   staffAccessType: user.staffAccessType ?? user.staff_access_type,
   gender: user.gender,
   workUnit: user.workUnit ?? user.work_unit,
+  subWorkUnit: user.subWorkUnit ?? user.sub_work_unit,
   homeAddress: user.homeAddress ?? user.home_address,
   phoneNumber: user.phoneNumber ?? user.phone_number,
   photoPath: user.photoPath ?? user.photo_path,
   createdAt: user.createdAt ?? user.created_at,
   lastLogin: user.lastLogin ?? user.last_login,
   umlAccess: user.umlAccess ?? user.uml_access,
+  accountStatus: user.accountStatus ?? user.account_status ?? (user.is_active === false || user.is_active === 0 ? "inactive" : "active"),
+  mustChangePassword: Boolean(user.mustChangePassword ?? user.must_change_password),
 })
 
 export interface CreateUserPayload {
@@ -58,9 +64,12 @@ export interface CreateUserPayload {
   staffAccessType?: "medis" | "non-medis" | "all"
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string
+  accountStatus?: "active" | "inactive" | "suspended"
+  mustChangePassword?: boolean
 }
 
 export interface UpdateUserPayload {
@@ -71,9 +80,12 @@ export interface UpdateUserPayload {
   umlAccess?: boolean
   gender?: string
   workUnit?: string
+  subWorkUnit?: string
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string
+  accountStatus?: "active" | "inactive" | "suspended"
+  mustChangePassword?: boolean
 }
 
 class UserService {
@@ -113,6 +125,10 @@ class UserService {
 
   async changePassword(id: number | string, currentPassword: string, newPassword: string): Promise<UserResponse> {
     return apiService.patch<UserResponse>(`/users/${id}/password`, { currentPassword, newPassword })
+  }
+
+  async resetPassword(id: number | string, newPassword: string): Promise<UserResponse> {
+    return apiService.patch<UserResponse>(`/users/${id}/password/reset`, { newPassword })
   }
 }
 

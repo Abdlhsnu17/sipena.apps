@@ -428,19 +428,21 @@ CREATE TABLE `users` (
   `last_login` timestamp NULL DEFAULT NULL,
   `session_version` int(11) NOT NULL DEFAULT 0,
   `uml_access` tinyint(1) NOT NULL DEFAULT 0,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `account_status` varchar(20) NOT NULL DEFAULT 'active',
+  `must_change_password` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data untuk tabel `users`
 --
 
-INSERT INTO `users` (`id`, `nip`, `name`, `email`, `password`, `role`, `staff_access_type`, `gender`, `work_unit`, `sub_work_unit`, `home_address`, `phone_number`, `photo_path`, `created_at`, `updated_at`, `last_login`, `session_version`, `uml_access`, `is_active`) VALUES
-(1, '199803172025211031', 'Fikri Abdillah', 'fkr@gmail.com', '$2a$12$4c.jNu/cjvcQyUtA0JGDPe5J9qoKwd.kEYKcbkxnrmARwzIDuMIvu', 'admin', NULL, NULL, NULL, NULL, NULL, '+628111111111', NULL, '2026-01-17 16:27:41', '2026-04-11 11:56:02', '2026-04-11 11:56:02', 0, 0, 1),
-(2, '200003172025211031', 'Abdlh', 'ab@gmail.com', '$2a$12$YMno6PWX6aW1.wzus5YBs.l89PWNyTWoQ2NwngtjA5PoHZRRhtddK', 'leader', 'all', NULL, NULL, NULL, NULL, '+628111111112', NULL, '2026-01-17 23:04:33', '2026-04-11 13:35:25', '2026-04-11 13:35:25', 0, 0, 1),
-(3, '200103172025211031', 'Lilis Zulfah', 'lzh@gmail.com', '$2a$12$uQQiBErPS4LbRgSk3vUSXuQpgXdUiOUQ0oKCeI5XHwOXHrGEQ0bWy', 'staff_pj', 'all', NULL, 'Instalasi Rawat Inap', NULL, NULL, '+628111111113', NULL, '2026-04-11 01:40:12', '2026-04-11 12:09:11', '2026-04-11 12:09:11', 0, 0, 1),
-(4, '200203172025211031', 'Denisa', 'denisa@gmail.com', '$2a$12$7urQns.l0lQdbPgksIjIyObxOJ55mR1DLxEASSL2/nHEWglhgVqq2', 'staff', 'all', NULL, NULL, NULL, NULL, '+628111111114', NULL, '2026-04-11 01:40:44', '2026-04-11 05:54:51', '2026-04-11 05:54:51', 0, 0, 1),
-(5, '200303172025211031', 'Doni', 'doni@gmail.com', '$2a$12$M69xkT/d/FVBdiXbBx.Lt.f1eLaTvAXkoK2uSD0NqefNRaWg8Mq32', 'teknisi', NULL, NULL, 'Teknisi Medis dan Non Medis', NULL, NULL, '+628111111115', NULL, '2026-04-11 01:41:11', '2026-04-11 06:27:06', '2026-04-11 06:27:06', 0, 0, 1);
+INSERT INTO `users` (`id`, `nip`, `name`, `email`, `password`, `role`, `staff_access_type`, `gender`, `work_unit`, `sub_work_unit`, `home_address`, `phone_number`, `photo_path`, `created_at`, `updated_at`, `last_login`, `session_version`, `uml_access`, `is_active`, `account_status`, `must_change_password`) VALUES
+(1, '199803172025211031', 'Fikri Abdillah', 'fkr@gmail.com', '$2a$12$4c.jNu/cjvcQyUtA0JGDPe5J9qoKwd.kEYKcbkxnrmARwzIDuMIvu', 'admin', NULL, NULL, NULL, NULL, NULL, '+628111111111', NULL, '2026-01-17 16:27:41', '2026-04-11 11:56:02', '2026-04-11 11:56:02', 0, 0, 1, 'active', 0),
+(2, '200003172025211031', 'Abdlh', 'ab@gmail.com', '$2a$12$YMno6PWX6aW1.wzus5YBs.l89PWNyTWoQ2NwngtjA5PoHZRRhtddK', 'leader', 'all', NULL, NULL, NULL, NULL, '+628111111112', NULL, '2026-01-17 23:04:33', '2026-04-11 13:35:25', '2026-04-11 13:35:25', 0, 0, 1, 'active', 0),
+(3, '200103172025211031', 'Lilis Zulfah', 'lzh@gmail.com', '$2a$12$uQQiBErPS4LbRgSk3vUSXuQpgXdUiOUQ0oKCeI5XHwOXHrGEQ0bWy', 'staff_pj', 'all', NULL, 'Instalasi Rawat Inap', NULL, NULL, '+628111111113', NULL, '2026-04-11 01:40:12', '2026-04-11 12:09:11', '2026-04-11 12:09:11', 0, 0, 1, 'active', 0),
+(4, '200203172025211031', 'Denisa', 'denisa@gmail.com', '$2a$12$7urQns.l0lQdbPgksIjIyObxOJ55mR1DLxEASSL2/nHEWglhgVqq2', 'staff', 'all', NULL, NULL, NULL, NULL, '+628111111114', NULL, '2026-04-11 01:40:44', '2026-04-11 05:54:51', '2026-04-11 05:54:51', 0, 0, 1, 'active', 0),
+(5, '200303172025211031', 'Doni', 'doni@gmail.com', '$2a$12$M69xkT/d/FVBdiXbBx.Lt.f1eLaTvAXkoK2uSD0NqefNRaWg8Mq32', 'teknisi', NULL, NULL, 'Teknisi Medis dan Non Medis', NULL, NULL, '+628111111115', NULL, '2026-04-11 01:41:11', '2026-04-11 06:27:06', '2026-04-11 06:27:06', 0, 0, 1, 'active', 0);
 
 --
 -- --------------------------------------------------------

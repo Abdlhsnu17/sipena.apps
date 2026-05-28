@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "leader" | "staff" | "staff_pj" | "teknisi" | string
 export type StaffAccessType = "medis" | "non-medis" | "all" | string | null
+export type AccountStatus = "active" | "inactive" | "suspended"
 
 export interface User {
   id: number | string
@@ -17,6 +18,8 @@ export interface User {
   createdAt: Date | string
   lastLogin?: Date | string
   sessionVersion?: number
+  accountStatus?: AccountStatus
+  mustChangePassword?: boolean
   umlAccess?: boolean | {
     isApproved: boolean
     approvedBy?: string
@@ -79,6 +82,8 @@ export interface TokenPayload {
   phoneNumber?: string
   photoPath?: string
   sessionVersion?: number
+  accountStatus?: AccountStatus
+  mustChangePassword?: boolean
   iat?: number
   exp?: number
 }

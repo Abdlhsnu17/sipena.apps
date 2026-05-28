@@ -19,6 +19,7 @@ import {
     ensureNonMedicalSpecificationsColumn,
     ensureReportUploadsTable,
     ensureScheduleAssetForeignKeyRemoved,
+    ensureUserAccessControlColumns,
     ensureUserActivityLogsTable,
     ensureUserProfileColumns,
     withSchemaLock
@@ -228,6 +229,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureReportUploadsTable();
         await ensureScheduleAssetForeignKeyRemoved();
         await ensureUserProfileColumns();
+        await ensureUserAccessControlColumns();
         await ensureUserActivityLogsTable();
       });
 

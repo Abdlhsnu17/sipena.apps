@@ -528,11 +528,11 @@ export default function MedicalAssetsPage() {
                     onClick={() => toggleRoomExpanded(room.id)}
                   >
                   <div className="flex items-center gap-3 flex-1">
-                    <button className="text-teal-600">
+                    <button className="text-teal-600 hover:bg-teal-100/60 rounded-lg p-1.5 transition">
                       {shouldShowDetails ? (
-                        <ChevronUp className="w-4 h-4" />
+                        <ChevronUp className="w-5 h-5" />
                       ) : (
-                        <ChevronDown className="w-4 h-4" />
+                        <ChevronDown className="w-5 h-5" />
                       )}
                     </button>
                     <div>
@@ -555,9 +555,9 @@ export default function MedicalAssetsPage() {
                           e.stopPropagation()
                           handleEditRoom(room)
                         }}
-                        className="h-7 w-7 p-0"
+                        className="h-9 w-9 p-1.5 text-emerald-600 hover:bg-emerald-50"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-4 h-4" />
                       </Button>
                     )}
                     {canDeleteInventory && (
@@ -568,9 +568,9 @@ export default function MedicalAssetsPage() {
                           e.stopPropagation()
                           handleDeleteRoom(room.id)
                         }}
-                        className="text-red-600 hover:bg-red-50 h-7 w-7 p-0"
+                        className="text-red-600 hover:bg-red-50 h-9 w-9 p-1.5"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
@@ -723,24 +723,24 @@ export default function MedicalAssetsPage() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 w-7 p-0"
+                                        className="h-9 w-9 p-1.5 text-emerald-600 hover:bg-emerald-50"
                                         onClick={() => {
                                           setSelectedRoomId(room.id)
                                           setEditingAsset(asset)
                                           setShowAssetForm(true)
                                         }}
                                       >
-                                        <Edit2 className="w-3.5 h-3.5" />
+                                        <Edit2 className="w-4 h-4" />
                                       </Button>
                                     )}
                                     {canDeleteInventory && (
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                                        className="h-9 w-9 p-1.5 text-red-600 hover:bg-red-50"
                                         onClick={() => handleDeleteAsset(room.id, asset.id)}
                                       >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                       </Button>
                                     )}
                                   </div>

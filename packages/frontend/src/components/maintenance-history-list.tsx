@@ -937,11 +937,11 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                      className="h-9 w-9 rounded-lg p-1 text-slate-700 hover:bg-slate-200"
                       onClick={() => toggleHistorySummary(h.id)}
                       aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
                     >
-                      {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </Button>
                   </div>
                 </div>

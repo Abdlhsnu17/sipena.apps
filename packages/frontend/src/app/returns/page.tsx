@@ -1171,10 +1171,10 @@ export default function ReturnsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                                className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
                                 onClick={() => toggleActiveCardCollapse(b.id)}
                               >
-                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                               </Button>
                             </div>
                           </div>
@@ -1269,8 +1269,8 @@ export default function ReturnsPage() {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0">
-                                      <Download className="w-3 h-3" />
+                                    <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
+                                      <Download className="w-4 h-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -1473,10 +1473,10 @@ export default function ReturnsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 w-6 rounded-lg p-0 text-slate-700 hover:bg-slate-200"
+                                className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
                                 onClick={() => toggleHistoryCardCollapse(b.id)}
                               >
-                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                               </Button>
                             </div>
                           </div>

@@ -67,6 +67,12 @@ export default function ClientLayout({
   }, [isAllowedPath, loading, pathname, router, showLayout, user])
 
   useEffect(() => {
+    if (!loading && showLayout && user?.mustChangePassword && pathname !== "/settings") {
+      router.replace("/settings")
+    }
+  }, [loading, pathname, router, showLayout, user])
+
+  useEffect(() => {
     if (!showLayout) return
     if (typeof document === "undefined") return
 
@@ -123,7 +129,9 @@ export default function ClientLayout({
     window.localStorage.setItem("sipena-sidebar-collapsed", String(isSidebarCollapsed))
   }, [isSidebarCollapsed])
 
-  const shouldBlockProtectedPage = showLayout && (!user || (user && !isAllowedPath))
+  const shouldBlockProtectedPage =
+    showLayout &&
+    (!user || (user && !isAllowedPath) || (user?.mustChangePassword && pathname !== "/settings"))
 
   if (loading) {
     return (

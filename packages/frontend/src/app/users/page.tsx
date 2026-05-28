@@ -9,10 +9,10 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { getCurrentUser } from "@/services/auth-utils";
 import type { User as ApiUser } from "@/services/user.service";
 import { userService } from "@/services/user.service";
-import type { User as AuthUser, StaffAccessType } from "@/types/auth-types";
+import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
 import { normalizeUserRole } from "@/utils/role";
 
-import { AlertCircle, Check, Edit, Plus, Smartphone, Trash2, Users } from "lucide-react";
+import { AlertCircle, Check, Edit, KeyRound, Plus, Smartphone, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function UsersPage() {
@@ -22,14 +22,23 @@ export default function UsersPage() {
   const { confirm } = useConfirm()
   const [currentUser] = useState<AuthUser | null>(getCurrentUser())
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [resetTarget, setResetTarget] = useState<ApiUser | null>(null)
+  const [resetPassword, setResetPassword] = useState("")
+  const [isResettingPassword, setIsResettingPassword] = useState(false)
   const [editingId, setEditingId] = useState<string | number | null>(null)
   const [formData, setFormData] = useState({
     nip: "",
     name: "",
     email: "",
     phoneNumber: "",
+    gender: "",
+    workUnit: "",
+    subWorkUnit: "",
+    homeAddress: "",
     role: "staff" as ManagedRole,
     staffAccessType: "all" as StaffAccessType,
+    accountStatus: "active" as AccountStatus,
+    mustChangePassword: true,
     password: "",
   })
   const [message, setMessage] = useState("")
@@ -61,7 +70,21 @@ export default function UsersPage() {
   const handleAddUser = () => {
     if (!canCreateUsers) return
     setEditingId(null)
-    setFormData({ nip: "", name: "", email: "", phoneNumber: "", role: "user", staffAccessType: "all", password: "" })
+    setFormData({
+      nip: "",
+      name: "",
+      email: "",
+      phoneNumber: "",
+      gender: "",
+      workUnit: "",
+      subWorkUnit: "",
+      homeAddress: "",
+      role: "user",
+      staffAccessType: "all",
+      accountStatus: "active",
+      mustChangePassword: true,
+      password: "",
+    })
     setIsFormOpen(true)
   }
 
@@ -78,8 +101,14 @@ export default function UsersPage() {
       name: user.name,
       email: user.email,
       phoneNumber: user.phoneNumber || "",
+      gender: user.gender || "",
+      workUnit: user.workUnit || "",
+      subWorkUnit: user.subWorkUnit || "",
+      homeAddress: user.homeAddress || "",
       role: user.role,
       staffAccessType: user.staffAccessType || "all",
+      accountStatus: user.accountStatus || "active",
+      mustChangePassword: Boolean(user.mustChangePassword),
       password: "",
     })
     setIsFormOpen(true)
@@ -95,15 +124,45 @@ export default function UsersPage() {
       return
     }
 
+    if (formData.nip.length < 8 || formData.nip.length > 20) {
+      setMessage("NIP harus 8 sampai 20 digit")
+      setMessageType("error")
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setMessage("Format email tidak valid")
+      setMessageType("error")
+      return
+    }
+
+    if (!/^\+?\d{10,25}$/.test(formData.phoneNumber)) {
+      setMessage("Nomor WhatsApp / SMS harus 10 sampai 25 digit")
+      setMessageType("error")
+      return
+    }
+
+    if (formData.workUnit.length > 255 || formData.subWorkUnit.length > 255 || formData.homeAddress.length > 500) {
+      setMessage("Unit kerja maksimal 255 karakter dan alamat maksimal 500 karakter")
+      setMessageType("error")
+      return
+    }
+
     try {
       if (editingId) {
         const updateData = {
           name: formData.name,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
+          gender: formData.gender || undefined,
+          workUnit: formData.workUnit || undefined,
+          subWorkUnit: formData.subWorkUnit || undefined,
+          homeAddress: formData.homeAddress || undefined,
           role: formData.role,
           staffAccessType:
             formData.role === "staff" || formData.role === "staff_pj" ? formData.staffAccessType : undefined,
+          accountStatus: formData.accountStatus,
+          mustChangePassword: formData.mustChangePassword,
         }
         const result = await userService.update(editingId, updateData)
         setMessageType(result.success ? "success" : "error")
@@ -126,10 +185,16 @@ export default function UsersPage() {
           name: formData.name,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
+          gender: formData.gender || undefined,
+          workUnit: formData.workUnit || undefined,
+          subWorkUnit: formData.subWorkUnit || undefined,
+          homeAddress: formData.homeAddress || undefined,
           password: formData.password,
           role: formData.role,
           staffAccessType:
             formData.role === "staff" || formData.role === "staff_pj" ? formData.staffAccessType : undefined,
+          accountStatus: formData.accountStatus,
+          mustChangePassword: formData.mustChangePassword,
         })
         setMessageType(result.success ? "success" : "error")
         setMessage(result.message)
@@ -203,6 +268,43 @@ export default function UsersPage() {
         setMessageType("error")
         setMessage(error.message || "Gagal menghapus semua pengguna")
       })
+  }
+
+  const openResetPassword = (user: ApiUser) => {
+    if (isLeader && ["admin", "leader"].includes(normalizeUserRole(user.role))) {
+      setMessage("Leader tidak dapat reset password admin atau leader")
+      setMessageType("error")
+      return
+    }
+    setResetTarget(user)
+    setResetPassword("")
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetTarget) return
+
+    if (resetPassword.length < 6) {
+      setMessage("Password baru minimal 6 karakter")
+      setMessageType("error")
+      return
+    }
+
+    setIsResettingPassword(true)
+    try {
+      const result = await userService.resetPassword(resetTarget.id, resetPassword)
+      setMessageType(result.success ? "success" : "error")
+      setMessage(result.message)
+      if (result.success) {
+        setResetTarget(null)
+        setResetPassword("")
+        loadUsers()
+      }
+    } catch (error: any) {
+      setMessageType("error")
+      setMessage(error.message || "Gagal reset password pengguna")
+    } finally {
+      setIsResettingPassword(false)
+    }
   }
 
   const getAccessTypeLabel = (type?: StaffAccessType) => {
@@ -291,6 +393,28 @@ export default function UsersPage() {
         return "bg-slate-100 text-slate-700"
       default:
         return "bg-blue-100 text-blue-700"
+    }
+  }
+
+  const getAccountStatusLabel = (status?: AccountStatus) => {
+    switch (status) {
+      case "inactive":
+        return "Nonaktif"
+      case "suspended":
+        return "Ditangguhkan"
+      default:
+        return "Aktif"
+    }
+  }
+
+  const getAccountStatusBadgeClass = (status?: AccountStatus) => {
+    switch (status) {
+      case "inactive":
+        return "bg-slate-100 text-slate-700"
+      case "suspended":
+        return "bg-red-100 text-red-700"
+      default:
+        return "bg-emerald-100 text-emerald-700"
     }
   }
 
@@ -435,6 +559,51 @@ export default function UsersPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Jenis Kelamin</label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground text-sm"
+                >
+                  <option value="">Belum diisi</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Unit Kerja</label>
+                <Input
+                  type="text"
+                  placeholder="Contoh: Instalasi Rawat Inap"
+                  value={formData.workUnit}
+                  onChange={(e) => setFormData({ ...formData, workUnit: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Sub Unit Kerja</label>
+                <Input
+                  type="text"
+                  placeholder="Contoh: Ruang Melati"
+                  value={formData.subWorkUnit}
+                  onChange={(e) => setFormData({ ...formData, subWorkUnit: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Alamat Rumah</label>
+                <textarea
+                  placeholder="Alamat pengguna"
+                  value={formData.homeAddress}
+                  onChange={(e) => setFormData({ ...formData, homeAddress: e.target.value })}
+                  className="min-h-20 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Role</label>
                 <select
                   value={formData.role}
@@ -467,6 +636,32 @@ export default function UsersPage() {
                 </div>
               )}
 
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Status Akun</label>
+                <select
+                  value={formData.accountStatus}
+                  onChange={(e) => setFormData({ ...formData, accountStatus: e.target.value as AccountStatus })}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground text-sm"
+                >
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                  <option value="suspended">Ditangguhkan</option>
+                </select>
+              </div>
+
+              <label className="flex items-start gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={formData.mustChangePassword}
+                  onChange={(e) => setFormData({ ...formData, mustChangePassword: e.target.checked })}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-medium text-foreground">Wajib ganti password</span>
+                  <span className="text-xs text-muted-foreground">Pengguna akan diarahkan ke Pengaturan sebelum memakai modul lain.</span>
+                </span>
+              </label>
+
               {!editingId && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Password</label>
@@ -493,6 +688,34 @@ export default function UsersPage() {
         </div>
       )}
 
+        {resetTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="mx-4 w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+              <h2 className="mb-2 text-lg font-bold text-foreground">Reset Password</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Reset password untuk {resetTarget.name}. Pengguna akan wajib mengganti password saat login berikutnya.
+              </p>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">Password Baru</label>
+                <Input
+                  type="password"
+                  placeholder="Minimal 6 karakter"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                />
+              </div>
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setResetTarget(null)}>
+                  Batal
+                </Button>
+                <Button type="button" className="flex-1 bg-teal-600 text-white hover:bg-teal-700" onClick={handleResetPassword} disabled={isResettingPassword}>
+                  {isResettingPassword ? "Mereset..." : "Reset"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Users Management Table */}
         <div className="bg-white/90 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
             <div className="border-b border-border/70 bg-slate-50/70 px-4 py-3">
@@ -508,6 +731,7 @@ export default function UsersPage() {
                 <th className="px-4 py-3 text-left font-medium text-foreground">Nama</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground">Email</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground">Role</th>
+                <th className="px-4 py-3 text-left font-medium text-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground">Akses</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground">Terdaftar</th>
                 <th className="px-4 py-3 text-center font-medium text-foreground">Aksi</th>
@@ -525,6 +749,18 @@ export default function UsersPage() {
                     >
                       {getRoleLabel(user.role)}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className={`w-fit rounded-full px-2 py-1 text-xs font-medium ${getAccountStatusBadgeClass(user.accountStatus)}`}>
+                        {getAccountStatusLabel(user.accountStatus)}
+                      </span>
+                      {user.mustChangePassword && (
+                        <span className="w-fit rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                          Wajib ganti sandi
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                       <span
@@ -548,6 +784,15 @@ export default function UsersPage() {
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canViewUsers && String(user.id) !== String(currentUser?.id) && (!isLeader || !["admin", "leader"].includes(normalizeUserRole(user.role))) && (
+                        <button
+                          onClick={() => openResetPassword(user)}
+                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-amber-600"
+                          title="Reset password"
+                        >
+                          <KeyRound className="w-4 h-4" />
                         </button>
                       )}
                       {canDeleteUsers && user.id !== currentUser?.id && (
