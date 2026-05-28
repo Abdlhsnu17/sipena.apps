@@ -1,15 +1,15 @@
 'use client'
 
-import * as React from 'react'
+import * as React from 'react';
 
 import {
-  THEME_ATTRIBUTE,
-  THEME_DEFAULT_THEME,
-  THEME_ENABLE_COLOR_SCHEME,
-  THEME_ENABLE_SYSTEM,
-  THEME_STORAGE_KEY,
-  THEME_THEMES,
-} from '@/components/theme-config'
+    THEME_ATTRIBUTE,
+    THEME_DEFAULT_THEME,
+    THEME_ENABLE_COLOR_SCHEME,
+    THEME_ENABLE_SYSTEM,
+    THEME_STORAGE_KEY,
+    THEME_THEMES,
+} from '@/components/theme-config';
 
 type Attribute = string | string[]
 type ThemeValueMap = Record<string, string>
@@ -137,27 +137,33 @@ export function ThemeProvider({
       setThemeState(event.newValue || defaultTheme)
     }
 
+    // Get system theme on mount
+    const storedTheme = getStoredTheme(storageKey, defaultTheme)
+    setThemeState(storedTheme)
     handleMediaQuery()
-    setThemeState(getStoredTheme(storageKey, defaultTheme))
 
-    if (typeof mediaQuery.addEventListener === 'function') {
+    // Only listen to media query changes if system theme is enabled
+    // This prevents auto-switching when user has explicitly chosen light/dark
+    if (enableSystem && typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', handleMediaQuery)
-    } else {
+    } else if (enableSystem && typeof mediaQuery.addListener === 'function') {
       mediaQuery.addListener(handleMediaQuery)
     }
 
     window.addEventListener('storage', handleStorage)
 
     return () => {
-      if (typeof mediaQuery.removeEventListener === 'function') {
-        mediaQuery.removeEventListener('change', handleMediaQuery)
-      } else {
-        mediaQuery.removeListener(handleMediaQuery)
+      if (enableSystem) {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', handleMediaQuery)
+        } else if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(handleMediaQuery)
+        }
       }
 
       window.removeEventListener('storage', handleStorage)
     }
-  }, [defaultTheme, storageKey])
+  }, [defaultTheme, storageKey, enableSystem])
 
   const activeTheme = forcedTheme ?? theme
   const resolvedTheme =
