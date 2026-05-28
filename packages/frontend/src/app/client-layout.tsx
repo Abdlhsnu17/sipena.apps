@@ -144,8 +144,8 @@ export default function ClientLayout({
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme=""
-      enableSystem={true}
+      defaultTheme="light"
+      enableSystem={false}
       disableTransitionOnChange
     >
       <ConfirmProvider>
