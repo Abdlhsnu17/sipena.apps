@@ -35,7 +35,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ComponentType, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type SyntheticEvent } from "react";
 
 
 
@@ -273,6 +273,7 @@ const formatActivityTime = (value: string) => {
 export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const navRef = useRef<HTMLElement | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [profileImageError, setProfileImageError] = useState(false)
@@ -294,6 +295,24 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   useEffect(() => {
     closeMobileMenu()
   }, [closeMobileMenu, pathname])
+
+  useEffect(() => {
+    const navElement = navRef.current
+    if (!navElement) return
+
+    const animationFrameId = window.requestAnimationFrame(() => {
+      const activeLink = navElement.querySelector<HTMLElement>('[data-sidebar-link-active="true"]')
+      if (!activeLink) return
+
+      activeLink.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+        behavior: "auto",
+      })
+    })
+
+    return () => window.cancelAnimationFrame(animationFrameId)
+  }, [pathname, isCollapsed])
 
   const loadActivities = useCallback(async () => {
     if (!currentUser?.id) {
@@ -582,6 +601,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       </div>
 
       <nav
+        ref={navRef}
         className={cn(
           "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
           collapsed ? "p-2" : "p-3",
@@ -596,8 +616,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <Link 
                 key={link.href} 
                 href={link.href} 
+                scroll={false}
                 onClick={handleLinkClick}
                 aria-current={isActive ? "page" : undefined}
+                data-sidebar-link-active={isActive ? "true" : undefined}
                 className="block touch-manipulation"
               >
                 <div
