@@ -420,8 +420,8 @@ export default function UsersPage() {
 
   if (!currentUser || !canViewUsers) {
     return (
-      <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
-        <div className="mx-auto max-w-4xl space-y-4 page-gutter">
+      <div>
+        <div className="w-full space-y-4">
 
           <div className="flex flex-col gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
             <div className="flex items-center gap-2">
@@ -436,8 +436,8 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30">
-      <div className="mx-auto w-full max-w-7xl space-y-6 page-gutter">
+    <div>
+      <div className="w-full space-y-6">
         <div className="space-y-6">
           <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

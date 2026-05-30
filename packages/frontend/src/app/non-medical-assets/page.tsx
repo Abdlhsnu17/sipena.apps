@@ -409,8 +409,8 @@ export default function NonMedicalAssetsPage() {
   })
 
   return (
-    <div className="bg-linear-to-br from-slate-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/30">
-      <div className="mx-auto w-full max-w-7xl space-y-6 page-gutter">
+    <div>
+      <div className="w-full space-y-6">
         <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <CardContent className="p-0">
             <div className="border-b border-slate-100 bg-slate-50 panel-gutter">

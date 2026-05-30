@@ -270,8 +270,8 @@ export default function SettingsPage() {
   const currentUser = getCurrentUser()
 
   return (
-    <div className="bg-slate-50/60 dark:bg-slate-950/80">
-      <div className="mx-auto w-full max-w-6xl space-y-6 page-gutter">
+    <div>
+      <div className="w-full space-y-6">
         <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-sm">

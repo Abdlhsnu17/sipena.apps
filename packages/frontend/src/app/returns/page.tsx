@@ -986,11 +986,11 @@ export default function ReturnsPage() {
 
   return (
     <main
-      className="min-h-full min-w-0 bg-slate-50/70 dark:bg-slate-950"
+      className="min-h-full min-w-0"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
     >
-      <div className="page-gutter">
-        <div className="mx-auto w-full max-w-7xl space-y-5">
+      <div>
+        <div className="w-full space-y-5">
           <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3 sm:items-center sm:gap-5">

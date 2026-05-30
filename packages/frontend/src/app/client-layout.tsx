@@ -28,8 +28,8 @@ export default function ClientLayout({
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true
-    return window.localStorage.getItem("sipena-sidebar-collapsed") !== "false"
+    if (typeof window === "undefined") return false
+    return window.localStorage.getItem("sipena-sidebar-collapsed") === "true"
   })
 
   useEffect(() => {
@@ -129,6 +129,15 @@ export default function ClientLayout({
     window.localStorage.setItem("sipena-sidebar-collapsed", String(isSidebarCollapsed))
   }, [isSidebarCollapsed])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const openSidebar = () => setIsSidebarCollapsed(false)
+
+    window.addEventListener("sipena-sidebar-open", openSidebar)
+    return () => window.removeEventListener("sipena-sidebar-open", openSidebar)
+  }, [])
+
   const shouldBlockProtectedPage =
     showLayout &&
     (!user || (user && !isAllowedPath) || (user?.mustChangePassword && pathname !== "/settings"))
@@ -168,7 +177,10 @@ export default function ClientLayout({
               toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             />
             <div
-              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-(--app-shell-background) transition-[padding] duration-300 ease-in-out lg:pl-64"
+              className={cn(
+                "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-(--app-shell-background) transition-[padding] duration-300 ease-in-out",
+                isSidebarCollapsed ? "md:pl-20" : "md:pl-64",
+              )}
             >
               <Topbar />
               <main

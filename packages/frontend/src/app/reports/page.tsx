@@ -571,8 +571,8 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-w-0 bg-slate-50/70 dark:bg-slate-950">
-      <div className="mx-auto max-w-7xl space-y-5 page-gutter">
+    <div className="min-w-0">
+      <div className="w-full space-y-5">
         <div className="border-b border-slate-200 pb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>

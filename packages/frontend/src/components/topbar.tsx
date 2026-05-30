@@ -360,7 +360,7 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-      <div className="flex min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 lg:pr-6 xl:px-8">
+      <div className="flex min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 md:pl-4 lg:px-6 xl:px-8">
         <div className="min-w-0 flex-1">
           <p className="min-w-0 truncate text-base font-bold sm:hidden">{formattedCompactDate}</p>
           <p className="hidden min-w-0 truncate font-bold sm:block" style={{ fontSize: 18 }}>{formattedDate}</p>

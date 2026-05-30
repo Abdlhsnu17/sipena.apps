@@ -42,6 +42,8 @@ export default function LoginPage() {
       const result = await authService.login({ nip, password, rememberMe })
 
       if (result.success) {
+        window.localStorage.setItem("sipena-sidebar-collapsed", "false")
+        window.dispatchEvent(new Event("sipena-sidebar-open"))
         toast({
           title: "Login berhasil",
         })

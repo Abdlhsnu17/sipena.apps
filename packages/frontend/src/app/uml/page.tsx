@@ -458,8 +458,8 @@ export default function UMLPage() {
   }, [activeSection])
 
   return (
-    <div className="bg-linear-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/30">
-      <div className="mx-auto max-w-7xl space-y-8 page-gutter">
+    <div>
+      <div className="w-full space-y-8">
           <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"

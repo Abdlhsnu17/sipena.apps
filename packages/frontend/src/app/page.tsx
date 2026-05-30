@@ -296,8 +296,8 @@ export default function DashboardPage() {
   if (!currentUser) return null
 
   return (
-    <div className="flex-1 overflow-auto bg-background">
-      <div className="space-y-6 page-gutter">
+    <div className="min-h-full">
+      <div className="space-y-6">
         {/* Quick Actions */}
         <Card className="rounded-[28px] border-0 bg-linear-to-br from-teal-50/80 via-white/80 to-cyan-50/80 shadow-[0_30px_60px_rgba(14,165,233,0.15)]">
           <CardContent className="space-y-4">

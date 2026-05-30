@@ -1663,11 +1663,11 @@ export default function BorrowingPage() {
 
   return (
     <main
-      className="min-h-full bg-white"
+      className="min-h-full"
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
     >
-      <div className="page-gutter">
-        <div className="mx-auto w-full max-w-7xl space-y-4">
+      <div>
+        <div className="w-full space-y-4">
           <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3 sm:items-center sm:gap-5">

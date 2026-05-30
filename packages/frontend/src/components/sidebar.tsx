@@ -329,7 +329,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   useEffect(() => {
     if (typeof window === "undefined") return
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 768) {
         closeMobileMenu()
       }
     }
@@ -521,11 +521,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     return (first + second).toUpperCase()
   }
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ collapsed = isCollapsed }: { collapsed?: boolean } = {}) => (
     <>
       <div className="border-b border-border bg-(--app-shell-background) px-4 py-3">
-        {isCollapsed ? (
-          <div className="hidden flex-col items-center gap-3 lg:flex">
+        {collapsed ? (
+          <div className="hidden flex-col items-center gap-3 md:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
               <Image
                 src="/images/logo-sipena-transparent.png"
@@ -561,7 +561,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted lg:block"
+              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted md:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
@@ -574,7 +574,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <nav
         className={cn(
           "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
-          isCollapsed ? "p-2" : "p-3",
+          collapsed ? "p-2" : "p-3",
         )}
       >
         {visibleLinks.map((link) => {
@@ -582,7 +582,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             const isActive = isLinkActive(link.href)
             const iconColorClass = isActive ? "text-white" : link.iconColor ?? "text-foreground"
             const isVisualAdjustedIcon = link.href === "/borrowing" || link.href === "/settings" || link.href === "/users"
-            const iconSizeClass = isCollapsed
+            const iconSizeClass = collapsed
               ? isVisualAdjustedIcon
                 ? "w-[22px] h-[22px]"
                 : "w-5 h-5"
@@ -600,7 +600,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                 <div
                   className={cn(
                     "flex items-center rounded-lg transition-colors cursor-pointer select-none",
-                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
+                    collapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
                     isActive ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted",
                   )}
                   title={link.label}
@@ -610,7 +610,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   }}
                 >
                   <Icon className={cn(iconSizeClass, iconColorClass)} />
-                  {isCollapsed ? (
+                  {collapsed ? (
                     <span className="sr-only">{link.label}</span>
                   ) : (
                     <span className="min-w-0 truncate text-sm font-semibold">{link.label}</span>
@@ -621,7 +621,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           })}
       </nav>
 
-      {currentUser && !isCollapsed && (
+      {currentUser && !collapsed && (
         <div className="px-3 pb-0 z-0">
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
             <div className="w-full border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70">
@@ -696,7 +696,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       )}
 
 
-      {currentUser && !isCollapsed && (
+      {currentUser && !collapsed && (
         <div className="px-3 py-2 z-0">
           <div className="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
             <button
@@ -762,7 +762,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           </div>
         </div>
       )}
-      {currentUser && isCollapsed && (
+      {currentUser && collapsed && (
         <div className="flex flex-col items-center p-2 pb-4">
           <Button
             variant="ghost"
@@ -780,10 +780,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <div className="p-4 border-t border-border">
         <div className={cn(
           "flex items-center justify-center gap-2",
-          isCollapsed ? "flex-col gap-1" : ""
+          collapsed ? "flex-col gap-1" : ""
         )}>
           
-          {isCollapsed ? (
+          {collapsed ? (
             <span
               className="flex items-center justify-center w-8 h-8 bg-teal-100 text-teal-700 rounded-full cursor-pointer hover:bg-teal-200 transition"
               title="SiPeNa"
@@ -806,7 +806,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-(--app-shell-background) text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted lg:hidden",
+          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-(--app-shell-background) text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted md:hidden",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Buka menu navigasi"
@@ -817,7 +817,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         </span>
       </button>
 
-      <div className={cn("fixed inset-0 z-40 flex lg:hidden", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
+      <div className={cn("fixed inset-0 z-40 flex md:hidden", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
       >
         <div
           className={cn("absolute inset-0 z-40 bg-black/60 transition-opacity duration-300",
@@ -843,13 +843,13 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           >
             <X className="w-5 h-5 text-foreground" />
           </button>
-          <SidebarContent />
+          <SidebarContent collapsed={false} />
         </aside>
       </div>
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden h-dvh min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-(--app-shell-background) overscroll-contain transition-all duration-300 ease-in-out lg:flex",
+          "fixed inset-y-0 left-0 z-40 hidden h-dvh min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-(--app-shell-background) overscroll-contain transition-all duration-300 ease-in-out md:flex",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
