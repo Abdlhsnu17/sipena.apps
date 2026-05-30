@@ -443,14 +443,11 @@ export default function UsersPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-3">
                 <div className="flex items-start gap-3 sm:items-center">
-                  <div className="rounded-2xl bg-linear-to-br from-teal-500 to-cyan-500 p-3 shadow-lg">
-                    <Users className="h-6 w-6 text-white" />
+                  <div className="rounded-2xl bg-linear-to-br from-teal-500 to-teal-700 p-2.5 shadow-lg">
+                    <Users className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Manajemen Pengguna</h1>
-                    <p className="text-sm text-muted-foreground">
-                      Pengaturan akun, akses role, dan kontrol perubahan data pengguna.
-                    </p>
                   </div>
                 </div>
 
@@ -473,16 +470,7 @@ export default function UsersPage() {
             </div>
           </section>
 
-          <div className="rounded-2xl border border-teal-200/70 bg-white/80 panel-gutter shadow-sm backdrop-blur-sm dark:border-teal-900/50 dark:bg-slate-900/50">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm text-teal-700/90 dark:text-teal-200/90">
-                Dashboard ini menampilkan alur pengelolaan pengguna yang mengikuti kaidah mulai dari otentikasi hingga pemberian akses untuk inventaris medis dan non-medis.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Setiap perubahan pengguna perlu tercatat agar kontrol akses tetap konsisten.
-              </p>
-            </div>
-          </div>
+          {/* Dashboard info card removed to avoid confusion */}
         </div>
 
         {/* Message */}
@@ -819,29 +807,7 @@ export default function UsersPage() {
         )}
       </div>
 
-        {/* Information Section */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-teal-100/80 bg-white/70 panel-gutter shadow">
-            <h3 className="text-lg font-semibold text-teal-800 mb-3">ℹ️ Cara Kerja Sistem</h3>
-            <ul className="text-sm text-teal-700 space-y-2">
-              <li>• Admin memetakan peran dan akses ke dalam diagram UML.</li>
-              <li>• Pengguna dicatat sebagai role self-service untuk alur pinjam dan kembali aset.</li>
-              <li>• Staff diberi akses khusus sesuai alur peminjaman medis atau non-medis.</li>
-              <li>• Leader membantu validasi sesuai use case diagram.</li>
-              <li>• Data pengguna selalu terupdate agar dokumentasi sinkron.</li>
-            </ul>
-          </div>
-
-          <div className="rounded-2xl border border-orange-100/80 bg-white/80 panel-gutter shadow">
-            <h3 className="text-lg font-semibold text-orange-800 mb-3">⚠️ Catatan Penting</h3>
-            <ul className="text-sm text-orange-700 space-y-2">
-              <li>• Gunakan NIP valid agar diagram referensi mudah ditelusuri.</li>
-              <li>• Hindari akun berbagi agar audit trail jelas.</li>
-              <li>• Hapus pengguna tidak aktif sesuai proses UML.</li>
-              <li>• Update peran staff ketika batas akses berubah.</li>
-            </ul>
-          </div>
-        </div>
+        {/* Information Section removed per request */}
       </div>
     </div>
   )
