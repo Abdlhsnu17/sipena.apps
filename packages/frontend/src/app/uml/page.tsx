@@ -466,7 +466,7 @@ export default function UMLPage() {
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Dokumentasi UML</h1>
+              <h1 className="mt-1 text-[18px] font-bold text-foreground">Dokumentasi UML</h1>
             </div>
           </div>
         </section>

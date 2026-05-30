@@ -195,7 +195,7 @@ export default function ActivityArchivePage() {
             <Archive className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Arsip Riwayat Aktivitas</h1>
+            <h1 className="mt-1 text-[18px] font-bold text-foreground">Arsip Riwayat Aktivitas</h1>
           </div>
         </div>
       </section>

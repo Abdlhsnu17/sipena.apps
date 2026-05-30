@@ -998,7 +998,7 @@ export default function ReturnsPage() {
                   <RotateCcw className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengembalian</h1>
+                  <h1 className="text-[18px] font-bold text-foreground">Pengembalian</h1>
                 </div>
               </div>
             </div>

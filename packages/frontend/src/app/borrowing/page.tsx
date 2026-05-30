@@ -1675,7 +1675,7 @@ export default function BorrowingPage() {
                   <HandHelping className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman</h1>
+                  <h1 className="text-[18px] font-bold text-foreground">Peminjaman</h1>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">

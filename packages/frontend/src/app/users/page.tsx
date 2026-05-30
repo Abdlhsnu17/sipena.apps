@@ -447,7 +447,7 @@ export default function UsersPage() {
                     <Users className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Manajemen Pengguna</h1>
+                    <h1 className="text-[18px] font-bold text-foreground">Manajemen Pengguna</h1>
                   </div>
                 </div>
 

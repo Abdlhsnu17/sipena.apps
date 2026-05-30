@@ -275,7 +275,7 @@ export default function SettingsPage() {
               <Settings className="h-5 w-5 text-white" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengaturan</h1>
+              <h1 className="text-[18px] font-bold text-foreground">Pengaturan</h1>
             </div>
           </div>
         </section>

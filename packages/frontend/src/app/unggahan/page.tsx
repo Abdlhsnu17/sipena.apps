@@ -441,7 +441,7 @@ export default function UnggahanPage() {
                     <UploadCloud className="h-5 w-5" />
                   </div>
                   <div className="space-y-2">
-                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">Unggahan</h1>
+                    <h1 className="text-[18px] font-semibold tracking-tight">Unggahan</h1>
                     <p className="max-w-2xl text-sm leading-6 text-cyan-50/90">
                       Pusat arsip file dengan alur unggah yang lebih bersih, cepat, dan mudah dipantau.
                     </p>
