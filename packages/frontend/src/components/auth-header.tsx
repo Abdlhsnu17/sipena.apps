@@ -16,13 +16,13 @@ export default function AuthHeader({
 }: AuthHeaderProps) {
   if (variant === "inline") {
     return (
-      <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-2 text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-1 text-center">
         <Image
           src="/images/logo-sipena-clean.png"
           alt="Logo SiPeNa"
           width={160}
           height={160}
-          className="h-[8.75rem] w-[8.75rem] shrink-0 object-contain"
+          className="h-auto w-[8.75rem] shrink-0 object-contain"
           priority
         />
         <div className="space-y-0">
