@@ -383,14 +383,11 @@ export default function MedicalAssetsPage() {
             <div className="border-b border-slate-100 bg-slate-50 panel-gutter">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-3xl space-y-3">
-                  <div className="inline-flex p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg">
+                  <div className="inline-flex rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
                     <Stethoscope className="w-5 h-5 text-white" />
                   </div>
                   <div className="space-y-2">
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">Inventaris Medis</h1>
-                    <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                      Kelola aset penunjang operasional dengan tampilan inventaris yang lebih rapi dan mudah dipantau.
-                    </p>
                   </div>
                 </div>
                 {canManageInventory && (

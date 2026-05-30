@@ -191,11 +191,10 @@ export default function ActivityArchivePage() {
     <div className="min-w-0 space-y-5">
       <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
         <div className="flex items-start gap-3 sm:items-center sm:gap-5">
-          <div className="rounded-lg bg-linear-to-br from-slate-500 to-slate-700 p-2">
+            <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
             <Archive className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Arsip aktivitas</p>
             <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Arsip Riwayat Aktivitas</h1>
           </div>
         </div>

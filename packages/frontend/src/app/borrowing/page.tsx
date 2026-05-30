@@ -1671,15 +1671,11 @@ export default function BorrowingPage() {
           <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3 sm:items-center sm:gap-5">
-                <div className="p-2 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg">
+                <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
                   <HandHelping className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-foreground sm:text-2xl">Peminjaman</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Audit, validasi, dan monitoring status inventaris dalam satu halaman.
-                  </p>
-
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">

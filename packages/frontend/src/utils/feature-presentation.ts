@@ -13,7 +13,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#5eead4",
   },
   dokumentasi_unggahan: {
-    label: "Dokumentasi UML & Unggahan",
+    label: "Dokumentasi UML",
     backgroundColor: "#e2e8f0",
     textColor: "#475569",
     borderColor: "#cbd5e1",
@@ -37,7 +37,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#fca5a5",
   },
   laporan: {
-    label: "Laporan",
+    label: "Laporan & Analitik",
     backgroundColor: "#f3e8ff",
     textColor: "#9333ea",
     borderColor: "#d8b4fe",
@@ -55,7 +55,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#fcd34d",
   },
   peminjaman_alat: {
-    label: "Peminjaman Alat",
+    label: "Peminjaman",
     backgroundColor: "#fef3c7",
     textColor: "#d97706",
     borderColor: "#fcd34d",
@@ -67,7 +67,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#fdba74",
   },
   pengembalian_alat: {
-    label: "Pengembalian Alat",
+    label: "Pengembalian",
     backgroundColor: "#dcfce7",
     textColor: "#16a34a",
     borderColor: "#86efac",

@@ -1188,7 +1188,7 @@ export default function MaintenancePage() {
       case "requested":
         return "border-slate-200 bg-slate-50 text-slate-700"
       case "scheduled":
-        return "border-sky-200 bg-sky-50 text-sky-700"
+        return "border-teal-200 bg-teal-50 text-teal-700"
       case "in_progress":
         return "border-teal-200 bg-teal-50 text-teal-700"
       case "completed":
@@ -1217,15 +1217,11 @@ export default function MaintenancePage() {
           <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3 sm:items-center sm:gap-5">
-                <div className="p-2 bg-linear-to-br from-teal-500 to-cyan-500 rounded-lg">
-                  <ShieldCheck className="w-5 h-5 text-white" />
+                <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
+                  <CalendarDays className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pemeliharaan Sarana</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Monitoring pengajuan, jadwal, proses perbaikan, dan validasi pemeliharaan.
-                  </p>
-
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -1292,7 +1288,7 @@ export default function MaintenancePage() {
             <CardHeader className="space-y-3 pb-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-sky-50 p-2 text-sky-700">
+                  <div className="rounded-xl bg-teal-50 p-2 text-teal-700">
                     <CalendarDays className="h-5 w-5" />
                   </div>
                   <div>
@@ -1741,7 +1737,7 @@ export default function MaintenancePage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                    className="h-8 w-8 rounded-lg p-0 text-red-600 hover:bg-red-50"
+                                    className="h-8 w-8 rounded-lg p-0 text-teal-600 hover:bg-teal-50"
                                   onClick={() => handleDeleteMaintenance(m.id)}
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1813,7 +1809,7 @@ export default function MaintenancePage() {
           </CardHeader>
           <CardContent className="px-0">
             {isHistoryMinimized ? (
-              <div className="rounded-2xl border border-green-100 bg-green-50/80 px-4 py-4 text-center text-[14px] text-green-900">
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-[14px] text-teal-900">
                 Section riwayat pemeliharaan disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
               </div>
             ) : (

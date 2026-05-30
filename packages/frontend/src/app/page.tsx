@@ -61,7 +61,7 @@ const quickActionLinks: QuickActionLink[] = [
   },
   {
     key: "reports",
-    label: "Laporan",
+    label: "Laporan & Analitik",
     description: "Analitik & unggahan PDF/Excel/Word.",
     href: "/reports",
     icon: BarChart3,

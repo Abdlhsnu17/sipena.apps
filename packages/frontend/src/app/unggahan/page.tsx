@@ -438,7 +438,7 @@ export default function UnggahanPage() {
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-3xl space-y-3">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/14 ring-1 ring-white/20 backdrop-blur">
-                    <UploadCloud className="h-6 w-6" />
+                    <UploadCloud className="h-5 w-5" />
                   </div>
                   <div className="space-y-2">
                     <h1 className="text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">Unggahan</h1>
@@ -511,8 +511,8 @@ export default function UnggahanPage() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-[28px] border border-cyan-100 bg-linear-to-br from-cyan-50 via-white to-teal-50/80 p-5 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-[0.25em] text-cyan-700/70">Format</p>
+              <div className="rounded-[28px] border border-teal-100 bg-linear-to-br from-teal-50 via-white to-teal-50/80 p-5 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-[0.25em] text-teal-700/70">Format</p>
                 <p className="mt-2 text-lg font-semibold text-slate-900">PDF, Word, Excel, dan gambar.</p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   Tipe yang didukung: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG, dan WEBP.

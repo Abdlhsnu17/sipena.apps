@@ -613,15 +613,11 @@ export default function ReportsPage() {
       <div className="w-full space-y-5">
         <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-3 sm:items-center sm:gap-5">
-            <div className="p-2 bg-linear-to-br from-purple-500 to-indigo-500 rounded-lg">
+            <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
               <BarChart3 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>
               <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Laporan & Analitik</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Pantau aset, pemeliharaan, peminjaman, dan penggunaan alat dalam satu tampilan ringkas.
-              </p>
             </div>
           </div>
         </section>

@@ -846,12 +846,11 @@ export default function AssetUsagePage() {
     <div className="min-h-full w-full space-y-5">
       <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="rounded-lg bg-linear-to-br from-teal-500 to-cyan-500 p-2.5">
+          <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
             <ClipboardList className="h-5 w-5 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground sm:text-2xl">Penggunaan</h1>
-            <p className="mt-1 text-[12px] text-muted-foreground">Catat pemakaian alat untuk melihat frekuensi dan beban pemakaian.</p>
           </div>
         </div>
       </section>

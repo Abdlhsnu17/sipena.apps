@@ -271,14 +271,11 @@ export default function SettingsPage() {
       <div className="w-full space-y-6">
         <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-4">
-            <div className="rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 p-2.5 shadow-sm">
+            <div className="rounded-xl bg-linear-to-br from-teal-500 to-teal-700 p-2.5 shadow-sm">
               <Settings className="h-5 w-5 text-white" />
             </div>
             <div className="space-y-1">
               <h1 className="text-xl font-bold text-foreground sm:text-2xl">Pengaturan</h1>
-              <p className="text-sm text-muted-foreground">
-                Kelola data profil, keamanan akun, dan tampilan aplikasi dari satu halaman yang ringkas.
-              </p>
             </div>
           </div>
         </section>

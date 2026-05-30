@@ -11,8 +11,8 @@ import { getFeatureLabel } from "@/utils/feature-presentation";
 import { toPublicPhotoUrl } from "@/utils/photoUrl";
 import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role";
 import {
-    BarChart3,
     Archive,
+    BarChart3,
     Building,
     Calendar,
     ChevronDown,
@@ -51,6 +51,8 @@ type SidebarLink = {
   iconColor?: string
   searchKeywords?: string[]
 }
+
+const featureIconColor = "text-teal-600"
 
 const normalizeActivityValue = (value?: string | null) =>
   String(value ?? "")
@@ -400,66 +402,66 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const fullAccessLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
-    { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
+    { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-teal-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
-    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
+    { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/users", label: "Manajemen Pengguna", icon: Users, iconColor: "text-amber-600", searchKeywords: ["pengguna", "user", "nip", "nik", "akun"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
-    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const staffLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
-    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
+    { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const staffPjLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
-    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
+    { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const technicianLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
-    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
+    { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const userLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
-    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
-    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
+    { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
-    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
+    { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
@@ -588,15 +590,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         {visibleLinks.map((link) => {
             const Icon = link.icon
             const isActive = isLinkActive(link.href)
-            const iconColorClass = isActive ? "text-white" : link.iconColor ?? "text-foreground"
-            const isVisualAdjustedIcon = link.href === "/borrowing" || link.href === "/settings" || link.href === "/users"
-            const iconSizeClass = collapsed
-              ? isVisualAdjustedIcon
-                ? "w-[22px] h-[22px]"
-                : "w-5 h-5"
-              : isVisualAdjustedIcon
-                ? "w-[18px] h-[18px]"
-                : "w-4 h-4"
+            const iconColorClass = isActive ? "text-white" : featureIconColor
+            const iconSizeClass = "w-5 h-5"
             return (
               <Link 
                 key={link.href} 
@@ -621,7 +616,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   {collapsed ? (
                     <span className="sr-only">{link.label}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-sm font-semibold">{link.label}</span>
+                    <span className="min-w-0 truncate text-[13px] font-medium leading-tight">{link.label}</span>
                   )}
                 </div>
               </Link>
@@ -636,7 +631,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Clock3 className="h-4 w-4 text-teal-600" />
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
+                  <p className="text-[13px] font-semibold tracking-[0.08em] text-slate-600 dark:text-slate-300">
                     Riwayat Aktivitas
                   </p>
                 </div>
@@ -671,7 +666,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             >
               <div className="px-2 py-1.5">
                 {recentActivities.length === 0 ? (
-                  <p className="py-2 text-center text-xs text-muted-foreground">Belum ada aktivitas tercatat.</p>
+                  <p className="py-2 text-center text-[13px] text-muted-foreground">Belum ada aktivitas tercatat.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {recentActivities.map((activity) => (
@@ -679,26 +674,26 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                         key={activity.id}
                         className="rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 dark:border-slate-800/70 dark:bg-slate-900/60"
                       >
-                        <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">
+                        <p className="text-[13px] font-semibold text-teal-700 dark:text-teal-300">
                           {getFeatureLabel(activity.feature)}
                         </p>
-                        <p className="text-sm leading-snug text-foreground">{formatActivityDescription(activity)}</p>
+                        <p className="text-[13px] leading-snug text-foreground">{formatActivityDescription(activity)}</p>
                         {getActivityItemName(activity) ? (
-                          <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">
+                          <p className="mt-1 text-[13px] text-slate-700 dark:text-slate-300">
                             Nama Alat: {getActivityItemName(activity)}
                           </p>
                         ) : null}
                         {getActivityItemCode(activity) ? (
-                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-[13px] tracking-[0.08em] text-slate-500 dark:text-slate-400">
                             Kode Barang: {getActivityItemCode(activity)}
                           </p>
                         ) : null}
                         {getActivityTransactionId(activity) ? (
-                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-[13px] tracking-[0.08em] text-slate-500 dark:text-slate-400">
                             No ID: {getActivityTransactionId(activity)}
                           </p>
                         ) : null}
-                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <p className="mt-1 text-[13px] tracking-[0.08em] text-muted-foreground">
                           {formatActivityTime(activity.createdAt)}
                         </p>
                       </div>
@@ -719,7 +714,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               onClick={() => setIsProfileExpanded(!isProfileExpanded)}
               className="w-full flex items-center justify-between gap-2 border-b border-slate-200/70 px-4 py-2 dark:border-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-t-lg cursor-pointer"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
+              <p className="text-[13px] font-semibold tracking-[0.08em] text-slate-600 dark:text-slate-300">
                 Profil Akun
               </p>
               <ChevronDown
@@ -747,8 +742,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="text-base font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
-                      <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-0.5 text-xs leading-tight">
+                      <p className="text-[13px] font-semibold leading-tight text-foreground wrap-break-word">{currentUser.name}</p>
+                      <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-0.5 text-[13px] leading-tight">
                         <span className="text-muted-foreground">NIP</span>
                         <span className="min-w-0 font-semibold text-slate-700 break-all dark:text-slate-200">{currentUser.nip}</span>
                         <span className="text-muted-foreground">Role</span>
@@ -768,7 +763,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]"
+                className="w-full justify-center gap-2 text-[13px] font-semibold tracking-[0.08em]"
                 onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4" />
@@ -807,7 +802,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               <Sparkles className="w-6 h-6" />
             </span>
           ) : (
-            <span className="flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 text-sm font-medium rounded-full cursor-pointer hover:bg-teal-200 transition">
+            <span className="flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 text-[13px] font-medium rounded-full cursor-pointer hover:bg-teal-200 transition">
               <Sparkles className="w-4.5 h-4.5" />
               SiPeNa
             </span>

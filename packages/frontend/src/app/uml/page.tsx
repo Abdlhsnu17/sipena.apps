@@ -462,15 +462,11 @@ export default function UMLPage() {
       <div className="w-full space-y-8">
         <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
           <div className="flex items-start gap-3 sm:items-center sm:gap-5">
-            <div className="rounded-lg bg-linear-to-br from-purple-500 to-indigo-500 p-2">
+            <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Dokumentasi sistem</p>
               <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Dokumentasi UML</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Lihat rangkuman alur proses, diagram use case, dan dokumentasi unggahan dalam satu tampilan.
-              </p>
             </div>
           </div>
         </section>
