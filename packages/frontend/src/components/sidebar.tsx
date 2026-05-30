@@ -35,7 +35,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ComponentType, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useState, type ComponentType, type MouseEvent, type SyntheticEvent } from "react";
 
 
 
@@ -53,6 +53,7 @@ type SidebarLink = {
 }
 
 const featureIconColor = "text-teal-600"
+const SIDEBAR_NAV_SCROLL_KEY = "sipena-sidebar-nav-scroll-top"
 
 const normalizeActivityValue = (value?: string | null) =>
   String(value ?? "")
@@ -273,7 +274,6 @@ const formatActivityTime = (value: string) => {
 export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const navRef = useRef<HTMLElement | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [profileImageError, setProfileImageError] = useState(false)
@@ -297,17 +297,17 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   }, [closeMobileMenu, pathname])
 
   useEffect(() => {
-    const navElement = navRef.current
-    if (!navElement) return
+    if (typeof window === "undefined") return
+
+    const savedScrollTopValue = window.sessionStorage.getItem(SIDEBAR_NAV_SCROLL_KEY)
+    if (savedScrollTopValue === null) return
+
+    const savedScrollTop = Number(savedScrollTopValue)
+    if (!Number.isFinite(savedScrollTop)) return
 
     const animationFrameId = window.requestAnimationFrame(() => {
-      const activeLink = navElement.querySelector<HTMLElement>('[data-sidebar-link-active="true"]')
-      if (!activeLink) return
-
-      activeLink.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-        behavior: "auto",
+      document.querySelectorAll<HTMLElement>("[data-sidebar-nav]").forEach((navElement) => {
+        navElement.scrollTop = savedScrollTop
       })
     })
 
@@ -499,9 +499,18 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           : staffLinks
   const visibleLinks = isCollapsed ? links : links
 
-  const handleLinkClick = useCallback(() => {
+  const saveSidebarScrollTop = useCallback((scrollTop: number) => {
+    if (typeof window === "undefined") return
+    window.sessionStorage.setItem(SIDEBAR_NAV_SCROLL_KEY, String(scrollTop))
+  }, [])
+
+  const handleLinkClick = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
+    const navElement = event?.currentTarget.closest<HTMLElement>("[data-sidebar-nav]")
+    if (navElement) {
+      saveSidebarScrollTop(navElement.scrollTop)
+    }
     closeMobileMenu()
-  }, [closeMobileMenu])
+  }, [closeMobileMenu, saveSidebarScrollTop])
 
   const isLinkActive = useCallback(
     (href: string) => {
@@ -601,7 +610,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       </div>
 
       <nav
-        ref={navRef}
+        data-sidebar-nav
+        onScroll={(event) => saveSidebarScrollTop(event.currentTarget.scrollTop)}
         className={cn(
           "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
           collapsed ? "p-2" : "p-3",
