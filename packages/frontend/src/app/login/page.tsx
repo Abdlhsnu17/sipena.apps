@@ -77,14 +77,14 @@ export default function LoginPage() {
 
       <div className="relative z-10 flex w-full justify-center px-2 sm:px-4">
         <div className="w-full max-w-md" data-auth-card>
-          <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-lg sm:p-8">
+          <div className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-3xl border border-white/20 bg-white/95 p-5 shadow-2xl backdrop-blur-lg sm:p-6">
             <AuthHeader
               title="SiPeNa"
               description="Masuk untuk mengelola inventaris, pemeliharaan, dan peminjaman sarana."
               variant="inline"
             />
 
-            <form onSubmit={handleSubmit} className="mt-3 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-2 space-y-3">
               <div>
                 <label htmlFor="nip" className="mb-2 block text-sm font-medium text-foreground">
                   Username atau Email
@@ -173,7 +173,7 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              <div className="border-t border-gray-100 pt-4 text-center">
+              <div className="border-t border-gray-100 pt-3 text-center">
                 <p className="text-sm text-muted-foreground">
                   Belum punya akun?{" "}
                   <button

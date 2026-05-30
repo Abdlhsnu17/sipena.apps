@@ -83,14 +83,14 @@ export default function RegisterPage() {
         className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardContent className="space-y-6 pt-6 sm:pt-8">
+        <CardContent className="space-y-4 pt-5 sm:pt-6">
           <AuthHeader
             title="Daftar Akun"
             description="Buat akun baru untuk mulai menggunakan SiPeNa."
             variant="inline"
           />
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label htmlFor="nip" className="block text-sm font-medium text-foreground mb-2">
                 NIP

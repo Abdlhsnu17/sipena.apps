@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
         className="relative z-10 w-full max-w-md max-h-[calc(100svh-2rem)] overflow-y-auto border border-white/20 bg-white/95 shadow-2xl backdrop-blur-lg"
         data-auth-card
       >
-        <CardContent className="space-y-6 pt-6 sm:pt-8">
+        <CardContent className="space-y-4 pt-5 sm:pt-6">
           <AuthHeader
             title="Lupa Password"
             description="Masukkan NIP untuk menerima kode verifikasi reset password."
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
             variant="inline"
           />
           {step === "request" ? (
-            <form onSubmit={handleRequestCode} className="space-y-4">
+            <form onSubmit={handleRequestCode} className="space-y-3">
               <div>
                 <label htmlFor="nip" className="block text-sm font-medium text-foreground mb-2">
                   NIP
@@ -161,7 +161,7 @@ export default function ResetPasswordPage() {
               </Button>
             </form>
           ) : (
-            <form onSubmit={handleResetPassword} className="space-y-4">
+            <form onSubmit={handleResetPassword} className="space-y-3">
               <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-700">
                 Kode verifikasi tersedia di <span className="font-medium">{deliveryTarget || "aplikasi lokal"}</span>.
                 {expiresInMinutes ? ` Berlaku selama ${expiresInMinutes} menit.` : ""}
