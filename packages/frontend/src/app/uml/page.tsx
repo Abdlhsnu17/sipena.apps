@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getCurrentUser } from "@/services/auth-utils";
 import { cn } from "@/utils";
 import { normalizeUserRole } from "@/utils/role";
-import { ArrowRight, Box, Database, UploadCloud, Users, Workflow, Zap } from "lucide-react";
+import { ArrowRight, Box, Database, FileText, UploadCloud, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -460,13 +460,28 @@ export default function UMLPage() {
   return (
     <div>
       <div className="w-full space-y-8">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+            <div className="rounded-lg bg-linear-to-br from-purple-500 to-indigo-500 p-2">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Dokumentasi sistem</p>
+              <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Dokumentasi UML</h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Lihat rangkuman alur proses, diagram use case, dan dokumentasi unggahan dalam satu tampilan.
+              </p>
+            </div>
+          </div>
+        </section>
+
           <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"
             onClick={() => setActiveSection("activity")}
             className={cn(
               "group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-orange-500/70 via-amber-500/70 to-rose-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500",
-              activeSection === "activity" && "ring-2 ring-orange-400 ring-offset-2 ring-offset-[var(--app-shell-background)]",
+              activeSection === "activity" && "ring-2 ring-orange-400 ring-offset-2 ring-offset-(--app-shell-background)",
             )}
             aria-label="Lihat Activity Diagram"
           >
@@ -489,7 +504,7 @@ export default function UMLPage() {
             onClick={() => setActiveSection("use-case")}
             className={cn(
               "group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-purple-500/70 via-fuchsia-500/70 to-pink-500/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500",
-              activeSection === "use-case" && "ring-2 ring-purple-400 ring-offset-2 ring-offset-[var(--app-shell-background)]",
+              activeSection === "use-case" && "ring-2 ring-purple-400 ring-offset-2 ring-offset-(--app-shell-background)",
             )}
             aria-label="Lihat Use Case Diagram"
           >

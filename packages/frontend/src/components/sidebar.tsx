@@ -12,6 +12,7 @@ import { toPublicPhotoUrl } from "@/utils/photoUrl";
 import { getUserRoleLabel, isAdminOrLeaderRole, isStaffPjRole, isTechnicianRole, isUserRole } from "@/utils/role";
 import {
     BarChart3,
+    Archive,
     Building,
     Calendar,
     ChevronDown,
@@ -302,7 +303,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       return
     }
     try {
-      const response = await userActivityService.getMyActivities(7)
+      const response = await userActivityService.getMyActivities(10)
       if (response.success) {
         setRecentActivities(response.data.filter((activity) => !isSearchActivity(activity)))
       }
@@ -405,6 +406,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/users", label: "Manajemen Pengguna", icon: Users, iconColor: "text-amber-600", searchKeywords: ["pengguna", "user", "nip", "nik", "akun"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
@@ -419,6 +421,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
@@ -432,6 +435,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
@@ -441,6 +445,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
     { href: "/uml", label: "Dokumentasi", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
+    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
@@ -450,6 +456,8 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
+    { href: "/reports", label: "Laporan", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/activity-archive", label: "Arsip Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: "text-green-600", searchKeywords: ["kembali", "pengembalian", "return"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
@@ -646,6 +654,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   />
                 </button>
               </div>
+              <Link
+                href="/activity-archive"
+                onClick={handleLinkClick}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Lihat Arsip
+              </Link>
             </div>
             <div
               className={cn(

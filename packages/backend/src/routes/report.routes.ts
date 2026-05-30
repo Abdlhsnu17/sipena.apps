@@ -127,7 +127,8 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('category').optional().trim(),
     query('type').optional().trim(),
-    query('status').optional().trim()
+    query('status').optional().trim(),
+    query('userId').optional().isInt({ min: 1 })
   ],
   reportController.exportPdf
 );
@@ -140,7 +141,8 @@ router.get(
     query('endDate').optional().isISO8601(),
     query('category').optional().trim(),
     query('type').optional().trim(),
-    query('status').optional().trim()
+    query('status').optional().trim(),
+    query('userId').optional().isInt({ min: 1 })
   ],
   reportController.exportExcel
 );

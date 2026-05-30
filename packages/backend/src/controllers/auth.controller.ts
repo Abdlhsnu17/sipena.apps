@@ -234,7 +234,6 @@ export class AuthController {
       const file = (req.file as Express.Multer.File | undefined);
       
       if (file) {
-        console.log(`[Upload] Profile photo uploaded: ${file.filename}, size: ${file.size} bytes, mime: ${file.mimetype}`);
       }
       
       const photoPath = file ? `profiles/${file.filename}` : undefined;
@@ -251,7 +250,6 @@ export class AuthController {
       }, photoPath);
 
       if (result.success) {
-        console.log(`[Upload] Profile update successful for user ${userId}${photoPath ? ` with photo: ${photoPath}` : ''}`);
       } else {
         console.error(`[Upload] Profile update failed: ${result.message}`);
       }

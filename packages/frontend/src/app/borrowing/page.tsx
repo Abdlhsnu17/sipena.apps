@@ -537,7 +537,7 @@ export default function BorrowingPage() {
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
   const currentUserId = Number(currentUser?.id)
 
-  const isBorrowingOwner = (borrowing: ApiBorrowing) =>
+  const _isBorrowingOwner = (borrowing: ApiBorrowing) =>
     Number.isFinite(currentUserId) && currentUserId > 0 && Number(borrowing.userId) === currentUserId
 
   const canManageBorrowingExtension = (borrowing: ApiBorrowing) => {
@@ -1299,7 +1299,7 @@ export default function BorrowingPage() {
     })
   }
 
-  const exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
+  const _exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
     void exportNarrativeReport(format, {
       title: "Formulir Peminjaman",
       subtitle: "RINGKASAN FORMULIR PEMINJAMAN",
@@ -1312,7 +1312,7 @@ export default function BorrowingPage() {
     })
   }
 
-  const buildBorrowingLetterSections = (entry: ApiBorrowing): DocumentSection[] => {
+  const buildBorrowingLetterSections = (_entry: ApiBorrowing): DocumentSection[] => {
     const main: SectionLine[] = []
     appendLine(main, 'Nomor Surat', '')
     appendLine(main, 'Pengaju', '')

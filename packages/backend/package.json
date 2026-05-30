@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "migrate": "tsx src/scripts/run-migrations.ts",
     "migrate:user-security-columns": "tsx scripts/migrate-user-security-columns.ts",
+    "migrate:prod": "node dist/scripts/run-migrations.js",
     "start": "node dist/index.js",
     "test": "jest --passWithNoTests",
     "lint": "eslint src --ext .ts",

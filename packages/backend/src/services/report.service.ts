@@ -4,6 +4,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
+import { hasAnyRole } from '../utils/role';
 import { getReportUploadsDir } from '../utils/storage-paths';
 
 interface ReportFilters {
@@ -13,6 +14,9 @@ interface ReportFilters {
   type?: string;
   status?: string;
   reportType?: string;
+  userId?: string;
+  actorUserId?: number | string | null;
+  actorRole?: string | null;
 }
 
 interface StatsRow extends RowDataPacket {
@@ -102,6 +106,11 @@ interface ExportSheet {
   columns?: string[];
 }
 
+interface UploadValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
 interface DueBorrowingRow extends RowDataPacket {
   id: number;
   borrowing_code: string | null;
@@ -145,9 +154,60 @@ const formatCellValue = (value: unknown): string | number | Date => {
 const escapePdfText = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'usage' | 'all' => {
-  if (value === 'borrowing' || value === 'maintenance' || value === 'usage' || value === 'all') return value;
+const formatPdfValue = (value: unknown): string => {
+  const formatted = formatCellValue(value);
+  if (formatted instanceof Date) {
+    return formatted.toLocaleString('id-ID');
+  }
+  return String(formatted).replace(/\s+/g, ' ').trim();
+};
+
+const getFilterSummary = (filters: ReportFilters): string[] => [
+  filters.startDate || filters.endDate ? `Periode: ${filters.startDate || 'awal'} s/d ${filters.endDate || 'akhir'}` : 'Periode: Semua data',
+  filters.category ? `Kategori: ${filters.category}` : null,
+  filters.type ? `Jenis: ${filters.type}` : null,
+  filters.status ? `Status: ${filters.status}` : null,
+  filters.userId ? `User ID: ${filters.userId}` : null,
+].filter((item): item is string => Boolean(item));
+
+const wrapText = (value: string, width: number): string[] => {
+  if (value.length <= width) return [value];
+  const words = value.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  words.forEach((word) => {
+    if (!current) {
+      current = word;
+      return;
+    }
+    if (`${current} ${word}`.length <= width) {
+      current = `${current} ${word}`;
+      return;
+    }
+    lines.push(current);
+    current = word;
+  });
+
+  if (current) lines.push(current);
+  return lines.flatMap((line) => {
+    if (line.length <= width) return [line];
+    const chunks: string[] = [];
+    for (let index = 0; index < line.length; index += width) {
+      chunks.push(line.slice(index, index + width));
+    }
+    return chunks;
+  });
+};
+
+const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'usage' | 'activity' | 'all' => {
+  if (value === 'borrowing' || value === 'maintenance' || value === 'usage' || value === 'activity' || value === 'all') return value;
   return 'assets';
+};
+
+const toPositiveNumber = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
 export class ReportService {
@@ -212,6 +272,31 @@ export class ReportService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async validateUploadFileSignature(file: Express.Multer.File): Promise<UploadValidationResult> {
+    const extension = path.extname(file.originalname).toLowerCase();
+    const handle = await fsPromises.open(file.path, 'r');
+    try {
+      const buffer = Buffer.alloc(12);
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+      const header = buffer.subarray(0, bytesRead);
+      const startsWith = (...bytes: number[]) => bytes.every((byte, index) => header[index] === byte);
+
+      const valid =
+        (extension === '.pdf' && header.subarray(0, 4).toString('ascii') === '%PDF') ||
+        ((extension === '.png') && startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) ||
+        ((extension === '.jpg' || extension === '.jpeg') && startsWith(0xff, 0xd8, 0xff)) ||
+        (extension === '.webp' && header.subarray(0, 4).toString('ascii') === 'RIFF' && header.subarray(8, 12).toString('ascii') === 'WEBP') ||
+        ((extension === '.docx' || extension === '.xlsx') && startsWith(0x50, 0x4b, 0x03, 0x04)) ||
+        ((extension === '.doc' || extension === '.xls') && startsWith(0xd0, 0xcf, 0x11, 0xe0));
+
+      return valid
+        ? { valid: true }
+        : { valid: false, message: 'Isi file tidak sesuai dengan ekstensi laporan' };
+    } finally {
+      await handle.close();
     }
   }
 
@@ -616,6 +701,52 @@ export class ReportService {
     return { success: true, message: 'Usage report generated successfully', data: rows };
   }
 
+  async getActivityReport(filters: ReportFilters): Promise<ApiResponse> {
+    const actorUserId = toPositiveNumber(filters.actorUserId);
+    const requestedUserId = toPositiveNumber(filters.userId);
+    const canViewOthers = hasAnyRole(filters.actorRole, ['admin', 'leader']);
+    const scopedUserId = canViewOthers ? requestedUserId : actorUserId;
+
+    if (!actorUserId) {
+      return { success: false, message: 'User tidak valid', data: [] };
+    }
+
+    let query = `
+      SELECT
+        ual.id,
+        ual.user_id,
+        u.name AS user_name,
+        u.nip AS user_nip,
+        ual.feature,
+        ual.action,
+        ual.description,
+        ual.created_at
+      FROM user_activity_logs ual
+      LEFT JOIN users u ON u.id = ual.user_id
+      WHERE NOT (ual.feature = 'pencarian' AND ual.action = 'search')`;
+    const params: Array<string | number> = [];
+
+    if (scopedUserId) {
+      query += ' AND ual.user_id = ?';
+      params.push(scopedUserId);
+    }
+
+    if (filters.startDate) {
+      query += ' AND DATE(ual.created_at) >= ?';
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query += ' AND DATE(ual.created_at) <= ?';
+      params.push(filters.endDate);
+    }
+
+    query += ' ORDER BY ual.created_at DESC';
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+    return { success: true, message: 'Activity report generated successfully', data: rows };
+  }
+
   async getUploadReport(filters: ReportFilters): Promise<ApiResponse> {
     let query = 'SELECT * FROM report_uploads WHERE 1=1';
     const params: any[] = [];
@@ -675,12 +806,13 @@ export class ReportService {
       ];
     }
 
-    const [summaryRows, assetResult, borrowingResult, maintenanceResult, usageResult, uploadResult] = await Promise.all([
+    const [summaryRows, assetResult, borrowingResult, maintenanceResult, usageResult, activityResult, uploadResult] = await Promise.all([
       this.getDashboardSummaryRows(),
       this.getAssetReport(filters),
       this.getBorrowingReport(filters),
       this.getMaintenanceReport(filters),
       this.getUsageReport(filters),
+      this.getActivityReport(filters),
       this.getUploadReport(filters),
     ]);
 
@@ -707,6 +839,11 @@ export class ReportService {
         columns: this.getExportColumns((usageResult.data ?? []) as RowDataPacket[], 'usage'),
       },
       {
+        title: 'Aktivitas',
+        rows: ((activityResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((activityResult.data ?? []) as RowDataPacket[], 'activity'),
+      },
+      {
         title: 'Unggahan',
         rows: ((uploadResult.data ?? []) as unknown) as Record<string, unknown>[],
         columns: ['id', 'filename', 'contentType', 'sizeBytes', 'uploadedAt', 'notes', 'downloadPath'],
@@ -728,6 +865,10 @@ export class ReportService {
       const result = await this.getUsageReport(filters);
       return (result.data ?? []) as RowDataPacket[];
     }
+    if (reportType === 'activity') {
+      const result = await this.getActivityReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
     const result = await this.getAssetReport(filters);
     return (result.data ?? []) as RowDataPacket[];
   }
@@ -740,6 +881,8 @@ export class ReportService {
         return 'Laporan Pemeliharaan';
       case 'usage':
         return 'Laporan Penggunaan';
+      case 'activity':
+        return 'Laporan Riwayat Aktivitas';
       case 'all':
         return 'Laporan Terpadu';
       default:
@@ -766,11 +909,16 @@ export class ReportService {
       'started_at',
       'ended_at',
       'usage_count',
+      'user_id',
+      'user_name',
+      'user_nip',
+      'feature',
+      'action',
+      'description',
       'condition_before',
       'condition_after',
       'condition',
       'location',
-      'user_name',
       'nip',
       'borrow_date',
       'due_date',
@@ -799,6 +947,8 @@ export class ReportService {
         return ['id', 'maintenance_code', 'asset_name', 'type', 'status', 'scheduled_date', 'technician'];
       case 'usage':
         return ['id', 'asset_name', 'asset_code', 'room_name', 'usage_context', 'started_at', 'ended_at', 'usage_count'];
+      case 'activity':
+        return ['id', 'user_name', 'user_nip', 'feature', 'action', 'description', 'created_at'];
       default:
         return ['id', 'asset_code', 'name', 'category', 'type', 'status', 'location'];
     }
@@ -807,30 +957,41 @@ export class ReportService {
   async exportToPdf(filters: ReportFilters): Promise<Buffer> {
     const sheets = await this.getExportSheets(filters);
     const title = this.getExportTitle(filters.reportType);
-    const lines = [title, `Dibuat: ${new Date().toLocaleString('id-ID')}`];
+    const lines = [
+      'SIPENA - RSUP Persahabatan',
+      title,
+      `Dibuat: ${new Date().toLocaleString('id-ID')}`,
+      ...getFilterSummary(filters),
+    ];
 
     sheets.forEach((sheet) => {
+      const columns = (sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType));
       lines.push('', sheet.title, `Total data: ${sheet.rows.length}`);
-      const columns = (sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType)).slice(0, 6);
-      lines.push(columns.join(' | '));
-      lines.push(
-        ...sheet.rows.map((row) =>
-          columns
-            .map((key) => String(formatCellValue(row[key])).replace(/\s+/g, ' ').slice(0, 32))
-            .join(' | ')
-        )
-      );
+
+      if (sheet.rows.length === 0) {
+        lines.push('Tidak ada data pada filter ini.');
+        return;
+      }
+
+      sheet.rows.forEach((row, rowIndex) => {
+        lines.push(`Data ${rowIndex + 1}`);
+        columns.forEach((key) => {
+          const label = key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+          wrapText(`${label}: ${formatPdfValue(row[key]) || '-'}`, 96).forEach((line) => lines.push(line));
+        });
+        lines.push('');
+      });
     });
 
     const pdfLines = lines.flatMap((line) => {
-      if (line.length <= 110) return [line];
+      if (line.length <= 100) return [line];
       const chunks: string[] = [];
-      for (let index = 0; index < line.length; index += 110) {
-        chunks.push(line.slice(index, index + 110));
+      for (let index = 0; index < line.length; index += 100) {
+        chunks.push(line.slice(index, index + 100));
       }
       return chunks;
     });
-    const pageLineLimit = 56;
+    const pageLineLimit = 52;
     const pageChunks: string[][] = [];
     for (let index = 0; index < pdfLines.length; index += pageLineLimit) {
       pageChunks.push(pdfLines.slice(index, index + pageLineLimit));

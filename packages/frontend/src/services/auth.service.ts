@@ -329,7 +329,6 @@ class AuthService {
       if (!ENABLE_LOCAL_FALLBACK) {
         return { success: false, message: normalizeLoginError(error) };
       }
-      console.log('Backend not available, using localStorage fallback');
     }
 
     // Fallback to localStorage

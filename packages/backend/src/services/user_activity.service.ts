@@ -1,10 +1,13 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { ApiResponse, CreateUserActivityDTO, UserActivity } from '../models';
+import { hasAnyRole } from '../utils/role';
 
 interface UserActivityRow extends RowDataPacket {
   id: number;
   user_id: number;
+  user_name?: string | null;
+  user_nip?: string | null;
   feature: string;
   action: string;
   description: string;
@@ -28,6 +31,25 @@ interface ActivityRecordInfo {
   recordNoId?: string | null;
   recordItemName?: string | null;
   recordItemCode?: string | null;
+}
+
+interface ActivityListFilters {
+  actorUserId: number | string;
+  actorRole?: string | null;
+  userId?: number | string | null;
+  page?: number | string;
+  limit?: number | string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+interface PaginatedActivityResponse extends ApiResponse<UserActivity[]> {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 const toNumber = (value: unknown): number | null => {
@@ -264,6 +286,8 @@ const enrichActivityMetadata = async (activity: UserActivity): Promise<UserActiv
 const mapRow = (row: UserActivityRow): UserActivity => ({
   id: Number(row.id),
   userId: Number(row.user_id),
+  userName: row.user_name ?? null,
+  userNip: row.user_nip ?? null,
   feature: row.feature,
   action: row.action,
   description: row.description,
@@ -289,20 +313,21 @@ export class UserActivityService {
     );
   }
 
-  async getByUserId(userIdValue: number | string, limitValue: number = 8): Promise<ApiResponse<UserActivity[]>> {
+  async getByUserId(userIdValue: number | string, limitValue: number = 10): Promise<ApiResponse<UserActivity[]>> {
     const userId = toNumber(userIdValue);
     if (!userId) {
       return { success: false, message: 'User tidak valid', data: [] };
     }
 
-    const limit = Math.max(1, Math.min(Number(limitValue) || 8, 30));
+    const limit = Math.max(1, Math.min(Number(limitValue) || 10, 10));
 
     const [rows] = await pool.query<UserActivityRow[]>(
-      `SELECT id, user_id, feature, action, description, metadata_json, created_at
-       FROM user_activity_logs
-       WHERE user_id = ?
+      `SELECT ual.id, ual.user_id, u.name AS user_name, u.nip AS user_nip, ual.feature, ual.action, ual.description, ual.metadata_json, ual.created_at
+       FROM user_activity_logs ual
+       LEFT JOIN users u ON u.id = ual.user_id
+       WHERE ual.user_id = ?
          AND NOT (feature = 'pencarian' AND action = 'search')
-       ORDER BY created_at DESC
+       ORDER BY ual.created_at DESC
        LIMIT ?`,
       [userId, limit]
     );
@@ -311,6 +336,75 @@ export class UserActivityService {
       success: true,
       message: 'Histori aktivitas berhasil diambil',
       data: await Promise.all(rows.map((row) => enrichActivityMetadata(mapRow(row)))),
+    };
+  }
+
+  async getActivities(filters: ActivityListFilters): Promise<PaginatedActivityResponse> {
+    const actorUserId = toNumber(filters.actorUserId);
+    if (!actorUserId) {
+      return {
+        success: false,
+        message: 'User tidak valid',
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      };
+    }
+
+    const canViewOthers = hasAnyRole(filters.actorRole, ['admin', 'leader']);
+    const requestedUserId = toNumber(filters.userId);
+    const scopedUserId = canViewOthers ? requestedUserId : actorUserId;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Math.min(Number(filters.limit) || 20, 100));
+    const offset = (page - 1) * limit;
+    const where = [`NOT (ual.feature = 'pencarian' AND ual.action = 'search')`];
+    const params: Array<string | number> = [];
+
+    if (scopedUserId) {
+      where.push('ual.user_id = ?');
+      params.push(scopedUserId);
+    }
+
+    if (filters.startDate) {
+      where.push('DATE(ual.created_at) >= ?');
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      where.push('DATE(ual.created_at) <= ?');
+      params.push(filters.endDate);
+    }
+
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+      `SELECT COUNT(*) AS total
+       FROM user_activity_logs ual
+       ${whereClause}`,
+      params
+    );
+
+    const total = Number(countRows[0]?.total || 0);
+    const [rows] = await pool.query<UserActivityRow[]>(
+      `SELECT ual.id, ual.user_id, u.name AS user_name, u.nip AS user_nip,
+              ual.feature, ual.action, ual.description, ual.metadata_json, ual.created_at
+       FROM user_activity_logs ual
+       LEFT JOIN users u ON u.id = ual.user_id
+       ${whereClause}
+       ORDER BY ual.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    return {
+      success: true,
+      message: 'Arsip riwayat aktivitas berhasil diambil',
+      data: await Promise.all(rows.map((row) => enrichActivityMetadata(mapRow(row)))),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

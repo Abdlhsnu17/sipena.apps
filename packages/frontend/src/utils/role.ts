@@ -34,13 +34,14 @@ const fullAccessRoutes = [
   "/medical-assets",
   "/non-medical-assets",
   "/reports",
+  "/activity-archive",
   "/users",
   "/borrowing",
   "/returns",
   "/settings",
 ]
 
-const staffRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/asset-usage", "/reports", "/borrowing", "/returns", "/settings"]
+const staffRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings"]
 const staffPjRoutes = [
   "/",
   "/uml",
@@ -50,13 +51,14 @@ const staffPjRoutes = [
   "/medical-assets",
   "/non-medical-assets",
   "/reports",
+  "/activity-archive",
   "/borrowing",
   "/returns",
   "/settings",
 ]
-const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/settings"]
+const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/reports", "/activity-archive", "/settings"]
 const inventoryRoutes = ["/medical-assets", "/non-medical-assets"]
-const userRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/asset-usage", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
+const userRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
 
 export const getAllowedRoutesForRole = (role?: string | UserRole | null): string[] => {
   switch (normalizeUserRole(role)) {

@@ -184,7 +184,6 @@ export default function SettingsPage() {
       setLocalPhotoPreview(previewUrl)
       setPhotoFile(file)
       setImageError(false)
-      console.log(`[Photo] Selected file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`)
     } else {
       setLocalPhotoPreview(null)
       setPhotoFile(null)
@@ -204,7 +203,6 @@ export default function SettingsPage() {
   const handleProfileSubmit = async () => {
     setIsUpdatingProfile(true)
     try {
-      console.log(`[Profile] Submitting profile update with${photoFile ? ` photo file: ${photoFile.name}` : ' no photo'}`)
       const response = await authService.updateProfile({
         nip: profileForm.nip || undefined,
         name: profileForm.name || undefined,
@@ -219,7 +217,6 @@ export default function SettingsPage() {
 
       if (response.success && response.data?.user) {
         const updated = response.data.user
-        console.log(`[Profile] Update successful. New photoPath:`, updated.photoPath)
         setProfileForm({
           nip: updated.nip ?? "",
           name: updated.name ?? "",

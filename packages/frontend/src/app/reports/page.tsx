@@ -7,12 +7,16 @@ import { API_BASE_URL } from "@/services/api.service";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { getAuthToken } from "@/services/auth-utils";
+import authService, { type User as AuthUser } from "@/services/auth.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
+import userService, { type User } from "@/services/user.service";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { parseDateValue } from "@/utils/format";
+import { isAdminOrLeaderRole } from "@/utils/role";
 import {
+    BarChart3,
     Boxes,
     CalendarCheck2,
     Download,
@@ -40,13 +44,14 @@ import {
 // usageContextLabels removed — reports now aggregate into broader categories
 
 type IconComponent = ComponentType<{ className?: string }>
-type ExportReportType = "assets" | "borrowing" | "maintenance" | "usage" | "all"
+type ExportReportType = "assets" | "borrowing" | "maintenance" | "usage" | "activity" | "all"
 type ExportFilters = {
   reportType: ExportReportType
   startDate: string
   endDate: string
   status: string
   type: string
+  userId: string
 }
 
 type FilterOption = {
@@ -76,6 +81,7 @@ const reportTypeOptions: Array<FilterOption & { value: ExportReportType; descrip
   { value: "borrowing", label: "Peminjaman", description: "Transaksi pinjam pakai alat" },
   { value: "maintenance", label: "Pemeliharaan", description: "Jadwal dan riwayat pemeliharaan" },
   { value: "usage", label: "Penggunaan", description: "Log pemakaian alat per ruangan dan konteks" },
+  { value: "activity", label: "Aktivitas", description: "Arsip riwayat aktivitas pengguna" },
   { value: "all", label: "Semua Modul", description: "Ringkasan terpadu semua laporan" },
 ]
 
@@ -123,6 +129,7 @@ const initialExportFilters: ExportFilters = {
   endDate: "",
   status: "",
   type: "",
+  userId: "",
 }
 
 const toDateInputValue = (date: Date) => {
@@ -227,6 +234,8 @@ export default function ReportsPage() {
   const [maintenance, setMaintenance] = useState<any[]>([])
   const [borrowings, setBorrowings] = useState<any[]>([])
   const [assetUsageLogs, setAssetUsageLogs] = useState<AssetUsageLog[]>([])
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
+  const [users, setUsers] = useState<User[]>([])
   const [monthlyData, setMonthlyData] = useState<any[]>([])
   const [monthlyDataByLocation, setMonthlyDataByLocation] = useState<any[]>([])
   const [usageMonthlyData, setUsageMonthlyData] = useState<any[]>([])
@@ -237,6 +246,10 @@ export default function ReportsPage() {
   const [exportFilters, setExportFilters] = useState<ExportFilters>(initialExportFilters)
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
+
+  useEffect(() => {
+    setCurrentUser(authService.getCurrentUser())
+  }, [])
 
   const generateMonthlyData = useCallback((data: any[]) => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -405,6 +418,21 @@ export default function ReportsPage() {
     loadReportData()
   }, [generateMonthlyData, generateUsageData])
 
+  useEffect(() => {
+    if (!isAdminOrLeaderRole(currentUser?.role)) return
+    const loadUsers = async () => {
+      try {
+        const response = await userService.getAll({ page: 1, limit: 500 })
+        if (response.success && Array.isArray(response.data)) {
+          setUsers(response.data)
+        }
+      } catch (error) {
+        console.error("Failed to load users for activity report:", error)
+      }
+    }
+    void loadUsers()
+  }, [currentUser?.role])
+
   const totalNonMedicalRooms = nonMedicalRooms.length
   const totalMedicalRooms = medicalRooms.length
   const totalRooms = totalNonMedicalRooms + totalMedicalRooms
@@ -492,11 +520,19 @@ export default function ReportsPage() {
         : []
   const showStatusFilter = availableStatusOptions.length > 0
   const showTypeFilter = availableTypeOptions.length > 0
+  const showUserFilter = exportFilters.reportType === "activity" || exportFilters.reportType === "all"
+  const canSelectReportUser = isAdminOrLeaderRole(currentUser?.role)
   const dateRangeInvalid = Boolean(
     exportFilters.startDate && exportFilters.endDate && exportFilters.startDate > exportFilters.endDate
   )
   const selectedStatusLabel = availableStatusOptions.find((option) => option.value === exportFilters.status)?.label
   const selectedTypeLabel = availableTypeOptions.find((option) => option.value === exportFilters.type)?.label
+  const selectedUserLabel =
+    canSelectReportUser && exportFilters.userId
+      ? users.find((user) => String(user.id) === exportFilters.userId)?.name ?? "User terpilih"
+      : canSelectReportUser
+        ? "Semua user"
+        : currentUser?.name ?? "Akun sendiri"
   const periodLabel =
     exportFilters.startDate && exportFilters.endDate
       ? `${exportFilters.startDate} s/d ${exportFilters.endDate}`
@@ -510,6 +546,7 @@ export default function ReportsPage() {
     periodLabel,
     selectedStatusLabel ? `${exportFilters.reportType === "usage" ? "Konteks" : "Status"}: ${selectedStatusLabel}` : null,
     selectedTypeLabel ? `Jenis: ${selectedTypeLabel}` : null,
+    showUserFilter ? `User: ${selectedUserLabel}` : null,
   ].filter(Boolean)
 
   const setReportType = (reportType: ExportReportType) => {
@@ -518,6 +555,7 @@ export default function ReportsPage() {
       reportType,
       status: "",
       type: "",
+      userId: reportType === "activity" || reportType === "all" ? current.userId : "",
     }))
   }
 
@@ -573,15 +611,20 @@ export default function ReportsPage() {
   return (
     <div className="min-w-0">
       <div className="w-full space-y-5">
-        <div className="border-b border-slate-200 pb-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-950">Laporan & Analitik</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Pantau aset, pemeliharaan, peminjaman, dan penggunaan alat dalam satu tampilan ringkas.
-            </p>
+        <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+            <div className="p-2 bg-linear-to-br from-purple-500 to-indigo-500 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Laporan operasional</p>
+              <h1 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">Laporan & Analitik</h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Pantau aset, pemeliharaan, peminjaman, dan penggunaan alat dalam satu tampilan ringkas.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
         <Card className="rounded-lg border-slate-200 py-0 shadow-sm">
           <CardHeader className="border-b border-slate-100 px-4 py-3">
@@ -590,7 +633,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="grid gap-5 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
                 {reportTypeOptions.map((option) => {
                   const active = exportFilters.reportType === option.value
                   return (
@@ -670,7 +713,7 @@ export default function ReportsPage() {
                 </Button>
               </div>
 
-              {(showStatusFilter || showTypeFilter) ? (
+              {(showStatusFilter || showTypeFilter || showUserFilter) ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   {showStatusFilter ? (
                     <label className="space-y-1 text-xs font-medium text-slate-600">
@@ -703,6 +746,31 @@ export default function ReportsPage() {
                         ))}
                       </select>
                     </label>
+                  ) : null}
+                  {showUserFilter ? (
+                    canSelectReportUser ? (
+                      <label className="space-y-1 text-xs font-medium text-slate-600">
+                        <span>User aktivitas</span>
+                        <select
+                          aria-label="User aktivitas"
+                          value={exportFilters.userId}
+                          onChange={(event) => setExportFilters((current) => ({ ...current, userId: event.target.value }))}
+                          className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
+                        >
+                          <option value="">Semua user</option>
+                          {users.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} - {user.nip}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="text-xs font-medium text-slate-500">User aktivitas</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-800">{selectedUserLabel}</p>
+                      </div>
+                    )
                   ) : null}
                 </div>
               ) : null}

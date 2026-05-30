@@ -446,8 +446,6 @@ export default function MaintenancePage() {
           cancellationReason: data.cancellationReason?.trim() || undefined,
         }
 
-        console.log("SELECTED ASSET ID (UPDATE):", updatePayload.assetId, updatePayload.assetDetailId)
-        console.log("PAYLOAD (UPDATE):", updatePayload)
         const currentMaintenance = editingMaintenance
         if (!currentMaintenance) {
           return
@@ -476,8 +474,6 @@ export default function MaintenancePage() {
           cancellationReason: data.cancellationReason?.trim() || undefined,
           createdBy: Number(currentUser.id),
         }
-        console.log("SELECTED ASSET ID (CREATE):", newPayload.assetId, data.assetDetailId)
-        console.log("PAYLOAD (CREATE):", { ...newPayload, assetDetailId: data.assetDetailId, assetDetailName: data.assetDetailName, assetDetailCode: data.assetDetailCode, assetLocation: data.assetLocation })
 
         const response = await maintenanceService.create({
           ...newPayload,

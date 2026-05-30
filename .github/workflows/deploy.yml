@@ -10,6 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Backend lint
+        run: npm run lint --workspace=inventory-backend
+
+      - name: Backend build
+        run: npm run build:backend
+
+      - name: Backend tests
+        run: npm test --workspace=inventory-backend
+
+      - name: Frontend lint
+        run: npm run lint --workspace=inventory-frontend
+
+      - name: Frontend type-check
+        run: npm run type-check --workspace=inventory-frontend
+
+      - name: Frontend build
+        run: npm run build --workspace=inventory-frontend
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -111,7 +141,35 @@ jobs:
               exit 1
             '
 
-            if ! docker compose up -d --build backend frontend; then
+            mkdir -p backups
+            backup_file="backups/pre-migration-$(date +%Y%m%d%H%M%S).sql"
+            if docker compose exec -T mysql sh -eu -c '
+              db_name="${APP_DB_NAME:-sipena_db_local}"
+              db_user="${APP_DB_USER:-sipena_app}"
+              db_password="${APP_DB_PASSWORD:-changeme}"
+              MYSQL_PWD="$db_password" mysqldump --protocol=TCP -h127.0.0.1 -u"$db_user" --single-transaction --routines --triggers "$db_name"
+            ' > "$backup_file"; then
+              gzip -f "$backup_file"
+              echo "Database backup created: $backup_file.gz"
+            else
+              rm -f "$backup_file"
+              echo "Database backup failed; aborting before migration." >&2
+              exit 1
+            fi
+
+            if ! docker compose build backend frontend; then
+              docker compose ps
+              docker compose logs --no-color --tail=200 backend mysql redis
+              exit 1
+            fi
+
+            if ! docker compose run --rm backend npm run migrate:prod; then
+              docker compose ps
+              docker compose logs --no-color --tail=200 backend mysql redis
+              exit 1
+            fi
+
+            if ! docker compose up -d --force-recreate backend frontend; then
               docker compose ps
               docker compose logs --no-color --tail=200 backend mysql redis
               exit 1

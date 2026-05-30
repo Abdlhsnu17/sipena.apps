@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { promises as fsPromises } from 'fs';
 import { ReportService } from '../services/report.service';
 import { recordUserActivity } from '../services/user_activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
@@ -178,7 +179,7 @@ export class ReportController {
    */
   exportPdf = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { reportType, startDate, endDate, category, type, status } = req.query;
+      const { reportType, startDate, endDate, category, type, status, userId } = req.query;
 
       const pdfBuffer = await this.reportService.exportToPdf({
         reportType: reportType as string,
@@ -186,7 +187,10 @@ export class ReportController {
         endDate: endDate as string,
         category: category as string,
         type: type as string,
-        status: status as string
+        status: status as string,
+        userId: userId as string,
+        actorUserId: req.user?.id,
+        actorRole: req.user?.role
       });
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -207,7 +211,7 @@ export class ReportController {
    */
   exportExcel = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { reportType, startDate, endDate, category, type, status } = req.query;
+      const { reportType, startDate, endDate, category, type, status, userId } = req.query;
 
       const excelBuffer = await this.reportService.exportToExcel({
         reportType: reportType as string,
@@ -215,7 +219,10 @@ export class ReportController {
         endDate: endDate as string,
         category: category as string,
         type: type as string,
-        status: status as string
+        status: status as string,
+        userId: userId as string,
+        actorUserId: req.user?.id,
+        actorRole: req.user?.role
       });
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -241,6 +248,16 @@ export class ReportController {
         res.status(400).json({
           success: false,
           message: 'File laporan wajib diunggah'
+        });
+        return;
+      }
+
+      const signature = await this.reportService.validateUploadFileSignature(file);
+      if (!signature.valid) {
+        await fsPromises.unlink(file.path).catch(() => undefined);
+        res.status(400).json({
+          success: false,
+          message: signature.message || 'File laporan tidak valid'
         });
         return;
       }

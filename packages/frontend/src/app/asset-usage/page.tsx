@@ -802,7 +802,7 @@ export default function AssetUsagePage() {
     return sections;
   };
 
-  const buildUsageLetterSections = (log: AssetUsageLog): DocumentSection[] => {
+  const buildUsageLetterSections = (_log: AssetUsageLog): DocumentSection[] => {
     const main: SectionLine[] = []
     appendLine(main, 'Nomor Surat', '')
     appendLine(main, 'Operator', '')

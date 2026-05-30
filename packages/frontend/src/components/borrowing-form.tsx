@@ -74,7 +74,7 @@ export default function BorrowingForm({
         const resp = await assetUsageService.getAll({ page: 1, limit: 50, assetId: String(asset.assetId), assetType: asset.assetType })
         const active = Array.isArray(resp.data) && resp.data.some((u) => !u.endedAt && ( !u.assetDetailId || u.assetDetailId === asset.detailId ))
         if (mounted) setHasActiveUsage(Boolean(active))
-      } catch (e) {
+      } catch {
         if (mounted) setHasActiveUsage(false)
       }
     }

@@ -332,8 +332,6 @@ export default function MaintenanceForm({
       assetDetailCode: resolvedAsset?.detailCode || assetDetailCode || "",
       cancellationReason: cancellationReason.trim() || undefined,
     }
-    console.log("SELECTED ASSET ID:", resolvedAsset?.assetId, resolvedAsset?.detailId)
-    console.log("PAYLOAD:", payload)
     onSave(payload)
   }
 

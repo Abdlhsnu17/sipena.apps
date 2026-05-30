@@ -1278,7 +1278,7 @@ export class BorrowingService {
         notes: borrowing.data.notes || null,
         createdBy: approvedBy
       });
-    } catch (err) {
+    } catch {
       // ignore logging errors
     }
 
@@ -1448,7 +1448,7 @@ export class BorrowingService {
         conditionAfter: data.condition || null,
         notes: data.notes || null
       });
-    } catch (err) {
+    } catch {
       // ignore logging errors to avoid breaking return flow
     }
 
@@ -1627,7 +1627,7 @@ export class BorrowingService {
           notes: data.notes || borrowingRow.notes || null,
           createdBy: (borrowingRow.userId || borrowingRow.user_id) as number
         });
-      } catch (err) {
+      } catch {
         // ignore logging errors
       }
     }
@@ -1663,7 +1663,7 @@ export class BorrowingService {
           conditionAfter: returnCondition,
           notes: data.returnNotes ?? borrowingRow.returnNotes ?? borrowingRow.return_notes ?? null
         });
-      } catch (err) {
+      } catch {
         // ignore logging errors to avoid breaking borrowing update flow
       }
 

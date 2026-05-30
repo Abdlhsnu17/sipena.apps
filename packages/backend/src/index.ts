@@ -70,6 +70,11 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const STARTUP_RETRY_ATTEMPTS = Number.parseInt(process.env.STARTUP_RETRY_ATTEMPTS || '12', 10);
 const STARTUP_RETRY_DELAY_MS = Number.parseInt(process.env.STARTUP_RETRY_DELAY_MS || '5000', 10);
+const infrastructureStatus = {
+  database: 'initializing' as 'initializing' | 'up' | 'down',
+  redis: 'initializing' as 'initializing' | 'up' | 'down' | 'optional-down',
+  schema: 'initializing' as 'initializing' | 'up' | 'down',
+};
 
 const resolveTrustProxy = (value: string | undefined): boolean | number => {
   if (!value) {
@@ -163,11 +168,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads/profiles', express.static(getProfileUploadsDir()));
 
 const healthHandler = (req: express.Request, res: express.Response) => {
+  const status = infrastructureStatus.database === 'up' && infrastructureStatus.schema === 'up'
+    ? 'OK'
+    : 'DEGRADED';
+
   res.status(200).json({
-    status: 'OK',
+    status,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    services: infrastructureStatus,
+    requestId: req.requestId,
   });
 };
 
@@ -216,6 +227,7 @@ const initializeInfrastructure = async (): Promise<void> => {
   for (let attempt = 1; attempt <= STARTUP_RETRY_ATTEMPTS; attempt += 1) {
     try {
       await connectDatabase();
+      infrastructureStatus.database = 'up';
       console.log('✅ Database connected successfully');
 
       await withSchemaLock(async () => {
@@ -232,11 +244,14 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureUserAccessControlColumns();
         await ensureUserActivityLogsTable();
       });
+      infrastructureStatus.schema = 'up';
 
       const redisConnected = await connectRedis();
       if (redisConnected) {
+        infrastructureStatus.redis = 'up';
         console.log('✅ Redis connected successfully');
       } else {
+        infrastructureStatus.redis = 'optional-down';
         console.log('⚠️ Redis not available - continuing without Redis');
       }
 
@@ -247,6 +262,8 @@ const initializeInfrastructure = async (): Promise<void> => {
         `❌ Startup initialization attempt ${attempt}/${STARTUP_RETRY_ATTEMPTS} failed:`,
         error
       );
+      infrastructureStatus.database = 'down';
+      infrastructureStatus.schema = 'down';
 
       if (attempt < STARTUP_RETRY_ATTEMPTS) {
         await sleep(STARTUP_RETRY_DELAY_MS);

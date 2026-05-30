@@ -7,6 +7,36 @@ const toNumber = (value: unknown): number | null => {
 };
 
 export class UserActivityController {
+  getActivities = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = toNumber(req.user?.id);
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const result = await userActivityService.getActivities({
+        actorUserId: userId,
+        actorRole: req.user?.role,
+        userId: req.query.userId as string,
+        page: req.query.page as string,
+        limit: req.query.limit as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Get activity archive error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
   getMyActivities = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = toNumber(req.user?.id);
@@ -18,7 +48,7 @@ export class UserActivityController {
         return;
       }
 
-      const limit = Number(req.query.limit ?? 8);
+      const limit = Number(req.query.limit ?? 10);
       const result = await userActivityService.getByUserId(userId, limit);
       res.json(result);
     } catch (error) {

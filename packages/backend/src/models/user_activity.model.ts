@@ -9,6 +9,8 @@ export type UserActivityFeature =
 export interface UserActivity {
   id: number;
   userId: number;
+  userName?: string | null;
+  userNip?: string | null;
   feature: UserActivityFeature | string;
   action: string;
   description: string;
