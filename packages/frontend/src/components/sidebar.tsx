@@ -616,7 +616,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   {collapsed ? (
                     <span className="sr-only">{link.label}</span>
                   ) : (
-                    <span className="min-w-0 truncate text-[13px] font-medium leading-tight">{link.label}</span>
+                    <span className="min-w-0 truncate text-[13px] font-semibold leading-tight">{link.label}</span>
                   )}
                 </div>
               </Link>
