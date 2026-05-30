@@ -287,7 +287,7 @@ export default function ActivityArchivePage() {
                 <th className="px-4 py-3 font-semibold">User</th>
                 <th className="px-4 py-3 font-semibold">Fitur</th>
                 <th className="px-4 py-3 font-semibold">Aktivitas</th>
-                <th className="px-4 py-3 font-semibold">Referensi</th>
+                <th className="px-4 py-3 font-semibold">Detail Alat</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
