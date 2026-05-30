@@ -46,10 +46,12 @@ applyDevelopmentEnvDefaults();
 // Validate required environment variables
 const validateEnvironment = () => {
   const nodeEnv = process.env.NODE_ENV || 'development';
+  const isProduction = nodeEnv === 'production';
   const requiredVars = nodeEnv === 'production'
-    ? ['JWT_SECRET', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER']
+    ? ['JWT_SECRET', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'FRONTEND_URL', 'REDIS_HOST', 'REDIS_PORT']
     : ['JWT_SECRET'];
   const missing: string[] = [];
+  const invalid: string[] = [];
 
   requiredVars.forEach((varName) => {
     if (!process.env[varName]) {
@@ -57,9 +59,55 @@ const validateEnvironment = () => {
     }
   });
 
+  if (isProduction) {
+    const jwtSecret = process.env.JWT_SECRET || '';
+    const weakJwtSecrets = new Set([
+      'sipena-local-dev-jwt-secret-change-in-production',
+      'sipena-local-dev-jwt-secret-from-env',
+      'dev_jwt_secret_change_me_before_production',
+      'generate_a_strong_secret_key_here_minimum_32_characters',
+    ]);
+    const weakDbPasswords = new Set([
+      '',
+      'changeme',
+      'root',
+      'root_changeme',
+      'password',
+      'generate_a_strong_password_here',
+      'your_secure_password_here',
+      'your_secure_app_password_min_12_chars',
+    ]);
+    const frontendOrigins = (process.env.FRONTEND_URL || '')
+      .split(',')
+      .map((origin) => origin.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (jwtSecret.length < 32 || weakJwtSecrets.has(jwtSecret)) {
+      invalid.push('JWT_SECRET must be at least 32 characters and must not use a development/example value');
+    }
+
+    if (weakDbPasswords.has(process.env.DB_PASSWORD || '')) {
+      invalid.push('DB_PASSWORD must be set to a strong non-default value');
+    }
+
+    if (process.env.ALLOW_IN_MEMORY_PASSWORD_RESET_STORE !== 'false') {
+      invalid.push('ALLOW_IN_MEMORY_PASSWORD_RESET_STORE must be false in production');
+    }
+
+    if (frontendOrigins.some((origin) => origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      invalid.push('FRONTEND_URL must use the real production origin, not localhost');
+    }
+  }
+
   if (missing.length > 0) {
     console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
     console.error('Please ensure all variables are set in your .env file');
+    process.exit(1);
+  }
+
+  if (invalid.length > 0) {
+    console.error('❌ Invalid production environment configuration:');
+    invalid.forEach((message) => console.error(`- ${message}`));
     process.exit(1);
   }
 };
@@ -68,6 +116,7 @@ validateEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const isProduction = (process.env.NODE_ENV || 'development') === 'production';
 const STARTUP_RETRY_ATTEMPTS = Number.parseInt(process.env.STARTUP_RETRY_ATTEMPTS || '12', 10);
 const STARTUP_RETRY_DELAY_MS = Number.parseInt(process.env.STARTUP_RETRY_DELAY_MS || '5000', 10);
 const infrastructureStatus = {
@@ -107,7 +156,7 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+const isDev = !isProduction;
 const parseRateLimitMax = (value: string | undefined, fallback: number): number => {
   const parsedValue = Number.parseInt(value || '', 10);
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
@@ -251,6 +300,10 @@ const initializeInfrastructure = async (): Promise<void> => {
         infrastructureStatus.redis = 'up';
         console.log('✅ Redis connected successfully');
       } else {
+        if (isProduction) {
+          infrastructureStatus.redis = 'down';
+          throw new Error('Redis wajib aktif di production');
+        }
         infrastructureStatus.redis = 'optional-down';
         console.log('⚠️ Redis not available - continuing without Redis');
       }
@@ -268,6 +321,11 @@ const initializeInfrastructure = async (): Promise<void> => {
       if (attempt < STARTUP_RETRY_ATTEMPTS) {
         await sleep(STARTUP_RETRY_DELAY_MS);
         continue;
+      }
+
+      if (isProduction) {
+        console.error('❌ Startup initialization failed in production. Exiting.');
+        process.exit(1);
       }
 
       console.error('⚠️ Continuing to serve while startup initialization remains unavailable.');

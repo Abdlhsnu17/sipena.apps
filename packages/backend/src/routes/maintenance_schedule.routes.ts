@@ -18,7 +18,7 @@ router.put('/:id', scheduleController.updateSchedule);
 // Update only status - teknisi, admin, leader
 router.patch('/:id/status', scheduleController.updateScheduleStatus);
 
-// Delete schedule - only admin, leader
+// Delete schedule - only admin
 router.delete('/:id', scheduleController.deleteSchedule);
 
 export default router;
