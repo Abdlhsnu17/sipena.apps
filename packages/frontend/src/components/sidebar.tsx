@@ -35,7 +35,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ComponentType, type MouseEvent, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type ComponentType, type MouseEvent, type SyntheticEvent } from "react";
 
 
 
@@ -54,6 +54,35 @@ type SidebarLink = {
 
 const featureIconColor = "text-teal-600"
 const SIDEBAR_NAV_SCROLL_KEY = "sipena-sidebar-nav-scroll-top"
+
+const isVisibleElement = (element: HTMLElement) => {
+  if (typeof window === "undefined") return false
+  const style = window.getComputedStyle(element)
+  return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0
+}
+
+const getVisibleSidebarNavElements = () => {
+  if (typeof document === "undefined") return []
+  return Array.from(document.querySelectorAll<HTMLElement>("[data-sidebar-nav]")).filter(isVisibleElement)
+}
+
+const getSavedSidebarScrollTop = () => {
+  if (typeof window === "undefined") return null
+  const savedScrollTopValue = window.sessionStorage.getItem(SIDEBAR_NAV_SCROLL_KEY)
+  if (savedScrollTopValue === null) return null
+
+  const savedScrollTop = Number(savedScrollTopValue)
+  return Number.isFinite(savedScrollTop) ? savedScrollTop : null
+}
+
+const restoreVisibleSidebarScrollTop = () => {
+  const savedScrollTop = getSavedSidebarScrollTop()
+  if (savedScrollTop === null) return
+
+  getVisibleSidebarNavElements().forEach((navElement) => {
+    navElement.scrollTop = savedScrollTop
+  })
+}
 
 const normalizeActivityValue = (value?: string | null) =>
   String(value ?? "")
@@ -296,22 +325,22 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     closeMobileMenu()
   }, [closeMobileMenu, pathname])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return
 
-    const savedScrollTopValue = window.sessionStorage.getItem(SIDEBAR_NAV_SCROLL_KEY)
-    if (savedScrollTopValue === null) return
-
-    const savedScrollTop = Number(savedScrollTopValue)
-    if (!Number.isFinite(savedScrollTop)) return
+    restoreVisibleSidebarScrollTop()
 
     const animationFrameId = window.requestAnimationFrame(() => {
-      document.querySelectorAll<HTMLElement>("[data-sidebar-nav]").forEach((navElement) => {
-        navElement.scrollTop = savedScrollTop
-      })
+      restoreVisibleSidebarScrollTop()
     })
+    const timeoutId = window.setTimeout(() => {
+      restoreVisibleSidebarScrollTop()
+    }, 80)
 
-    return () => window.cancelAnimationFrame(animationFrameId)
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.clearTimeout(timeoutId)
+    }
   }, [pathname, isCollapsed])
 
   const loadActivities = useCallback(async () => {
@@ -506,7 +535,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const handleLinkClick = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
     const navElement = event?.currentTarget.closest<HTMLElement>("[data-sidebar-nav]")
-    if (navElement) {
+    if (navElement && isVisibleElement(navElement)) {
       saveSidebarScrollTop(navElement.scrollTop)
     }
     closeMobileMenu()
@@ -559,7 +588,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     return (first + second).toUpperCase()
   }
 
-  const SidebarContent = ({ collapsed = isCollapsed }: { collapsed?: boolean } = {}) => (
+  const renderSidebarContent = ({ collapsed = isCollapsed }: { collapsed?: boolean } = {}) => (
     <>
       <div className="border-b border-border bg-(--app-shell-background) px-4 py-3">
         {collapsed ? (
@@ -611,7 +640,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <nav
         data-sidebar-nav
-        onScroll={(event) => saveSidebarScrollTop(event.currentTarget.scrollTop)}
+        onScroll={(event) => {
+          if (!isVisibleElement(event.currentTarget)) return
+          saveSidebarScrollTop(event.currentTarget.scrollTop)
+        }}
         className={cn(
           "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
           collapsed ? "p-2" : "p-3",
@@ -886,7 +918,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           >
             <X className="w-5 h-5 text-foreground" />
           </button>
-          <SidebarContent collapsed={false} />
+          {isMobileMenuOpen ? renderSidebarContent({ collapsed: false }) : null}
         </aside>
       </div>
 
@@ -896,7 +928,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           isCollapsed ? "w-20" : "w-64"
         )}
       >
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
     </>
   )
