@@ -681,6 +681,10 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   onMouseDown={(event) => {
                     event.stopPropagation()
                   }}
+                  onClick={() => {
+                    if (link.href === pathname) return
+                    router.push(link.href)
+                  }}
                 >
                   <Icon className={cn(iconSizeClass, iconColorClass)} />
                   {collapsed ? (
