@@ -12,12 +12,14 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
-    "build": "npm run build --workspace=inventory-frontend",
-    "start": "npm run start --workspace=inventory-frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "PORT=4000 npm run start:backend & npm run start:frontend",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
+    "build:frontend": "npm run build --workspace=inventory-frontend",
     "migrate:user-security-columns": "npm run migrate:user-security-columns --workspace=inventory-backend",
     "start:backend": "npm run start --workspace=inventory-backend",
+    "start:frontend": "npm run start --workspace=inventory-frontend -- --hostname 0.0.0.0 --port ${PORT:-3000}",
     "dev:all": "npm run dev --workspaces",
     "load-test:login": "node scripts/load-test-login.mjs"
   },
