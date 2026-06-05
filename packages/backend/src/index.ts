@@ -243,6 +243,14 @@ app.use('/api/assets', authMiddleware, assetRoutes);
 app.use('/api/asset-usage', authMiddleware, assetUsageRoutes);
 app.use('/api/borrowing', authMiddleware, borrowingRoutes);
 app.use('/api/dss', authMiddleware, dssRoutes);
+// Development-only: expose DSS routes without auth for debugging only when explicitly allowed
+// Set ALLOW_DSS_DEBUG=true in your local env to enable this route.
+if (!isProduction && process.env.ALLOW_DSS_DEBUG === 'true') {
+  app.use('/api/dss-debug', dssRoutes);
+  console.log('⚠️ DSS debug routes mounted at /api/dss-debug (dev only)');
+} else if (!isProduction && process.env.ALLOW_DSS_DEBUG !== 'true') {
+  console.log('ℹ️ DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
+}
 app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
 app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
@@ -261,17 +269,51 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use(errorHandler);
 
+
 const sleep = async (delayMs: number): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, delayMs));
 };
 
-// Start the HTTP server first so the container becomes responsive quickly.
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log(`🌐 API URL: http://localhost:${PORT}`);
-});
+// Start the HTTP server with port-retry logic so a busy port doesn't crash the process.
+const startHttpServer = (startPort: number, maxAttempts = 10) => {
+  let attempt = 0;
+
+  const tryListen = (port: number) => {
+    attempt += 1;
+    const server = app.listen(port);
+
+    server.on('listening', () => {
+      console.log(`🚀 Server running on port ${port}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+      console.log(`🌐 API URL: http://localhost:${port}`);
+    });
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err && err.code === 'EADDRINUSE') {
+        console.error(`⚠️ Port ${port} is already in use.`);
+        server.close?.();
+        if (attempt < maxAttempts) {
+          const nextPort = port + 1;
+          console.log(`ℹ️ Trying next port ${nextPort} (attempt ${attempt + 1}/${maxAttempts})`);
+          // small delay before retrying
+          setTimeout(() => tryListen(nextPort), 200);
+          return;
+        }
+        console.error('❌ All port attempts failed. Please free the port or set PORT to another value.');
+        process.exit(1);
+      }
+
+      // For other errors, rethrow to surface the problem
+      console.error('❌ HTTP server error:', err);
+      process.exit(1);
+    });
+  };
+
+  tryListen(Number(startPort));
+};
+
+startHttpServer(Number(PORT));
 
 // Initialize database connections in the background.
 const initializeInfrastructure = async (): Promise<void> => {

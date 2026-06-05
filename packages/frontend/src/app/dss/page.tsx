@@ -1,6 +1,7 @@
 "use client"
 
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import { assetService } from "@/services/asset.service";
 import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingResult } from "@/services/dss.service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/utils";
+import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { Activity, ArrowDownUp, Calculator, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -22,6 +24,16 @@ const DEFAULT_WEIGHTS: Record<string, number> = {
   functionalUrgency: 16,
   statusRisk: 6,
 }
+
+const DEFAULT_CRITERIA: DssRankingResult["criteria"] = [
+  { id: "condition", name: "Kondisi Aset", type: "cost", weight: 0 },
+  { id: "age", name: "Usia Aset", type: "cost", weight: 0 },
+  { id: "maintenanceDue", name: "Kedekatan Jadwal Maintenance", type: "cost", weight: 0 },
+  { id: "usageFrequency", name: "Frekuensi Pemakaian", type: "benefit", weight: 0 },
+  { id: "maintenanceHistory", name: "Riwayat Maintenance", type: "cost", weight: 0 },
+  { id: "functionalUrgency", name: "Urgensi Fungsi", type: "benefit", weight: 0 },
+  { id: "statusRisk", name: "Risiko Status", type: "cost", weight: 0 },
+]
 
 const criteriaHelp: Record<string, string> = {
   condition: "Semakin buruk kondisi, semakin tinggi prioritas.",
@@ -48,6 +60,163 @@ const recommendationClassName = (recommendation: string) => {
   if (normalized.includes("tinggi")) return "border-red-200 bg-red-50 text-red-700"
   if (normalized.includes("sedang")) return "border-amber-200 bg-amber-50 text-amber-700"
   return "border-emerald-200 bg-emerald-50 text-emerald-700"
+}
+
+const dayMs = 24 * 60 * 60 * 1000
+
+const parseDate = (value?: string | null) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const daysBetween = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / dayMs)
+
+const conditionScore = (value?: string | null) => {
+  const normalized = String(value || "").toLowerCase()
+  if (normalized.includes("rusak") || normalized.includes("damaged")) return 5
+  if (normalized.includes("poor") || normalized.includes("buruk") || normalized.includes("kurang")) return 4
+  if (normalized.includes("cukup") || normalized.includes("fair")) return 3
+  return 1
+}
+
+const statusRiskScore = (value?: string | null) => {
+  const normalized = String(value || "").toLowerCase()
+  if (normalized.includes("disposed") || normalized.includes("non")) return 5
+  if (normalized.includes("maintenance") || normalized.includes("perbaikan")) return 4
+  if (normalized.includes("borrowed") || normalized.includes("dipinjam")) return 3
+  if (normalized.includes("digunakan") || normalized.includes("in_use") || normalized.includes("in use")) return 2
+  return 1
+}
+
+const functionalUrgencyScore = (name?: string | null, type?: string | null, category?: string | null) => {
+  const text = `${name || ""} ${type || ""} ${category || ""}`.toLowerCase()
+  if (/(ventilator|defibrillator|aed|crash|resuscitation|monitor|infusion|syringe|oxygen|suction|ctg|incubator|icu|emergency)/.test(text)) return 5
+  if (/(ecg|ekg|pump|bed|stretcher|doppler|radiology|diagnostic|respiratory|fire|apar|ups|power|security|smoke)/.test(text)) return 4
+  if (/(thermometer|stethoscope|cctv|network|access|hvac|ahu|hepa|sanitation)/.test(text)) return 3
+  if (/(storage|rack|whiteboard|display|office)/.test(text)) return 1
+  return 2
+}
+
+const maintenanceDueScore = (nextMaintenance?: string | null) => {
+  const nextDate = parseDate(nextMaintenance)
+  if (!nextDate) return 1
+  const days = daysBetween(new Date(), nextDate)
+  if (days < 0) return 5
+  if (days <= 30) return 4
+  if (days <= 90) return 3
+  if (days <= 180) return 2
+  return 1
+}
+
+const ageScore = (purchaseDate?: string | null) => {
+  const purchasedAt = parseDate(purchaseDate)
+  if (!purchasedAt) return 1
+  return Math.max(1, Math.round(Math.max(0, daysBetween(purchasedAt, new Date())) / 365))
+}
+
+const buildClientFallbackRanking = async (
+  assetType: DssAssetType,
+  normalizedWeights: Record<string, number>
+): Promise<DssRankingResult> => {
+  const [medicalResponse, nonMedicalResponse] = await Promise.all([
+    assetType === "non_medical" ? Promise.resolve(null) : assetService.getMedicalAssets({ page: 1, limit: 1000 }),
+    assetType === "medical" ? Promise.resolve(null) : assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
+  ])
+
+  const assets = [
+    ...(medicalResponse?.success ? medicalResponse.data : []),
+    ...(nonMedicalResponse?.success ? nonMedicalResponse.data : []),
+  ]
+  const detailItems = flattenDetailInventories(assets, { includeAssetFallback: true })
+  const criteria = DEFAULT_CRITERIA.map((criterion) => ({
+    ...criterion,
+    weight: normalizedWeights[criterion.id] || 0,
+  }))
+
+  const alternatives = detailItems.map((item) => {
+    const criteriaScores: Record<string, number> = {
+      condition: conditionScore(item.conditionLabel || item.condition),
+      age: ageScore((item as typeof item & { purchaseDate?: string }).purchaseDate),
+      maintenanceDue: maintenanceDueScore(item.nextMaintenance),
+      usageFrequency: 0,
+      maintenanceHistory: item.lastMaintenance ? 1 : 0,
+      functionalUrgency: functionalUrgencyScore(item.detailName, item.detailType, item.assetCategory),
+      statusRisk: statusRiskScore(item.statusLabel || item.availability),
+    }
+
+    return {
+      assetId: item.assetId,
+      assetType: item.assetType,
+      assetName: item.assetName,
+      assetCode: item.assetCode,
+      assetCategory: item.assetCategory,
+      assetLocation: item.roomName || item.assetLocation,
+      detailId: item.detailId,
+      detailName: item.detailName,
+      detailCode: item.detailCode,
+      detailType: item.detailType,
+      conditionLabel: item.conditionLabel || item.condition,
+      statusLabel: item.statusLabel || item.availability,
+      purchaseDate: undefined,
+      lastMaintenance: item.lastMaintenance,
+      nextMaintenance: item.nextMaintenance,
+      criteriaScores,
+    }
+  })
+
+  const denominators = Object.fromEntries(criteria.map((criterion) => {
+    const sumSquares = alternatives.reduce((sum, alternative) => {
+      const value = alternative.criteriaScores[criterion.id] || 0
+      return sum + value * value
+    }, 0)
+    return [criterion.id, Math.sqrt(sumSquares) || 1]
+  }))
+
+  const scored = alternatives.map((alternative) => {
+    const weightedScores: Record<string, number> = Object.fromEntries(criteria.map((criterion) => {
+      const normalized = (alternative.criteriaScores[criterion.id] || 0) / denominators[criterion.id]
+      return [criterion.id, normalized * criterion.weight]
+    }))
+    return { ...alternative, weightedScores }
+  })
+
+  const positiveIdeal: Record<string, number> = {}
+  const negativeIdeal: Record<string, number> = {}
+  criteria.forEach((criterion) => {
+    const values = scored.map((alternative) => alternative.weightedScores[criterion.id])
+    positiveIdeal[criterion.id] = criterion.type === "benefit" ? Math.max(...values) : Math.min(...values)
+    negativeIdeal[criterion.id] = criterion.type === "benefit" ? Math.min(...values) : Math.max(...values)
+  })
+
+  const rankings = scored
+    .map((alternative) => {
+      const positiveDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
+        const diff = alternative.weightedScores[criterion.id] - positiveIdeal[criterion.id]
+        return sum + diff * diff
+      }, 0))
+      const negativeDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
+        const diff = alternative.weightedScores[criterion.id] - negativeIdeal[criterion.id]
+        return sum + diff * diff
+      }, 0))
+      const preferenceScore = positiveDistance + negativeDistance === 0 ? 0 : negativeDistance / (positiveDistance + negativeDistance)
+      return {
+        ...alternative,
+        preferenceScore,
+        recommendation: preferenceScore >= 0.7 ? "Prioritas tinggi" : preferenceScore >= 0.45 ? "Prioritas sedang" : "Prioritas rendah",
+      }
+    })
+    .sort((left, right) => right.preferenceScore - left.preferenceScore)
+    .slice(0, 250)
+    .map((item, index) => ({ ...item, rank: index + 1 }))
+
+  return {
+    criteria,
+    consistency: null,
+    generatedAt: new Date().toISOString(),
+    totalAlternatives: alternatives.length,
+    rankings,
+  }
 }
 
 export default function DssPage() {
@@ -86,7 +255,14 @@ export default function DssPage() {
       }
     } catch (error) {
       console.error("Error loading DSS ranking:", error)
-      setErrorMessage(error instanceof Error ? error.message : "Gagal memuat ranking SPK")
+      try {
+        const fallbackResult = await buildClientFallbackRanking(assetType, normalizedWeights)
+        setRankingResult(fallbackResult)
+        setErrorMessage("Perhitungan memakai mode fallback dari data aset karena endpoint SPK backend belum merespons.")
+      } catch (fallbackError) {
+        console.error("Error loading DSS fallback ranking:", fallbackError)
+        setErrorMessage(error instanceof Error ? error.message : "Gagal memuat ranking SPK")
+      }
     } finally {
       setIsLoading(false)
     }

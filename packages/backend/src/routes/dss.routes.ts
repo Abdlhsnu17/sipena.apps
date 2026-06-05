@@ -15,4 +15,7 @@ router.post(
   dssController.getRanking
 );
 
+// Debug route (non-production only)
+router.post('/debug', dssController.debugRanking);
+
 export default router;

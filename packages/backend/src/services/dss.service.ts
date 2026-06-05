@@ -213,26 +213,35 @@ const calculateAhpWeights = (matrix: number[][]): { weights: Record<string, numb
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }));
 
-  const columnTotals = Array.from({ length: n }, (_, columnIndex) =>
-    numericMatrix.reduce((sum, row) => sum + row[columnIndex], 0)
-  );
-  const priorityVector = numericMatrix.map((row) =>
-    row.reduce((sum, value, columnIndex) => sum + value / (columnTotals[columnIndex] || 1), 0) / n
-  );
-  const weightedSums = numericMatrix.map((row) =>
-    row.reduce((sum, value, columnIndex) => sum + value * priorityVector[columnIndex], 0)
-  );
-  const lambdaMax = weightedSums.reduce((sum, value, index) => sum + value / (priorityVector[index] || 1), 0) / n;
+  // Power iteration to estimate principal eigenvector (more stable than simple column-normalization)
+  let v = Array.from({ length: n }, () => 1 / n);
+  const maxIter = 1000;
+  const tol = 1e-12;
+  for (let iter = 0; iter < maxIter; iter += 1) {
+    const next = numericMatrix.map((row) => row.reduce((sum, value, j) => sum + value * v[j], 0));
+    const s = next.reduce((acc, x) => acc + x, 0) || 1;
+    const nextNorm = next.map((x) => x / s);
+    const diff = Math.max(...nextNorm.map((x, i) => Math.abs(x - v[i])));
+    v = nextNorm;
+    if (diff < tol) break;
+  }
+
+  const weightsVec = v.map((x) => (Number.isFinite(x) && x > 0 ? x : 0));
+  const weightSum = weightsVec.reduce((s, x) => s + x, 0) || 1;
+  const normalizedWeights = weightsVec.map((w) => w / weightSum);
+
+  const weightedSums = numericMatrix.map((row) => row.reduce((sum, value, j) => sum + value * normalizedWeights[j], 0));
+  const lambdaMax = weightedSums.reduce((sum, value, i) => sum + (value / (normalizedWeights[i] || 1)), 0) / n;
   const consistencyIndex = n > 1 ? (lambdaMax - n) / (n - 1) : 0;
   const consistencyRatio = (RANDOM_INDEX[n] || 1.49) === 0 ? 0 : consistencyIndex / (RANDOM_INDEX[n] || 1.49);
 
   return {
-    weights: Object.fromEntries(DEFAULT_CRITERIA.map((criterion, index) => [criterion.id, priorityVector[index]])),
+    weights: Object.fromEntries(DEFAULT_CRITERIA.map((criterion, index) => [criterion.id, normalizedWeights[index]])),
     consistency: {
       lambdaMax,
       consistencyIndex,
       consistencyRatio,
-      isConsistent: consistencyRatio <= 0.1,
+      isConsistent: Number.isFinite(consistencyRatio) ? consistencyRatio <= 0.1 : false,
     },
   };
 };
@@ -352,72 +361,96 @@ export class DssService {
   }
 
   async rankAssets(options: RankingOptions = {}): Promise<DssRankingResult> {
-    const ahp = options.pairwiseMatrix ? calculateAhpWeights(options.pairwiseMatrix) : null;
-    const weights = normalizeWeights(ahp?.weights || options.weights || DEFAULT_WEIGHTS);
-    const criteria = DEFAULT_CRITERIA.map((criterion) => ({ ...criterion, weight: weights[criterion.id] || 0 }));
-    const [assets, usageCounts, maintenanceCounts] = await Promise.all([
-      this.getAssets(options.assetType || 'all'),
-      this.getUsageCounts(),
-      this.getMaintenanceCounts(),
-    ]);
-    const alternatives = this.buildAlternatives(assets, usageCounts, maintenanceCounts);
-    const denominators = Object.fromEntries(criteria.map((criterion) => {
-      const sumSquares = alternatives.reduce((sum, alternative) => {
-        const value = alternative.criteriaScores[criterion.id] || 0;
-        return sum + value * value;
-      }, 0);
-      return [criterion.id, Math.sqrt(sumSquares) || 1];
-    }));
+    try {
+      const ahpComputed = options.pairwiseMatrix ? calculateAhpWeights(options.pairwiseMatrix) : null;
+      const useAhp = ahpComputed && ahpComputed.consistency && ahpComputed.consistency.isConsistent;
+      if (ahpComputed && !useAhp) {
+        console.warn('DSS: provided AHP pairwise matrix is inconsistent (CR > 0.1) - falling back to provided/default weights');
+      }
+      const weights = normalizeWeights(useAhp ? ahpComputed!.weights : (options.weights || DEFAULT_WEIGHTS));
+      const criteria = DEFAULT_CRITERIA.map((criterion) => ({ ...criterion, weight: weights[criterion.id] || 0 }));
+      const [assets, usageCounts, maintenanceCounts] = await Promise.all([
+        this.getAssets(options.assetType || 'all'),
+        this.getUsageCounts(),
+        this.getMaintenanceCounts(),
+      ]);
+      const alternatives = this.buildAlternatives(assets, usageCounts, maintenanceCounts);
 
-    const positiveIdeal: Record<string, number> = {};
-    const negativeIdeal: Record<string, number> = {};
-    const scored = alternatives.map((alternative) => {
-      const normalizedScores: Record<string, number> = {};
-      const weightedScores: Record<string, number> = {};
-      criteria.forEach((criterion) => {
-        normalizedScores[criterion.id] = (alternative.criteriaScores[criterion.id] || 0) / denominators[criterion.id];
-        weightedScores[criterion.id] = normalizedScores[criterion.id] * criterion.weight;
+      if (!Array.isArray(alternatives) || alternatives.length === 0) {
+        console.warn('DSS: no alternatives found for ranking (empty dataset)');
+        return {
+          criteria,
+          consistency: ahpComputed?.consistency || null,
+          generatedAt: new Date().toISOString(),
+          totalAlternatives: 0,
+          rankings: [],
+        };
+      }
+
+      const denominators = Object.fromEntries(criteria.map((criterion) => {
+        const sumSquares = alternatives.reduce((sum, alternative) => {
+          const value = Number(alternative.criteriaScores[criterion.id]) || 0;
+          return sum + value * value;
+        }, 0);
+        const denom = Math.sqrt(sumSquares);
+        return [criterion.id, denom > 0 ? denom : 1];
+      }));
+
+      const positiveIdeal: Record<string, number> = {};
+      const negativeIdeal: Record<string, number> = {};
+      const scored = alternatives.map((alternative) => {
+        const normalizedScores: Record<string, number> = {};
+        const weightedScores: Record<string, number> = {};
+        criteria.forEach((criterion) => {
+          const raw = Number(alternative.criteriaScores[criterion.id]) || 0;
+          const normalized = Number.isFinite(raw) ? raw / denominators[criterion.id] : 0;
+          const weighted = Number.isFinite(normalized) && Number.isFinite(criterion.weight) ? normalized * criterion.weight : 0;
+          normalizedScores[criterion.id] = Number.isFinite(normalized) ? normalized : 0;
+          weightedScores[criterion.id] = Number.isFinite(weighted) ? weighted : 0;
+        });
+        return { ...alternative, normalizedScores, weightedScores };
       });
-      return { ...alternative, normalizedScores, weightedScores };
-    });
 
-    criteria.forEach((criterion) => {
-      const values = scored.map((alternative) => alternative.weightedScores[criterion.id]);
-      positiveIdeal[criterion.id] = criterion.type === 'benefit' ? Math.max(...values) : Math.min(...values);
-      negativeIdeal[criterion.id] = criterion.type === 'benefit' ? Math.min(...values) : Math.max(...values);
-    });
+      criteria.forEach((criterion) => {
+        const values = scored.map((alternative) => alternative.weightedScores[criterion.id] || 0);
+        positiveIdeal[criterion.id] = values.length > 0 ? (criterion.type === 'benefit' ? Math.max(...values) : Math.min(...values)) : 0;
+        negativeIdeal[criterion.id] = values.length > 0 ? (criterion.type === 'benefit' ? Math.min(...values) : Math.max(...values)) : 0;
+      });
 
-    const rankings = scored
-      .map((alternative) => {
-        const positiveDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
-          const diff = alternative.weightedScores[criterion.id] - positiveIdeal[criterion.id];
-          return sum + diff * diff;
-        }, 0));
-        const negativeDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
-          const diff = alternative.weightedScores[criterion.id] - negativeIdeal[criterion.id];
-          return sum + diff * diff;
-        }, 0));
-        const preferenceScore = positiveDistance + negativeDistance === 0
-          ? 0
-          : negativeDistance / (positiveDistance + negativeDistance);
-        const recommendation = preferenceScore >= 0.7
-          ? 'Prioritas tinggi'
-          : preferenceScore >= 0.45
-            ? 'Prioritas sedang'
-            : 'Prioritas rendah';
-        return { ...alternative, positiveDistance, negativeDistance, preferenceScore, recommendation };
-      })
-      .sort((left, right) => right.preferenceScore - left.preferenceScore)
-      .slice(0, Math.max(1, Math.min(Number(options.limit) || 100, 1000)))
-      .map((alternative, index) => ({ ...alternative, rank: index + 1 }));
+      const rankings = scored
+        .map((alternative) => {
+          const positiveDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
+            const diff = (alternative.weightedScores[criterion.id] || 0) - (positiveIdeal[criterion.id] || 0);
+            return sum + diff * diff;
+          }, 0));
+          const negativeDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
+            const diff = (alternative.weightedScores[criterion.id] || 0) - (negativeIdeal[criterion.id] || 0);
+            return sum + diff * diff;
+          }, 0));
+          const denom = positiveDistance + negativeDistance;
+          const preferenceScore = denom === 0 ? 0 : (negativeDistance / denom);
+          const recommendation = preferenceScore >= 0.7
+            ? 'Prioritas tinggi'
+            : preferenceScore >= 0.45
+              ? 'Prioritas sedang'
+              : 'Prioritas rendah';
+          return { ...alternative, positiveDistance, negativeDistance, preferenceScore, recommendation };
+        })
+        .sort((left, right) => right.preferenceScore - left.preferenceScore)
+        .slice(0, Math.max(1, Math.min(Number(options.limit) || 100, 1000)))
+        .map((alternative, index) => ({ ...alternative, rank: index + 1 }));
 
-    return {
-      criteria,
-      consistency: ahp?.consistency || null,
-      generatedAt: new Date().toISOString(),
-      totalAlternatives: alternatives.length,
-      rankings,
-    };
+      return {
+        criteria,
+        consistency: ahpComputed?.consistency || null,
+        generatedAt: new Date().toISOString(),
+        totalAlternatives: alternatives.length,
+        rankings,
+      };
+    } catch (err) {
+      console.error('DSS: error ranking assets', err instanceof Error ? err.message : err);
+      throw err;
+    }
   }
 }
 
