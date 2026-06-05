@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
     "build": "npm run build:backend && npm run build:frontend",
-    "start": "PORT=4000 npm run start:backend & npm run start:frontend",
+    "start": "sh scripts/start-production.sh",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
     "build:frontend": "npm run build --workspace=inventory-frontend",
