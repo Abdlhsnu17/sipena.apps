@@ -49,6 +49,15 @@ const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 
 const formatScore = (value: number) => value.toFixed(4)
 
+const buildAhpPairwiseMatrix = (normalizedWeights: Record<string, number>) => {
+  const criteriaIds = DEFAULT_CRITERIA.map((criterion) => criterion.id)
+  return criteriaIds.map((rowId) => criteriaIds.map((columnId) => {
+    const rowWeight = normalizedWeights[rowId] || 1
+    const columnWeight = normalizedWeights[columnId] || 1
+    return rowWeight / columnWeight
+  }))
+}
+
 const assetTypeLabel = (value: DssAssetType | DssAssetRanking["assetType"]) => {
   if (value === "medical") return "Medis"
   if (value === "non_medical") return "Non-Medis"
@@ -227,6 +236,7 @@ export default function DssPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [rankingSource, setRankingSource] = useState<"backend" | "fallback" | null>(null)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -249,15 +259,18 @@ export default function DssPage() {
         assetType,
         limit: 250,
         weights: normalizedWeights,
+        pairwiseMatrix: buildAhpPairwiseMatrix(normalizedWeights),
       })
       if (response.success) {
         setRankingResult(response.data)
+        setRankingSource("backend")
       }
     } catch (error) {
       console.error("Error loading DSS ranking:", error)
       try {
         const fallbackResult = await buildClientFallbackRanking(assetType, normalizedWeights)
         setRankingResult(fallbackResult)
+        setRankingSource("fallback")
         setErrorMessage("Perhitungan memakai mode fallback dari data aset karena endpoint SPK backend belum merespons.")
       } catch (fallbackError) {
         console.error("Error loading DSS fallback ranking:", fallbackError)
@@ -302,7 +315,7 @@ export default function DssPage() {
               SPK Prioritas Aset
             </h1>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Ranking menggunakan data inventaris yang sudah tersimpan. Bobot kriteria dinormalisasi sebagai bobot AHP, lalu TOPSIS menghitung prioritas aset detail.
+              Ranking menggunakan data inventaris yang sudah tersimpan. AHP menghitung bobot kriteria dari matriks perbandingan, lalu TOPSIS menghitung prioritas aset detail.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -414,6 +427,36 @@ export default function DssPage() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="grid gap-3 p-4 md:grid-cols-3">
+                <div>
+                  <div className="text-xs font-medium uppercase text-slate-500">Metode AHP</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">Matriks perbandingan kriteria</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Slider membentuk matriks AHP, backend menghitung bobot dan rasio konsistensi.</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium uppercase text-slate-500">Konsistensi AHP</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">
+                    {rankingResult?.consistency ? (
+                      rankingResult.consistency.isConsistent ? "Konsisten" : "Tidak konsisten"
+                    ) : (
+                      rankingSource === "fallback" ? "Tidak tersedia di fallback" : "Belum dihitung"
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    CR {rankingResult?.consistency ? rankingResult.consistency.consistencyRatio.toFixed(4) : "-"} · batas maksimal 0.1000
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium uppercase text-slate-500">Metode TOPSIS</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">Ranking aset detail</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    Sumber hasil: {rankingSource === "backend" ? "backend SPK" : rankingSource === "fallback" ? "fallback frontend" : "-"}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {topRankings.length > 0 && (
               <div className="grid gap-3 lg:grid-cols-3">
