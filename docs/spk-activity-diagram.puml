@@ -1,0 +1,67 @@
+@startuml
+title Activity Diagram SPK Prioritas Aset (TOPSIS-AHP)
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Pengguna|
+start
+:Membuka menu "SPK Prioritas Aset";
+
+|Sistem|
+:Mengambil data aset, riwayat penggunaan,
+dan riwayat pemeliharaan dari basis data;
+:Menampilkan daftar aset dengan
+bobot kriteria default;
+
+|Pengguna|
+:Memilih jenis aset
+(Semua / Medis / Non-Medis);
+
+if (Sesuaikan bobot kriteria?) then (Ya)
+  :Mengatur slider bobot
+  7 kriteria penilaian;
+  |Sistem|
+  :Menormalisasi bobot agar
+  total bernilai 100%;
+else (Tidak)
+  |Sistem|
+  :Menggunakan bobot default;
+endif
+
+|Pengguna|
+:Menekan tombol "Hitung Ulang";
+
+|Sistem|
+:Menghitung skor mentah tiap kriteria
+untuk setiap aset (alternatif);
+:Melakukan normalisasi vektor (Euclidean);
+:Mengalikan nilai ternormalisasi
+dengan bobot kriteria;
+:Menentukan solusi ideal positif
+dan solusi ideal negatif;
+:Menghitung jarak ke solusi ideal
+positif dan negatif (TOPSIS);
+:Menghitung preference score
+dan mengurutkan ranking aset;
+
+if (Matriks perbandingan AHP konsisten? (CR <= 0,1)) then (Ya)
+  :Memakai bobot hasil AHP;
+else (Tidak)
+  :Memberi peringatan dan
+  memakai bobot default/manual;
+endif
+
+:Menampilkan tabel ranking
+prioritas aset beserta rekomendasi;
+
+|Pengguna|
+:Melihat hasil prioritas aset;
+stop
+
+@enduml
