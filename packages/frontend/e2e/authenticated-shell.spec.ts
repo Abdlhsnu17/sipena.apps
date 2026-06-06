@@ -32,7 +32,7 @@ test.describe("authenticated shell responsive checks", () => {
     await expectNoHorizontalOverflow(page)
 
     await page.goto("/uml")
-    await expect(page.getByText("Dokumentasi UML", { exact: false }).first()).toBeVisible()
+    await expect(page.getByText("Dokumentasi Sistem", { exact: false }).first()).toBeVisible()
     await expectNoHorizontalOverflow(page)
   })
 })

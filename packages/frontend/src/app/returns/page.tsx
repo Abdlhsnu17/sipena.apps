@@ -52,6 +52,8 @@ import { matchesSearchKeyword } from "@/utils/search-keyword";
 import {
     AlertCircle,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     Download,
     Pencil,
@@ -63,6 +65,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type ReturnExportColumn = TableExportColumn<ApiBorrowing>
+
+const RETURN_ROWS_PER_PAGE = 3
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right)
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1]
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page]
+    }
+    return [page]
+  })
+}
 
 const borrowingPurposeTypeLabels = {
   inside_hospital: "Penggunaan di dalam Rumah Sakit",
@@ -178,6 +201,8 @@ export default function ReturnsPage() {
   const [expandedHistoryReturnIds, setExpandedHistoryReturnIds] = useState<Set<number>>(() => new Set())
   const [isActiveSectionMinimized, setIsActiveSectionMinimized] = useState(false)
   const [isHistorySectionMinimized, setIsHistorySectionMinimized] = useState(false)
+  const [activeReturnPage, setActiveReturnPage] = useState(1)
+  const [historyReturnPage, setHistoryReturnPage] = useState(1)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -446,6 +471,38 @@ export default function ReturnsPage() {
 
     return matchesSearch && matchesSource && matchesCondition && matchesValidation
   })
+
+  useEffect(() => {
+    setActiveReturnPage(1)
+  }, [activeBorrowings.length, activeFilterSource, activeSearchTerm])
+
+  useEffect(() => {
+    setHistoryReturnPage(1)
+  }, [
+    historyFilterCondition,
+    historyFilterSource,
+    historyFilterValidation,
+    historySearchTerm,
+    returnedBorrowings.length,
+  ])
+
+  const totalActiveReturnPages = Math.max(1, Math.ceil(filteredActiveBorrowings.length / RETURN_ROWS_PER_PAGE))
+  const currentActiveReturnPage = Math.min(activeReturnPage, totalActiveReturnPages)
+  const activeReturnStartIndex = (currentActiveReturnPage - 1) * RETURN_ROWS_PER_PAGE
+  const paginatedActiveBorrowings = filteredActiveBorrowings.slice(activeReturnStartIndex, activeReturnStartIndex + RETURN_ROWS_PER_PAGE)
+  const visibleActiveReturnPages = buildVisiblePageItems(currentActiveReturnPage, totalActiveReturnPages)
+  const goToActiveReturnPage = (page: number) => {
+    setActiveReturnPage(Math.min(totalActiveReturnPages, Math.max(1, page)))
+  }
+
+  const totalHistoryReturnPages = Math.max(1, Math.ceil(filteredReturnedBorrowings.length / RETURN_ROWS_PER_PAGE))
+  const currentHistoryReturnPage = Math.min(historyReturnPage, totalHistoryReturnPages)
+  const historyReturnStartIndex = (currentHistoryReturnPage - 1) * RETURN_ROWS_PER_PAGE
+  const paginatedReturnedBorrowings = filteredReturnedBorrowings.slice(historyReturnStartIndex, historyReturnStartIndex + RETURN_ROWS_PER_PAGE)
+  const visibleHistoryReturnPages = buildVisiblePageItems(currentHistoryReturnPage, totalHistoryReturnPages)
+  const goToHistoryReturnPage = (page: number) => {
+    setHistoryReturnPage(Math.min(totalHistoryReturnPages, Math.max(1, page)))
+  }
 
   const activeReturnSelectedRows = filteredActiveBorrowings.filter((b) =>
     selectedActiveReturnIds.has(b.id)
@@ -1140,9 +1197,9 @@ export default function ReturnsPage() {
               ) : filteredActiveBorrowings.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-[13px]">Tidak ada alat yang perlu dikembalikan</p>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                <div className="px-3 pb-4 sm:px-4 sm:pb-4">
                   <div className="space-y-4 py-3">
-                    {filteredActiveBorrowings.map((b) => {
+                    {paginatedActiveBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
                       const assetName =
                         detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
@@ -1286,6 +1343,55 @@ export default function ReturnsPage() {
                         </div>
                       )
                     })}
+                  </div>
+                  <div className="flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs text-slate-500">
+                      Menampilkan {activeReturnStartIndex + 1}-{Math.min(activeReturnStartIndex + RETURN_ROWS_PER_PAGE, filteredActiveBorrowings.length)} dari {filteredActiveBorrowings.length} peminjaman aktif
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentActiveReturnPage === 1}
+                        onClick={() => setActiveReturnPage((page) => Math.max(1, page - 1))}
+                        aria-label="Halaman alat dikembalikan sebelumnya"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      {visibleActiveReturnPages.map((page) => (
+                        typeof page === "number" ? (
+                          <Button
+                            key={page}
+                            type="button"
+                            variant={page === currentActiveReturnPage ? "default" : "outline"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => goToActiveReturnPage(page)}
+                            aria-label={`Halaman alat dikembalikan ${page}`}
+                            aria-current={page === currentActiveReturnPage ? "page" : undefined}
+                          >
+                            {page}
+                          </Button>
+                        ) : (
+                          <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                            ...
+                          </span>
+                        )
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentActiveReturnPage === totalActiveReturnPages}
+                        onClick={() => setActiveReturnPage((page) => Math.min(totalActiveReturnPages, page + 1))}
+                        aria-label="Halaman alat dikembalikan berikutnya"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1437,9 +1543,9 @@ export default function ReturnsPage() {
                   Tidak ada riwayat pengembalian yang sesuai pencarian/filter.
                 </p>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                <div className="px-3 pb-4 sm:px-4 sm:pb-4">
                   <div className="space-y-4 py-3">
-                    {filteredReturnedBorrowings.map((b) => {
+                    {paginatedReturnedBorrowings.map((b) => {
                     const detailInfo = resolveDetailForBorrowing(b)
                     const historyDetailColumns = historySelectedReturnColumns.includes("tanggalPinjam")
                       ? historySelectedReturnColumns
@@ -1631,6 +1737,55 @@ export default function ReturnsPage() {
                         </div>
                     )
                   })}
+                  </div>
+                  <div className="flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs text-slate-500">
+                      Menampilkan {historyReturnStartIndex + 1}-{Math.min(historyReturnStartIndex + RETURN_ROWS_PER_PAGE, filteredReturnedBorrowings.length)} dari {filteredReturnedBorrowings.length} riwayat
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentHistoryReturnPage === 1}
+                        onClick={() => setHistoryReturnPage((page) => Math.max(1, page - 1))}
+                        aria-label="Halaman riwayat pengembalian sebelumnya"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      {visibleHistoryReturnPages.map((page) => (
+                        typeof page === "number" ? (
+                          <Button
+                            key={page}
+                            type="button"
+                            variant={page === currentHistoryReturnPage ? "default" : "outline"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => goToHistoryReturnPage(page)}
+                            aria-label={`Halaman riwayat pengembalian ${page}`}
+                            aria-current={page === currentHistoryReturnPage ? "page" : undefined}
+                          >
+                            {page}
+                          </Button>
+                        ) : (
+                          <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                            ...
+                          </span>
+                        )
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentHistoryReturnPage === totalHistoryReturnPages}
+                        onClick={() => setHistoryReturnPage((page) => Math.min(totalHistoryReturnPages, page + 1))}
+                        aria-label="Halaman riwayat pengembalian berikutnya"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -1,19 +1,29 @@
-# Database
+# Database Seeds
 
-This package stores database artifacts for the inventory system.
+This folder stores the local schema seed for SIPENA. Database migrations are stored one level above in `packages/database/migrations`.
 
-- `schema.sql`: local schema dump
-- `migrations/`: migration scripts
-- `seeds/`: seed data
+- `schema.sql`: local schema dump for `sipena_db_local`
+- `../migrations/`: migration scripts for schema changes after the seed was created
 
 ## Local MySQL + phpMyAdmin
 
-The canonical schema for `sipena_db_local` lives in `schema.sql`. To use it with a local MySQL + phpMyAdmin stack:
+The canonical seed schema for `sipena_db_local` lives in `packages/database/seeds/schema.sql`. To use it with a local MySQL + phpMyAdmin stack:
 
 1. From the repo root run `docker compose -f packages/backend/docker-compose.yml up mysql phpmyadmin`.
    * The compose file will start MySQL (`sipena_db_local`) and phpMyAdmin on `localhost:8081`. The default credentials are `root` / `root`.
    * If you plan to connect the backend to this container, make sure `packages/backend/.env` sets `DB_PASSWORD=root` (the file defaults to an empty password for a local install).
 2. Open `http://localhost:8081`, log in as `root` and import `packages/database/seeds/schema.sql` into the `sipena_db_local` database.
-3. Run migration scripts from `packages/database/migrations` after pulling backend changes that add new columns. For sanction fields, run `packages/database/migrations/20260427_add_borrowing_sanctions.sql`.
+3. Run migration scripts from `packages/database/migrations` after pulling backend changes that add new columns.
+
+Current migrations include:
+
+- `20260427_add_borrowing_sanctions.sql`
+- `20260517_add_borrowing_extension_columns.sql`
+- `20260517_add_user_security_columns.sql`
+- `20260523_add_asset_usage_logs.sql`
+- `20260523_add_user_sub_work_unit.sql`
+- `20260524_add_asset_usage_no.sql`
+- `20260524_link_asset_usage_borrowings.sql`
+- `20260528_add_user_access_control_columns.sql`
 
 Once the schema is imported, you can point the backend or any CLI tool to `localhost:3306` / `sipena_db_local` and interact with the tables defined above.

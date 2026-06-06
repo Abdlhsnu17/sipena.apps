@@ -1,17 +1,17 @@
 "use client"
 
-import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
-import { assetService } from "@/services/asset.service";
-import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingResult } from "@/services/dss.service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { assetService } from "@/services/asset.service";
+import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
+import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingResult } from "@/services/dss.service";
 import { cn } from "@/utils";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
-import { Activity, ArrowDownUp, Calculator, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { Activity, ArrowDownUp, Calculator, ChevronLeft, ChevronRight, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -48,6 +48,8 @@ const criteriaHelp: Record<string, string> = {
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 
 const formatScore = (value: number) => value.toFixed(4)
+
+const RANKINGS_PER_PAGE = 10
 
 const buildAhpPairwiseMatrix = (normalizedWeights: Record<string, number>) => {
   const criteriaIds = DEFAULT_CRITERIA.map((criterion) => criterion.id)
@@ -238,6 +240,7 @@ export default function DssPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [rankingSource, setRankingSource] = useState<"backend" | "fallback" | null>(null)
+  const [rankingPage, setRankingPage] = useState(1)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -301,135 +304,112 @@ export default function DssPage() {
     ].some((value) => String(value || "").toLowerCase().includes(query)))
   }, [rankingResult?.rankings, searchTerm])
 
+  useEffect(() => {
+    setRankingPage(1)
+  }, [assetType, rankingResult?.rankings, searchTerm])
+
+  const totalRankingPages = Math.max(1, Math.ceil(filteredRankings.length / RANKINGS_PER_PAGE))
+  const currentRankingPage = Math.min(rankingPage, totalRankingPages)
+  const rankingStartIndex = (currentRankingPage - 1) * RANKINGS_PER_PAGE
+  const paginatedRankings = filteredRankings.slice(rankingStartIndex, rankingStartIndex + RANKINGS_PER_PAGE)
+  const visibleRankingPages = useMemo(() => {
+    if (totalRankingPages <= 7) {
+      return Array.from({ length: totalRankingPages }, (_, index) => index + 1)
+    }
+
+    const pages = new Set([
+      1,
+      totalRankingPages,
+      currentRankingPage - 1,
+      currentRankingPage,
+      currentRankingPage + 1,
+    ])
+    const sortedPages = Array.from(pages)
+      .filter((page) => page >= 1 && page <= totalRankingPages)
+      .sort((left, right) => left - right)
+
+    return sortedPages.flatMap((page, index) => {
+      const previousPage = sortedPages[index - 1]
+      if (index > 0 && previousPage && page - previousPage > 1) {
+        return [`ellipsis-${previousPage}-${page}`, page]
+      }
+      return [page]
+    })
+  }, [currentRankingPage, totalRankingPages])
+
+  const goToRankingPage = (page: number) => {
+    setRankingPage(Math.min(totalRankingPages, Math.max(1, page)))
+  }
+
   const topRankings = rankingResult?.rankings.slice(0, 3) || []
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-semibold text-teal-700">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white">
-                <Calculator className="h-5 w-5" />
-              </span>
-              AHP-TOPSIS
+    <div>
+      <div className="w-full space-y-6">
+        <Card className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <CardContent className="p-0">
+            <div className="border-b border-slate-100 bg-slate-50 panel-gutter">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl flex items-center gap-3">
+                  <div className="inline-flex rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
+                    <Calculator className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-[18px] font-semibold tracking-tight text-slate-900">SPK Prioritas Aset</h1>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full lg:w-auto">
+                  <Select value={assetType} onValueChange={(value) => setAssetType(value as DssAssetType)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Jenis aset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua aset</SelectItem>
+                      <SelectItem value="medical">Medis</SelectItem>
+                      <SelectItem value="non_medical">Non-Medis</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2 rounded-2xl">
+                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                    Hitung Ulang
+                  </Button>
+                </div>
+              </div>
             </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950 sm:text-3xl">
-              SPK Prioritas Aset
-            </h1>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Select value={assetType} onValueChange={(value) => setAssetType(value as DssAssetType)}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Jenis aset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua aset</SelectItem>
-                <SelectItem value="medical">Medis</SelectItem>
-                <SelectItem value="non_medical">Non-Medis</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2">
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-              Hitung Ulang
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <SlidersHorizontal className="h-4 w-4 text-teal-700" />
-                Bobot Kriteria
-              </CardTitle>
+              <CardTitle className="text-base">Ringkasan Prioritas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {rankingResult?.criteria.map((criterion) => {
-                const rawValue = weights[criterion.id] ?? 0
-                return (
-                  <div key={criterion.id} className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Label htmlFor={`weight-${criterion.id}`} className="text-sm font-semibold text-slate-900">
-                          {criterion.name}
-                        </Label>
-                        <p className="mt-0.5 text-xs leading-5 text-slate-500">{criteriaHelp[criterion.id]}</p>
-                      </div>
-                      <Badge variant="outline" className="shrink-0">
-                        {criterion.type === "benefit" ? "Benefit" : "Cost"}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-[1fr_72px] items-center gap-3">
-                      <input
-                        id={`weight-${criterion.id}`}
-                        type="range"
-                        min="1"
-                        max="40"
-                        value={rawValue}
-                        onChange={(event) => setWeights((current) => ({
-                          ...current,
-                          [criterion.id]: Number(event.target.value),
-                        }))}
-                        className="h-2 w-full accent-teal-700"
-                      />
-                      <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-semibold text-slate-800">
-                        {formatPercent(criterion.weight)}
-                      </div>
-                    </div>
-                  </div>
-                )
-              }) ?? (
-                <div className="space-y-3">
-                  {Object.keys(DEFAULT_WEIGHTS).map((criterionId) => (
-                    <div key={criterionId} className="h-20 animate-pulse rounded-md bg-slate-100" />
-                  ))}
-                </div>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setWeights(DEFAULT_WEIGHTS)}
-              >
-                Reset Bobot Default
-              </Button>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-4">
+            <CardContent className="space-y-4 pt-0">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
                   <div className="text-xs font-medium uppercase text-slate-500">Alternatif</div>
                   <div className="mt-1 text-2xl font-semibold text-slate-950">
                     {rankingResult?.totalAlternatives ?? 0}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">Item inventaris detail</div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-4">
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
                   <div className="text-xs font-medium uppercase text-slate-500">Sumber Data</div>
                   <div className="mt-1 text-2xl font-semibold text-slate-950">{assetTypeLabel(assetType)}</div>
                   <div className="mt-1 text-xs text-slate-500">Medis dan non-medis</div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-4">
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
                   <div className="text-xs font-medium uppercase text-slate-500">Ranking Tertinggi</div>
-                  <div className="mt-1 truncate text-lg font-semibold text-slate-950">
+                  <div className="mt-1 line-clamp-1 text-lg font-semibold text-slate-950">
                     {topRankings[0]?.detailName ?? "-"}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
                     {topRankings[0] ? formatScore(topRankings[0].preferenceScore) : "Belum dihitung"}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </div>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="grid gap-3 p-4 md:grid-cols-3">
+              <div className="grid gap-3 border-t border-slate-100 pt-4 md:grid-cols-3">
                 <div>
                   <div className="text-xs font-medium uppercase text-slate-500">Metode AHP</div>
                   <div className="mt-1 text-sm font-semibold text-slate-950">Perbandingan kriteria</div>
@@ -453,116 +433,237 @@ export default function DssPage() {
                   <div className="mt-1 text-sm font-semibold text-slate-950">Ranking aset detail</div>
                   <div className="mt-1 text-xs leading-5 text-slate-500">Ranking aset dihitung berdasarkan bobot kriteria dan nilai alternatif.</div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {topRankings.length > 0 && (
-              <div className="grid gap-3 lg:grid-cols-3">
-                {topRankings.map((item) => (
-                  <Card key={`${item.assetType}-${item.assetId}-${item.detailId}`} className="border-slate-200 shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <Badge className="bg-slate-950 text-white">#{item.rank}</Badge>
-                        <Badge variant="outline" className={recommendationClassName(item.recommendation)}>
-                          {item.recommendation}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 min-w-0">
-                        <div className="truncate text-base font-semibold text-slate-950">{item.detailName}</div>
-                        <div className="mt-1 text-sm text-slate-600">{item.detailCode}</div>
-                        <div className="mt-2 text-xs leading-5 text-slate-500">{item.assetLocation || item.assetName}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Top Ranking</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {topRankings.length > 0 ? (
+                topRankings.map((item) => (
+                  <div key={`${item.assetType}-${item.assetId}-${item.detailId}`} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start">
+                    <Badge className="w-fit bg-slate-950 text-white">#{item.rank}</Badge>
+                    <div className="min-w-0">
+                      <div className="line-clamp-1 text-sm font-semibold text-slate-950">{item.detailName}</div>
+                      <div className="mt-0.5 text-xs leading-5 text-slate-500">{item.detailCode} · {item.assetLocation || item.assetName}</div>
+                    </div>
+                    <Badge variant="outline" className={cn("w-fit justify-self-start sm:justify-self-end", recommendationClassName(item.recommendation))}>
+                      {item.recommendation}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                  Belum ada ranking untuk ditampilkan.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <SlidersHorizontal className="h-4 w-4 text-teal-700" />
+              Bobot Kriteria
+            </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setWeights(DEFAULT_WEIGHTS)}
+            >
+              Reset Bobot Default
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-3 pt-0 md:grid-cols-2 xl:grid-cols-3">
+            {rankingResult?.criteria.map((criterion) => {
+              const rawValue = weights[criterion.id] ?? 0
+              return (
+                <div key={criterion.id} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Label htmlFor={`weight-${criterion.id}`} className="text-sm font-semibold text-slate-900">
+                        {criterion.name}
+                      </Label>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{criteriaHelp[criterion.id]}</p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 bg-white">
+                      {criterion.type === "benefit" ? "Benefit" : "Cost"}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_76px] items-center gap-3">
+                    <input
+                      id={`weight-${criterion.id}`}
+                      type="range"
+                      min="1"
+                      max="40"
+                      value={rawValue}
+                      onChange={(event) => setWeights((current) => ({
+                        ...current,
+                        [criterion.id]: Number(event.target.value),
+                      }))}
+                      className="h-2 w-full accent-teal-700"
+                    />
+                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-right text-sm font-semibold text-slate-800">
+                      {formatPercent(criterion.weight)}
+                    </div>
+                  </div>
+                </div>
+              )
+            }) ?? (
+              <div className="col-span-full grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {Object.keys(DEFAULT_WEIGHTS).map((criterionId) => (
+                  <div key={criterionId} className="h-28 animate-pulse rounded-xl bg-slate-100" />
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="gap-3 pb-3 lg:flex-row lg:items-center lg:justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ArrowDownUp className="h-4 w-4 text-teal-700" />
-                  Ranking Prioritas
-                </CardTitle>
-                <div className="relative w-full lg:w-80">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Cari aset, kode, ruangan"
-                    className="pl-9"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {errorMessage && (
-                  <div className="m-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {errorMessage}
-                  </div>
-                )}
-                {isLoading ? (
-                  <div className="space-y-2 p-4">
-                    {Array.from({ length: 8 }).map((_, index) => (
-                      <div key={index} className="h-14 animate-pulse rounded-md bg-slate-100" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[980px] text-left text-sm">
-                      <thead className="border-y border-slate-200 bg-slate-100 text-xs uppercase text-slate-600">
-                        <tr>
-                          <th className="px-4 py-3">Rank</th>
-                          <th className="px-4 py-3">Aset Detail</th>
-                          <th className="px-4 py-3">Lokasi</th>
-                          <th className="px-4 py-3">Jenis</th>
-                          <th className="px-4 py-3">Kondisi</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3">Skor</th>
-                          <th className="px-4 py-3">Rekomendasi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {filteredRankings.map((item) => (
-                          <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 align-top font-semibold text-slate-950">#{item.rank}</td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="font-semibold text-slate-950">{item.detailName}</div>
-                              <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.assetName}</div>
-                            </td>
-                            <td className="px-4 py-3 align-top text-slate-700">{item.assetLocation || "-"}</td>
-                            <td className="px-4 py-3 align-top">
-                              <Badge variant="outline">{assetTypeLabel(item.assetType)}</Badge>
-                            </td>
-                            <td className="px-4 py-3 align-top text-slate-700">{item.conditionLabel}</td>
-                            <td className="px-4 py-3 align-top text-slate-700">{item.statusLabel}</td>
-                            <td className="px-4 py-3 align-top font-semibold text-slate-950">{formatScore(item.preferenceScore)}</td>
-                            <td className="px-4 py-3 align-top">
-                              <Badge variant="outline" className={recommendationClassName(item.recommendation)}>
-                                {item.recommendation}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredRankings.length === 0 && (
-                          <tr>
-                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-500">
-                              Tidak ada data ranking yang sesuai.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Activity className="h-4 w-4" />
-              Hasil dihitung dari kondisi, usia, jadwal maintenance, pemakaian, riwayat maintenance, urgensi fungsi, dan risiko status aset.
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="gap-3 pb-3 lg:flex-row lg:items-center lg:justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ArrowDownUp className="h-4 w-4 text-teal-700" />
+              Ranking Prioritas
+            </CardTitle>
+            <div className="relative w-full lg:w-80">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Cari aset, kode, ruangan"
+                className="pl-9"
+              />
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {errorMessage && (
+              <div className="m-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            )}
+            {isLoading ? (
+              <div className="space-y-2 p-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="h-14 animate-pulse rounded-md bg-slate-100" />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-275 text-left text-[13px]">
+                  <thead className="border-y border-slate-200 bg-slate-100 text-xs uppercase text-slate-600">
+                    <tr>
+                      <th className="px-3 py-2.5">Rank</th>
+                      <th className="px-3 py-2.5">Aset Detail</th>
+                      <th className="px-3 py-2.5">Lokasi</th>
+                      <th className="px-3 py-2.5">Jenis</th>
+                      <th className="px-3 py-2.5">Kondisi</th>
+                      <th className="px-3 py-2.5">Status</th>
+                      <th className="px-3 py-2.5">Skor</th>
+                      <th className="px-3 py-2.5">Rekomendasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {paginatedRankings.map((item) => (
+                      <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50">
+                        <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{item.rank}</td>
+                        <td className="px-3 py-2.5 align-top">
+                          <div className="font-semibold text-slate-950">{item.detailName}</div>
+                          <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.assetName}</div>
+                        </td>
+                        <td className="px-3 py-2.5 align-top text-slate-700">{item.assetLocation || "-"}</td>
+                        <td className="px-3 py-2.5 align-top">
+                          <Badge variant="outline">{assetTypeLabel(item.assetType)}</Badge>
+                        </td>
+                        <td className="px-3 py-2.5 align-top text-slate-700">{item.conditionLabel}</td>
+                        <td className="px-3 py-2.5 align-top text-slate-700">{item.statusLabel}</td>
+                        <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{formatScore(item.preferenceScore)}</td>
+                        <td className="px-3 py-2.5 align-top">
+                          <Badge variant="outline" className={recommendationClassName(item.recommendation)}>
+                            {item.recommendation}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredRankings.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">
+                          Tidak ada data ranking yang sesuai.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                {filteredRankings.length > 0 && (
+                  <div className="flex flex-col gap-3 border-t border-slate-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs text-slate-500">
+                      Menampilkan {rankingStartIndex + 1}-{Math.min(rankingStartIndex + RANKINGS_PER_PAGE, filteredRankings.length)} dari {filteredRankings.length} ranking
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentRankingPage === 1}
+                        onClick={() => setRankingPage((page) => Math.max(1, page - 1))}
+                        aria-label="Halaman ranking sebelumnya"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      {visibleRankingPages.map((page) => (
+                        typeof page === "number" ? (
+                          <Button
+                            key={page}
+                            type="button"
+                            variant={page === currentRankingPage ? "default" : "outline"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => goToRankingPage(page)}
+                            aria-label={`Halaman ranking ${page}`}
+                            aria-current={page === currentRankingPage ? "page" : undefined}
+                          >
+                            {page}
+                          </Button>
+                        ) : (
+                          <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                            ...
+                          </span>
+                        )
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={currentRankingPage === totalRankingPages}
+                        onClick={() => setRankingPage((page) => Math.min(totalRankingPages, page + 1))}
+                        aria-label="Halaman ranking berikutnya"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <Activity className="h-4 w-4" />
+          Hasil dihitung dari kondisi, usia, jadwal maintenance, pemakaian, riwayat maintenance, urgensi fungsi, dan risiko status aset.
         </div>
+      </div>
+
+      <div className="mt-8 flex w-full justify-center border-t border-border pt-6">
+        <p className="text-center text-[13px] text-muted-foreground">
+          Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
+        </p>
       </div>
     </div>
   )

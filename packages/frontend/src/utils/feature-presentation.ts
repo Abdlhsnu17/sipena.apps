@@ -13,7 +13,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#5eead4",
   },
   dokumentasi_unggahan: {
-    label: "Dokumentasi UML",
+    label: "Dokumentasi Sistem",
     backgroundColor: "#e2e8f0",
     textColor: "#475569",
     borderColor: "#cbd5e1",
@@ -43,7 +43,7 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
     borderColor: "#d8b4fe",
   },
   unggahan: {
-    label: "Unggahan",
+    label: "Unggah Dokumen",
     backgroundColor: "#e0f2fe",
     textColor: "#0369a1",
     borderColor: "#7dd3fc",
@@ -83,10 +83,12 @@ const FEATURE_PRESENTATIONS: Record<string, FeaturePresentation> = {
 const FEATURE_ALIASES: Record<string, string> = {
   dashboard: "dashboard",
   dokumentasi: "dokumentasi_unggahan",
-  "dokumentasi unggahan": "dokumentasi_unggahan",
-  "dokumentasi UML & unggahan": "dokumentasi_unggahan",
+  "dokumentasi sistem": "dokumentasi_unggahan",
+  "dokumentasi uml": "dokumentasi_unggahan",
   uml: "dokumentasi_unggahan",
   unggahan: "unggahan",
+  "unggah dokumen": "unggahan",
+  "dokumen pendukung": "unggahan",
   "inventaris medis": "inventaris_medis",
   medis: "inventaris_medis",
   "inventaris non medis": "inventaris_non_medis",

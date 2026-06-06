@@ -14,7 +14,7 @@ import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { Activity, Check, ChevronDown, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -45,6 +45,27 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
 };
 
 const functionalUsageKeys: AssetUsageContext[] = ["emergency", "rounding"];
+
+const HISTORY_ROWS_PER_PAGE = 3;
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1];
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page];
+    }
+    return [page];
+  });
+};
 
 const getAssetRoomOptions = (item?: DetailInventoryItem) => {
   if (!item) return [];
@@ -279,6 +300,7 @@ export default function AssetUsagePage() {
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [expandedUsageHistoryIds, setExpandedUsageHistoryIds] = useState<number[]>([]);
+  const [usageHistoryPage, setUsageHistoryPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
@@ -508,6 +530,19 @@ export default function AssetUsagePage() {
       return matchesSearch && matchesSearchKeyword(roomFilter, [log.roomName]);
     });
   }, [logs, roomFilter, searchTerm]);
+
+  useEffect(() => {
+    setUsageHistoryPage(1);
+  }, [logs.length, roomFilter, searchTerm]);
+
+  const totalUsageHistoryPages = Math.max(1, Math.ceil(filteredLogs.length / HISTORY_ROWS_PER_PAGE));
+  const currentUsageHistoryPage = Math.min(usageHistoryPage, totalUsageHistoryPages);
+  const usageHistoryStartIndex = (currentUsageHistoryPage - 1) * HISTORY_ROWS_PER_PAGE;
+  const paginatedLogs = filteredLogs.slice(usageHistoryStartIndex, usageHistoryStartIndex + HISTORY_ROWS_PER_PAGE);
+  const visibleUsageHistoryPages = buildVisiblePageItems(currentUsageHistoryPage, totalUsageHistoryPages);
+  const goToUsageHistoryPage = (page: number) => {
+    setUsageHistoryPage(Math.min(totalUsageHistoryPages, Math.max(1, page)));
+  };
 
   const summary = useMemo(() => {
     const totalUsage = filteredLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0);
@@ -1123,14 +1158,14 @@ export default function AssetUsagePage() {
                   </div>
                   <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
                 </div>
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                <div className="px-3 pb-4 sm:px-4 sm:pb-4">
                   <div className="space-y-4 py-3">
                   {filteredLogs.length === 0 ? (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
                       {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
                     </div>
                   ) : (
-                    filteredLogs.map((log) => {
+                    paginatedLogs.map((log) => {
                       const roomDisplay = getUsageRoomDisplay(log);
                       const userLabel = log.operatorName || log.createdByName || "-";
                       const isExpanded = expandedUsageHistoryIds.includes(log.id);
@@ -1269,6 +1304,57 @@ export default function AssetUsagePage() {
                     })
                   )}
                   </div>
+                  {filteredLogs.length > 0 && (
+                    <div className="flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-xs text-slate-500">
+                        Menampilkan {usageHistoryStartIndex + 1}-{Math.min(usageHistoryStartIndex + HISTORY_ROWS_PER_PAGE, filteredLogs.length)} dari {filteredLogs.length} riwayat
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentUsageHistoryPage === 1}
+                          onClick={() => setUsageHistoryPage((page) => Math.max(1, page - 1))}
+                          aria-label="Halaman riwayat pemakaian sebelumnya"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {visibleUsageHistoryPages.map((page) => (
+                          typeof page === "number" ? (
+                            <Button
+                              key={page}
+                              type="button"
+                              variant={page === currentUsageHistoryPage ? "default" : "outline"}
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => goToUsageHistoryPage(page)}
+                              aria-label={`Halaman riwayat pemakaian ${page}`}
+                              aria-current={page === currentUsageHistoryPage ? "page" : undefined}
+                            >
+                              {page}
+                            </Button>
+                          ) : (
+                            <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                              ...
+                            </span>
+                          )
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentUsageHistoryPage === totalUsageHistoryPages}
+                          onClick={() => setUsageHistoryPage((page) => Math.min(totalUsageHistoryPages, page + 1))}
+                          aria-label="Halaman riwayat pemakaian berikutnya"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getCurrentUser } from "@/services/auth-utils";
 import { cn } from "@/utils";
 import { normalizeUserRole } from "@/utils/role";
-import { ArrowRight, Box, Database, FileText, UploadCloud, Users, Workflow, Zap } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Box, Database, FileText, Users, Workflow, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
@@ -90,28 +89,40 @@ const activityFlows: { title: string; color: "amber" | "emerald" | "fuchsia" | "
     ],
   },
   {
-    title: "Alur Penambahan Inventaris",
-    color: "teal",
+    title: "Alur Pengaturan Profil",
+    color: "rose",
     steps: [
       { step: "Start", type: "start" },
-      { step: "Pilih kategori aset", type: "action" },
-      { step: "Isi data detail", type: "action" },
-      { step: "Validasi", type: "decision" },
-      { step: "Simpan ke master inventory", type: "action" },
+      { step: "Buka Edit Profil", type: "action" },
+      { step: "Ubah biodata, foto, atau password", type: "action" },
+      { step: "Data valid?", type: "decision" },
+      { step: "Simpan perubahan akun", type: "action" },
       { step: "End", type: "end" },
     ],
   },
   {
-    title: "Alur Pemeliharaan Sarana",
-    color: "emerald",
+    title: "Alur Inventaris Medis",
+    color: "teal",
     steps: [
       { step: "Start", type: "start" },
-      { step: "Pilih aset yang akan dipelihara", type: "action" },
-      { step: "Buat jadwal pemeliharaan", type: "action" },
-      { step: "Jadwal valid?", type: "decision" },
-      { step: "Teknisi melakukan pemeliharaan", type: "action" },
-      { step: "Update status dan catatan hasil", type: "action" },
-      { step: "Validasi selesai", type: "action" },
+      { step: "Buka Inventaris Medis", type: "action" },
+      { step: "Cari, filter, atau pilih detail aset", type: "action" },
+      { step: "Role boleh ubah data?", type: "decision" },
+      { step: "Tambah atau perbarui aset medis", type: "action" },
+      { step: "Simpan ke master inventaris", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Inventaris Non-Medis",
+    color: "fuchsia",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka Inventaris Non-Medis", type: "action" },
+      { step: "Cari, filter, atau pilih detail aset", type: "action" },
+      { step: "Role boleh ubah data?", type: "decision" },
+      { step: "Tambah atau perbarui aset non-medis", type: "action" },
+      { step: "Simpan ke master inventaris", type: "action" },
       { step: "End", type: "end" },
     ],
   },
@@ -142,6 +153,123 @@ const activityFlows: { title: string; color: "amber" | "emerald" | "fuchsia" | "
       { step: "Petugas verifikasi kondisi alat", type: "action" },
       { step: "Alat sesuai?", type: "decision" },
       { step: "Status alat menjadi tersedia", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Penggunaan Aset",
+    color: "amber",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Pilih aset dan ruangan pemakaian", type: "action" },
+      { step: "Isi operator, waktu, dan tujuan penggunaan", type: "action" },
+      { step: "Data penggunaan lengkap?", type: "decision" },
+      { step: "Catat kondisi sebelum dan sesudah", type: "action" },
+      { step: "Simpan log penggunaan aset", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Jadwal Pemeliharaan",
+    color: "emerald",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Pilih aset yang perlu dijadwalkan", type: "action" },
+      { step: "Isi tanggal dan deskripsi pemeliharaan", type: "action" },
+      { step: "Jadwal valid?", type: "decision" },
+      { step: "Simpan jadwal pemeliharaan", type: "action" },
+      { step: "Sinkronkan ke record pemeliharaan", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Pemeliharaan Sarana",
+    color: "teal",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka daftar pemeliharaan", type: "action" },
+      { step: "Teknisi melakukan pengecekan lanjutan", type: "action" },
+      { step: "Pekerjaan dapat dilanjutkan?", type: "decision" },
+      { step: "Update status dan catatan hasil", type: "action" },
+      { step: "Leader/Admin validasi akhir", type: "action" },
+      { step: "Simpan riwayat pemeliharaan", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur SPK Prioritas Aset",
+    color: "purple",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka SPK Prioritas Aset", type: "action" },
+      { step: "Pilih aset dan kriteria penilaian", type: "action" },
+      { step: "Bobot konsisten?", type: "decision" },
+      { step: "Hitung prioritas dengan matriks AHP", type: "action" },
+      { step: "Tampilkan ranking rekomendasi", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Laporan & Analitik",
+    color: "fuchsia",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka dashboard laporan", type: "action" },
+      { step: "Pilih jenis laporan dan filter periode", type: "action" },
+      { step: "Data tersedia?", type: "decision" },
+      { step: "Tampilkan ringkasan dan tabel laporan", type: "action" },
+      { step: "Ekspor PDF atau Excel", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Unggah Dokumen",
+    color: "orange",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka Unggah Dokumen", type: "action" },
+      { step: "Pilih file pendukung", type: "action" },
+      { step: "Format dan ukuran valid?", type: "decision" },
+      { step: "Unggah dan simpan metadata", type: "action" },
+      { step: "Pratinjau, unduh, atau hapus dokumen", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Manajemen Pengguna",
+    color: "amber",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Admin/Leader buka daftar pengguna", type: "action" },
+      { step: "Tambah, ubah, atau pilih detail pengguna", type: "action" },
+      { step: "Role boleh mengelola user ini?", type: "decision" },
+      { step: "Simpan data, akses unit, atau password", type: "action" },
+      { step: "Catat aktivitas manajemen user", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Arsip Aktivitas",
+    color: "emerald",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka Riwayat Aktivitas", type: "action" },
+      { step: "Terapkan filter fitur, aksi, user, atau tanggal", type: "action" },
+      { step: "Hasil ditemukan?", type: "decision" },
+      { step: "Tampilkan log dan metadata transaksi", type: "action" },
+      { step: "Gunakan sebagai audit operasional", type: "action" },
+      { step: "End", type: "end" },
+    ],
+  },
+  {
+    title: "Alur Dokumentasi Sistem",
+    color: "rose",
+    steps: [
+      { step: "Start", type: "start" },
+      { step: "Buka Dokumentasi Sistem", type: "action" },
+      { step: "Validasi hak akses diagram", type: "decision" },
+      { step: "Pilih Activity atau Use Case Diagram", type: "action" },
+      { step: "Sistem menampilkan diagram sesuai role", type: "action" },
       { step: "End", type: "end" },
     ],
   },
@@ -308,7 +436,7 @@ const useCaseActors: UseCaseActor[] = [
     items: [
       "Logout dan kelola profil sendiri",
       "Unggah foto profil dan ubah password",
-      "Akses dokumentasi UML dan riwayat aktivitas",
+      "Akses dokumentasi sistem dan riwayat aktivitas",
       "Unggah, lihat, unduh, dan pratinjau dokumen sesuai hak akses",
     ],
   },
@@ -320,7 +448,7 @@ const useCaseActors: UseCaseActor[] = [
       "CRUD inventaris medis dan non-medis",
       "Validasi peminjaman, pengembalian, dan pemeliharaan",
       "Kelola jadwal pemeliharaan termasuk hapus jadwal dan record",
-      "Kelola semua pengguna, seluruh laporan, dan hapus unggahan",
+      "Kelola semua pengguna, seluruh laporan, dan hapus dokumen",
     ],
   },
   {
@@ -466,7 +594,7 @@ export default function UMLPage() {
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="mt-1 text-[18px] font-bold text-foreground">Dokumentasi UML</h1>
+              <h1 className="mt-1 text-[18px] font-bold text-foreground">Dokumentasi Sistem</h1>
             </div>
           </div>
         </section>
@@ -487,7 +615,7 @@ export default function UMLPage() {
               </span>
               <div className="flex-1 space-y-1">
                 <p className="text-base font-bold text-white">Activity Diagram</p>
-                <p className="text-xs text-white/90">Alur proses peminjaman, pengembalian, dan pemeliharaan.</p>
+                <p className="text-xs text-white/90">Alur proses semua fitur utama SIPENA.</p>
               </div>
             </div>
             <div className="mt-3 flex items-center">
@@ -518,23 +646,6 @@ export default function UMLPage() {
             </div>
           </button>
 
-          <Link
-            href="/unggahan"
-            className="group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br from-sky-500/70 via-cyan-500/70 to-teal-400/60 p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
-          >
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur">
-                <UploadCloud className="h-5 w-5 text-white" />
-              </span>
-              <div className="flex-1 space-y-1">
-                <p className="text-base font-bold text-white">Dokumentasi Unggahan</p>
-                <p className="text-xs text-white/90">Alur arsip dan unggah file pendukung.</p>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center">
-              <ArrowRight className="h-4 w-4 text-white/80" />
-            </div>
-          </Link>
         </section>
 
         <div ref={sectionContainerRef}>
@@ -548,7 +659,7 @@ export default function UMLPage() {
                 </div>
                 <div>
                   <CardTitle>Activity Diagram</CardTitle>
-                  <CardDescription>Alur proses utama termasuk peminjaman, pengembalian, dan pemeliharaan sarana.</CardDescription>
+                  <CardDescription>Alur proses autentikasi, profil, inventaris, transaksi, pemeliharaan, laporan, SPK, unggahan, dan dokumentasi.</CardDescription>
                 </div>
               </div>
             </CardHeader>

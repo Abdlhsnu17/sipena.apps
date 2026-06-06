@@ -51,7 +51,7 @@ export default function UMLPage() {
       <div className="p-8">
 
         <div className="mb-6">
-          <h1 className="text-[18px] font-bold text-foreground">Dokumentasi UML Diagram Use Case & Unggahan</h1>
+          <h1 className="text-[18px] font-bold text-foreground">Dokumentasi Sistem</h1>
           <p className="text-muted-foreground text-sm">Diagram Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)</p>
           <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <p className="text-sm text-teal-800">

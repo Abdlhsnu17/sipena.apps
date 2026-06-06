@@ -79,20 +79,26 @@ rectangle "SIPENA" {
     usecase "Hapus Jadwal Pemeliharaan" as UC_DeleteSchedule
   }
 
-  package "Laporan & Dokumentasi" {
+  package "Laporan & Analitik" {
     usecase "Lihat Dashboard Laporan" as UC_ViewDashboard
     usecase "Lihat Laporan Aset" as UC_AssetReport
     usecase "Lihat Laporan Peminjaman" as UC_BorrowingReport
     usecase "Lihat Laporan Pemeliharaan" as UC_MaintenanceReport
-    usecase "Unggah Laporan" as UC_UploadReport
-    usecase "Lihat Upload Laporan" as UC_ViewUploads
-    usecase "Unduh Upload Laporan" as UC_DownloadUpload
-    usecase "Pratinjau Upload Laporan" as UC_PreviewUpload
-    usecase "Hapus Upload Laporan" as UC_DeleteUpload
     usecase "Ekspor PDF" as UC_ExportPdf
     usecase "Ekspor Excel" as UC_ExportExcel
+  }
+
+  package "Unggah Dokumen" {
+    usecase "Unggah Dokumen" as UC_UploadReport
+    usecase "Lihat Dokumen" as UC_ViewUploads
+    usecase "Unduh Dokumen" as UC_DownloadUpload
+    usecase "Pratinjau Dokumen" as UC_PreviewUpload
+    usecase "Hapus Dokumen" as UC_DeleteUpload
+  }
+
+  package "Dokumentasi Sistem" {
     usecase "Lihat Riwayat Aktivitas" as UC_ViewActivity
-    usecase "Akses Dokumentasi UML" as UC_ViewUML
+    usecase "Akses Dokumentasi Sistem" as UC_ViewUML
   }
 
   package "Manajemen Pengguna" {
@@ -269,9 +275,10 @@ UC_ViewUploads ..> UC_DeleteUpload : <<include>>
 
 note right of Authenticated
   Semua aktor terautentikasi dapat
-  mengelola akun sendiri, mengakses UML,
+  mengelola akun sendiri, mengakses
+  dokumentasi sistem,
   melihat riwayat aktivitas, dan
-  mengelola unggahan sesuai hak akses.
+  mengelola dokumen sesuai hak akses.
 end note
 
 note right of StaffPJ
@@ -288,7 +295,7 @@ end note
 
 note bottom of Admin
   Admin memiliki akses paling luas
-  pada pengelolaan data dan dokumentasi.
+  pada pengelolaan data dan dokumen.
 end note
 
 @enduml

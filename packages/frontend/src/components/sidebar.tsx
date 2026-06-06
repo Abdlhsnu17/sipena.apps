@@ -18,6 +18,7 @@ import {
     ChevronDown,
     ClipboardList,
     Clock3,
+    FileUp,
     FileText,
     HandHelping,
     LayoutDashboard,
@@ -451,13 +452,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const fullAccessLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-teal-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/unggahan", label: "Unggah Dokumen", icon: FileUp, iconColor: featureIconColor, searchKeywords: ["unggah", "upload", "dokumen", "berkas", "arsip"] },
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/users", label: "Manajemen Pengguna", icon: Users, iconColor: "text-amber-600", searchKeywords: ["pengguna", "user", "nip", "nik", "akun"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
@@ -467,13 +469,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const staffLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/unggahan", label: "Unggah Dokumen", icon: FileUp, iconColor: featureIconColor, searchKeywords: ["unggah", "upload", "dokumen", "berkas", "arsip"] },
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
@@ -482,13 +485,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const staffPjLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/unggahan", label: "Unggah Dokumen", icon: FileUp, iconColor: featureIconColor, searchKeywords: ["unggah", "upload", "dokumen", "berkas", "arsip"] },
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
@@ -497,22 +501,24 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
   const technicianLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/unggahan", label: "Unggah Dokumen", icon: FileUp, iconColor: featureIconColor, searchKeywords: ["unggah", "upload", "dokumen", "berkas", "arsip"] },
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
   const userLinks: SidebarLink[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, iconColor: "text-black", searchKeywords: ["beranda", "home", "ringkasan"] },
-    { href: "/uml", label: "Dokumentasi UML", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "uml", "unggahan", "arsip"] },
+    { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
+    { href: "/unggahan", label: "Unggah Dokumen", icon: FileUp, iconColor: featureIconColor, searchKeywords: ["unggah", "upload", "dokumen", "berkas", "arsip"] },
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },

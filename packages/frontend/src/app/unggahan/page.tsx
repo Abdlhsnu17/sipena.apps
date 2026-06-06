@@ -11,7 +11,7 @@ import { API_BASE_URL } from "@/services/api.service";
 import { getAuthToken, getCurrentUser } from "@/services/auth-utils";
 import reportService, { type ReportUpload } from "@/services/report.service";
 import type { User } from "@/types/auth-types";
-import { Trash2, UploadCloud } from "lucide-react";
+import { FileUp, Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 type RawUpload = Record<string, unknown>
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
@@ -53,7 +53,7 @@ const normalizeUpload = (upload: RawUpload): ReportUpload => {
         : upload.user_id !== undefined
           ? (upload.user_id as number | null)
           : null,
-    filename: (upload.filename as string) ?? "Laporan tanpa nama",
+    filename: (upload.filename as string) ?? "Dokumen tanpa nama",
     contentType:
       (upload.contentType as string) ?? (upload.content_type as string) ?? "application/octet-stream",
     sizeBytes: Number(upload.sizeBytes ?? upload.size_bytes ?? 0),
@@ -143,7 +143,7 @@ export default function UnggahanPage() {
     ? (currentUser.role ?? "").toLowerCase() === "admin"
     : false
   const totalUploads = uploadedReports.length
-  const latestUploadLabel = uploadedReports[0] ? formatUploadDate(uploadedReports[0].uploadedAt) : "Belum ada unggahan"
+  const latestUploadLabel = uploadedReports[0] ? formatUploadDate(uploadedReports[0].uploadedAt) : "Belum ada dokumen"
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -334,18 +334,18 @@ export default function UnggahanPage() {
         }
 
         toast({
-          title: "Unggahan berhasil disimpan",
+          title: "Dokumen berhasil disimpan",
           description:
             uploadResults.length === 1
-              ? "1 file unggahan sudah tersimpan."
-              : `${uploadResults.length} file unggahan sudah tersimpan.`,
+              ? "1 file dokumen sudah tersimpan."
+              : `${uploadResults.length} file dokumen sudah tersimpan.`,
         })
       }
     } catch (error) {
       console.error("Failed to upload reports:", error)
-      const errorMessage = error instanceof Error ? error.message : "Gagal menyimpan file unggahan."
+      const errorMessage = error instanceof Error ? error.message : "Gagal menyimpan file dokumen."
       toast({
-        title: "Unggahan gagal",
+        title: "Unggah dokumen gagal",
         description: errorMessage,
         variant: "destructive",
       })
@@ -365,8 +365,8 @@ export default function UnggahanPage() {
   const handleDeleteUpload = async (id: number) => {
     if (!canDeleteUploads) return
     const isConfirmed = await confirm({
-      title: "Hapus unggahan",
-      description: "Hapus unggahan ini?",
+      title: "Hapus dokumen",
+      description: "Hapus dokumen ini?",
       confirmText: "Ya, hapus",
       destructive: true,
     })
@@ -377,15 +377,15 @@ export default function UnggahanPage() {
       if (response.success) {
         setUploadedReports((prev) => prev.filter((upload) => upload.id !== id))
         toast({
-          title: "Unggahan berhasil dihapus",
-          description: "Data unggahan sudah diperbarui.",
+          title: "Dokumen berhasil dihapus",
+          description: "Data dokumen sudah diperbarui.",
         })
       }
     } catch (error) {
       console.error("Failed to delete upload:", error)
       toast({
-        title: "Gagal menghapus unggahan",
-        description: "Terjadi kesalahan saat menghapus unggahan.",
+        title: "Gagal menghapus dokumen",
+        description: "Terjadi kesalahan saat menghapus dokumen.",
         variant: "destructive",
       })
     } finally {
@@ -416,7 +416,7 @@ export default function UnggahanPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = report.filename || "laporan"
+      link.download = report.filename || "dokumen"
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -433,62 +433,55 @@ export default function UnggahanPage() {
     <div className="min-h-full">
       <main className="flex flex-col">
         <div className="flex w-full flex-col gap-6 md:gap-8">
-          <section className="overflow-hidden rounded-4xl border border-white/60 bg-white/85 shadow-[0_30px_80px_rgba(14,165,233,0.14)] backdrop-blur-sm">
-            <div className="bg-linear-to-r from-slate-900 via-cyan-800 to-teal-600 panel-gutter text-white">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="max-w-3xl space-y-3">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/14 ring-1 ring-white/20 backdrop-blur">
-                    <UploadCloud className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-2">
-                    <h1 className="text-[18px] font-semibold tracking-tight">Unggahan</h1>
-                    <p className="max-w-2xl text-sm leading-6 text-cyan-50/90">
-                      Pusat arsip file dengan alur unggah yang lebih bersih, cepat, dan mudah dipantau.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <Badge className="border-white/20 bg-white/14 px-3 py-1 text-white hover:bg-white/14">
-                      {totalUploads} file tersimpan
-                    </Badge>
-                    <Badge className="border-white/20 bg-white/14 px-3 py-1 text-white hover:bg-white/14">
-                      9 format didukung
-                    </Badge>
-                    <Badge className="border-white/20 bg-white/14 px-3 py-1 text-white hover:bg-white/14">
-                      Update terakhir: {latestUploadLabel}
-                    </Badge>
-                  </div>
+          <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/60">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+              <div className="rounded-lg bg-linear-to-br from-teal-500 to-emerald-700 p-2.5">
+                <FileUp className="h-5 w-5 text-white" />
+              </div>
+              <div className="max-w-2xl">
+                <h1 className="text-[18px] font-bold text-foreground">Unggah Dokumen</h1>
+                <div className="flex flex-wrap gap-2 text-[11px] mt-3">
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 hover:bg-slate-50">
+                    {totalUploads} file tersimpan
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 hover:bg-slate-50">
+                    9 format didukung
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 hover:bg-slate-50">
+                    Update terakhir: {latestUploadLabel}
+                  </Badge>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 panel-gutter md:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="panel-gutter">
               <Card className="rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
-                <CardContent className="space-y-5 p-5">
+                <CardContent className="space-y-4 p-4 md:p-5">
                   <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-foreground">Pilih sumber unggahan</h2>
-                    <p className="text-sm text-muted-foreground">Unggah satu file atau satu folder arsip tanpa langkah tambahan.</p>
+                    <h2 className="text-base font-semibold text-foreground">Pilih sumber dokumen</h2>
+                    <p className="text-sm text-muted-foreground">Unggah satu file atau satu folder arsip dalam satu langkah.</p>
                   </div>
 
                   <div className="grid gap-3 lg:grid-cols-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex h-auto items-center justify-between gap-3 rounded-2xl border-teal-100/80 bg-linear-to-r from-teal-50 to-cyan-50 px-4 py-4 text-left text-sm font-semibold text-teal-700 hover:border-teal-200 hover:bg-teal-50 dark:bg-slate-900/40 dark:text-teal-200"
+                      className="flex h-auto items-center justify-between gap-3 rounded-2xl border-sky-100/80 bg-linear-to-r from-sky-50 to-cyan-50 px-3 py-3 text-left text-sm font-semibold text-sky-700 hover:border-sky-200 hover:bg-sky-50 dark:bg-slate-900/40 dark:text-sky-200"
                       onClick={openFilePicker}
                     >
                       <span className="truncate">
-                        {uploadedReportName ? `Terpilih: ${uploadedReportName}` : "Pilih file laporan"}
+                        {uploadedReportName ? `Terpilih: ${uploadedReportName}` : "Pilih file dokumen"}
                       </span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-700">File</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-700">File</span>
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex h-auto items-center justify-between gap-3 rounded-2xl border-cyan-100/80 bg-linear-to-r from-cyan-50 to-sky-50 px-4 py-4 text-left text-sm font-semibold text-cyan-700 hover:border-cyan-200 hover:bg-cyan-50 dark:bg-slate-900/40 dark:text-cyan-200"
+                      className="flex h-auto items-center justify-between gap-3 rounded-2xl border-cyan-100/80 bg-linear-to-r from-cyan-50 to-sky-50 px-3 py-3 text-left text-sm font-semibold text-cyan-700 hover:border-cyan-200 hover:bg-cyan-50 dark:bg-slate-900/40 dark:text-cyan-200"
                       onClick={openFolderPicker}
                     >
                       <span className="truncate">Pilih folder arsip</span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-700">Folder</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-700">Folder</span>
                     </Button>
                   </div>
 
@@ -510,21 +503,13 @@ export default function UnggahanPage() {
                   />
                 </CardContent>
               </Card>
-
-              <div className="rounded-[28px] border border-teal-100 bg-linear-to-br from-teal-50 via-white to-teal-50/80 p-5 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-[0.25em] text-teal-700/70">Format</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">PDF, Word, Excel, dan gambar.</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Tipe yang didukung: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG, dan WEBP.
-                </p>
-              </div>
             </div>
           </section>
 
           <Card className="rounded-[28px] border border-white/60 bg-white/90 shadow-[0_24px_70px_rgba(15,23,42,0.12)] dark:bg-slate-950/70">
             <CardHeader className="flex flex-wrap items-center justify-between gap-3 pb-0">
               <div>
-                <CardTitle className="text-2xl">Riwayat Unggahan</CardTitle>
+                <CardTitle className="text-2xl">Riwayat Dokumen</CardTitle>
                 <CardDescription className="text-sm text-muted-foreground">
                   Akses pratinjau dan unduhan file langsung dari satu daftar.
                 </CardDescription>
@@ -535,9 +520,9 @@ export default function UnggahanPage() {
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
             {isLoading ? (
-              <p className="text-xs text-muted-foreground">Memuat unggahan...</p>
+              <p className="text-xs text-muted-foreground">Memuat dokumen...</p>
             ) : uploadedReports.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Belum ada unggahan.</p>
+              <p className="text-xs text-muted-foreground">Belum ada dokumen.</p>
             ) : (
               <div className="space-y-4">
                 {uploadedReports.map((report) => (
@@ -588,7 +573,7 @@ export default function UnggahanPage() {
                           className="self-end text-red-600 hover:text-red-700 sm:self-auto"
                           onClick={() => handleDeleteUpload(report.id)}
                           disabled={deletingId === report.id}
-                          aria-label="Hapus unggahan"
+                          aria-label="Hapus dokumen"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -604,8 +589,8 @@ export default function UnggahanPage() {
         <Dialog open={!!previewReport} onOpenChange={(open) => setPreviewReport(open ? previewReport : null)}>
           <DialogContent className="max-w-[calc(100%-1rem)] sm:max-w-5xl">
             <DialogHeader>
-              <DialogTitle>{previewReport?.filename ?? "Pratinjau laporan"}</DialogTitle>
-              <DialogDescription>Lihat unggahan langsung tanpa harus mengunduh terlebih dahulu.</DialogDescription>
+              <DialogTitle>{previewReport?.filename ?? "Pratinjau dokumen"}</DialogTitle>
+              <DialogDescription>Lihat dokumen langsung tanpa harus mengunduh terlebih dahulu.</DialogDescription>
             </DialogHeader>
 
             {previewReport ? (

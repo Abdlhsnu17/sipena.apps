@@ -67,6 +67,27 @@ type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
   defaultSelected?: boolean
 }
 
+const CARD_ROWS_PER_PAGE = 3
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right)
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1]
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page]
+    }
+    return [page]
+  })
+}
+
 const SectionHeader = ({ label }: { label: string }) => (
   <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
     {label}
@@ -167,6 +188,7 @@ export default function MaintenancePage() {
   const [filterStatus, setFilterStatus] = useState("Semua")
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
+  const [maintenancePage, setMaintenancePage] = useState(1)
   const [calendarMonthDate, setCalendarMonthDate] = useState(() => new Date())
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     maintenanceId: number | string
@@ -957,6 +979,19 @@ export default function MaintenancePage() {
     return matchesSearch && matchesStatus
   })
 
+  useEffect(() => {
+    setMaintenancePage(1)
+  }, [filterStatus, maintenance.length, searchTerm])
+
+  const totalMaintenancePages = Math.max(1, Math.ceil(filteredMaintenance.length / CARD_ROWS_PER_PAGE))
+  const currentMaintenancePage = Math.min(maintenancePage, totalMaintenancePages)
+  const maintenanceStartIndex = (currentMaintenancePage - 1) * CARD_ROWS_PER_PAGE
+  const paginatedMaintenance = filteredMaintenance.slice(maintenanceStartIndex, maintenanceStartIndex + CARD_ROWS_PER_PAGE)
+  const visibleMaintenancePages = buildVisiblePageItems(currentMaintenancePage, totalMaintenancePages)
+  const goToMaintenancePage = (page: number) => {
+    setMaintenancePage(Math.min(totalMaintenancePages, Math.max(1, page)))
+  }
+
   const selectedMaintenanceRows = filteredMaintenance.filter((item) => selectedMaintenanceIds.has(item.id))
   const maintenanceRowsToExport =
     selectedMaintenanceRows.length > 0 ? selectedMaintenanceRows : filteredMaintenance
@@ -1548,9 +1583,9 @@ export default function MaintenancePage() {
                 {filteredMaintenance.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada jadwal pemeliharaan</p>
                 ) : (
-                  <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                  <div className="px-3 pb-4 sm:px-4 sm:pb-4">
                     <div className="space-y-4">
-                      {filteredMaintenance.map((m) => {
+                      {paginatedMaintenance.map((m) => {
                       const detailInfo = resolveDetailForMaintenance(m)
 
                       const inventoryTypeSource = deriveAssetSource(
@@ -1769,6 +1804,55 @@ export default function MaintenancePage() {
                   </div>
                   )
                 })}
+              </div>
+              <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-slate-500">
+                  Menampilkan {maintenanceStartIndex + 1}-{Math.min(maintenanceStartIndex + CARD_ROWS_PER_PAGE, filteredMaintenance.length)} dari {filteredMaintenance.length} jadwal
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={currentMaintenancePage === 1}
+                    onClick={() => setMaintenancePage((page) => Math.max(1, page - 1))}
+                    aria-label="Halaman daftar pemeliharaan sebelumnya"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {visibleMaintenancePages.map((page) => (
+                    typeof page === "number" ? (
+                      <Button
+                        key={page}
+                        type="button"
+                        variant={page === currentMaintenancePage ? "default" : "outline"}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => goToMaintenancePage(page)}
+                        aria-label={`Halaman daftar pemeliharaan ${page}`}
+                        aria-current={page === currentMaintenancePage ? "page" : undefined}
+                      >
+                        {page}
+                      </Button>
+                    ) : (
+                      <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                        ...
+                      </span>
+                    )
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={currentMaintenancePage === totalMaintenancePages}
+                    onClick={() => setMaintenancePage((page) => Math.min(totalMaintenancePages, page + 1))}
+                    aria-label="Halaman daftar pemeliharaan berikutnya"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}

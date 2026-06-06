@@ -3,7 +3,7 @@ import { authMiddleware, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// GET /api/uml - Retrieve UML diagrams documentation
+// GET /api/uml - Retrieve system documentation diagrams
 // Accessible to: admin, leader, staff, staff_pj, teknisi, user
 router.get('/', 
   authMiddleware,
@@ -11,7 +11,7 @@ router.get('/',
   (req, res) => {
     res.json({
       success: true,
-      message: 'UML documentation accessed',
+      message: 'System documentation accessed',
       data: {
         diagrams: {
           useCase: {
@@ -35,14 +35,9 @@ router.get('/',
             description: 'Entity Relationship Diagram - Struktur database'
           }
         },
-        uploads: {
-          available: true,
-          roles: ['admin', 'leader', 'staff', 'staff_pj', 'teknisi', 'user'],
-          description: 'Unggahan - Upload dokumentasi dan laporan'
-        },
         user: {
           role: req.user?.role,
-          accessibleDiagrams: ['useCase', 'activity', 'uploads']
+          accessibleDiagrams: ['useCase', 'activity']
         }
       }
     });

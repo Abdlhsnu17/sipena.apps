@@ -23,7 +23,7 @@ import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
 import { canManageMaintenanceStatusRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { ChevronDown, ChevronUp, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Pencil, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 interface MaintenanceHistory {
@@ -103,6 +103,27 @@ type HistoryExportColumn = {
   label: string;
   getValue: (history: MaintenanceHistory) => string;
   defaultSelected?: boolean;
+};
+
+const HISTORY_ROWS_PER_PAGE = 3;
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1];
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page];
+    }
+    return [page];
+  });
 };
 
 const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, onRefresh, disableWrapper, wrapperClassName }) => {
@@ -519,6 +540,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
   const [historySearchTerm, setHistorySearchTerm] = useState("");
   const [historyFilterSource, setHistoryFilterSource] = useState<AssetSourceKey>("Semua");
   const [historyFilterStatus, setHistoryFilterStatus] = useState("Semua");
+  const [historyPage, setHistoryPage] = useState(1);
 
   const historyRecords = useMemo(
     () => histories.filter((history) => ["completed", "validated", "cancelled"].includes(history.status)),
@@ -608,6 +630,19 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     const matchesStatus = historyFilterStatus === "Semua" || history.status === historyFilterStatus;
     return matchesSearch && matchesSource && matchesStatus;
   });
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [histories.length, historyFilterSource, historyFilterStatus, historySearchTerm]);
+
+  const totalHistoryPages = Math.max(1, Math.ceil(filteredHistories.length / HISTORY_ROWS_PER_PAGE));
+  const currentHistoryPage = Math.min(historyPage, totalHistoryPages);
+  const historyStartIndex = (currentHistoryPage - 1) * HISTORY_ROWS_PER_PAGE;
+  const paginatedHistories = filteredHistories.slice(historyStartIndex, historyStartIndex + HISTORY_ROWS_PER_PAGE);
+  const visibleHistoryPages = buildVisiblePageItems(currentHistoryPage, totalHistoryPages);
+  const goToHistoryPage = (page: number) => {
+    setHistoryPage(Math.min(totalHistoryPages, Math.max(1, page)));
+  };
 
   const historiesToExport =
     selectedHistoryIds.size > 0
@@ -920,9 +955,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
             : "Belum ada riwayat pemeliharaan"}
         </div>
       ) : (
-        <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+        <div className="px-3 pb-4 sm:px-4 sm:pb-4">
           <div className="space-y-4 py-3">
-            {filteredHistories.map((h) => {
+            {paginatedHistories.map((h) => {
             const meta = getHistoryCardMeta(h);
             const historyNoId = getHistoryNoId(h);
             const isExpanded = expandedHistoryIds.has(h.id);
@@ -1157,6 +1192,55 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                 </div>
             )
           })}
+          </div>
+          <div className="flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-slate-500">
+              Menampilkan {historyStartIndex + 1}-{Math.min(historyStartIndex + HISTORY_ROWS_PER_PAGE, filteredHistories.length)} dari {filteredHistories.length} riwayat
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentHistoryPage === 1}
+                onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
+                aria-label="Halaman riwayat pemeliharaan sebelumnya"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {visibleHistoryPages.map((page) => (
+                typeof page === "number" ? (
+                  <Button
+                    key={page}
+                    type="button"
+                    variant={page === currentHistoryPage ? "default" : "outline"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => goToHistoryPage(page)}
+                    aria-label={`Halaman riwayat pemeliharaan ${page}`}
+                    aria-current={page === currentHistoryPage ? "page" : undefined}
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                    ...
+                  </span>
+                )
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentHistoryPage === totalHistoryPages}
+                onClick={() => setHistoryPage((page) => Math.min(totalHistoryPages, page + 1))}
+                aria-label="Halaman riwayat pemeliharaan berikutnya"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

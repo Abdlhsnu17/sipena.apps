@@ -1,4 +1,5 @@
 import {
+    Archive,
     BarChart3,
     Building,
     Calendar,
@@ -26,7 +27,7 @@ const featureIconColor = "text-teal-600"
 
 export const featureLinks: FeatureLink[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, iconColor: featureIconColor },
-  { label: "Dokumentasi UML", href: "/uml", icon: FileText, iconColor: featureIconColor },
+  { label: "Dokumentasi Sistem", href: "/uml", icon: FileText, iconColor: featureIconColor },
   { label: "Edit Profil", href: "/settings", icon: Settings, iconColor: featureIconColor },
   { label: "Inventaris Medis", href: "/medical-assets", icon: Stethoscope, iconColor: featureIconColor },
   { label: "Inventaris Non-Medis", href: "/non-medical-assets", icon: Building, iconColor: featureIconColor },
@@ -37,5 +38,6 @@ export const featureLinks: FeatureLink[] = [
   { label: "Peminjaman", href: "/borrowing", icon: HandHelping, iconColor: featureIconColor },
   { label: "Pengembalian", href: "/returns", icon: RotateCcw, iconColor: featureIconColor },
   { label: "Penggunaan", href: "/asset-usage", icon: ClipboardList, iconColor: featureIconColor },
-  { label: "Unggahan", href: "/unggahan", icon: FileUp, iconColor: featureIconColor },
+  { label: "Unggah Dokumen", href: "/unggahan", icon: FileUp, iconColor: featureIconColor },
+  { label: "Arsip Riwayat Aktivitas", href: "/activity-archive", icon: Archive, iconColor: featureIconColor },
 ]
