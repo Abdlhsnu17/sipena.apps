@@ -1,0 +1,179 @@
+@startuml
+!pragma layout smetana
+title Entity Relationship Diagram Sistem Manajemen Inventaris Aset (Terbaru)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+}
+hide methods
+hide circle
+
+entity "users" as users {
+  + id : INT <<PK>>
+  --
+  nip : VARCHAR <<UQ>>
+  name : VARCHAR
+  email : VARCHAR <<UQ>>
+  password : VARCHAR
+  role : ENUM
+  staff_access_type : VARCHAR
+  work_unit : VARCHAR
+  sub_work_unit : VARCHAR  <<baru>>
+  phone_number : VARCHAR  <<baru>>
+  session_version : INT  <<baru>>
+  account_status : ENUM  <<baru>>
+  must_change_password : BOOLEAN  <<baru>>
+  uml_access : BOOLEAN
+  is_active : BOOLEAN
+}
+
+entity "assets\n(medical / non_medical)" as assets {
+  + id : INT <<PK>>
+  --
+  asset_code : VARCHAR <<UQ>>
+  name : VARCHAR
+  category : VARCHAR
+  type : ENUM
+  status : ENUM
+  condition : ENUM
+  location : VARCHAR
+  purchase_date : DATE
+  specifications : JSON
+}
+
+entity "borrowing_records" as borrowing {
+  + id : INT <<PK>>
+  --
+  borrowing_code : VARCHAR <<UQ>>
+  asset_id : INT <<FK>>
+  asset_type : ENUM
+  user_id : INT <<FK>>
+  borrow_date : DATETIME
+  due_date : DATETIME
+  return_date : DATETIME
+  status : ENUM
+  purpose : TEXT
+  approved_by : INT <<FK>>
+  return_validated_by : INT <<FK>>
+  .. Sanksi (baru) ..
+  overdue_days : INT
+  sanction_status : ENUM
+  sanction_notes : TEXT
+  sanction_applied_at : DATETIME
+  .. Perpanjangan (baru) ..
+  extension_count : INT
+  last_extended_date : DATETIME
+  is_extension_blocked : BOOLEAN
+}
+
+entity "return_records" as returns {
+  + id : INT <<PK>>
+  --
+  borrowing_id : INT <<FK>>
+  returned_by : INT <<FK>>
+  received_by : INT <<FK>>
+  return_date : DATETIME
+  asset_condition : ENUM
+  penalties : DECIMAL
+  notes : TEXT
+}
+
+entity "asset_usage_logs\n(Mutasi Sementara)" as usage <<baru>> {
+  + id : INT <<PK>>
+  --
+  no : VARCHAR <<UQ>>
+  borrowing_id : INT <<FK>>
+  asset_id : INT <<FK>>
+  asset_type : ENUM
+  asset_location : VARCHAR
+  room_name : VARCHAR
+  operator_user_id : INT <<FK>>
+  usage_context : ENUM
+  started_at : DATETIME
+  ended_at : DATETIME
+  condition_before : VARCHAR
+  condition_after : VARCHAR
+  created_by : INT <<FK>>
+}
+
+entity "jadwal_pemeliharaan" as schedule {
+  + id : INT <<PK>>
+  --
+  asset_id : INT <<FK>>
+  asset_type : ENUM
+  tanggal : DATETIME
+  deskripsi : TEXT
+  status : ENUM
+}
+
+entity "maintenance_records" as maintenance {
+  + id : INT <<PK>>
+  --
+  maintenance_code : VARCHAR <<UQ>>
+  asset_id : INT <<FK>>
+  asset_type : ENUM
+  schedule_id : INT <<FK>>
+  type : ENUM
+  status : ENUM
+  scheduled_date : DATETIME
+  completed_date : DATETIME
+  created_by : INT <<FK>>
+  completed_by : INT <<FK>>
+}
+
+entity "maintenance_history" as mhistory {
+  + id : INT <<PK>>
+  --
+  maintenance_id : INT <<FK>>
+  asset_id : INT
+  type : ENUM
+  status : ENUM
+  validated_by : INT <<FK>>
+  validated_at : DATETIME
+}
+
+entity "user_activity_logs" as activity {
+  + id : BIGINT <<PK>>
+  --
+  user_id : INT <<FK>>
+  feature : VARCHAR
+  action : VARCHAR
+  description : TEXT
+  metadata_json : JSON
+  created_at : DATETIME
+}
+
+entity "report_uploads" as reports {
+  + id : INT <<PK>>
+  --
+  user_id : INT <<FK>>
+  filename : VARCHAR
+  content_type : VARCHAR
+  stored_path : VARCHAR
+  uploaded_at : DATETIME
+}
+
+users ||--o{ borrowing : "meminjam"
+assets ||--o{ borrowing : "dipinjam"
+borrowing ||--o| returns : "dikembalikan"
+users ||--o{ returns : "memproses"
+assets ||--o{ usage : "digunakan"
+users ||--o{ usage : "mencatat"
+borrowing ||--o{ usage : "mutasi sementara"
+assets ||--o{ schedule : "dijadwalkan"
+assets ||--o{ maintenance : "dipelihara"
+schedule ||--o{ maintenance : "sinkron"
+maintenance ||--o{ mhistory : "riwayat"
+users ||--o{ maintenance : "menangani"
+users ||--o{ mhistory : "validasi"
+users ||--o{ activity : "aktivitas"
+users ||--o{ reports : "unggah"
+
+legend right
+  <<baru>> = tabel/kolom penambahan dari rancangan awal
+  || = satu, o{ = nol atau banyak, o| = nol atau satu
+endlegend
+@enduml

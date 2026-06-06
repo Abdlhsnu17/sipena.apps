@@ -1,0 +1,117 @@
+@startuml
+!pragma layout smetana
+title DFD Level 1 Sistem Manajemen Inventaris Aset (Terbaru)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam rectangle {
+  BackgroundColor #EAF2FF
+  BorderColor #2F3B52
+}
+skinparam node {
+  BackgroundColor #FFF6E5
+  BorderColor #B5852A
+}
+skinparam actor {
+  BackgroundColor #E9F7EF
+  BorderColor #2E7D46
+}
+
+' ===== Entitas Eksternal =====
+actor "Pengguna Publik" as pub
+actor "Pengguna\nTerautentikasi" as auth
+actor "Administrator" as admin
+actor "Leader" as leader
+actor "Staff PJ" as pj
+actor "Staff Pelayanan" as staff
+actor "Pengguna\nSelf-Service" as self
+actor "Teknisi" as tek
+
+' ===== Proses =====
+rectangle "P1\nManajemen\nAutentikasi" as P1
+rectangle "P2\nManajemen\nInventaris Aset" as P2
+rectangle "P3\nManajemen\nPeminjaman\n(+ Sanksi & Perpanjangan)" as P3
+rectangle "P4\nManajemen\nPengembalian" as P4
+rectangle "P5\nManajemen\nPemeliharaan" as P5
+rectangle "P6\nManajemen\nPenggunaan Aset\n(Mutasi Sementara)" as P6 #DDF3FF
+rectangle "P7\nSPK\nPrioritas Aset\n(TOPSIS-AHP)" as P7 #DDF3FF
+rectangle "P8\nPelaporan\ndan Arsip" as P8
+
+' ===== Data Store =====
+node "D1 Users" as D1
+node "D2 Assets" as D2
+node "D3 Borrowing Records" as D3
+node "D4 Return Records" as D4
+node "D5 Maintenance Schedules" as D5
+node "D6 Maintenance Records" as D6
+node "D7 Maintenance History" as D7
+node "D8 Asset Usage Logs" as D8 #DDF3FF
+node "D9 Report Uploads" as D9
+node "D10 User Activities" as D10
+
+' ===== Aliran: Autentikasi =====
+pub --> P1 : data registrasi,\nkredensial, reset OTP
+P1 --> pub : token JWT,\nstatus, OTP
+auth --> P1 : ubah profil,\nubah password
+P1 <--> D1
+
+' ===== Inventaris =====
+admin --> P2 : data master aset
+pj --> P2 : data inventaris unit
+P2 <--> D2
+P2 --> D10 : log aktivitas
+
+' ===== Peminjaman =====
+staff --> P3 : pengajuan peminjaman
+self --> P3 : pengajuan peminjaman
+pj --> P3 : pengajuan peminjaman
+leader --> P3 : persetujuan / penolakan
+P3 <--> D3
+P3 --> D2 : perbarui status aset
+P3 --> self : status, notifikasi
+
+' ===== Pengembalian =====
+self --> P4 : pengajuan pengembalian
+leader --> P4 : validasi pengembalian
+P4 <--> D4
+P4 --> D3 : perbarui status pinjam
+P4 --> D2 : perbarui status aset
+
+' ===== Pemeliharaan =====
+pj --> P5 : permintaan pemeliharaan
+tek --> P5 : hasil pemeliharaan,\npembaruan status
+admin --> P5 : validasi pemeliharaan
+P5 <--> D5
+P5 <--> D6
+P5 --> D7 : simpan riwayat
+P5 --> D2 : perbarui status aset
+
+' ===== Penggunaan Aset (BARU) =====
+staff --> P6 : catatan penggunaan aset
+tek --> P6 : catatan penggunaan aset
+P6 <--> D8
+P6 --> D2 : perbarui status aset
+P6 --> D3 : kaitkan mutasi sementara
+
+' ===== SPK (BARU) =====
+admin --> P7 : kriteria & bobot
+leader --> P7 : kriteria & bobot
+P7 --> D2 : baca data aset
+P7 --> D6 : baca data pemeliharaan
+P7 --> D8 : baca data penggunaan
+P7 --> admin : ranking prioritas aset
+
+' ===== Laporan & Arsip =====
+auth --> P8 : permintaan laporan,\nunggah berkas
+P8 --> D2
+P8 --> D3
+P8 --> D4
+P8 --> D6
+P8 <--> D9
+P8 <--> D10
+P8 --> leader : laporan operasional
+
+legend bottom
+  Proses biru muda (P6, P7) dan data store D8 = penambahan dari rancangan awal.
+  P6, P7 membaca/memperbarui D2 (Assets) yang sama sehingga status aset konsisten antarproses.
+endlegend
+@enduml

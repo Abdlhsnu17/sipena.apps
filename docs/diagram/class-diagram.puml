@@ -1,0 +1,182 @@
+@startuml
+!pragma layout smetana
+title Class Diagram Sistem Manajemen Inventaris Aset (Terbaru)
+skinparam shadowing false
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+}
+
+class User <<Core>> {
+  - id : number
+  - nip : string
+  - name : string
+  - email : string
+  - password : string
+  - role : UserRole
+  - staffAccessType : StaffAccessType
+  - workUnit : string
+  - subWorkUnit : string
+  - sessionVersion : number
+  - accountStatus : AccountStatus
+  - mustChangePassword : boolean
+  + create() : void
+  + update() : void
+  + changePassword() : void
+  + requestPasswordReset() : void
+  + verifyOtp() : boolean
+}
+
+class Asset <<Entity>> {
+  - id : number
+  - assetCode : string
+  - name : string
+  - category : string
+  - type : AssetType
+  - status : AssetStatus
+  - condition : AssetCondition
+  - location : string
+  - specifications : Record
+  + create() : void
+  + update() : void
+  + updateStatus() : void
+  + getById() : Asset
+}
+
+class Borrowing <<Transaction>> {
+  - id : number
+  - borrowingCode : string
+  - assetId : number
+  - userId : number
+  - borrowDate : Date
+  - dueDate : Date
+  - status : BorrowingStatus
+  - approvedBy : number
+  - overdueDays : number
+  - sanctionStatus : SanctionStatus
+  - extensionCount : number
+  - isExtensionBlocked : boolean
+  + create() : void
+  + approve() : void
+  + reject() : void
+  + extend() : void
+  + applySanction() : void
+}
+
+class Return <<Transaction>> {
+  - id : number
+  - borrowingId : number
+  - returnedBy : number
+  - receivedBy : number
+  - condition : AssetCondition
+  - penalties : number
+  + create() : void
+  + validate() : void
+}
+
+class AssetUsage <<Log>> {
+  - id : number
+  - no : string
+  - borrowingId : number
+  - assetId : number
+  - roomName : string
+  - operatorUserId : number
+  - usageContext : UsageContext
+  - startedAt : Date
+  - endedAt : Date
+  - conditionBefore : string
+  - conditionAfter : string
+  + create() : void
+  + endUsage() : void
+  + getById() : AssetUsage
+}
+
+class MaintenanceSchedule <<Schedule>> {
+  - id : number
+  - assetId : number
+  - tanggal : Date
+  - deskripsi : string
+  - status : string
+  + create() : void
+  + update() : void
+}
+
+class Maintenance <<Transaction>> {
+  - id : number
+  - maintenanceCode : string
+  - assetId : number
+  - scheduleId : number
+  - type : MaintenanceType
+  - status : MaintenanceStatus
+  - createdBy : number
+  - completedBy : number
+  + create() : void
+  + updateStatus() : void
+  + complete() : void
+  + validate() : void
+}
+
+class MaintenanceHistory <<History>> {
+  - id : number
+  - maintenanceId : number
+  - status : MaintenanceStatus
+  - validatedBy : number
+  - validatedAt : Date
+  + create() : void
+}
+
+class DssService <<SPK>> {
+  - criteria : Criterion[]
+  - weights : Record
+  + rankAssets() : DssRankingResult
+  + calculateAhpWeights() : Weights
+  + checkConsistency() : ConsistencyInfo
+  + normalize() : Matrix
+  + topsisScore() : number
+}
+
+class UserActivity <<Log>> {
+  - id : number
+  - userId : number
+  - feature : string
+  - action : string
+  - metadata : Record
+  + create() : void
+}
+
+class ReportUpload <<Document>> {
+  - id : number
+  - userId : number
+  - filename : string
+  - storedPath : string
+  + upload() : void
+  + delete() : void
+}
+
+User "1" -- "*" Borrowing : meminjam
+Asset "1" -- "*" Borrowing : dipinjam
+Borrowing "1" -- "0..1" Return : dikembalikan
+User "1" -- "*" Return : memproses
+Asset "1" -- "*" AssetUsage : digunakan
+User "1" -- "*" AssetUsage : mengoperasikan
+Borrowing "1" -- "*" AssetUsage : mutasi sementara
+Asset "1" -- "*" MaintenanceSchedule : dijadwalkan
+Asset "1" -- "*" Maintenance : dipelihara
+MaintenanceSchedule "1" -- "*" Maintenance : sinkron
+Maintenance "1" -- "*" MaintenanceHistory : riwayat
+User "1" -- "*" Maintenance : menangani
+User "1" -- "*" UserActivity : aktivitas
+User "1" -- "*" ReportUpload : unggah
+DssService ..> Asset : membaca
+DssService ..> AssetUsage : membaca
+DssService ..> Maintenance : membaca
+
+note bottom of DssService
+  Kelas control SPK (TOPSIS-AHP).
+  Tidak memiliki tabel sendiri;
+  menghitung prioritas dari data aset,
+  penggunaan, dan pemeliharaan.
+end note
+@enduml
