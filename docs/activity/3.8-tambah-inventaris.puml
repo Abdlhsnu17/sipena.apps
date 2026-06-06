@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.8 Activity Diagram Tambah Inventaris
+title Activity Diagram Tambah Inventaris
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

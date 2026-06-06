@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.11 Activity Diagram Pemeliharaan Aset
+title Activity Diagram Pemeliharaan Aset
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.10 Activity Diagram Pengembalian Aset
+title Activity Diagram Pengembalian Aset
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.13 Activity Diagram Penggunaan Aset (Mutasi Sementara Antarunit)
+title Activity Diagram Penggunaan Aset (Mutasi Sementara Antarunit)
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

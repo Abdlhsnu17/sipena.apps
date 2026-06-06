@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.9 Activity Diagram Peminjaman Aset
+title Activity Diagram Peminjaman Aset
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

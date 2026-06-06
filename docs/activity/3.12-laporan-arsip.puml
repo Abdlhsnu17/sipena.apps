@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.12 Activity Diagram Laporan dan Arsip
+title Activity Diagram Laporan dan Arsip
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

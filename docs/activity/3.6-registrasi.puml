@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.6 Activity Diagram Registrasi Akun
+title Activity Diagram Registrasi Akun
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.14 Activity Diagram Manajemen Pengguna
+title Activity Diagram Manajemen Pengguna
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF

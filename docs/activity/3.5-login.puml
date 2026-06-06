@@ -1,5 +1,5 @@
 @startuml
-title Gambar 3.5 Activity Diagram Login
+title Activity Diagram Login
 skinparam shadowing false
 skinparam activity {
   BackgroundColor #F8FAFF
