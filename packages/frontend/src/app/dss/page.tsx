@@ -308,15 +308,14 @@ export default function DssPage() {
         <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-teal-700">
-              <Calculator className="h-4 w-4" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white">
+                <Calculator className="h-5 w-5" />
+              </span>
               AHP-TOPSIS
             </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950 sm:text-3xl">
               SPK Prioritas Aset
             </h1>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Ranking menggunakan data inventaris yang sudah tersimpan. AHP menghitung bobot kriteria dari matriks perbandingan, lalu TOPSIS menghitung prioritas aset detail.
-            </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={assetType} onValueChange={(value) => setAssetType(value as DssAssetType)}>
@@ -432,8 +431,8 @@ export default function DssPage() {
               <CardContent className="grid gap-3 p-4 md:grid-cols-3">
                 <div>
                   <div className="text-xs font-medium uppercase text-slate-500">Metode AHP</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">Matriks perbandingan kriteria</div>
-                  <div className="mt-1 text-xs leading-5 text-slate-500">Slider membentuk matriks AHP, backend menghitung bobot dan rasio konsistensi.</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">Perbandingan kriteria</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Bobot kriteria dihitung dari perbandingan slider.</div>
                 </div>
                 <div>
                   <div className="text-xs font-medium uppercase text-slate-500">Konsistensi AHP</div>
@@ -445,15 +444,13 @@ export default function DssPage() {
                     )}
                   </div>
                   <div className="mt-1 text-xs leading-5 text-slate-500">
-                    CR {rankingResult?.consistency ? rankingResult.consistency.consistencyRatio.toFixed(4) : "-"} · batas maksimal 0.1000
+                    CR {rankingResult?.consistency ? rankingResult.consistency.consistencyRatio.toFixed(4) : "-"} / Maksimal 0.1000
                   </div>
                 </div>
                 <div>
                   <div className="text-xs font-medium uppercase text-slate-500">Metode TOPSIS</div>
                   <div className="mt-1 text-sm font-semibold text-slate-950">Ranking aset detail</div>
-                  <div className="mt-1 text-xs leading-5 text-slate-500">
-                    Sumber hasil: {rankingSource === "backend" ? "backend SPK" : rankingSource === "fallback" ? "fallback frontend" : "-"}
-                  </div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Ranking aset dihitung berdasarkan bobot kriteria dan nilai alternatif.</div>
                 </div>
               </CardContent>
             </Card>
