@@ -49,12 +49,52 @@ type FlattenOptions = {
   includeAssetFallback?: boolean
 }
 
+const isNumericId = (value: unknown) => /^\d+$/.test(String(value ?? "").trim())
+
+const buildAssetLocationLookup = (assets: Asset[]) => {
+  const lookup = new Map<string, string>()
+  assets.forEach((asset) => {
+    const assetType = asset.type === "non_medical" ? "non_medical" : "medical"
+    const label = (asset.location || asset.name || "").trim()
+    if (label) {
+      lookup.set(`${assetType}|${asset.id}`, label)
+    }
+  })
+  return lookup
+}
+
+const resolveDetailRoomName = (
+  detailRecord: Record<string, any>,
+  asset: Asset,
+  assetRoomName: string | undefined,
+  assetLocationLookup: Map<string, string>
+) => {
+  const assetType = asset.type === "non_medical" ? "non_medical" : "medical"
+  const rawRoomName =
+    detailRecord.roomId ??
+    detailRecord.roomName ??
+    detailRecord.room_name ??
+    detailRecord.ruangan ??
+    detailRecord.lokasi ??
+    detailRecord.location ??
+    detailRecord.room?.name ??
+    detailRecord.room?.roomName
+
+  if (isNumericId(rawRoomName)) {
+    return assetLocationLookup.get(`${assetType}|${String(rawRoomName).trim()}`) || assetRoomName || asset.location || asset.name || undefined
+  }
+
+  return rawRoomName || assetRoomName || asset.location || undefined
+}
+
 /**
  * Flatten spesifikasi detail dari aset medis & non-medis menjadi daftar item siap pakai
  * untuk pemeliharaan/peminjaman/pengembalian.
  */
 export const flattenDetailInventories = (assets: Asset[], options: FlattenOptions = {}): DetailInventoryItem[] => {
   const { includeAssetFallback = false } = options
+  const assetLocationLookup = buildAssetLocationLookup(assets)
+
   return assets.flatMap((asset): DetailInventoryItem[] => {
     const assetType = asset.type === "non_medical" ? "non_medical" : "medical"
     const assetRoomName = (asset as Asset & { roomName?: string }).roomName
@@ -69,16 +109,7 @@ export const flattenDetailInventories = (assets: Asset[], options: FlattenOption
         detailRecord.serialNumber ??
         `${asset.id}-detail-${String(index)}`
       const roomName =
-        detailRecord.roomName ||
-        detailRecord.room_name ||
-        detailRecord.ruangan ||
-        detailRecord.lokasi ||
-        detailRecord.location ||
-        detailRecord.room?.name ||
-        detailRecord.room?.roomName ||
-        assetRoomName ||
-        asset.location ||
-        undefined
+        resolveDetailRoomName(detailRecord, asset, assetRoomName, assetLocationLookup)
       return {
         assetId: asset.id,
         assetType,

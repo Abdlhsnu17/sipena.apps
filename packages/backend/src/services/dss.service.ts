@@ -193,6 +193,47 @@ const buildDetailKey = (assetType: AssetType, assetId: number, detailId?: string
   return `${assetType}|${assetId}|${id || code || 'asset'}`;
 };
 
+const isNumericId = (value: unknown): value is string | number => {
+  const normalized = String(value ?? '').trim();
+  return /^\d+$/.test(normalized);
+};
+
+const buildAssetLocationLookup = (assets: AssetRow[]): Map<string, string> => {
+  const lookup = new Map<string, string>();
+  assets.forEach((asset) => {
+    const assetType: AssetType = asset.type === 'non_medical' ? 'non_medical' : 'medical';
+    const label = String(asset.location || asset.name || '').trim();
+    if (label) {
+      lookup.set(`${assetType}|${asset.id}`, label);
+    }
+  });
+  return lookup;
+};
+
+const resolveDetailLocation = (
+  detail: Record<string, any>,
+  asset: AssetRow,
+  assetType: AssetType,
+  assetLocationLookup: Map<string, string>
+): string | null => {
+  const rawLocation =
+    detail.roomId ??
+    detail.roomName ??
+    detail.room_name ??
+    detail.ruangan ??
+    detail.lokasi ??
+    detail.location ??
+    detail.room?.name ??
+    detail.room?.roomName;
+
+  if (isNumericId(rawLocation)) {
+    return assetLocationLookup.get(`${assetType}|${String(rawLocation).trim()}`) || asset.location || asset.name || null;
+  }
+
+  const normalizedLocation = String(rawLocation || '').trim();
+  return normalizedLocation || asset.location || asset.name || null;
+};
+
 const normalizeWeights = (weights: Record<string, number>): Record<string, number> => {
   const sanitized = DEFAULT_CRITERIA.reduce<Record<string, number>>((acc, criterion) => {
     const value = Number(weights[criterion.id]);
@@ -300,6 +341,7 @@ export class DssService {
 
   private buildAlternatives(assets: AssetRow[], usageCounts: Map<string, number>, maintenanceCounts: Map<string, number>): DetailAlternative[] {
     const today = new Date();
+    const assetLocationLookup = buildAssetLocationLookup(assets);
 
     return assets.flatMap((asset) => {
       const assetType: AssetType = asset.type === 'non_medical' ? 'non_medical' : 'medical';
@@ -339,7 +381,7 @@ export class DssService {
           assetName: asset.name,
           assetCode: asset.asset_code,
           assetCategory: asset.category,
-          assetLocation: detail.roomId || detail.location || asset.location,
+          assetLocation: resolveDetailLocation(detail, asset, assetType, assetLocationLookup),
           detailId,
           detailName,
           detailCode,
