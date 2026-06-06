@@ -1,0 +1,48 @@
+@startuml
+title Gambar 3.13 Activity Diagram Penggunaan Aset (Mutasi Sementara Antarunit)
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Petugas Unit|
+start
+:Membuka menu Penggunaan;
+:Memilih aset yang akan digunakan;
+:Mengisi data penggunaan (unit pengguna,
+ruangan, operator, waktu mulai, tujuan);
+:Menyimpan catatan penggunaan;
+
+|Sistem|
+:Memeriksa status aset;
+if (Status aset "Tersedia"?) then (Tidak)
+  :Menolak dan menampilkan pesan
+  aset sedang digunakan, dipinjam,
+  atau dalam pemeliharaan;
+  stop
+else (Ya)
+endif
+:Mencatat mutasi sementara
+(dari unit asal ke unit tujuan);
+:Mengubah status aset menjadi "Digunakan";
+:Menyimpan log penggunaan aset;
+
+|Petugas Unit|
+:Menggunakan aset di unit tujuan;
+:Mengisi waktu selesai dan
+kondisi aset setelah pemakaian;
+:Mengakhiri penggunaan;
+
+|Sistem|
+:Memperbarui log penggunaan;
+:Mengembalikan status aset menjadi "Tersedia";
+:Menyimpan riwayat penggunaan untuk audit;
+
+|Petugas Unit|
+:Penggunaan aset selesai tercatat;
+stop
+@enduml

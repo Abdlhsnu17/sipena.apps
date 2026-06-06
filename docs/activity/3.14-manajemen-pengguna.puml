@@ -1,0 +1,50 @@
+@startuml
+title Gambar 3.14 Activity Diagram Manajemen Pengguna
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Admin|
+start
+:Membuka menu Manajemen Pengguna;
+:Memilih aksi (Tambah/Ubah/Hapus pengguna);
+
+if (Jenis aksi?) then (Tambah/Ubah)
+  |Admin|
+  :Mengisi/memperbarui data pengguna
+  (nama, email, peran, hak akses, unit);
+  :Menyimpan data;
+
+  |Sistem|
+  :Memvalidasi kelengkapan dan
+  keunikan data pengguna;
+  if (Data valid?) then (Tidak)
+    :Menampilkan pesan kesalahan;
+    |Admin|
+    stop
+  else (Ya)
+  endif
+  |Sistem|
+  :Menyimpan data pengguna ke basis data;
+else (Hapus)
+  |Admin|
+  :Memilih pengguna yang akan dihapus;
+  :Mengonfirmasi penghapusan;
+  |Sistem|
+  :Menghapus/menonaktifkan akun pengguna;
+endif
+
+|Sistem|
+:Mencatat aktivitas ke log;
+:Memperbarui daftar pengguna;
+:Menampilkan notifikasi berhasil;
+
+|Admin|
+:Melihat perubahan pada daftar pengguna;
+stop
+@enduml
