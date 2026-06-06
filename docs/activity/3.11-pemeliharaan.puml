@@ -13,27 +13,30 @@ skinparam activity {
 start
 :Membuka menu Pemeliharaan Sarana;
 :Mengajukan pemeliharaan aset
-(preventif/korektif) dan deskripsi;
+(preventif atau korektif) dan
+menetapkan jadwal pemeliharaan;
 
 |Sistem|
 :Mengubah status aset menjadi
 "Dalam Pemeliharaan";
-:Menyimpan data pemeliharaan
-dengan status "Diproses";
+:Mengirim notifikasi ke teknisi
+yang ditugaskan;
 
 |Teknisi|
-:Melakukan pemeriksaan/perbaikan aset;
-:Mencatat tindakan pemeliharaan;
+:Mengerjakan pemeliharaan dan
+memperbarui progres di lapangan;
 if (Aset layak digunakan?) then (Tidak)
-  :Menandai perlu pengecekan/perbaikan lanjutan;
-  |Sistem|
-  :Mempertahankan status "Dalam Pemeliharaan";
+  :Menandai perlu pengecekan
+  atau perbaikan lanjutan;
   stop
 else (Ya)
 endif
+:Menandai pekerjaan selesai dikerjakan
+(status completed);
 
-|Teknisi|
-:Melakukan validasi akhir pemeliharaan;
+|Administrator|
+:Memvalidasi hasil pemeliharaan
+(status validated);
 
 |Sistem|
 :Menyimpan riwayat pemeliharaan;
