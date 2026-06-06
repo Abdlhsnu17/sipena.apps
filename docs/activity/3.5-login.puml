@@ -1,0 +1,44 @@
+@startuml
+title Gambar 3.5 Activity Diagram Login
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Pengguna|
+start
+:Membuka halaman login;
+:Memasukkan email dan password;
+:Menekan tombol "Masuk";
+
+|Sistem|
+:Memvalidasi format input;
+if (Input valid?) then (Tidak)
+  :Menampilkan pesan kesalahan input;
+  |Pengguna|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Mencocokkan kredensial dengan basis data;
+if (Kredensial benar?) then (Tidak)
+  :Menampilkan pesan email/password salah;
+  |Pengguna|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Membuat token sesi (JWT);
+:Mengarahkan ke halaman dashboard
+sesuai hak akses pengguna;
+
+|Pengguna|
+:Masuk ke sistem;
+stop
+@enduml

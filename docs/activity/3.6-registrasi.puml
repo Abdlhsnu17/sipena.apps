@@ -1,0 +1,45 @@
+@startuml
+title Gambar 3.6 Activity Diagram Registrasi Akun
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Pengguna|
+start
+:Membuka halaman registrasi;
+:Mengisi data diri (nama, email, NIP,
+unit kerja, password);
+:Menekan tombol "Daftar";
+
+|Sistem|
+:Memvalidasi kelengkapan dan format data;
+if (Data valid?) then (Tidak)
+  :Menampilkan pesan kesalahan;
+  |Pengguna|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Memeriksa email/NIP sudah terdaftar?;
+if (Sudah terdaftar?) then (Ya)
+  :Menampilkan pesan akun sudah ada;
+  |Pengguna|
+  stop
+else (Tidak)
+endif
+
+|Sistem|
+:Mengenkripsi password;
+:Menyimpan data akun ke basis data;
+:Menampilkan notifikasi registrasi berhasil;
+
+|Pengguna|
+:Diarahkan ke halaman login;
+stop
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+title Gambar 3.9 Activity Diagram Peminjaman Aset
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Pemohon|
+start
+:Membuka menu Peminjaman;
+:Memilih aset dan mengisi data
+peminjaman (tujuan, durasi, unit);
+:Mengajukan permohonan;
+
+|Sistem|
+:Memeriksa status aset;
+if (Status aset "Tersedia"?) then (Tidak)
+  :Menolak pengajuan dan menampilkan
+  pesan aset tidak tersedia;
+  |Pemohon|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Menyimpan pengajuan dengan status
+"Menunggu Persetujuan";
+
+|Penyetuju (Admin/Leader)|
+:Meninjau pengajuan peminjaman;
+if (Disetujui?) then (Tidak)
+  |Sistem|
+  :Menyimpan status "Ditolak"
+  beserta alasan;
+  |Pemohon|
+  :Menerima notifikasi penolakan;
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Mengubah status aset menjadi "Dipinjam";
+:Menyimpan status peminjaman "Disetujui";
+
+|Pemohon|
+:Menerima notifikasi persetujuan
+dan menggunakan aset;
+stop
+@enduml

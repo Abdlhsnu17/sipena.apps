@@ -1,0 +1,39 @@
+@startuml
+title Gambar 3.8 Activity Diagram Tambah Inventaris
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Petugas Pengelola Aset|
+start
+:Membuka menu Inventaris (Medis/Non-Medis);
+:Menekan tombol "Tambah Aset";
+:Mengisi data aset (nama, kategori,
+kondisi, lokasi, spesifikasi);
+:Menekan tombol "Simpan";
+
+|Sistem|
+:Memvalidasi kelengkapan data aset;
+if (Data valid?) then (Tidak)
+  :Menampilkan pesan kesalahan;
+  |Petugas Pengelola Aset|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Membuat kode aset;
+:Menetapkan status awal "Tersedia";
+:Menyimpan data aset ke basis data;
+:Menampilkan notifikasi aset berhasil ditambahkan;
+:Memperbarui daftar inventaris;
+
+|Petugas Pengelola Aset|
+:Melihat aset baru pada daftar inventaris;
+stop
+@enduml

@@ -1,0 +1,46 @@
+@startuml
+title Gambar 3.11 Activity Diagram Pemeliharaan Aset
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Petugas Pengelola Aset|
+start
+:Membuka menu Pemeliharaan Sarana;
+:Mengajukan pemeliharaan aset
+(preventif/korektif) dan deskripsi;
+
+|Sistem|
+:Mengubah status aset menjadi
+"Dalam Pemeliharaan";
+:Menyimpan data pemeliharaan
+dengan status "Diproses";
+
+|Teknisi|
+:Melakukan pemeriksaan/perbaikan aset;
+:Mencatat tindakan pemeliharaan;
+if (Aset layak digunakan?) then (Tidak)
+  :Menandai perlu pengecekan/perbaikan lanjutan;
+  |Sistem|
+  :Mempertahankan status "Dalam Pemeliharaan";
+  stop
+else (Ya)
+endif
+
+|Teknisi|
+:Melakukan validasi akhir pemeliharaan;
+
+|Sistem|
+:Menyimpan riwayat pemeliharaan;
+:Mengubah status aset menjadi "Tersedia";
+:Menampilkan notifikasi pemeliharaan selesai;
+
+|Petugas Pengelola Aset|
+:Aset siap digunakan kembali;
+stop
+@enduml

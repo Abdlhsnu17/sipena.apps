@@ -1,0 +1,44 @@
+@startuml
+title Gambar 3.10 Activity Diagram Pengembalian Aset
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Peminjam|
+start
+:Membuka menu Pengembalian;
+:Memilih data peminjaman yang aktif;
+:Mengisi kondisi aset saat dikembalikan
+dan catatan pengembalian;
+:Mengajukan pengembalian;
+
+|Sistem|
+:Memeriksa tanggal pengembalian;
+if (Terlambat dari batas waktu?) then (Ya)
+  :Mencatat keterlambatan dan
+  menerapkan sanksi peminjaman;
+else (Tidak)
+endif
+
+|Petugas Validasi|
+:Memvalidasi kondisi fisik aset;
+if (Kondisi sesuai?) then (Tidak)
+  |Sistem|
+  :Mencatat ketidaksesuaian kondisi aset;
+else (Ya)
+endif
+
+|Sistem|
+:Menyimpan data pengembalian;
+:Mengubah status aset menjadi "Tersedia";
+:Memperbarui riwayat peminjaman;
+
+|Peminjam|
+:Menerima notifikasi pengembalian selesai;
+stop
+@enduml

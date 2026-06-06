@@ -1,0 +1,47 @@
+@startuml
+title Gambar 3.12 Activity Diagram Laporan dan Arsip
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFF
+  BorderColor #2F3B52
+  ArrowColor #2F3B52
+  DiamondBackgroundColor #F8FAFF
+  DiamondBorderColor #2F3B52
+}
+
+|Pengguna|
+start
+:Membuka menu Laporan & Analitik;
+:Memilih jenis laporan (aset,
+peminjaman, pemeliharaan);
+:Menentukan rentang tanggal/filter;
+
+|Sistem|
+:Mengambil data sesuai filter
+dari basis data;
+if (Data tersedia?) then (Tidak)
+  :Menampilkan informasi data kosong;
+  |Pengguna|
+  stop
+else (Ya)
+endif
+
+|Sistem|
+:Menampilkan ringkasan dan grafik laporan;
+
+|Pengguna|
+if (Ekspor laporan?) then (Ya)
+  :Memilih format (PDF/Excel);
+  |Sistem|
+  :Membuat berkas laporan;
+  :Mengunduh berkas ke perangkat pengguna;
+else (Tidak/Arsip)
+  :Mengunggah dokumen ke arsip;
+  |Sistem|
+  :Menyimpan dokumen pada arsip sistem;
+endif
+
+|Pengguna|
+:Laporan/arsip selesai dikelola;
+stop
+@enduml
