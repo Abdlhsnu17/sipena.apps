@@ -26,6 +26,7 @@ export interface DssAssetRanking {
   statusLabel: string;
   purchaseDate?: string | null;
   lastMaintenance?: string | null;
+  lastRepair?: string | null;
   nextMaintenance?: string | null;
   criteriaScores: Record<string, number>;
   preferenceScore: number;

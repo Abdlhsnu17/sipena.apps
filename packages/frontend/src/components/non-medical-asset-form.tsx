@@ -39,6 +39,7 @@ const createInitialFormData = (defaultTypeValue: NonMedicalAsset["type"]) => ({
   serialNumber: "",
   purchaseDate: "",
   lastMaintenance: "",
+  lastRepair: "",
   nextMaintenance: "",
   condition: "Baik" as ConditionType,
   status: "Aktif" as StatusType,
@@ -109,6 +110,7 @@ export default function NonMedicalAssetForm({
         serialNumber: asset.serialNumber ?? "",
         purchaseDate: toDateInputValue(asset.purchaseDate),
         lastMaintenance: toDateInputValue(asset.lastMaintenance),
+        lastRepair: toDateInputValue(asset.lastRepair),
         nextMaintenance: toDateInputValue(asset.nextMaintenance),
         condition: (asset.condition as ConditionType) ?? "Baik",
         status: (asset.status as StatusType) ?? "Aktif",
@@ -179,6 +181,7 @@ export default function NonMedicalAssetForm({
       notes: formData.notes.trim(),
       purchaseDate: formData.purchaseDate,
       lastMaintenance: formData.lastMaintenance,
+      lastRepair: formData.lastRepair,
       nextMaintenance: formData.nextMaintenance,
       condition: formData.condition as "Baik" | "Cukup" | "Rusak",
       status: formData.status as StatusType,
@@ -560,6 +563,16 @@ export default function NonMedicalAssetForm({
                 type="date"
                 name="lastMaintenance"
                 value={formData.lastMaintenance}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Perbaikan Terakhir</label>
+              <input
+                type="date"
+                name="lastRepair"
+                value={formData.lastRepair}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
               />

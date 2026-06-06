@@ -153,6 +153,7 @@ export interface MedicalAsset {
   serialNumber: string
   purchaseDate: string
   lastMaintenance: string
+  lastRepair: string
   nextMaintenance: string
   condition: "Baik" | "Cukup" | "Rusak"
   status: "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"

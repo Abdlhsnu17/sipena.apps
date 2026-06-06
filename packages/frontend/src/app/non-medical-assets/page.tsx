@@ -746,6 +746,14 @@ export default function NonMedicalAssetsPage() {
                                         </p>
                                       </div>
                                     )}
+                                    {asset.lastRepair && (
+                                      <div>
+                                        <p className="text-[11px] uppercase tracking-wide">Perbaikan</p>
+                                        <p className="text-foreground font-medium">
+                                          {new Date(asset.lastRepair).toLocaleDateString("id-ID")}
+                                        </p>
+                                      </div>
+                                    )}
                                     <div>
                                       <p className="text-[11px] uppercase tracking-wide">Penggunaan</p>
                                       <p className="text-foreground font-medium">

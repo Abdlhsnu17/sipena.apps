@@ -24,6 +24,7 @@ export interface DetailInventoryItem {
   detailBrandModel?: string
   usagePurpose?: string
   lastMaintenance?: string
+  lastRepair?: string
   nextMaintenance?: string
   serialNumber?: string
   notes?: string

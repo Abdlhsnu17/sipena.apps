@@ -149,7 +149,7 @@ const buildClientFallbackRanking = async (
       age: ageScore((item as typeof item & { purchaseDate?: string }).purchaseDate),
       maintenanceDue: maintenanceDueScore(item.nextMaintenance),
       usageFrequency: 0,
-      maintenanceHistory: item.lastMaintenance ? 1 : 0,
+      maintenanceHistory: item.lastMaintenance || item.lastRepair ? 1 : 0,
       functionalUrgency: functionalUrgencyScore(item.detailName, item.detailType, item.assetCategory),
       statusRisk: statusRiskScore(item.statusLabel || item.availability),
     }
@@ -169,6 +169,7 @@ const buildClientFallbackRanking = async (
       statusLabel: item.statusLabel || item.availability,
       purchaseDate: undefined,
       lastMaintenance: item.lastMaintenance,
+      lastRepair: item.lastRepair,
       nextMaintenance: item.nextMaintenance,
       criteriaScores,
     }

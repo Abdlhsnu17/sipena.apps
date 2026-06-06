@@ -264,10 +264,11 @@ export class MaintenanceService {
     let hasChanges = false;
     const completionDateSource = options?.completedAt || options?.scheduledAt || new Date();
     const completedDateOnly = this.formatDateOnly(completionDateSource);
+    const isCorrectiveMaintenance = options?.maintenanceType === 'corrective';
     
     // Calculate next maintenance date based on maintenance type interval
     const maintenanceInterval = this.getMaintenanceInterval(options?.maintenanceType);
-    const nextMaintenanceDateOnly = completedDateOnly
+    const nextMaintenanceDateOnly = completedDateOnly && !isCorrectiveMaintenance
       ? this.formatDateOnly(this.addMonths(new Date(completionDateSource), maintenanceInterval))
       : null;
 
@@ -312,7 +313,12 @@ export class MaintenanceService {
         (maintenanceStatus === 'completed' || maintenanceStatus === 'validated') &&
         completedDateOnly
       ) {
-        if (detail.lastMaintenance !== completedDateOnly) {
+        if (isCorrectiveMaintenance) {
+          if (detail.lastRepair !== completedDateOnly) {
+            detail.lastRepair = completedDateOnly;
+            hasChanges = true;
+          }
+        } else if (detail.lastMaintenance !== completedDateOnly) {
           detail.lastMaintenance = completedDateOnly;
           hasChanges = true;
         }

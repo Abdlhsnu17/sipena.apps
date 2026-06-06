@@ -27,6 +27,7 @@ export interface DssAssetRanking {
   statusLabel: string;
   purchaseDate?: string | null;
   lastMaintenance?: string | null;
+  lastRepair?: string | null;
   nextMaintenance?: string | null;
   criteriaScores: Record<string, number>;
   normalizedScores: Record<string, number>;
@@ -130,6 +131,7 @@ type DetailAlternative = {
   statusLabel: string;
   purchaseDate?: string | null;
   lastMaintenance?: string | null;
+  lastRepair?: string | null;
   nextMaintenance?: string | null;
   criteriaScores: Record<string, number>;
 };
@@ -321,6 +323,7 @@ export class DssService {
         const statusLabel = String(detail.status || asset.status || 'Aktif');
         const purchaseDate = normalizeDate(detail.purchaseDate || asset.purchase_date);
         const lastMaintenance = normalizeDate(detail.lastMaintenance);
+        const lastRepair = normalizeDate(detail.lastRepair);
         const nextMaintenance = normalizeDate(detail.nextMaintenance);
         const key = buildDetailKey(assetType, asset.id, detailId, detailCode);
 
@@ -345,6 +348,7 @@ export class DssService {
           statusLabel,
           purchaseDate,
           lastMaintenance,
+          lastRepair,
           nextMaintenance,
           criteriaScores: {
             condition: normalizeConditionScore(conditionLabel),

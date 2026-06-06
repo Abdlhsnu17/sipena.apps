@@ -100,6 +100,7 @@ export const flattenDetailInventories = (assets: Asset[], options: FlattenOption
         condition: normalizeCondition(detailRecord.condition),
         usagePurpose: detailRecord.usagePurpose,
         lastMaintenance: detailRecord.lastMaintenance,
+        lastRepair: detailRecord.lastRepair,
         nextMaintenance: detailRecord.nextMaintenance,
         serialNumber: detailRecord.serialNumber,
         notes: detailRecord.notes,
