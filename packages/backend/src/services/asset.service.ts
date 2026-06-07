@@ -73,7 +73,112 @@ interface AssetRow extends RowDataPacket, Asset {}
 interface CountRow extends RowDataPacket {
   count: number;
 }
+
+const IN_USE_DETAIL_STATUSES = new Set(['Sedang Digunakan', 'Dalam Penggunaan']);
+
 export class AssetService {
+  private parseAssetSpecifications(raw: unknown): Record<string, any> {
+    if (!raw) return {};
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    if (typeof raw === 'object') {
+      return raw as Record<string, any>;
+    }
+    return {};
+  }
+
+  private normalizeDetailIdentifier(value?: string | number | null): string {
+    if (value === undefined || value === null) return '';
+    return String(value).trim();
+  }
+
+  private buildDetailCandidates(detail: Record<string, any>): string[] {
+    return Array.from(
+      new Set(
+        [
+          detail.id,
+          detail.detailId,
+          detail.assetDetailId,
+          detail.assetCode,
+          detail.detailCode,
+          detail.serialNumber,
+        ]
+          .map((value) => this.normalizeDetailIdentifier(value))
+          .filter(Boolean)
+      )
+    );
+  }
+
+  private async hasActiveUsageForDetail(assetId: number, assetType: string, detail: Record<string, any>): Promise<boolean> {
+    const candidates = this.buildDetailCandidates(detail);
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const allCandidates = Array.from(new Set([...candidates, ...fallbackIds]));
+    const candidatePlaceholders = allCandidates.map(() => '?').join(', ');
+
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM asset_usage_logs
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND ended_at IS NULL
+         AND (
+           asset_detail_id IS NULL
+           ${allCandidates.length > 0 ? `OR asset_detail_id IN (${candidatePlaceholders}) OR asset_detail_code IN (${candidatePlaceholders})` : ''}
+         )`,
+      [assetId, normalizedAssetType, ...allCandidates, ...allCandidates]
+    );
+
+    return (rows[0]?.count || 0) > 0;
+  }
+
+  private async reconcileStaleUsageDetailStatuses(rows: AssetRow[], assetType?: string): Promise<void> {
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    const table = getAssetTable(normalizedAssetType);
+
+    for (const row of rows) {
+      const specifications = this.parseAssetSpecifications(row.specifications);
+      const details = Array.isArray(specifications.details) ? specifications.details : [];
+      if (details.length === 0) continue;
+
+      let hasChanges = false;
+      const updatedDetails = [];
+
+      for (const rawDetail of details) {
+        const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
+        if (!detail || typeof detail !== 'object' || !IN_USE_DETAIL_STATUSES.has(detail.status)) {
+          updatedDetails.push(rawDetail);
+          continue;
+        }
+
+        const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail);
+        if (hasActiveUsage) {
+          updatedDetails.push(rawDetail);
+          continue;
+        }
+
+        detail.status = detail.condition === 'Rusak' ? 'Dalam Perbaikan' : 'Aktif';
+        hasChanges = true;
+        updatedDetails.push(detail);
+      }
+
+      if (!hasChanges) continue;
+
+      const nextSpecifications = { ...specifications, details: updatedDetails };
+      await pool.query(`UPDATE ${table} SET specifications = ?, updated_at = NOW() WHERE id = ?`, [
+        JSON.stringify(nextSpecifications),
+        row.id,
+      ]);
+      row.specifications = nextSpecifications;
+    }
+  }
+
   async getAll(filters: AssetFilters): Promise<PaginatedResponse<Asset>> {
     const { page, limit, search, category, status, type } = filters;
     const offset = (page - 1) * limit;
@@ -124,6 +229,7 @@ export class AssetService {
 
     const [dataRows] = await pool.query<AssetRow[]>(query, params);
     const [countRows] = await pool.query<CountRow[]>(countQuery, countParams);
+    await this.reconcileStaleUsageDetailStatuses(dataRows, type);
 
     const total = countRows[0].count;
 

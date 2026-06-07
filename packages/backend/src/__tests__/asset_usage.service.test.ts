@@ -129,6 +129,55 @@ describe('AssetUsageService usage completion status sync', () => {
     );
   });
 
+  it('matches completed detail usage by inventory name when id and code differ', async () => {
+    mockedQuery.mockResolvedValue([[{ count: 0 }]]);
+    const assetService = (service as any).assetService;
+    jest.spyOn(assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 12,
+        status: 'borrowed',
+        specifications: {
+          details: [
+            {
+              id: 'different-detail',
+              inventoryName: 'Oxygen Flowmeter & Humidifier',
+              assetCode: 'MED-ANGH-OXY',
+              status: 'Sedang Digunakan',
+              condition: 'Baik',
+            },
+          ],
+        },
+      },
+    });
+    const updateSpy = jest.spyOn(assetService, 'update').mockResolvedValue({ success: true });
+
+    await (service as any).syncAssetStateAfterUsage(12, 'medical', {
+      detailId: 'IMD-DTL-ANG1-08',
+      detailName: 'Oxygen Flowmeter & Humidifier',
+      conditionAfter: 'Baik',
+      endedAt: '2026-05-23 10:00:00',
+    });
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      '12',
+      {
+        specifications: {
+          details: [
+            {
+              id: 'different-detail',
+              inventoryName: 'Oxygen Flowmeter & Humidifier',
+              assetCode: 'MED-ANGH-OXY',
+              status: 'Aktif',
+              condition: 'Baik',
+            },
+          ],
+        },
+      },
+      'medical'
+    );
+  });
+
   it('does not release the asset while another usage log is still active', async () => {
     mockedQuery.mockResolvedValue([[{ count: 1 }]]);
     const assetService = (service as any).assetService;

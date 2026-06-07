@@ -44,6 +44,7 @@ interface ActiveBorrowingRow extends RowDataPacket {
 type UsageSyncOptions = {
   usageId?: number | string | null;
   detailId?: string | null;
+  detailName?: string | null;
   detailCode?: string | null;
   conditionAfter?: string | null;
   endedAt?: string | Date | null;
@@ -122,9 +123,19 @@ export class AssetUsageService {
     return normalizedDetailId === `asset-${assetId}` || normalizedDetailId === `asset-${normalizedAssetType}-${assetId}`;
   }
 
-  private matchesAssetDetail(detail: Record<string, any>, detailId?: string | null, detailCode?: string | null): boolean {
+  private normalizeComparableText(value?: string | number | null): string {
+    return this.normalizeDetailIdentifier(value).toLowerCase();
+  }
+
+  private matchesAssetDetail(
+    detail: Record<string, any>,
+    detailId?: string | null,
+    detailCode?: string | null,
+    detailName?: string | null
+  ): boolean {
     const normalizedTargetId = this.normalizeDetailIdentifier(detailId);
     const normalizedTargetCode = this.normalizeDetailIdentifier(detailCode);
+    const normalizedTargetName = this.normalizeComparableText(detailName);
     const detailCandidates = [
       this.normalizeDetailIdentifier(detail.id),
       this.normalizeDetailIdentifier(detail.detailId),
@@ -140,6 +151,25 @@ export class AssetUsageService {
 
     if (normalizedTargetCode && detailCandidates.includes(normalizedTargetCode)) {
       return true;
+    }
+
+    if (normalizedTargetName) {
+      const nameCandidates = [
+        this.normalizeComparableText(detail.inventoryName),
+        this.normalizeComparableText(detail.name),
+        this.normalizeComparableText(detail.detailName),
+        this.normalizeComparableText(detail.assetDetailName),
+        this.normalizeComparableText(detail.brandModel),
+        [detail.brand, detail.model]
+          .map((value) => this.normalizeDetailIdentifier(value))
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+      ].filter(Boolean);
+
+      if (nameCandidates.includes(normalizedTargetName)) {
+        return true;
+      }
     }
 
     return false;
@@ -348,6 +378,7 @@ export class AssetUsageService {
 
     const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
     const details = Array.isArray(specifications.details) ? specifications.details : [];
+    const detailName = this.normalizeDetailIdentifier(options?.detailName);
     const detailCode = this.normalizeDetailIdentifier(options?.detailCode);
     const isFallbackDetail = this.isAssetFallbackDetailId(detailId, assetId, normalizedAssetType);
     const shouldMatchSpecificDetail = Boolean((detailId && !isFallbackDetail) || detailCode);
@@ -364,7 +395,7 @@ export class AssetUsageService {
         if (!detail || typeof detail !== 'object') return rawDetail;
 
         const isTarget = shouldMatchSpecificDetail
-          ? this.matchesAssetDetail(detail, detailId, detailCode)
+          ? this.matchesAssetDetail(detail, detailId, detailCode, detailName)
           : true;
 
         if (!isTarget) return rawDetail;
@@ -695,6 +726,7 @@ export class AssetUsageService {
       await this.syncAssetStateAfterUsage(data.assetId, data.assetType || 'medical', {
         usageId: result.insertId,
         detailId: data.assetDetailId,
+        detailName: data.assetDetailName,
         detailCode: data.assetDetailCode,
         conditionAfter: data.conditionAfter,
         endedAt: data.endedAt
@@ -703,6 +735,7 @@ export class AssetUsageService {
       // mark the detail/master as in-use so UI shows "Sedang Digunakan"
       await this.markAssetDetailInUse(data.assetId, data.assetType || 'medical', {
         detailId: data.assetDetailId,
+        detailName: data.assetDetailName,
         detailCode: data.assetDetailCode
       });
     }
@@ -746,6 +779,7 @@ export class AssetUsageService {
       await this.syncAssetStateAfterUsage(updatedLog.data.assetId, updatedLog.data.assetType, {
         usageId: updatedLog.data.id,
         detailId: updatedLog.data.assetDetailId,
+        detailName: updatedLog.data.assetDetailName,
         detailCode: updatedLog.data.assetDetailCode,
         conditionAfter: updatedLog.data.conditionAfter,
         endedAt: updatedLog.data.endedAt
