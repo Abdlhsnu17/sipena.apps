@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import InventoryPicker from "@/components/inventory-picker";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
@@ -161,9 +162,18 @@ const initialForm: FormState = {
 };
 
 const getInventoryKey = (item: DetailInventoryItem) => `${item.assetType}|${item.assetId}|${item.detailId}`;
-type AssetSourceFilter = "all" | "medical" | "non_medical";
 
 const activeMaintenanceStatuses = new Set(["requested", "scheduled", "in_progress", "completed"]);
+
+const formatUsageAssetLabel = (asset: DetailInventoryItem) => {
+  const inventoryLabel = asset.detailInventoryName || asset.detailName || asset.assetName || "";
+  const brandLabel = asset.detailBrandModel;
+  const codeLabel = asset.detailCode || asset.assetCode;
+  const locationLabel = asset.assetLocation ? ` (${asset.assetLocation})` : "";
+  const brandSuffix = brandLabel ? ` (${brandLabel})` : "";
+  const codeSuffix = codeLabel ? ` - ${codeLabel}` : "";
+  return `${inventoryLabel}${brandSuffix}${codeSuffix}${locationLabel}`.trim();
+};
 
 const getConditionLabel = (asset: DetailInventoryItem) => {
   if (asset.condition === "damaged") return "Rusak";
@@ -293,10 +303,6 @@ export default function AssetUsagePage() {
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
-  const [assetSearchTerm, setAssetSearchTerm] = useState("");
-  const [assetSearchInput, setAssetSearchInput] = useState("");
-  const [assetSourceFilter, setAssetSourceFilter] = useState<AssetSourceFilter>("all");
-  const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [expandedUsageHistoryIds, setExpandedUsageHistoryIds] = useState<number[]>([]);
@@ -487,25 +493,6 @@ export default function AssetUsagePage() {
     ).sort((a, b) => a.localeCompare(b, "id"));
   }, [selectedAsset, selectableAssets]);
 
-  const assetFilterCounts = useMemo(() => ({
-    all: selectableAssets.length,
-    medical: selectableAssets.filter((item) => item.assetType === "medical").length,
-    non_medical: selectableAssets.filter((item) => item.assetType === "non_medical").length,
-  }), [selectableAssets]);
-
-  const filteredSelectableAssets = useMemo(() => {
-    const searchTerm = assetSearchTerm.trim();
-    return selectableAssets.filter((item) => {
-      const matchesSource =
-        assetSourceFilter === "all" ||
-        (assetSourceFilter === "medical" && item.assetType === "medical") ||
-        (assetSourceFilter === "non_medical" && item.assetType === "non_medical");
-      if (!matchesSource) return false;
-
-      return matchesSearchKeyword(searchTerm, [buildInventorySearchKey(item)]);
-    });
-  }, [assetSearchTerm, assetSourceFilter, selectableAssets]);
-
   useEffect(() => {
     if (!form.inventoryKey) return;
     const currentStillSelectable = selectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey);
@@ -567,7 +554,6 @@ export default function AssetUsagePage() {
       inventoryKey,
       roomName: nextRoomName || prev.roomName,
     }));
-    setIsAssetPickerOpen(false);
   };
 
   const handleUsageContextChange = (usageContext: AssetUsageContext) => {
@@ -956,102 +942,27 @@ export default function AssetUsagePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium">Alat</label>
-                    <div className="relative mt-1">
-                      <button
-                        type="button"
-                        className="flex min-h-11 w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-left text-sm"
-                        onClick={() => setIsAssetPickerOpen((open) => !open)}
-                      >
-                        <span className={selectedAsset ? "text-slate-900" : "text-slate-500"}>
-                          {selectedAsset
-                            ? `${selectedAsset.detailInventoryName || selectedAsset.detailName} - ${selectedAsset.detailCode}`
-                            : "Pilih alat"}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-slate-500" />
-                      </button>
-                      {isAssetPickerOpen && (
-                        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
-                          <div className="border-b p-3">
-                            <div className="relative">
-                              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                  <Input
-                                    className="pl-9 pr-20"
-                                    placeholder="Cari inventaris..."
-                                    value={assetSearchInput}
-                                    onChange={(event) => {
-                                      setAssetSearchInput(event.target.value);
-                                      setAssetSearchTerm(event.target.value.trim());
-                                    }}
-                                  />
-                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                    setAssetSearchInput("");
-                                    setAssetSearchTerm("");
-                                  }}
-                                  className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200"
-                                >
-                                  Reset
-                                </button>
-                              </div>
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {[
-                                { value: "all" as const, label: `Semua (${assetFilterCounts.all})` },
-                                { value: "medical" as const, label: `Medis (${assetFilterCounts.medical})` },
-                                { value: "non_medical" as const, label: `Non-Medis (${assetFilterCounts.non_medical})` },
-                              ].map((option) => (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() => setAssetSourceFilter(option.value)}
-                                  className={`rounded-full border px-3 py-1.5 text-sm ${
-                                    assetSourceFilter === option.value
-                                      ? "border-teal-500 bg-teal-50 text-teal-700"
-                                      : "border-slate-200 bg-white text-slate-700"
-                                  }`}
-                                >
-                                  {option.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="max-h-72 overflow-y-auto">
-                            {filteredSelectableAssets.map((item) => {
-                              const key = getInventoryKey(item);
-                              const isSelected = key === form.inventoryKey;
-                              return (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  onClick={() => handleAssetChange(key)}
-                                  className="flex w-full items-start gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
-                                >
-                                  <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
-                                    {isSelected && <Check className="h-4 w-4 text-teal-600" />}
-                                  </span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block truncate font-medium text-slate-900">{item.detailInventoryName || item.detailName}</span>
-                                    <span className="block truncate text-xs text-slate-600">{item.detailCode} - {item.roomName || item.assetLocation || "-"}</span>
-                                    <span className="block truncate text-xs text-slate-500">
-                                      Status: {getDetailInventoryStatusLabel(item)} · Kondisi: {getConditionLabel(item)}
-                                    </span>
-                                  </span>
-                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                                    {item.assetType === "medical" ? "Medis" : "Non-Medis"}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                            {filteredSelectableAssets.length === 0 && (
-                              <div className="px-3 py-6 text-center text-sm text-slate-600">
-                                Tidak ada alat yang sesuai filter.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                    <div className="mt-1">
+                      <InventoryPicker
+                        assets={selectableAssets}
+                        selectedAsset={selectedAsset}
+                        onSelect={(asset) => handleAssetChange(getInventoryKey(asset))}
+                        formatLabel={formatUsageAssetLabel}
+                        getItemKey={getInventoryKey}
+                        getAssetCategory={(asset) => asset.assetType}
+                        showCategoryFilter
+                        searchValue={buildInventorySearchKey}
+                        placeholder="Cari inventaris..."
+                        buttonLabel="Pilih alat"
+                        ariaLabel="Pilih alat untuk pemakaian"
+                        selectedAssetLabel={formatUsageAssetLabel}
+                        renderItemMeta={(asset) => (
+                          <span>
+                            Status: {getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}
+                          </span>
+                        )}
+                        noResultsLabel="Tidak ada alat yang sesuai filter."
+                      />
                     </div>
                     {form.usageContext === "own_room" && selectableAssets.length === 0 && (
                       <p className="mt-1 text-xs font-medium text-red-600">
