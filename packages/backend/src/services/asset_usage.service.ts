@@ -42,6 +42,7 @@ interface ActiveBorrowingRow extends RowDataPacket {
 }
 
 type UsageSyncOptions = {
+  usageId?: number | string | null;
   detailId?: string | null;
   detailCode?: string | null;
   conditionAfter?: string | null;
@@ -197,6 +198,46 @@ export class AssetUsageService {
     return (rows[0]?.count || 0) > 0;
   }
 
+  private async hasActiveUsageForAssetDetail(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null,
+    usageIdToIgnore?: number | string | null
+  ): Promise<boolean> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+    const ignoreId = Number(usageIdToIgnore);
+    const ignoreClause = Number.isFinite(ignoreId) && ignoreId > 0 ? 'AND id <> ?' : '';
+    const ignoreParams = Number.isFinite(ignoreId) && ignoreId > 0 ? [ignoreId] : [];
+
+    if (!normalizedDetailId || isFallbackDetail) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COUNT(*) as count
+         FROM asset_usage_logs
+         WHERE asset_id = ?
+           AND COALESCE(asset_type, 'medical') = ?
+           AND ended_at IS NULL
+           ${ignoreClause}`,
+        [assetId, normalizedAssetType, ...ignoreParams]
+      );
+      return (rows[0]?.count || 0) > 0;
+    }
+
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM asset_usage_logs
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND ended_at IS NULL
+         AND (asset_detail_id = ? OR asset_detail_id IS NULL OR asset_detail_id IN (?, ?))
+         ${ignoreClause}`,
+      [assetId, normalizedAssetType, normalizedDetailId, fallbackIds[0], fallbackIds[1], ...ignoreParams]
+    );
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private async hasUsageForBorrowingId(borrowingId?: number | null): Promise<boolean> {
     if (!borrowingId) return false;
 
@@ -297,12 +338,16 @@ export class AssetUsageService {
     if (!endedAt) return;
 
     const normalizedAssetType = this.normalizeAssetType(assetType);
+    const detailId = this.normalizeDetailIdentifier(options?.detailId);
+    if (await this.hasActiveUsageForAssetDetail(assetId, normalizedAssetType, detailId || null, options?.usageId)) {
+      return;
+    }
+
     const assetResponse = await this.assetService.getById(String(assetId), normalizedAssetType);
     if (!assetResponse.success || !assetResponse.data) return;
 
     const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
     const details = Array.isArray(specifications.details) ? specifications.details : [];
-    const detailId = this.normalizeDetailIdentifier(options?.detailId);
     const detailCode = this.normalizeDetailIdentifier(options?.detailCode);
     const isFallbackDetail = this.isAssetFallbackDetailId(detailId, assetId, normalizedAssetType);
     const shouldMatchSpecificDetail = Boolean((detailId && !isFallbackDetail) || detailCode);
@@ -313,6 +358,7 @@ export class AssetUsageService {
 
     if (details.length > 0) {
       let hasChanges = false;
+      let matchedDetail = false;
       const updatedDetails = details.map((rawDetail: any) => {
         const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
         if (!detail || typeof detail !== 'object') return rawDetail;
@@ -322,6 +368,7 @@ export class AssetUsageService {
           : true;
 
         if (!isTarget) return rawDetail;
+        matchedDetail = true;
 
         const nextStatus = damagedUsage ? 'Dalam Perbaikan' : 'Aktif';
         const nextCondition = damagedUsage ? 'Rusak' : (normalizedDetailCondition || detail.condition || 'Baik');
@@ -347,7 +394,7 @@ export class AssetUsageService {
         );
       }
 
-      if (shouldMatchSpecificDetail) {
+      if (shouldMatchSpecificDetail && matchedDetail) {
         return;
       }
     }
@@ -646,6 +693,7 @@ export class AssetUsageService {
 
     if (data.endedAt) {
       await this.syncAssetStateAfterUsage(data.assetId, data.assetType || 'medical', {
+        usageId: result.insertId,
         detailId: data.assetDetailId,
         detailCode: data.assetDetailCode,
         conditionAfter: data.conditionAfter,
@@ -696,6 +744,7 @@ export class AssetUsageService {
     const updatedLog = await this.getById(id);
     if (updatedLog.success && updatedLog.data?.endedAt) {
       await this.syncAssetStateAfterUsage(updatedLog.data.assetId, updatedLog.data.assetType, {
+        usageId: updatedLog.data.id,
         detailId: updatedLog.data.assetDetailId,
         detailCode: updatedLog.data.assetDetailCode,
         conditionAfter: updatedLog.data.conditionAfter,

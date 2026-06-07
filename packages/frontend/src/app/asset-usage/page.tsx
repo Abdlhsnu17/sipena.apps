@@ -290,6 +290,10 @@ const isOwnRoomAsset = (item: DetailInventoryItem, user: User | null) =>
 
 const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
+const dispatchInventoryRefresh = () => {
+  window.dispatchEvent(new Event("inventory-refresh"));
+};
+
 export default function AssetUsagePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -623,6 +627,7 @@ export default function AssetUsagePage() {
         toast({ title: "Penggunaan alat dicatat", description: "Frekuensi pemakaian alat berhasil ditambahkan." });
         setForm((prev) => ({ ...initialForm, inventoryKey: prev.inventoryKey, roomName: prev.roomName, startedAt: toDateTimeLocalInputValue() }));
         await loadData();
+        dispatchInventoryRefresh();
       }
     } catch (error) {
       console.error("Error saving asset usage:", error);
@@ -642,6 +647,7 @@ export default function AssetUsagePage() {
     if (!ok) return;
     await assetUsageService.delete(log.id);
     await loadData();
+    dispatchInventoryRefresh();
   };
 
   const openEditDialog = (log: AssetUsageLog) => {
@@ -679,6 +685,7 @@ export default function AssetUsagePage() {
         });
         setEditForm(null);
         await loadData();
+        dispatchInventoryRefresh();
       } else {
         toast({
           title: "Gagal menyimpan edit",
@@ -739,6 +746,7 @@ export default function AssetUsagePage() {
         });
         setCompleteForm(null);
         await loadData();
+        dispatchInventoryRefresh();
       } else {
         toast({
           title: "Gagal memperbarui status",
