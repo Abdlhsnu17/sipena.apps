@@ -15,7 +15,7 @@ import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -536,8 +536,13 @@ export default function AssetUsagePage() {
   };
 
   const summary = useMemo(() => {
-    const totalUsage = filteredLogs.reduce((sum, log) => sum + (log.usageCount || 1), 0);
-    const uniqueAssets = new Set(filteredLogs.map((log) => `${log.assetType}|${log.assetId}|${log.assetDetailId || log.assetDetailCode || log.assetCode}`));
+    const totalRecords = filteredLogs.length;
+    const completedUsage = filteredLogs.filter((log) => Boolean(log.endedAt)).length;
+    const activeUsage = filteredLogs.filter((log) => !log.endedAt).length;
+    const activeAssetLabels = filteredLogs
+      .filter((log) => !log.endedAt)
+      .map((log) => log.assetDetailName || log.assetName || "-")
+      .filter(Boolean);
     const topAsset = Object.entries(
       filteredLogs.reduce<Record<string, { label: string; count: number }>>((acc, log) => {
         const key = `${log.assetType}|${log.assetId}|${log.assetDetailId || log.assetDetailCode || log.assetCode}`;
@@ -547,7 +552,7 @@ export default function AssetUsagePage() {
       }, {})
     ).sort((a, b) => b[1].count - a[1].count)[0]?.[1];
 
-    return { totalUsage, uniqueAssets: uniqueAssets.size, topAsset };
+    return { totalRecords, completedUsage, activeUsage, activeAssetLabels, topAsset };
   }, [filteredLogs]);
 
   const handleAssetChange = (inventoryKey: string) => {
@@ -886,21 +891,36 @@ export default function AssetUsagePage() {
 
         <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
           <CardContent className="p-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
                 <div>
-                  <p className="text-[12px] text-muted-foreground">Total Pemakaian</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.totalUsage}</p>
+                  <p className="text-[12px] text-muted-foreground">Total Catatan</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.totalRecords}</p>
+                  <p className="text-xs text-slate-600">Semua riwayat pemakaian</p>
                 </div>
                 <Activity className="h-4 w-4 shrink-0 text-amber-500" />
               </div>
 
               <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
                 <div>
-                  <p className="text-[12px] text-muted-foreground">Alat Terpakai</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.uniqueAssets}</p>
+                  <p className="text-[12px] text-muted-foreground">Selesai Penggunaan</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.completedUsage}</p>
+                  <p className="text-xs text-slate-600">Alat sudah dikembalikan aktif</p>
                 </div>
-                <ClipboardPlus className="h-4 w-4 shrink-0 text-teal-500" />
+                <Check className="h-4 w-4 shrink-0 text-teal-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/70 p-3 dark:bg-rose-950/30">
+                <div className="min-w-0">
+                  <p className="text-[12px] text-muted-foreground">Belum Diselesaikan</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.activeUsage}</p>
+                  <p className="truncate text-xs text-slate-600">
+                    {summary.activeUsage > 0
+                      ? `${summary.activeAssetLabels.slice(0, 2).join(", ")} masih digunakan`
+                      : "Tidak ada alat tertahan"}
+                  </p>
+                </div>
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
               </div>
 
               <div className="flex items-start justify-between gap-3 rounded-lg bg-cyan-50/50 p-3 dark:bg-cyan-950/30">
