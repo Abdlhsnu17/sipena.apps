@@ -194,4 +194,49 @@ describe('AssetUsageService usage completion status sync', () => {
     expect(getByIdSpy).not.toHaveBeenCalled();
     expect(updateSpy).not.toHaveBeenCalled();
   });
+
+  it('keeps usage completion successful when borrowing return sync fails', async () => {
+    const activeLog = {
+      id: 7,
+      assetId: 12,
+      assetType: 'medical',
+      roomName: 'Ruangan Anggrek',
+      usageContext: 'procedure',
+      startedAt: '2026-05-23 09:00:00',
+      endedAt: null,
+      usageCount: 1,
+      createdBy: 1,
+    };
+    const completedLog = {
+      ...activeLog,
+      endedAt: '2026-05-23 10:00:00',
+      conditionAfter: 'Baik',
+      notes: 'Selesai',
+    };
+
+    mockedQuery
+      .mockResolvedValueOnce([[activeLog]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([[completedLog]])
+      .mockResolvedValueOnce([[completedLog]]);
+
+    jest.spyOn(service as any, 'syncAssetStateAfterUsage').mockResolvedValue(undefined);
+    jest.spyOn(service as any, 'syncBorrowingReturnAfterUsageComplete').mockRejectedValue(new Error('sync failed'));
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const result = await service.update('7', {
+      endedAt: '2026-05-23 10:00:00',
+      conditionAfter: 'Baik',
+      notes: 'Selesai',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.endedAt).toBe('2026-05-23T10:00:00');
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Failed to sync borrowing return after usage completion:',
+      expect.any(Error)
+    );
+
+    warnSpy.mockRestore();
+  });
 });

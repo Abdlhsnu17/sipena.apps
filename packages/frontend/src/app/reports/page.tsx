@@ -114,13 +114,7 @@ const maintenanceTypeOptions: FilterOption[] = [
 ]
 
 const usageContextOptions: FilterOption[] = [
-  { value: "own_room", label: "Ruangan" },
-  { value: "same_unit_cross_room", label: "Antar Sub Ruangan" },
-  { value: "cross_room", label: "Antar Instalasi" },
-  { value: "emergency", label: "Emergency" },
-  { value: "procedure", label: "Prosedur" },
-  { value: "rounding", label: "Rounding" },
-  { value: "other", label: "Lainnya" },
+  { value: "procedure", label: "Antar Sub Ruangan" },
 ]
 
 const initialExportFilters: ExportFilters = {
@@ -338,15 +332,13 @@ export default function ReportsPage() {
 
     const classifyUsageCategory = (ctx?: string | null) => {
       const key = (ctx || "other").toString()
-      if (key === "emergency") return "Emergency"
-      if (key === "rounding") return "Antar Instalasi"
-      if (key === "procedure") return "Antar Sub Ruangan"
-      // default to room-related category for other contexts
-      return "Ruangan"
+      if (key === "procedure" || key === "same_unit_cross_room") return "Antar Sub Ruangan"
+      return null
     }
 
     const contextMap = logs.reduce<Record<string, number>>((acc, log) => {
       const category = classifyUsageCategory(log.usageContext)
+      if (!category) return acc
       acc[category] = (acc[category] || 0) + (log.usageCount || 1)
       return acc
     }, {})

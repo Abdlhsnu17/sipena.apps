@@ -34,7 +34,6 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import { appendLine, ExportFormat, exportNarrativeReport, type DocumentSection, type SectionLine } from "@/utils/export-table";
 
-// Only show functional usage categories to avoid confusion between location vs function
 const usageContextLabels: Record<AssetUsageContext, string> = {
   own_room: "Ruangan",
   same_unit_cross_room: "Antar Sub Ruangan",
@@ -45,7 +44,7 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   other: "Lainnya",
 };
 
-const functionalUsageKeys: AssetUsageContext[] = ["emergency", "rounding"];
+const visibleUsageContextKeys: AssetUsageContext[] = ["procedure"];
 
 const HISTORY_ROWS_PER_PAGE = 3;
 
@@ -153,7 +152,7 @@ type UsageDetailSection = {
 const initialForm: FormState = {
   inventoryKey: "",
   roomName: "",
-  usageContext: "rounding",
+  usageContext: "procedure",
   startedAt: toDateTimeLocalInputValue(),
   endedAt: "",
   usageCount: 1,
@@ -316,9 +315,8 @@ export default function AssetUsagePage() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [completeForm, setCompleteForm] = useState<CompleteFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
-  const sortedFunctionalUsageKeys = useMemo<AssetUsageContext[]>(() => {
-    const usageKeys: AssetUsageContext[] = [...functionalUsageKeys, "own_room"];
-    return usageKeys.sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id"));
+  const sortedVisibleUsageContextKeys = useMemo<AssetUsageContext[]>(() => {
+    return [...visibleUsageContextKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id"));
   }, []);
 
   useEffect(() => {
@@ -1019,7 +1017,7 @@ export default function AssetUsagePage() {
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium">Jenis Penggunaan</label>
                     <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
-                      {sortedFunctionalUsageKeys.map((key) => (
+                      {sortedVisibleUsageContextKeys.map((key) => (
                         <option key={key} value={key}>{usageContextLabels[key]}</option>
                       ))}
                     </select>

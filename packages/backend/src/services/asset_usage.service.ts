@@ -786,7 +786,11 @@ export class AssetUsageService {
       });
 
       if (!existingLog.data.endedAt && data.endedAt !== undefined) {
-        await this.syncBorrowingReturnAfterUsageComplete(updatedLog.data);
+        try {
+          await this.syncBorrowingReturnAfterUsageComplete(updatedLog.data);
+        } catch (error) {
+          console.warn('Failed to sync borrowing return after usage completion:', error);
+        }
       }
     }
 
