@@ -14,7 +14,7 @@ import type { User } from "@/types/auth-types";
 import type { MedicalAsset, MedicalRoom } from "@/types/medical-assets-types";
 import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
 import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage";
-import { formatNoId } from "@/utils/record-id";
+import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
@@ -22,7 +22,7 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 
 import { ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function MedicalAssetsPage() {
   const router = useRouter()
@@ -166,7 +166,11 @@ export default function MedicalAssetsPage() {
         if (!currentRoom) {
           return
         }
-        const details = currentRoom.assets || []
+        const details = (currentRoom.assets || []).map((detail) => ({
+          ...detail,
+          id: rebaseRoomScopedDetailCode(detail.id, "MED", currentRoom.roomName, roomFormData.roomName),
+          assetCode: rebaseRoomScopedDetailCode(detail.assetCode, "MED", currentRoom.roomName, roomFormData.roomName),
+        }))
         const response = await assetService.update(currentRoom.id, {
           name: roomFormData.roomName,
           category: roomFormData.category || defaultCategory,
@@ -341,7 +345,20 @@ export default function MedicalAssetsPage() {
   }
 
   const searchTermNormalized = searchTerm.trim().toLowerCase()
-  const getRoomNoId = (roomId: string) => formatNoId("IMD", roomId)
+  const sortedRooms = useMemo(
+    () =>
+      [...rooms].sort((left, right) => {
+        const nameComparison = left.roomName.localeCompare(right.roomName, "id", { numeric: true })
+        if (nameComparison !== 0) return nameComparison
+        return left.id.localeCompare(right.id, "id", { numeric: true })
+      }),
+    [rooms],
+  )
+  const roomNoIdByRoomId = useMemo(
+    () => new Map(sortedRooms.map((room, index) => [room.id, formatNoId("IMD", index + 1)])),
+    [sortedRooms],
+  )
+  const getRoomNoId = (roomId: string) => roomNoIdByRoomId.get(roomId) ?? formatNoId("IMD", roomId)
   const getAssetNoId = (assetId: string) => formatNoId("IMD-DTL", assetId)
 
   const matchesAssetSearch = (asset: MedicalAsset) => {
@@ -361,7 +378,7 @@ export default function MedicalAssetsPage() {
     ])
   }
 
-  const filteredRooms = rooms.filter((room) => {
+  const filteredRooms = sortedRooms.filter((room) => {
     const matchesRoomSearch = matchesSearchKeyword(searchTerm, [
       getRoomNoId(room.id),
       room.id,

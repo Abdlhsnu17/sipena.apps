@@ -12,7 +12,7 @@ import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
-import { formatNoId } from "@/utils/record-id";
+import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
@@ -22,7 +22,7 @@ import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets
 import { USAGE_OPTIONS } from "@/utils/asset-usage";
 import { Building, ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const normalizeNonMedicalDetailId = (
   detail: Partial<NonMedicalAsset> & { assetCode?: string; serialNumber?: string },
@@ -168,7 +168,11 @@ export default function NonMedicalAssetsPage() {
         if (!currentRoom) {
           return
         }
-        const details = currentRoom.assets || []
+        const details = (currentRoom.assets || []).map((detail) => ({
+          ...detail,
+          id: rebaseRoomScopedDetailCode(detail.id, "NMD", currentRoom.roomName, roomFormData.roomName),
+          assetCode: rebaseRoomScopedDetailCode(detail.assetCode, "NMD", currentRoom.roomName, roomFormData.roomName),
+        }))
         const response = await assetService.update(currentRoom.id, {
           name: roomFormData.roomName,
           category: roomFormData.category || defaultCategory,
@@ -374,7 +378,20 @@ export default function NonMedicalAssetsPage() {
   const totalAssetCount = rooms.reduce((total, room) => total + room.assets.length, 0)
 
   const searchTermNormalized = searchTerm.trim().toLowerCase()
-  const getRoomNoId = (roomId: string) => formatNoId("INM", roomId)
+  const sortedRooms = useMemo(
+    () =>
+      [...rooms].sort((left, right) => {
+        const nameComparison = left.roomName.localeCompare(right.roomName, "id", { numeric: true })
+        if (nameComparison !== 0) return nameComparison
+        return left.id.localeCompare(right.id, "id", { numeric: true })
+      }),
+    [rooms],
+  )
+  const roomNoIdByRoomId = useMemo(
+    () => new Map(sortedRooms.map((room, index) => [room.id, formatNoId("INM", index + 1)])),
+    [sortedRooms],
+  )
+  const getRoomNoId = (roomId: string) => roomNoIdByRoomId.get(roomId) ?? formatNoId("INM", roomId)
   const getAssetNoId = (assetId: string) => formatNoId("INM-DTL", assetId)
 
   const matchesAssetSearch = (asset: NonMedicalAsset) => {
@@ -394,7 +411,7 @@ export default function NonMedicalAssetsPage() {
     ])
   }
 
-  const filteredRooms = rooms.filter((room) => {
+  const filteredRooms = sortedRooms.filter((room) => {
     const matchesRoomSearch = matchesSearchKeyword(searchTerm, [
       getRoomNoId(room.id),
       room.id,
