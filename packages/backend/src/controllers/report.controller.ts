@@ -30,6 +30,52 @@ const canPreviewInline = (contentType?: string | null): boolean => [
   'image/webp'
 ].includes((contentType || '').toLowerCase());
 
+const reportFileNameLabels: Record<string, string> = {
+  assets: 'aset',
+  borrowing: 'peminjaman',
+  maintenance: 'pemeliharaan',
+  usage: 'penggunaan',
+  activity: 'aktivitas',
+  all: 'terpadu',
+};
+
+const normalizeReportTypeForFileName = (value?: string): string => {
+  if (value && reportFileNameLabels[value]) {
+    return value;
+  }
+  return 'assets';
+};
+
+const sanitizeFileNamePart = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const formatDateForFileName = (value?: string): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : sanitizeFileNamePart(value);
+};
+
+const buildReportExportFileName = (
+  reportType: string | undefined,
+  startDate: string | undefined,
+  endDate: string | undefined,
+  extension: 'pdf' | 'xlsx',
+): string => {
+  const normalizedType = normalizeReportTypeForFileName(reportType);
+  const typeLabel = reportFileNameLabels[normalizedType];
+  const start = formatDateForFileName(startDate);
+  const end = formatDateForFileName(endDate);
+  const period = start || end ? `${start || 'awal'}-sd-${end || 'akhir'}` : 'semua-data';
+
+  return `laporan-${typeLabel}-${period}.${extension}`;
+};
+
 export class ReportController {
   private reportService: ReportService;
 
@@ -194,7 +240,10 @@ export class ReportController {
       });
 
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=report-${Date.now()}.pdf`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${buildReportExportFileName(reportType as string, startDate as string, endDate as string, 'pdf')}"`
+      );
       res.send(pdfBuffer);
     } catch (error) {
       console.error('Export PDF error:', error);
@@ -226,7 +275,10 @@ export class ReportController {
       });
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename=report-${Date.now()}.xlsx`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${buildReportExportFileName(reportType as string, startDate as string, endDate as string, 'xlsx')}"`
+      );
       res.send(excelBuffer);
     } catch (error) {
       console.error('Export Excel error:', error);

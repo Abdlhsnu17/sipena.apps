@@ -957,66 +957,180 @@ export class ReportService {
   async exportToPdf(filters: ReportFilters): Promise<Buffer> {
     const sheets = await this.getExportSheets(filters);
     const title = this.getExportTitle(filters.reportType);
-    const lines = [
-      'SIPENA - RSUP Persahabatan',
-      title,
-      `Dibuat: ${new Date().toLocaleString('id-ID')}`,
-      ...getFilterSummary(filters),
-    ];
+    const pageWidth = 595;
+    const pageHeight = 842;
+    const margin = 36;
+    const contentWidth = pageWidth - margin * 2;
+    const bottomMargin = 44;
+    const pages: string[][] = [];
+    let operations: string[] = [];
+    let y = pageHeight - margin;
+
+    const formatColumnLabel = (key: string): string =>
+      key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
+    const addPage = () => {
+      operations = [];
+      pages.push(operations);
+      y = pageHeight - margin;
+    };
+
+    const color = (hex: string): string => {
+      const normalized = hex.replace('#', '');
+      const r = parseInt(normalized.slice(0, 2), 16) / 255;
+      const g = parseInt(normalized.slice(2, 4), 16) / 255;
+      const b = parseInt(normalized.slice(4, 6), 16) / 255;
+      return `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)}`;
+    };
+
+    const addText = (
+      text: string,
+      x: number,
+      baseline: number,
+      size = 9,
+      font: 'F1' | 'F2' = 'F1',
+      fill = '#111827',
+    ) => {
+      operations.push(`BT ${color(fill)} rg /${font} ${size} Tf 1 0 0 1 ${x} ${baseline} Tm (${escapePdfText(text)}) Tj ET`);
+    };
+
+    const addRect = (
+      x: number,
+      rectY: number,
+      width: number,
+      height: number,
+      stroke = '#d7dee8',
+      fill?: string,
+    ) => {
+      if (fill) operations.push(`q ${color(fill)} rg ${x} ${rectY} ${width} ${height} re f Q`);
+      operations.push(`q ${color(stroke)} RG 0.75 w ${x} ${rectY} ${width} ${height} re S Q`);
+    };
+
+    const addLine = (x1: number, y1: number, x2: number, y2: number, stroke = '#d7dee8', width = 0.75) => {
+      operations.push(`q ${color(stroke)} RG ${width} w ${x1} ${y1} m ${x2} ${y2} l S Q`);
+    };
+
+    const wrapPdfText = (value: string, maxWidth: number, fontSize = 9): string[] => {
+      const maxChars = Math.max(12, Math.floor(maxWidth / (fontSize * 0.52)));
+      return wrapText(value, maxChars);
+    };
+
+    const ensureSpace = (height: number) => {
+      if (y - height < bottomMargin) addPage();
+    };
+
+    addPage();
+
+    addText('SiPeNa', margin, y, 11, 'F2', '#64748b');
+    y -= 24;
+    addText(title, margin, y, 20, 'F2', '#0f172a');
+    y -= 20;
+    addText(`Dibuat: ${new Date().toLocaleString('id-ID')}`, margin, y, 9, 'F1', '#475569');
+    y -= 18;
+    addLine(margin, y, pageWidth - margin, y, '#cbd5e1', 1);
+    y -= 22;
+
+    const filterItems = getFilterSummary(filters);
+    const chips = filterItems.length > 0 ? filterItems : ['Periode: Semua data'];
+    let chipX = margin;
+    chips.forEach((item) => {
+      const chipWidth = Math.min(250, Math.max(120, item.length * 5.3 + 22));
+      if (chipX + chipWidth > pageWidth - margin) {
+        chipX = margin;
+        y -= 28;
+      }
+      addRect(chipX, y - 18, chipWidth, 22, '#dbe4ef', '#f8fafc');
+      addText(item, chipX + 10, y - 12, 8.5, 'F1', '#334155');
+      chipX += chipWidth + 8;
+    });
+    y -= 42;
+
+    const drawSectionHeader = (sheet: ExportSheet) => {
+      ensureSpace(48);
+      addRect(margin, y - 28, contentWidth, 34, '#d7dee8', '#f1f5f9');
+      addText(sheet.title, margin + 12, y - 10, 13, 'F2', '#0f172a');
+      addText(`Total data: ${sheet.rows.length}`, pageWidth - margin - 112, y - 10, 9, 'F1', '#475569');
+      y -= 48;
+    };
+
+    const drawRecordHeader = (label: string) => {
+      ensureSpace(32);
+      addRect(margin, y - 20, contentWidth, 24, '#0f172a', '#0f172a');
+      addText(label, margin + 10, y - 12, 9.5, 'F2', '#ffffff');
+      y -= 24;
+    };
+
+    const drawCell = (x: number, topY: number, width: number, height: number, label: string, value: string) => {
+      addRect(x, topY - height, width, height, '#d7dee8', '#ffffff');
+      addText(label, x + 8, topY - 13, 7.5, 'F2', '#64748b');
+      wrapPdfText(value || '-', width - 16, 8.5).forEach((line, index) => {
+        addText(line, x + 8, topY - 27 - index * 10, 8.5, 'F1', '#111827');
+      });
+    };
 
     sheets.forEach((sheet) => {
-      const columns = (sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType));
-      lines.push('', sheet.title, `Total data: ${sheet.rows.length}`);
+      const columns = sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType);
+      drawSectionHeader(sheet);
 
       if (sheet.rows.length === 0) {
-        lines.push('Tidak ada data pada filter ini.');
+        addRect(margin, y - 30, contentWidth, 34, '#d7dee8', '#ffffff');
+        addText('Tidak ada data pada filter ini.', margin + 12, y - 18, 9.5, 'F1', '#475569');
+        y -= 50;
         return;
       }
 
       sheet.rows.forEach((row, rowIndex) => {
-        lines.push(`Data ${rowIndex + 1}`);
-        columns.forEach((key) => {
-          const label = key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-          wrapText(`${label}: ${formatPdfValue(row[key]) || '-'}`, 96).forEach((line) => lines.push(line));
-        });
-        lines.push('');
+        drawRecordHeader(`Data ${rowIndex + 1}`);
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex += 2) {
+          const leftKey = columns[columnIndex];
+          const rightKey = columns[columnIndex + 1];
+          const cellGap = 8;
+          const cellWidth = (contentWidth - cellGap) / 2;
+          const leftValue = formatPdfValue(row[leftKey]) || '-';
+          const rightValue = rightKey ? formatPdfValue(row[rightKey]) || '-' : '';
+          const leftLines = wrapPdfText(leftValue, cellWidth - 16, 8.5).length;
+          const rightLines = rightKey ? wrapPdfText(rightValue, cellWidth - 16, 8.5).length : 1;
+          const rowHeight = Math.max(42, 30 + Math.max(leftLines, rightLines) * 10);
+
+          if (y - rowHeight < bottomMargin) {
+            addPage();
+            drawRecordHeader(`Data ${rowIndex + 1} (lanjutan)`);
+          }
+
+          drawCell(margin, y, cellWidth, rowHeight, formatColumnLabel(leftKey), leftValue);
+          if (rightKey) {
+            drawCell(margin + cellWidth + cellGap, y, cellWidth, rowHeight, formatColumnLabel(rightKey), rightValue);
+          } else {
+            addRect(margin + cellWidth + cellGap, y - rowHeight, cellWidth, rowHeight, '#d7dee8', '#ffffff');
+          }
+          y -= rowHeight;
+        }
+        y -= 14;
       });
+      y -= 10;
     });
 
-    const pdfLines = lines.flatMap((line) => {
-      if (line.length <= 100) return [line];
-      const chunks: string[] = [];
-      for (let index = 0; index < line.length; index += 100) {
-        chunks.push(line.slice(index, index + 100));
-      }
-      return chunks;
+    pages.forEach((page, index) => {
+      page.push(`q ${color('#d7dee8')} RG 0.75 w ${margin} 28 m ${pageWidth - margin} 28 l S Q`);
+      page.push(`BT ${color('#64748b')} rg /F1 8 Tf 1 0 0 1 ${margin} 16 Tm (${escapePdfText('SiPeNa')}) Tj ET`);
+      page.push(`BT ${color('#64748b')} rg /F1 8 Tf 1 0 0 1 ${pageWidth - margin - 65} 16 Tm (${escapePdfText(`Hal. ${index + 1}/${pages.length}`)}) Tj ET`);
     });
-    const pageLineLimit = 52;
-    const pageChunks: string[][] = [];
-    for (let index = 0; index < pdfLines.length; index += pageLineLimit) {
-      pageChunks.push(pdfLines.slice(index, index + pageLineLimit));
-    }
 
     const pageIds: number[] = [];
     const objects: string[] = [
       '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
       '',
       '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+      '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n',
     ];
-    let nextObjectId = 4;
+    let nextObjectId = 5;
 
-    pageChunks.forEach((pageLines) => {
+    pages.forEach((pageOperations) => {
       const pageId = nextObjectId++;
       const contentId = nextObjectId++;
       pageIds.push(pageId);
-      const content = ['BT', '/F1 9 Tf', '40 790 Td'];
-      pageLines.forEach((line, index) => {
-        if (index > 0) content.push('0 -13 Td');
-        content.push(`(${escapePdfText(line)}) Tj`);
-      });
-      content.push('ET');
-      const stream = content.join('\n');
-      objects.push(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`);
+      const stream = pageOperations.join('\n');
+      objects.push(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`);
       objects.push(`${contentId} 0 obj\n<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream\nendobj\n`);
     });
 
