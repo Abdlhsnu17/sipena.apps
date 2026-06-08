@@ -786,16 +786,6 @@ export class ReportService {
     `;
     const params: any[] = [];
 
-    if (filters.startDate) {
-      query += ' AND a.created_at >= ?';
-      params.push(filters.startDate);
-    }
-
-    if (filters.endDate) {
-      query += ' AND a.created_at <= ?';
-      params.push(filters.endDate);
-    }
-
     if (filters.category) {
       query += ' AND a.category = ?';
       params.push(filters.category);
