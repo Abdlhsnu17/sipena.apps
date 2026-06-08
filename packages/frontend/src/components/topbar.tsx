@@ -351,8 +351,8 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="z-30 w-full min-w-0 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
-      <div className="border-b border-border/70 bg-muted/40 px-3 py-1 xl:px-6">
+    <header className="z-30 w-full min-w-0 shrink-0 bg-background/95 shadow-[0_1px_0_rgba(15,23,42,0.05)] backdrop-blur supports-backdrop-filter:bg-background/85">
+      <div className="flex h-7 items-center overflow-hidden bg-muted/40 px-3 xl:px-6">
         <div className="overflow-hidden">
           <div className="animate-topbar-marquee flex w-max items-center text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground will-change-transform">
             <span className="shrink-0 pr-14">{topbarAnnouncement}</span>
@@ -360,7 +360,7 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-      <div className="flex min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 md:pl-4 lg:px-6 xl:px-8">
+      <div className="flex min-h-16 min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 md:pl-4 lg:px-6 xl:px-8">
         <div className="min-w-0 flex-1">
           <p className="min-w-0 truncate text-base font-bold sm:hidden">{formattedCompactDate}</p>
           <p className="hidden min-w-0 truncate font-bold sm:block" style={{ fontSize: 18 }}>{formattedDate}</p>

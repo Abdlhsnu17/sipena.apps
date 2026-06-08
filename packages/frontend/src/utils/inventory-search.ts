@@ -26,6 +26,7 @@ export const buildInventorySearchKey = (asset: DetailInventoryItem): string => {
     asset.detailInventoryName,
     asset.detailName,
     asset.detailBrandModel,
+    asset.serialNumber,
     asset.detailCode,
     asset.assetName,
     asset.assetCode,

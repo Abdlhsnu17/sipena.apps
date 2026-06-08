@@ -15,7 +15,7 @@ import { cn } from "@/utils";
 import { canAccessRoute, getDefaultRouteForRole } from "@/utils/role";
 import { Analytics } from "@vercel/analytics/next";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 export default function ClientLayout({
   children,
@@ -72,14 +72,15 @@ export default function ClientLayout({
     }
   }, [loading, pathname, router, showLayout, user])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!showLayout) return
     if (typeof document === "undefined") return
 
     const scrollContainer = document.querySelector("[data-main-scroll]") as HTMLElement | null
     if (!scrollContainer) return
 
-    scrollContainer.scrollTo({ top: 0, left: 0, behavior: "auto" })
+    scrollContainer.scrollTop = 0
+    scrollContainer.scrollLeft = 0
   }, [pathname, showLayout])
 
   useEffect(() => {
@@ -184,7 +185,7 @@ export default function ClientLayout({
             >
               <Topbar />
               <main
-                className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll bg-(--app-shell-background) overscroll-contain"
+                className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll bg-(--app-shell-background) overscroll-contain [scrollbar-gutter:stable]"
                 data-main-scroll
               >
                 <div

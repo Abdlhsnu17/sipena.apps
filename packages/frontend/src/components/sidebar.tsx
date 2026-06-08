@@ -687,10 +687,6 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
                   onMouseDown={(event) => {
                     event.stopPropagation()
                   }}
-                  onClick={() => {
-                    if (link.href === pathname) return
-                    router.push(link.href)
-                  }}
                 >
                   <Icon className={cn(iconSizeClass, iconColorClass)} />
                   {collapsed ? (
@@ -940,7 +936,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden h-dvh min-h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-(--app-shell-background) overscroll-contain transition-all duration-300 ease-in-out md:flex",
+          "fixed inset-y-0 left-0 z-40 hidden h-dvh min-h-screen shrink-0 flex-col overflow-hidden bg-(--app-shell-background) shadow-[1px_0_0_rgba(15,23,42,0.06)] overscroll-contain transition-all duration-300 ease-in-out md:flex",
           isCollapsed ? "w-20" : "w-64"
         )}
       >

@@ -1473,7 +1473,7 @@ export default function BorrowingPage() {
 
   const formatInventoryDisplayLabel = (asset: BorrowableAsset) => {
     const baseLabel = formatInventoryLabel(asset)
-    return asset.assetLocation ? `${baseLabel} (${asset.assetLocation})` : baseLabel
+    return asset.serialNumber ? `${baseLabel} (${asset.serialNumber})` : baseLabel
   }
 
   const getBorrowableAssetKey = (asset: BorrowableAsset, index?: number) => {
@@ -1613,6 +1613,7 @@ export default function BorrowingPage() {
         asset.detailId,
         asset.assetCode,
         asset.detailCode,
+        asset.serialNumber,
       ])
     )
   }, [borrowableAssets, searchTerm])
@@ -2118,7 +2119,7 @@ export default function BorrowingPage() {
                                 >
                                   <div className="font-medium">{formatInventoryLabel(asset)}</div>
                                   <p className="text-[13px] text-muted-foreground">
-                                    {asset.assetLocation || "Lokasi tidak tersedia"}
+                                    {asset.detailCode || asset.assetCode || "-"} · {asset.serialNumber || "-"}
                                   </p>
                                   <p className="text-[13px] text-muted-foreground">
                                     No ID: {formatNoId(asset.source === "medis" ? "IMD-DTL" : "INM-DTL", asset.detailId)}
