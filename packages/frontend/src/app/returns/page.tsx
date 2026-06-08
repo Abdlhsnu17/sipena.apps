@@ -946,10 +946,10 @@ export default function ReturnsPage() {
   const exportSingleReturnNarrative = async (
     format: ExportFormat,
     borrowing: ApiBorrowing,
-    sectionLabel: string
+    sectionLabel: string,
+    columnKeys: string[]
   ) => {
     const slug = sectionLabel.toLowerCase().replace(/\s+/g, "-")
-    const columnKeys = returnExportColumnDefinitions.map((column) => column.key)
     void exportNarrativeReport(format, {
       title: sectionLabel,
       subtitle: "LAPORAN OPERASIONAL PENGEMBALIAN",
@@ -1154,7 +1154,6 @@ export default function ReturnsPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleActiveExport("pdf")}>PDF</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void handleActiveExport("word")}>Word</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleActiveExport("excel")}>Excel</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
@@ -1312,7 +1311,7 @@ export default function ReturnsPage() {
                                 />
                                 Pilih kartu
                               </label>
-                              <div className="flex flex-wrap items-center gap-1">
+                              <div className="flex flex-wrap items-center justify-end gap-2">
                                 <Button
                                   size="sm"
                                   onClick={() => handleOpenReturn(b)}
@@ -1322,19 +1321,21 @@ export default function ReturnsPage() {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
-                                      <Download className="w-4 h-4" />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
+                                    >
+                                      <Download className="h-3.5 w-3.5" />
+                                      Unduh
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian")}>
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>
                                       PDF
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian")}>
+                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian", activeSelectedReturnColumns)}>
                                       Word
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("excel", b, "Pengembalian")}>
-                                      Excel
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -1443,7 +1444,6 @@ export default function ReturnsPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleHistoryExport("pdf")}>PDF</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void handleHistoryExport("word")}>Word</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleHistoryExport("excel")}>Excel</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -1666,9 +1666,9 @@ export default function ReturnsPage() {
                               />
                               Pilih kartu
                             </label>
-                            <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-600">
+                            <div className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-slate-600">
                               {canValidateReturns ? (
-                                <div className="flex flex-wrap gap-1">
+                                <div className="flex flex-wrap items-center justify-end gap-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1689,46 +1689,48 @@ export default function ReturnsPage() {
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   )}
-                                  {b.status === "returned" &&
-                                    (b.returnValidatedAt ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 px-3 border-border/60 text-[13px] text-muted-foreground"
-                                        disabled
-                                      >
-                                        Tervalidasi
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 px-3 border-green-600 text-[14px] text-green-700 hover:bg-green-50"
-                                        onClick={() => handleValidateReturn(b.id)}
-                                        disabled={validatingReturnId === b.id}
-                                      >
-                                        {validatingReturnId === b.id ? "Memvalidasi..." : "Validasi"}
-                                      </Button>
-                                    ))}
                                 </div>
                               ) : (
                                 <span className="text-[13px] text-muted-foreground">Aksi terbatas</span>
                               )}
+                              {b.status === "returned" &&
+                                (b.returnValidatedAt ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 border-border/60 text-[13px] text-muted-foreground"
+                                    disabled
+                                  >
+                                    Tervalidasi
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 border-green-600 text-[14px] text-green-700 hover:bg-green-50"
+                                    onClick={() => handleValidateReturn(b.id)}
+                                    disabled={validatingReturnId === b.id}
+                                  >
+                                    {validatingReturnId === b.id ? "Memvalidasi..." : "Validasi"}
+                                  </Button>
+                                ))}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg p-0">
-                                    <Download className="w-4 h-4" />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Unduh
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian")}>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
                                     PDF
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Riwayat Pengembalian")}>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
                                     Word
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("excel", b, "Riwayat Pengembalian")}>
-                                    Excel
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

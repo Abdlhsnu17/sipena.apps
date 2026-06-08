@@ -1213,21 +1213,22 @@ export default function AssetUsagePage() {
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    className="h-9 w-9 rounded-lg p-1.5"
+                                    className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
                                     aria-label="Unduh surat penggunaan"
                                     title="Unduh surat"
                                   >
-                                    <Download className="h-4 w-4" />
+                                    <Download className="h-3.5 w-3.5" />
+                                    Unduh
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
-                                    Surat PDF
+                                    PDF
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => void exportSingleUsageLetter("word", log)}>
-                                    Surat Word
+                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

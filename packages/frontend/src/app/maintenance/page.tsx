@@ -1148,40 +1148,6 @@ export default function MaintenancePage() {
     })
   }
 
-  const buildMaintenanceLetterSections = (_entry: Maintenance): DocumentSection[] => {
-    const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', '')
-    appendLine(main, 'Pemohon', '')
-    appendLine(main, 'NIP', '')
-    appendLine(main, 'Unit', '')
-    appendLine(main, 'Nama Alat', '')
-    appendLine(main, 'Kode Alat', '')
-    appendLine(main, 'Jadwal Pemeliharaan', '')
-    appendLine(main, 'Jenis Pemeliharaan', '')
-    appendLine(main, 'Catatan', '')
-
-    const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', '')
-    appendLine(sign, 'Penanggung Jawab', '')
-    appendLine(sign, 'NIP Penanggung Jawab', '')
-
-    return [
-      { title: 'SURAT PEMELIHARAAN', lines: main },
-      { title: 'PENUTUP & TANDA TANGAN', lines: sign },
-    ]
-  }
-
-  const exportSingleMaintenanceLetter = async (format: ExportFormat, item: Maintenance) => {
-    void exportNarrativeReport(format, {
-      title: `Surat Pemeliharaan - ${item.requesterName || item.id}`,
-      subtitle: 'SURAT PEMELIHARAAN',
-      entries: [item],
-      filePrefix: `surat-pemeliharaan-${item.id}`,
-      buildSections: buildMaintenanceLetterSections,
-      emptyMessage: 'Tidak ada data pemeliharaan yang dipilih.',
-    })
-  }
-
   const handleExport = async (format: ExportFormat) => {
     if (!maintenanceRowsToExport.length) return
     const columnKeys =
@@ -1526,7 +1492,6 @@ export default function MaintenancePage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => void handleExport("word")}>Word</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void handleExport("excel")}>Excel</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -1786,16 +1751,21 @@ export default function MaintenancePage() {
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Download className="w-4 h-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              Unduh
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("pdf", m)}>
-                              Surat PDF
+                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>
+                              PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void exportSingleMaintenanceLetter("word", m)}>
-                              Surat Word
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("word", m)}>
+                              Word
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

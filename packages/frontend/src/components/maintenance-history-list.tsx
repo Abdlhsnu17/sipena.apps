@@ -885,9 +885,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                 <DropdownMenuItem onClick={() => handleHistoryExport("word")}>
                   Word
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleHistoryExport("excel")}>
-                  Excel
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1123,19 +1120,21 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
-                              <Download className="w-4 h-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              Unduh
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>
                               PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => exportSingleHistory("word", h)}>
                               Word
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => exportSingleHistory("excel", h)}>
-                              Excel
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -1301,50 +1301,12 @@ export default function BorrowingPage() {
 
   const _exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
     void exportNarrativeReport(format, {
-      title: "Formulir Peminjaman",
-      subtitle: "RINGKASAN FORMULIR PEMINJAMAN",
+      title: "Detail Peminjaman",
+      subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
       entries: [borrowing],
-      filePrefix: `formulir-peminjaman-${borrowing.id}`,
-      buildSections: buildBorrowingNarrativeSections(
-        borrowingExportColumnDefinitions.map((column) => column.key)
-      ),
+      filePrefix: `detail-peminjaman-${borrowing.id}`,
+      buildSections: buildBorrowingNarrativeSections(selectedBorrowingExportColumns),
       emptyMessage: "Tidak ada data peminjaman yang dipilih.",
-    })
-  }
-
-  const buildBorrowingLetterSections = (_entry: ApiBorrowing): DocumentSection[] => {
-    const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', '')
-    appendLine(main, 'Pengaju', '')
-    appendLine(main, 'NIP', '')
-    appendLine(main, 'Jabatan', '')
-    appendLine(main, 'Unit', '')
-    appendLine(main, 'Nama Alat', '')
-    appendLine(main, 'Kode Alat', '')
-    appendLine(main, 'No ID', '')
-    appendLine(main, 'Tanggal Pinjam', '')
-    appendLine(main, 'Batas Pengembalian', '')
-    appendLine(main, 'Tujuan / Alasan', '')
-
-    const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', '')
-    appendLine(sign, 'Penanggung Jawab', '')
-    appendLine(sign, 'Jabatan Penanggung Jawab', '')
-
-    const sections: DocumentSection[] = []
-    sections.push({ title: 'SURAT PEMINJAMAN', lines: main })
-    sections.push({ title: 'PENUTUP & TANDA TANGAN', lines: sign })
-    return sections
-  }
-
-  const exportSingleBorrowingLetter = async (format: ExportFormat, borrowing: ApiBorrowing) => {
-    void exportNarrativeReport(format, {
-      title: `Surat Peminjaman - ${borrowing.userName || borrowing.id}`,
-      subtitle: 'SURAT PEMINJAMAN',
-      entries: [borrowing],
-      filePrefix: `surat-peminjaman-${borrowing.id}`,
-      buildSections: buildBorrowingLetterSections,
-      emptyMessage: 'Tidak ada data peminjaman yang dipilih.',
     })
   }
 
@@ -2098,7 +2060,6 @@ export default function BorrowingPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void handleExport("word")}>Word</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleExport("excel")}>Excel</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -2376,16 +2337,21 @@ export default function BorrowingPage() {
                               )}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5">
-                                    <Download className="w-4 h-4" />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Unduh
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("pdf", b)}>
-                                    Surat PDF
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}>
+                                    PDF
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleBorrowingLetter("word", b)}>
-                                    Surat Word
+                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("word", b)}>
+                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
