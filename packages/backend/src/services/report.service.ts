@@ -179,6 +179,11 @@ const exportColumnLabels: Record<string, string> = {
   condition_after: 'Kondisi Sesudah',
   condition: 'Kondisi',
   location: 'Lokasi',
+  brand_model: 'Merek/Model',
+  serial_number: 'Nomor Seri',
+  usage_purpose: 'Tujuan Penggunaan',
+  last_maintenance: 'Pemeliharaan Terakhir',
+  next_maintenance: 'Pemeliharaan Berikutnya',
   nip: 'NIP',
   borrow_date: 'Tanggal Pinjam',
   due_date: 'Tanggal Jatuh Tempo',
@@ -438,6 +443,136 @@ const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintena
 const toPositiveNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const parseAssetSpecifications = (value: unknown): Record<string, unknown> => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === 'object' ? value as Record<string, unknown> : {};
+};
+
+const getAssetSpecificationDetails = (value: unknown): Record<string, unknown>[] => {
+  const specifications = parseAssetSpecifications(value);
+  return Array.isArray(specifications.details)
+    ? specifications.details.filter((detail): detail is Record<string, unknown> => Boolean(detail) && typeof detail === 'object')
+    : [];
+};
+
+const getTextValue = (...values: unknown[]): string | null => {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return null;
+};
+
+const isNumericText = (value: unknown): boolean => /^\d+$/.test(String(value ?? '').trim());
+
+const buildAssetLocationLookup = (rows: RowDataPacket[]): Map<string, string> => {
+  const lookup = new Map<string, string>();
+  rows.forEach((row) => {
+    const assetType = row.type === 'non_medical' ? 'non_medical' : 'medical';
+    const label = getTextValue(row.location, row.name);
+    if (label) {
+      lookup.set(`${assetType}|${row.id}`, label);
+    }
+  });
+  return lookup;
+};
+
+const resolveAssetDetailLocation = (
+  detail: Record<string, unknown>,
+  asset: RowDataPacket,
+  locationLookup: Map<string, string>
+): string | null => {
+  const rawLocation = getTextValue(
+    detail.roomId,
+    detail.roomName,
+    detail.room_name,
+    detail.ruangan,
+    detail.lokasi,
+    detail.location,
+    (detail.room as Record<string, unknown> | undefined)?.name,
+    (detail.room as Record<string, unknown> | undefined)?.roomName
+  );
+  const assetType = asset.type === 'non_medical' ? 'non_medical' : 'medical';
+
+  if (rawLocation && isNumericText(rawLocation)) {
+    return locationLookup.get(`${assetType}|${rawLocation}`) ?? getTextValue(asset.location, asset.name);
+  }
+
+  return rawLocation ?? getTextValue(asset.location, asset.name);
+};
+
+const flattenAssetReportRows = (rows: RowDataPacket[]): Record<string, unknown>[] => {
+  const locationLookup = buildAssetLocationLookup(rows);
+
+  return rows.flatMap<Record<string, unknown>>((asset) => {
+    const assetType = asset.type === 'non_medical' ? 'non_medical' : 'medical';
+    const details = getAssetSpecificationDetails(asset.specifications);
+
+    if (details.length === 0) {
+      return [{
+        id: asset.id,
+        asset_id: asset.id,
+        asset_code: asset.asset_code,
+        name: asset.name,
+        category: asset.category,
+        type: assetType,
+        status: asset.status,
+        condition: asset.condition,
+        location: getTextValue(asset.location, asset.name),
+        purchase_date: asset.purchase_date,
+        purchase_price: asset.purchase_price,
+        warranty_expiry: asset.warranty_expiry,
+        total_borrowings: asset.total_borrowings,
+        total_maintenance: asset.total_maintenance,
+        created_at: asset.created_at,
+        updated_at: asset.updated_at,
+      }];
+    }
+
+    return details.map((detail, index) => {
+      const detailId = getTextValue(detail.id, detail.detailId, detail.assetDetailId, detail.assetCode, detail.serialNumber);
+      const detailCode = getTextValue(detail.assetCode, detail.detailCode, asset.asset_code);
+      const detailName = getTextValue(detail.inventoryName, detail.detailName, detail.name, asset.name);
+
+      return {
+        id: detailId ?? `${assetType}-${asset.id}-${index + 1}`,
+        asset_id: asset.id,
+        asset_detail_id: detailId,
+        asset_code: detailCode,
+        asset_name: asset.name,
+        asset_detail_name: detailName,
+        name: detailName,
+        category: asset.category,
+        type: assetType,
+        status: getTextValue(detail.status, asset.status),
+        condition: getTextValue(detail.condition, asset.condition),
+        location: resolveAssetDetailLocation(detail, asset, locationLookup),
+        brand_model: getTextValue(detail.brandModel, detail.brand, detail.model, detail.name, asset.brand, asset.model),
+        serial_number: getTextValue(detail.serialNumber, asset.serial_number),
+        usage_purpose: getTextValue(detail.usagePurpose, asset.usage_purpose),
+        purchase_date: getTextValue(detail.purchaseDate, asset.purchase_date),
+        warranty_expiry: getTextValue(detail.warrantyExpiry, asset.warranty_expiry),
+        last_maintenance: getTextValue(detail.lastMaintenance),
+        next_maintenance: getTextValue(detail.nextMaintenance),
+        notes: getTextValue(detail.notes, asset.description),
+        total_borrowings: asset.total_borrowings,
+        total_maintenance: asset.total_maintenance,
+        created_at: asset.created_at,
+        updated_at: asset.updated_at,
+      };
+    });
+  });
 };
 
 export class ReportService {
@@ -776,10 +911,10 @@ export class ReportService {
         (SELECT COUNT(*) FROM borrowing_records b WHERE b.asset_id = a.id AND COALESCE(b.asset_type, 'medical') = a.type) as total_borrowings,
         (SELECT COUNT(*) FROM maintenance_records m WHERE m.asset_id = a.id AND COALESCE(m.asset_type, 'medical') = a.type) as total_maintenance
       FROM (
-        SELECT id, asset_code, name, description, category, type, status, \`condition\`, location, purchase_date, purchase_price, warranty_expiry, specifications, image_url, created_at, updated_at
+        SELECT id, asset_code, name, description, category, type, status, \`condition\`, location, purchase_date, purchase_price, warranty_expiry, specifications, image_url, NULL as brand, NULL as model, NULL as serial_number, NULL as usage_purpose, created_at, updated_at
         FROM medical_assets
         UNION ALL
-        SELECT id, asset_code, name, NULL as description, category, 'non_medical' as type, status, \`condition\`, location, purchase_date, NULL as purchase_price, warranty_expiry, NULL as specifications, NULL as image_url, created_at, updated_at
+        SELECT id, asset_code, name, NULL as description, category, 'non_medical' as type, status, \`condition\`, location, purchase_date, NULL as purchase_price, warranty_expiry, specifications, NULL as image_url, brand, model, serial_number, usage_purpose, created_at, updated_at
         FROM non_medical_assets
       ) a
       WHERE 1=1
@@ -800,7 +935,7 @@ export class ReportService {
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
-    return { success: true, message: 'Asset report generated successfully', data: rows };
+    return { success: true, message: 'Asset report generated successfully', data: flattenAssetReportRows(rows) };
   }
 
   async getBorrowingReport(filters: ReportFilters): Promise<ApiResponse> {
@@ -1139,6 +1274,9 @@ export class ReportService {
       'condition_after',
       'condition',
       'location',
+      'brand_model',
+      'serial_number',
+      'usage_purpose',
       'nip',
       'borrow_date',
       'due_date',
@@ -1149,6 +1287,8 @@ export class ReportService {
       'cost',
       'total_borrowings',
       'total_maintenance',
+      'last_maintenance',
+      'next_maintenance',
       'created_at',
       'updated_at',
     ];
