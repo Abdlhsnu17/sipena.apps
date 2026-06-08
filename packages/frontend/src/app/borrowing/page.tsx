@@ -1568,7 +1568,7 @@ export default function BorrowingPage() {
     window.requestAnimationFrame(() => {
       borrowingFormRef.current?.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: "nearest",
         inline: "nearest",
       })
 
@@ -1727,7 +1727,7 @@ export default function BorrowingPage() {
           </Card>
 
           {showForm && (
-              <Card ref={borrowingFormRef} className="rounded-3xl border border-slate-200 bg-white/80 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
+              <Card ref={borrowingFormRef} className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white/80 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Form Peminjaman Baru</CardTitle>
                 <CardDescription className="text-[12px] text-muted-foreground">

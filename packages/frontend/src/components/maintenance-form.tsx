@@ -214,7 +214,7 @@ export default function MaintenanceForm({
     window.requestAnimationFrame(() => {
       formCardRef.current?.scrollIntoView({
         behavior: "smooth",
-        block: "start",
+        block: "nearest",
         inline: "nearest",
       })
 
@@ -337,7 +337,7 @@ export default function MaintenanceForm({
 
 
   return (
-    <Card ref={formCardRef} className="mb-6">
+    <Card ref={formCardRef} className="mb-6 scroll-mt-6">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle>{maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}</CardTitle>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
