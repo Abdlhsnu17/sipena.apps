@@ -10,7 +10,7 @@ import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
-import { formatDayTimeLabel } from "@/utils/format";
+import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { isAdminOrLeaderRole } from "@/utils/role";
@@ -834,22 +834,36 @@ export default function AssetUsagePage() {
     return sections;
   };
 
-  const buildUsageLetterSections = (_log: AssetUsageLog): DocumentSection[] => {
+  const buildUsageLetterSections = (log: AssetUsageLog): DocumentSection[] => {
+    const usageContextLabel = usageContextLabels[log.usageContext] || log.usageContext || "-";
+    const operatorLabel = log.operatorName || log.createdByName || "-";
+    const roomDisplay = getUsageRoomDisplay(log);
+    const usageNotes = [
+      usageContextLabel,
+      log.notes?.trim(),
+      `Jumlah penggunaan: ${log.usageCount || 1}`,
+    ].filter(Boolean).join("\n");
+    const statusNotes = [
+      `Status: ${getUsageStatusLabel(log)}`,
+      `Kondisi awal: ${log.conditionBefore || "-"}`,
+      `Kondisi akhir: ${log.conditionAfter || "-"}`,
+    ].join("\n");
+
     const main: SectionLine[] = []
-    appendLine(main, 'Nomor Surat', '')
-    appendLine(main, 'Operator', '')
-    appendLine(main, 'NIP Operator', '')
-    appendLine(main, 'Nama Alat', '')
-    appendLine(main, 'Kode Alat', '')
-    appendLine(main, 'Ruangan Pengguna', '')
-    appendLine(main, 'Waktu Mulai', '')
-    appendLine(main, 'Waktu Selesai', '')
-    appendLine(main, 'Tujuan / Keterangan', '')
+    appendLine(main, 'Nomor Surat', getUsageNoId(log))
+    appendLine(main, 'Operator', operatorLabel)
+    appendLine(main, 'NIP Operator', log.operatorNip || '-')
+    appendLine(main, 'Nama Alat', log.assetDetailName || log.assetName || '-')
+    appendLine(main, 'Kode Alat', log.assetDetailCode || log.assetCode || '-')
+    appendLine(main, 'Ruangan Pengguna', roomDisplay.secondary ? `${roomDisplay.primary}\n${roomDisplay.secondary}` : roomDisplay.primary)
+    appendLine(main, 'Waktu Mulai', formatDayTimeLabel(log.startedAt) || '-')
+    appendLine(main, 'Waktu Selesai', formatDayTimeLabel(log.endedAt) || '-')
+    appendLine(main, 'Tujuan / Keterangan', usageNotes || '-')
 
     const sign: SectionLine[] = []
-    appendLine(sign, 'Tempat, Tanggal', '')
-    appendLine(sign, 'Penanggung Jawab', '')
-    appendLine(sign, 'Keterangan', '')
+    appendLine(sign, 'Tempat, Tanggal', `Jakarta, ${formatLongDateLabel(new Date()) || '-'}`)
+    appendLine(sign, 'Penanggung Jawab', operatorLabel)
+    appendLine(sign, 'Keterangan', statusNotes)
 
     return [
       { title: 'SURAT PENGGUNAAN', lines: main },
