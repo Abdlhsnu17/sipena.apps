@@ -48,6 +48,18 @@ export interface SingleAssetResponse {
   data: Asset;
 }
 
+export interface ResetInventorySummary {
+  returnRecords: number;
+  maintenanceHistory: number;
+  assetUsageLogs: number;
+  maintenanceRecords: number;
+  maintenanceSchedules: number;
+  borrowingRecords: number;
+  medicalAssets: number;
+  nonMedicalAssets: number;
+  totalDeleted: number;
+}
+
 const normalizeAsset = (asset: any): Asset => ({
   id: asset.id,
   assetCode: asset.assetCode ?? asset.asset_code,
@@ -107,6 +119,10 @@ class AssetService {
   async delete(id: number | string, type?: Asset['type']): Promise<{ success: boolean; message: string }> {
     const query = type ? `?type=${encodeURIComponent(type)}` : '';
     return apiService.delete(`/assets/${id}${query}`);
+  }
+
+  async resetInventory(): Promise<{ success: boolean; message: string; data?: ResetInventorySummary }> {
+    return apiService.delete('/assets/reset/all');
   }
 
   async getMedicalAssets(filters: AssetFilters = {}): Promise<AssetResponse> {

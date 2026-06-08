@@ -111,3 +111,15 @@ export interface AssetFilters {
   status?: string;
   type?: string;
 }
+
+export interface ResetInventorySummary {
+  returnRecords: number;
+  maintenanceHistory: number;
+  assetUsageLogs: number;
+  maintenanceRecords: number;
+  maintenanceSchedules: number;
+  borrowingRecords: number;
+  medicalAssets: number;
+  nonMedicalAssets: number;
+  totalDeleted: number;
+}

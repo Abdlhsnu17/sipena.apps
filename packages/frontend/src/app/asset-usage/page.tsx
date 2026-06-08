@@ -13,7 +13,6 @@ import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils
 import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
-import { isAdminOrLeaderRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -43,8 +42,6 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   rounding: "Antar Instalasi",
   other: "Lainnya",
 };
-
-const visibleUsageContextKeys: AssetUsageContext[] = ["procedure"];
 
 const HISTORY_ROWS_PER_PAGE = 3;
 
@@ -254,7 +251,8 @@ const locationIncludes = (source: string, target?: string | null) => {
 const getUserUsageRoom = (user?: User | null) =>
   [user?.workUnit, user?.subWorkUnit].filter(Boolean).join(" - ");
 
-const _subText = (value?: string | null) => value ? ` dan sub ruangan ${value}` : "";
+const getAutoUsageRoom = (item: DetailInventoryItem | undefined, user: User | null) =>
+  getUserUsageRoom(user) || getAssetRoomOptions(item)[0] || "";
 
 const deriveUsageContextFromProfile = (
   item: DetailInventoryItem | undefined,
@@ -284,9 +282,6 @@ const deriveUsageContextFromProfile = (
   return "cross_room";
 };
 
-const isOwnRoomAsset = (item: DetailInventoryItem, user: User | null) =>
-  isAdminOrLeaderRole(user?.role) || deriveUsageContextFromProfile(item, user) === "own_room";
-
 const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
 const dispatchInventoryRefresh = () => {
@@ -315,9 +310,6 @@ export default function AssetUsagePage() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [completeForm, setCompleteForm] = useState<CompleteFormState | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
-  const sortedVisibleUsageContextKeys = useMemo<AssetUsageContext[]>(() => {
-    return [...visibleUsageContextKeys].sort((a, b) => usageContextLabels[a].localeCompare(usageContextLabels[b], "id"));
-  }, []);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -476,24 +468,8 @@ export default function AssetUsagePage() {
   }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets]);
 
   const selectableAssets = useMemo(() => {
-    if (form.usageContext === "emergency") {
-      return availableAssets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
-    }
-    if (form.usageContext !== "own_room") return availableAssets;
-    return availableAssets.filter((item) => isOwnRoomAsset(item, currentUser));
-  }, [availableAssets, currentUser, form.usageContext]);
-
-  const roomOptions = useMemo(() => {
-    if (selectedAsset) {
-      return getAssetRoomOptions(selectedAsset);
-    }
-
-    return Array.from(
-      new Set(
-        selectableAssets.flatMap((item) => getAssetRoomOptions(item))
-      )
-    ).sort((a, b) => a.localeCompare(b, "id"));
-  }, [selectedAsset, selectableAssets]);
+    return availableAssets;
+  }, [availableAssets]);
 
   useEffect(() => {
     if (!form.inventoryKey) return;
@@ -555,39 +531,29 @@ export default function AssetUsagePage() {
 
   const handleAssetChange = (inventoryKey: string) => {
     const item = assets.find((asset) => getInventoryKey(asset) === inventoryKey);
-    const nextRoomName = getAssetRoomOptions(item)[0] || getUserUsageRoom(currentUser) || "";
+    const nextRoomName = getAutoUsageRoom(item, currentUser);
+    const nextUsageContext = item ? deriveUsageContextFromProfile(item, currentUser) : "own_room";
     setForm((prev) => ({
       ...prev,
       inventoryKey,
       roomName: nextRoomName || prev.roomName,
-    }));
-  };
-
-  const handleUsageContextChange = (usageContext: AssetUsageContext) => {
-    let nextSelectableAssets: DetailInventoryItem[];
-    if (usageContext === "emergency") nextSelectableAssets = availableAssets.filter((item) => (item.detailType || "").toLowerCase() === "emergency");
-    else if (usageContext === "own_room") nextSelectableAssets = availableAssets.filter((item) => isOwnRoomAsset(item, currentUser));
-    else nextSelectableAssets = availableAssets;
-    const currentStillVisible = nextSelectableAssets.some((item) => getInventoryKey(item) === form.inventoryKey);
-    const nextAsset = currentStillVisible
-      ? nextSelectableAssets.find((item) => getInventoryKey(item) === form.inventoryKey)
-      : nextSelectableAssets[0];
-    const nextRoomName = getAssetRoomOptions(nextAsset)[0] || getUserUsageRoom(currentUser) || "";
-
-    setForm((prev) => ({
-      ...prev,
-      usageContext,
-      inventoryKey: nextAsset ? getInventoryKey(nextAsset) : "",
-      roomName: nextRoomName || prev.roomName,
+      usageContext: nextUsageContext,
     }));
   };
 
   useEffect(() => {
     if (!selectedAsset) return;
-    const nextRoomName = getAssetRoomOptions(selectedAsset)[0];
-    if (!nextRoomName) return;
-    setForm((prev) => (prev.roomName === nextRoomName ? prev : { ...prev, roomName: nextRoomName }));
-  }, [selectedAsset]);
+    const nextRoomName = getAutoUsageRoom(selectedAsset, currentUser);
+    const nextUsageContext = deriveUsageContextFromProfile(selectedAsset, currentUser);
+    setForm((prev) => {
+      if (prev.roomName === nextRoomName && prev.usageContext === nextUsageContext) return prev;
+      return {
+        ...prev,
+        roomName: nextRoomName || prev.roomName,
+        usageContext: nextUsageContext,
+      };
+    });
+  }, [currentUser, selectedAsset]);
 
   const handleSubmit = async () => {
     if (!selectedAsset) {
@@ -1004,37 +970,11 @@ export default function AssetUsagePage() {
                         noResultsLabel="Tidak ada alat yang sesuai filter."
                       />
                     </div>
-                    {form.usageContext === "own_room" && selectableAssets.length === 0 && (
+                    {selectableAssets.length === 0 && (
                       <p className="mt-1 text-xs font-medium text-red-600">
-                        Belum ada alat yang cocok dengan Unit Kerja / Sub Ruangan profil akun.
+                        Belum ada alat yang tersedia untuk dicatat.
                       </p>
                     )}
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium">Ruangan Penggunaan</label>
-                    {roomOptions.length > 0 ? (
-                      <select
-                        className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                        value={form.roomName}
-                        onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))}
-                      >
-                        {roomOptions.map((room) => (
-                          <option key={room} value={room}>{room}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Input value={form.roomName} onChange={(event) => setForm((prev) => ({ ...prev, roomName: event.target.value }))} />
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium">Jenis Penggunaan</label>
-                    <select className="mt-1 w-full rounded-md border px-3 py-2 text-sm" value={form.usageContext} onChange={(event) => handleUsageContextChange(event.target.value as AssetUsageContext)}>
-                      {sortedVisibleUsageContextKeys.map((key) => (
-                        <option key={key} value={key}>{usageContextLabels[key]}</option>
-                      ))}
-                    </select>
                   </div>
 
                   <div>

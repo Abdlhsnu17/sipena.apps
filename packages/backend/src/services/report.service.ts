@@ -155,6 +155,8 @@ const exportColumnLabels: Record<string, string> = {
   id: 'ID',
   asset_code: 'Kode Aset',
   asset_name: 'Nama Aset',
+  tool_code: 'Kode Alat',
+  tool_name: 'Nama Alat',
   asset_detail_name: 'Nama Detail Aset',
   asset_detail_code: 'Kode Detail Aset',
   name: 'Nama',
@@ -205,6 +207,8 @@ const exportColumnLabels: Record<string, string> = {
   maintenance_code: 'Kode Pemeliharaan',
   asset_location: 'Lokasi Aset',
   asset_id: 'ID Aset',
+  asset_master_id: 'ID Aset Master',
+  item_id: 'ID Barang',
   asset_detail_id: 'ID Detail Aset',
   no: 'Nomor',
   borrowing_id: 'ID Peminjaman',
@@ -503,6 +507,44 @@ const getAssetRoomName = (row: Record<string, unknown>): string =>
   getTextValue(row.location, row.room_name, row.asset_location) ?? 'Tanpa Ruangan';
 
 const isNumericText = (value: unknown): boolean => /^\d+$/.test(String(value ?? '').trim());
+
+const parseMetadataJson = (value: unknown): Record<string, unknown> => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === 'object' ? value as Record<string, unknown> : {};
+};
+
+const cleanActivityDescription = (row: Record<string, unknown>, metadata: Record<string, unknown>): string | null => {
+  const description = getTextValue(row.description);
+  if (!description) return null;
+
+  const assetCode = getTextValue(metadata.assetCode, row.tool_code);
+  if (row.feature === 'penggunaan_alat' && assetCode) {
+    return description.endsWith(assetCode)
+      ? description.slice(0, -assetCode.length).trim()
+      : description;
+  }
+
+  return description;
+};
+
+const normalizeActivityExportRows = (rows: RowDataPacket[]): Record<string, unknown>[] =>
+  rows.map((row) => {
+    const metadata = parseMetadataJson(row.metadata_json);
+    return {
+      ...row,
+      tool_code: getTextValue(metadata.assetCode, metadata.asset_detail_code, row.tool_code),
+      tool_name: getTextValue(metadata.assetName, metadata.asset_detail_name, row.tool_name),
+      description: cleanActivityDescription(row, metadata),
+    };
+  });
 
 const buildAssetLocationLookup = (rows: RowDataPacket[]): Map<string, string> => {
   const lookup = new Map<string, string>();
@@ -1043,12 +1085,17 @@ export class ReportService {
   async getUsageReport(filters: ReportFilters): Promise<ApiResponse> {
     let query = `
       SELECT l.*,
-        COALESCE(ma.name, na.name) as asset_name,
-        COALESCE(ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) as asset_name,
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) as asset_code,
+        l.asset_id as asset_master_id,
+        l.asset_detail_id as item_id,
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) as tool_name,
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) as tool_code,
         COALESCE(ma.location, na.location) as asset_location,
         op.name as operator_name,
         op.nip as operator_nip,
-        creator.name as created_by_name
+        creator.name as created_by_name,
+        l.notes as description
       FROM asset_usage_logs l
       LEFT JOIN medical_assets ma ON l.asset_type = 'medical' AND l.asset_id = ma.id
       LEFT JOIN non_medical_assets na ON l.asset_type = 'non_medical' AND l.asset_id = na.id
@@ -1103,6 +1150,7 @@ export class ReportService {
         ual.feature,
         ual.action,
         ual.description,
+        ual.metadata_json,
         ual.created_at
       FROM user_activity_logs ual
       LEFT JOIN users u ON u.id = ual.user_id
@@ -1127,7 +1175,7 @@ export class ReportService {
     query += ' ORDER BY ual.created_at DESC';
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
-    return { success: true, message: 'Activity report generated successfully', data: rows };
+    return { success: true, message: 'Activity report generated successfully', data: normalizeActivityExportRows(rows) };
   }
 
   async getUploadReport(filters: ReportFilters): Promise<ApiResponse> {
@@ -1298,6 +1346,7 @@ export class ReportService {
   }
 
   private getExportColumns(rows: RowDataPacket[], reportType?: string): string[] {
+    const normalizedReportType = normalizeExportType(reportType);
     const preferred = [
       'id',
       'asset_code',
@@ -1350,17 +1399,58 @@ export class ReportService {
       });
       return acc;
     }, []);
+    if (normalizedReportType === 'usage') {
+      const usagePreferred = [
+        'id',
+        'no',
+        'item_id',
+        'asset_master_id',
+        'tool_code',
+        'tool_name',
+        'asset_type',
+        'room_name',
+        'asset_location',
+        'operator_name',
+        'operator_nip',
+        'usage_context',
+        'started_at',
+        'ended_at',
+        'usage_count',
+        'condition_before',
+        'condition_after',
+        'description',
+        'created_by_name',
+        'created_at',
+        'updated_at',
+      ];
+      const usageColumns = usagePreferred.filter((key) => keys.includes(key));
+      if (usageColumns.length > 0) return usageColumns;
+      return ['id', 'tool_code', 'tool_name', 'room_name', 'usage_context', 'started_at', 'ended_at', 'usage_count', 'description'];
+    }
+    if (normalizedReportType === 'activity') {
+      const activityPreferred = [
+        'id',
+        'user_id',
+        'user_name',
+        'user_nip',
+        'feature',
+        'action',
+        'tool_code',
+        'tool_name',
+        'description',
+        'created_at',
+      ];
+      const activityColumns = activityPreferred.filter((key) => keys.includes(key));
+      if (activityColumns.length > 0) return activityColumns;
+      return ['id', 'user_name', 'user_nip', 'feature', 'action', 'tool_code', 'tool_name', 'description', 'created_at'];
+    }
     const columns = [...preferred.filter((key) => keys.includes(key)), ...keys.filter((key) => !preferred.includes(key))];
     if (columns.length > 0) return columns;
-    switch (normalizeExportType(reportType)) {
+    switch (normalizedReportType) {
       case 'borrowing':
         return ['id', 'borrowing_code', 'asset_name', 'user_name', 'status', 'borrow_date', 'due_date'];
       case 'maintenance':
         return ['id', 'maintenance_code', 'asset_name', 'type', 'status', 'scheduled_date', 'technician'];
-      case 'usage':
-        return ['id', 'asset_name', 'asset_code', 'room_name', 'usage_context', 'started_at', 'ended_at', 'usage_count'];
-      case 'activity':
-        return ['id', 'user_name', 'user_nip', 'feature', 'action', 'description', 'created_at'];
       default:
         return ['id', 'asset_code', 'name', 'category', 'type', 'status', 'location'];
     }

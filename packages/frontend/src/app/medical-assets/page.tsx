@@ -38,6 +38,7 @@ export default function MedicalAssetsPage() {
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("Semua")
+  const [isResettingInventory, setIsResettingInventory] = useState(false)
 
   const categoryOptions = Object.keys(MEDICAL_ASSET_CATEGORIES)
   const defaultCategory = categoryOptions[0] ?? "Alat Diagnostik dan Pencitraan"
@@ -254,6 +255,41 @@ export default function MedicalAssetsPage() {
     }
   }
 
+  const handleResetInventory = async () => {
+    if (!canDeleteInventory) {
+      alert("Hanya Admin yang dapat menghapus seluruh data inventaris")
+      return
+    }
+
+    const isConfirmed = await confirm({
+      title: "Hapus semua data inventaris?",
+      description: "Semua inventaris medis, non-medis, peminjaman, penggunaan, dan pemeliharaan akan dihapus. Data pengguna tetap tersimpan.",
+      confirmText: "Ya, hapus semua",
+      destructive: true,
+    })
+    if (!isConfirmed) return
+
+    setIsResettingInventory(true)
+    try {
+      const response = await assetService.resetInventory()
+      if (!response.success) {
+        alert(response.message || "Gagal menghapus seluruh data inventaris")
+        return
+      }
+
+      await loadRooms()
+      window.dispatchEvent(new Event("inventory-refresh"))
+      toast({
+        title: "Data inventaris berhasil dihapus",
+        description: `Total ${response.data?.totalDeleted ?? 0} data inventaris dan operasional terkait dihapus. Data pengguna tetap tersimpan.`,
+      })
+    } catch (error: any) {
+      alert(error.message || "Gagal menghapus seluruh data inventaris")
+    } finally {
+      setIsResettingInventory(false)
+    }
+  }
+
   const handleSaveAsset = async (asset: MedicalAsset) => {
     if (!canManageInventory) {
       alert("Anda tidak memiliki hak akses untuk menambah detail inventaris")
@@ -423,13 +459,27 @@ export default function MedicalAssetsPage() {
                   </div>
                 </div>
                 {canManageInventory && (
-                  <Button
-                    onClick={startRoomCreation}
-                    className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Tambah Inventaris
-                  </Button>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    {canDeleteInventory && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleResetInventory}
+                        disabled={isResettingInventory}
+                        className="w-full rounded-2xl border-red-200 px-4 text-red-600 hover:bg-red-50 hover:text-red-700 sm:w-auto"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {isResettingInventory ? "Menghapus..." : "Hapus Semua"}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={startRoomCreation}
+                      className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Tambah Inventaris
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

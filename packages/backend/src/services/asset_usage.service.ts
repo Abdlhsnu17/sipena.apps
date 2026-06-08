@@ -589,8 +589,8 @@ export class AssetUsageService {
 
     let query = `
       SELECT l.*,
-        COALESCE(ma.name, na.name) as asset_name,
-        COALESCE(ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) as asset_name,
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         op.name as operator_name,
         op.nip as operator_nip,
@@ -660,8 +660,8 @@ export class AssetUsageService {
   async getById(id: string): Promise<ApiResponse<AssetUsageLog>> {
     const [rows] = await pool.query<AssetUsageRow[]>(
       `SELECT l.*,
-        COALESCE(ma.name, na.name) as asset_name,
-        COALESCE(ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) as asset_name,
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         op.name as operator_name,
         op.nip as operator_nip,

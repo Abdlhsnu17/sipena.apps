@@ -5,10 +5,12 @@ import {
     ApiResponse,
     Asset,
     AssetFilters,
-    PaginatedResponse
+    PaginatedResponse,
+    ResetInventorySummary
 } from '../models';
 import { generateAssetCode } from '../utils/helpers';
 import { ensureNonMedicalConditionColumn, ensureNonMedicalSpecificationsColumn } from '../utils/schema';
+import { withConnection, withTransaction } from '../utils/transaction';
 
 function getAssetTable(type?: string) {
   return type === 'non_medical' ? 'non_medical_assets' : 'medical_assets';
@@ -73,10 +75,34 @@ interface AssetRow extends RowDataPacket, Asset {}
 interface CountRow extends RowDataPacket {
   count: number;
 }
+interface TableExistsRow extends RowDataPacket {
+  table_exists: number;
+}
 
 const IN_USE_DETAIL_STATUSES = new Set(['Sedang Digunakan', 'Dalam Penggunaan']);
 
 export class AssetService {
+  private async tableExists(connection: any, tableName: string): Promise<boolean> {
+    const [rows] = (await connection.query(
+      `SELECT COUNT(*) AS table_exists
+       FROM information_schema.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = ?`,
+      [tableName]
+    )) as [TableExistsRow[], any];
+
+    return Number(rows[0]?.table_exists || 0) > 0;
+  }
+
+  private async deleteTableRows(connection: any, tableName: string): Promise<number> {
+    if (!(await this.tableExists(connection, tableName))) {
+      return 0;
+    }
+
+    const [result] = (await connection.query(`DELETE FROM ${tableName}`)) as [ResultSetHeader, any];
+    return result.affectedRows || 0;
+  }
+
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
     if (!raw) return {};
     if (typeof raw === 'string') {
@@ -445,6 +471,49 @@ export class AssetService {
     }
 
     return { success: true, message: 'Asset deleted successfully' };
+  }
+
+  async resetInventory(): Promise<ApiResponse<ResetInventorySummary>> {
+    const summary = await withConnection(pool, async (connection) =>
+      withTransaction(connection, async (transaction) => {
+        const returnRecords = await this.deleteTableRows(transaction, 'return_records');
+        const maintenanceHistory = await this.deleteTableRows(transaction, 'maintenance_history');
+        const assetUsageLogs = await this.deleteTableRows(transaction, 'asset_usage_logs');
+        const maintenanceRecords = await this.deleteTableRows(transaction, 'maintenance_records');
+        const maintenanceSchedules = await this.deleteTableRows(transaction, 'jadwal_pemeliharaan');
+        const borrowingRecords = await this.deleteTableRows(transaction, 'borrowing_records');
+        const medicalAssets = await this.deleteTableRows(transaction, 'medical_assets');
+        const nonMedicalAssets = await this.deleteTableRows(transaction, 'non_medical_assets');
+
+        const totalDeleted =
+          returnRecords +
+          maintenanceHistory +
+          assetUsageLogs +
+          maintenanceRecords +
+          maintenanceSchedules +
+          borrowingRecords +
+          medicalAssets +
+          nonMedicalAssets;
+
+        return {
+          returnRecords,
+          maintenanceHistory,
+          assetUsageLogs,
+          maintenanceRecords,
+          maintenanceSchedules,
+          borrowingRecords,
+          medicalAssets,
+          nonMedicalAssets,
+          totalDeleted,
+        };
+      })
+    );
+
+    return {
+      success: true,
+      message: 'Data inventaris berhasil dihapus. Data pengguna tetap tersimpan.',
+      data: summary,
+    };
   }
 
 

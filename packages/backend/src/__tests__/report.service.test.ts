@@ -315,4 +315,89 @@ describe('ReportService.getAssetReport', () => {
     expect(workbook.getWorksheet('Ruangan Perinatologi')?.rowCount).toBe(3);
     expect(workbook.getWorksheet('Ruangan Wijayakusuma')?.rowCount).toBe(2);
   });
+
+  it('exports usage Excel with separate tool code, tool name, and description columns', async () => {
+    mockedQuery.mockResolvedValueOnce([
+      [
+        {
+          id: 1,
+          no: 'PG-20260607-001',
+          asset_id: 10,
+          asset_master_id: 10,
+          asset_type: 'medical',
+          asset_detail_id: 'WJKS-01',
+          item_id: 'WJKS-01',
+          asset_detail_name: 'Patient Monitor',
+          asset_detail_code: 'MED-WJKS-001',
+          asset_name: 'Patient Monitor',
+          asset_code: 'MED-WJKS-001',
+          tool_name: 'Patient Monitor',
+          tool_code: 'MED-WJKS-001',
+          room_name: 'Ruangan Wijayakusuma',
+          asset_location: 'Ruangan Wijayakusuma',
+          operator_name: 'Hafsah Nuzulfah',
+          operator_nip: '2001031720252110',
+          usage_context: 'own_room',
+          started_at: '2026-06-07 09:00:00',
+          ended_at: '2026-06-07 10:00:00',
+          usage_count: 1,
+          condition_before: 'good',
+          condition_after: 'good',
+          notes: 'Dipakai untuk monitoring pasien',
+          description: 'Dipakai untuk monitoring pasien',
+          created_by_name: 'Hafsah Nuzulfah',
+          created_at: '2026-06-07 09:00:00',
+          updated_at: '2026-06-07 10:00:00',
+        },
+      ],
+      [],
+    ]);
+
+    const buffer = await service.exportToExcel({ reportType: 'usage' });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+
+    const worksheet = workbook.getWorksheet('Laporan Penggunaan');
+    const headers = (worksheet?.getRow(1).values as unknown[]).map((value) => String(value ?? ''));
+    const values = (worksheet?.getRow(2).values as unknown[]).map((value) => String(value ?? ''));
+
+    expect(headers).toEqual(expect.arrayContaining(['ID Barang', 'ID Aset Master', 'Kode Alat', 'Nama Alat', 'Keterangan']));
+    expect(headers).not.toEqual(expect.arrayContaining(['Catatan']));
+    expect(values).toEqual(expect.arrayContaining(['WJKS-01', '10', 'MED-WJKS-001', 'Patient Monitor', 'Dipakai untuk monitoring pasien']));
+  });
+
+  it('exports activity Excel with usage tool details split from description', async () => {
+    mockedQuery.mockResolvedValueOnce([
+      [
+        {
+          id: 21,
+          user_id: 3,
+          user_name: 'Hafsah Nuzulfah',
+          user_nip: '2001031720252110',
+          feature: 'penggunaan_alat',
+          action: 'create',
+          description: 'Mencatat penggunaan alat MED-WJKS-001',
+          metadata_json: JSON.stringify({
+            assetCode: 'MED-WJKS-001',
+            assetName: 'Patient Monitor',
+          }),
+          created_at: '2026-06-07 09:00:00',
+        },
+      ],
+      [],
+    ]);
+
+    const buffer = await service.exportToExcel({ reportType: 'activity', actorUserId: 1, actorRole: 'admin' });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+
+    const worksheet = workbook.getWorksheet('Laporan Riwayat Aktivitas');
+    const headers = (worksheet?.getRow(1).values as unknown[]).map((value) => String(value ?? ''));
+    const values = (worksheet?.getRow(2).values as unknown[]).map((value) => String(value ?? ''));
+
+    expect(headers).toEqual(expect.arrayContaining(['Kode Alat', 'Nama Alat', 'Keterangan']));
+    expect(headers).not.toEqual(expect.arrayContaining(['Metadata']));
+    expect(values).toEqual(expect.arrayContaining(['MED-WJKS-001', 'Patient Monitor', 'Mencatat penggunaan alat']));
+    expect(values).not.toEqual(expect.arrayContaining(['Mencatat penggunaan alat MED-WJKS-001']));
+  });
 });
