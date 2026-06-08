@@ -57,7 +57,7 @@ const normalizeCapsText = (value: string) => {
 }
 
 const pickExportColorMode = (): ExportColorMode => {
-  return 'color'
+  return 'monochrome'
 }
 
 export type TableExportColumn<T> = {
@@ -364,8 +364,10 @@ const buildSectionHtml = (section: DocumentSection) => `
 const buildNarrativeEntryHtml = <T>(entry: T, index: number, total: number, buildSections: SectionBuilder<T>) => {
   const sections = buildSections(entry)
   if (!sections.length) return ''
+  const entryHeader = total > 1 ? `<div class="entry-card__heading">${escapeHtml(buildEntryHeaderLabel(entry, index))}</div>` : ''
   return `
     <article class="entry-card">
+      ${entryHeader}
       <div class="entry-card__body">
         ${sections.map((section) => buildSectionHtml(section)).join('')}
       </div>
@@ -387,7 +389,7 @@ const buildNarrativeHtml = <T>(
   const subtitleColor = isMonochrome ? '#111111' : '#1d4ed8'
   const cardBg = '#ffffff'
   const sectionBg = isMonochrome ? '#ffffff' : '#f5f7ff'
-  const sectionBorder = isMonochrome ? '#333333' : '#d8e2ff'
+  const sectionBorder = isMonochrome ? '#cfcfcf' : '#d8e2ff'
   const sectionHeadingBg = isMonochrome ? '#111111' : '#1d4ed8'
 
   const entriesHtml =
@@ -404,83 +406,103 @@ const buildNarrativeHtml = <T>(
         <meta charset="utf-8" />
         <title>${escapeHtml(title)}</title>
         <style>
+          @page {
+            margin: 18mm 14mm;
+          }
+          * {
+            box-sizing: border-box;
+          }
           body {
             font-family: Arial, sans-serif;
-            padding: 36px;
+            margin: 0;
+            padding: 0;
             color: ${bodyColor};
             background: ${pageBg};
             font-size: ${BASE_EXPORT_FONT_SIZE}px;
+            line-height: 1.25;
           }
           h1 {
-            font-size: ${HEADING_EXPORT_FONT_SIZE}px;
+            font-size: 18px;
             font-weight: 700;
-            margin: 0;
+            margin: 0 0 6px;
           }
           .subtitle {
-            font-size: ${BASE_EXPORT_FONT_SIZE}px;
+            font-size: 16px;
             color: ${subtitleColor};
-            margin: 4px 0 28px;
+            margin: 0 0 34px;
           }
           .entries {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            display: block;
           }
           .entry-card {
-            border-radius: 32px;
             background: ${cardBg};
-            box-shadow: ${isMonochrome ? 'none' : '0 30px 60px rgba(15, 23, 42, 0.15)'};
+            box-shadow: none;
             padding: 0;
             page-break-inside: avoid;
-            border: 1px solid ${isMonochrome ? '#333333' : 'transparent'};
+            border: 0;
+            margin: 0 0 16px;
+          }
+          .entry-card + .entry-card {
+            page-break-before: always;
+          }
+          .entry-card__heading {
+            border: 1px solid ${sectionBorder};
+            border-bottom: 0;
+            padding: 6px 8px;
+            font-size: ${BASE_EXPORT_FONT_SIZE}px;
+            font-weight: 700;
           }
           .entry-card__body {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.25rem;
-            padding: 2rem;
+            display: block;
+            padding: 0;
           }
           .section-block {
             background: ${sectionBg};
-            border-radius: 28px;
             border: 1px solid ${sectionBorder};
             overflow: hidden;
+            margin: 0;
+            page-break-inside: avoid;
+          }
+          .section-block + .section-block {
+            border-top: 0;
           }
           .section-block__heading {
             background: ${sectionHeadingBg};
             color: #fff;
-            font-size: ${HEADING_EXPORT_FONT_SIZE}px;
-            font-weight: 600;
-            padding: 0.65rem 1rem;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 4px 6px;
           }
           .section-block__rows {
-            padding: 0.65rem 1rem 0.8rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
+            padding: 0;
+            display: block;
           }
           .section-block__row {
-            display: grid;
-            grid-template-columns: 0.9fr 1.2fr;
-            gap: 0.75rem;
-            align-items: center;
-            padding: 0.5rem 0;
+            display: block;
+            padding: 3px 6px 4px;
             border-bottom: 1px solid ${sectionBorder};
           }
           .section-block__row:last-child {
             border-bottom: 0;
           }
           .section-block__label {
-            font-size: ${BASE_EXPORT_FONT_SIZE}px;
+            font-size: 14px;
             font-weight: 400;
             color: ${isMonochrome ? '#111111' : '#374151'};
+            margin: 0;
           }
           .section-block__value {
-            font-size: ${BASE_EXPORT_FONT_SIZE}px;
-            font-weight: 400;
+            font-size: 14px;
+            font-weight: 700;
             color: ${bodyColor};
+            margin: 0;
+            overflow-wrap: anywhere;
           }
           @media print {
+            body {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             .entry-card {
               page-break-inside: avoid;
             }
@@ -491,17 +513,6 @@ const buildNarrativeHtml = <T>(
         <h1>${escapeHtml(normalizeCapsText(title))}</h1>
         <p class="subtitle">${escapeHtml(normalizeCapsText(subtitle))}</p>
         ${entriesHtml}
-        <script>
-          document.querySelectorAll('.entry-card__toggle').forEach((button) => {
-            button.addEventListener('click', () => {
-              const card = button.closest('.entry-card')
-              if (!card) return
-              const collapsed = card.classList.toggle('is-collapsed')
-              button.textContent = collapsed ? 'Perluas' : 'Sederhanakan'
-              button.setAttribute('aria-expanded', String(!collapsed))
-            })
-          })
-        </script>
       </body>
     </html>
   `
