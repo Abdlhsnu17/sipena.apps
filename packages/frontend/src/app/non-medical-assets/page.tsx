@@ -172,6 +172,7 @@ export default function NonMedicalAssetsPage() {
           ...detail,
           id: rebaseRoomScopedDetailCode(detail.id, "NMD", currentRoom.roomName, roomFormData.roomName),
           assetCode: rebaseRoomScopedDetailCode(detail.assetCode, "NMD", currentRoom.roomName, roomFormData.roomName),
+          roomId: roomFormData.roomName,
         }))
         const response = await assetService.update(currentRoom.id, {
           name: roomFormData.roomName,
@@ -391,13 +392,27 @@ export default function NonMedicalAssetsPage() {
     () => new Map(sortedRooms.map((room, index) => [room.id, formatNoId("INM", index + 1)])),
     [sortedRooms],
   )
-  const getRoomNoId = (roomId: string) => roomNoIdByRoomId.get(roomId) ?? formatNoId("INM", roomId)
-  const getAssetNoId = (assetId: string) => formatNoId("INM-DTL", assetId)
+  const assetNoIdByRoomAndAssetId = useMemo(() => {
+    let detailNumber = 1
+    const lookup = new Map<string, string>()
 
-  const matchesAssetSearch = (asset: NonMedicalAsset) => {
+    sortedRooms.forEach((room) => {
+      room.assets.forEach((asset) => {
+        lookup.set(`${room.id}:${asset.id}`, formatNoId("INM-DTL", detailNumber))
+        detailNumber += 1
+      })
+    })
+
+    return lookup
+  }, [sortedRooms])
+  const getRoomNoId = (roomId: string) => roomNoIdByRoomId.get(roomId) ?? formatNoId("INM", roomId)
+  const getAssetNoId = (roomId: string, assetId: string) =>
+    assetNoIdByRoomAndAssetId.get(`${roomId}:${assetId}`) ?? formatNoId("INM-DTL", assetId)
+
+  const matchesAssetSearch = (roomId: string, asset: NonMedicalAsset) => {
     if (!searchTermNormalized) return false
     return matchesSearchKeyword(searchTerm, [
-      getAssetNoId(asset.id),
+      getAssetNoId(roomId, asset.id),
       asset.id,
       asset.roomId,
       asset.inventoryName,
@@ -420,7 +435,7 @@ export default function NonMedicalAssetsPage() {
       room.assetCode,
       room.category,
     ])
-    const matchesDetailSearch = searchTermNormalized ? room.assets.some(matchesAssetSearch) : false
+    const matchesDetailSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, asset)) : false
     const matchesCategory = filterCategory === "Semua" || room.category === filterCategory
     return (matchesRoomSearch || matchesDetailSearch) && matchesCategory
   })
@@ -564,8 +579,10 @@ export default function NonMedicalAssetsPage() {
         {filteredRooms.map((room) => {
           const categoryMeta =
             NON_MEDICAL_ASSET_CATEGORIES[room.category as keyof typeof NON_MEDICAL_ASSET_CATEGORIES]
-          const detailMatchesSearch = searchTermNormalized ? room.assets.some(matchesAssetSearch) : false
-          const assetsToDisplay = detailMatchesSearch ? room.assets.filter(matchesAssetSearch) : room.assets
+          const detailMatchesSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, asset)) : false
+          const assetsToDisplay = detailMatchesSearch
+            ? room.assets.filter((asset) => matchesAssetSearch(room.id, asset))
+            : room.assets
           const isExpanded = expandedRooms.has(room.id)
           const shouldAutoExpandFromSearch = Boolean(searchTermNormalized)
           const shouldShowDetails = isExpanded || shouldAutoExpandFromSearch
@@ -693,7 +710,7 @@ export default function NonMedicalAssetsPage() {
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-semibold text-sm">{asset.inventoryName || asset.name}</span>
                                     <Badge variant="outline" className="text-[10px]">
-                                      No ID: {getAssetNoId(asset.id)}
+                                      No ID: {getAssetNoId(room.id, asset.id)}
                                     </Badge>
                                     <Badge
                                       variant="outline"
