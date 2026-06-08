@@ -51,7 +51,7 @@ export function InventoryPicker<T>({
   placeholder = 'Cari inventaris...',
   buttonLabel = 'Pilih inventaris',
   buttonClassName,
-  popoverClassName = 'max-h-[min(420px,calc(100vh-8rem))] w-[min(92vw,680px)] overflow-hidden p-0 sm:w-[var(--radix-popover-trigger-width)] sm:min-w-[320px] sm:max-w-[min(92vw,680px)]',
+  popoverClassName = 'max-h-[min(420px,calc(100vh-8rem))] w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] overflow-hidden p-0',
   listClassName,
   noResultsLabel = 'Tidak ada inventaris tersedia',
   searchValue,

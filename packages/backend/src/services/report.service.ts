@@ -7,6 +7,9 @@ import { ApiResponse } from '../models';
 import { hasAnyRole } from '../utils/role';
 import { getReportUploadsDir } from '../utils/storage-paths';
 
+const REPORT_BRAND_NAME = 'SiPeNa';
+const REPORT_SYSTEM_NAME = 'Sistem Inventaris Peminjaman serta Pemeliharaan sarana (SiPeNa)';
+
 interface ReportFilters {
   startDate?: string;
   endDate?: string;
@@ -1520,7 +1523,7 @@ export class ReportService {
 
     addPage();
 
-    addText('SiPeNa', margin, y, 11, 'F2', '#64748b');
+    addText(REPORT_BRAND_NAME, margin, y, 11, 'F2', '#64748b');
     y -= 24;
     addText(title, margin, y, 20, 'F2', '#0f172a');
     y -= 20;
@@ -1611,7 +1614,7 @@ export class ReportService {
 
     pages.forEach((page, index) => {
       page.push(`q ${color('#d7dee8')} RG 0.75 w ${margin} 28 m ${pageWidth - margin} 28 l S Q`);
-      page.push(`BT ${color('#64748b')} rg /F1 8 Tf 1 0 0 1 ${margin} 16 Tm (${escapePdfText('SiPeNa')}) Tj ET`);
+      page.push(`BT ${color('#64748b')} rg /F1 8 Tf 1 0 0 1 ${margin} 16 Tm (${escapePdfText(REPORT_SYSTEM_NAME)}) Tj ET`);
       page.push(`BT ${color('#64748b')} rg /F1 8 Tf 1 0 0 1 ${pageWidth - margin - 65} 16 Tm (${escapePdfText(`Hal. ${index + 1}/${pages.length}`)}) Tj ET`);
     });
 

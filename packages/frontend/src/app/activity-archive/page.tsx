@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import authService, { type User as AuthUser } from "@/services/auth.service";
 import userActivityService, { type UserActivity } from "@/services/user-activity.service";
 import userService, { type User } from "@/services/user.service";
@@ -102,13 +103,17 @@ export default function ActivityArchivePage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [authReady, setAuthReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
 
   const canViewOthers = isAdminOrLeaderRole(currentUser?.role)
+  const hasAdminArchiveFilter = Boolean(selectedUserId || startDate || endDate)
+  const shouldLoadArchive = Boolean(authReady && currentUser && (!canViewOthers || hasAdminArchiveFilter))
 
   useEffect(() => {
     setCurrentUser(authService.getCurrentUser())
+    setAuthReady(true)
   }, [])
 
   useEffect(() => {
@@ -127,6 +132,15 @@ export default function ActivityArchivePage() {
   }, [canViewOthers])
 
   const loadActivities = useCallback(async () => {
+    if (!shouldLoadArchive) {
+      setActivities([])
+      setTotal(0)
+      setTotalPages(1)
+      setLoading(false)
+      setErrorMessage("")
+      return
+    }
+
     setLoading(true)
     setErrorMessage("")
     try {
@@ -148,17 +162,18 @@ export default function ActivityArchivePage() {
     } finally {
       setLoading(false)
     }
-  }, [endDate, page, selectedUserId, startDate])
+  }, [endDate, page, selectedUserId, shouldLoadArchive, startDate])
 
   useEffect(() => {
     void loadActivities()
   }, [loadActivities])
 
   const selectedUserLabel = useMemo(() => {
+    if (canViewOthers && !hasAdminArchiveFilter) return "Pilih filter dahulu"
     if (!canViewOthers) return currentUser?.name ?? "Akun sendiri"
     if (!selectedUserId) return "Semua user"
     return users.find((user) => String(user.id) === selectedUserId)?.name ?? "User terpilih"
-  }, [canViewOthers, currentUser?.name, selectedUserId, users])
+  }, [canViewOthers, currentUser?.name, hasAdminArchiveFilter, selectedUserId, users])
 
   const resolveActivityUser = useCallback(
     (activity: UserActivity) => {
@@ -205,21 +220,27 @@ export default function ActivityArchivePage() {
           {canViewOthers ? (
             <label className="space-y-1 text-xs font-medium text-slate-600">
               <span>User</span>
-              <select
-                value={selectedUserId}
-                onChange={(event) => {
-                  setSelectedUserId(event.target.value)
+              <Select
+                value={selectedUserId || "all"}
+                onValueChange={(value) => {
+                  setSelectedUserId(value === "all" ? "" : value)
                   setPage(1)
                 }}
-                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400"
               >
-                <option value="">Semua user</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} - {user.nip}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-10 w-full bg-white text-slate-700">
+                  <SelectValue placeholder="Pilih user" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 w-[min(24rem,var(--radix-select-trigger-width))]">
+                  <SelectItem value="all">Semua user</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={String(user.id)} className="min-w-0">
+                      <span className="block min-w-0 truncate">
+                        {user.name}{user.nip ? ` - ${user.nip}` : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           ) : (
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
@@ -279,53 +300,59 @@ export default function ActivityArchivePage() {
           </div>
         ) : null}
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-190 text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-normal text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Waktu</th>
-                <th className="px-4 py-3 font-semibold">User</th>
-                <th className="px-4 py-3 font-semibold">Fitur</th>
-                <th className="px-4 py-3 font-semibold">Aktivitas</th>
-                <th className="px-4 py-3 font-semibold">Detail Alat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
+        {!shouldLoadArchive ? (
+          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+            Pilih user atau rentang tanggal terlebih dahulu untuk menampilkan kolom riwayat aktivitas.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-190 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-normal text-slate-500">
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Memuat arsip aktivitas...</td>
+                  <th className="px-4 py-3 font-semibold">Waktu</th>
+                  <th className="px-4 py-3 font-semibold">User</th>
+                  <th className="px-4 py-3 font-semibold">Fitur</th>
+                  <th className="px-4 py-3 font-semibold">Aktivitas</th>
+                  <th className="px-4 py-3 font-semibold">Detail Alat</th>
                 </tr>
-              ) : activities.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada aktivitas pada filter ini.</td>
-                </tr>
-              ) : (
-                activities.map((activity) => (
-                  <tr key={activity.id} className="align-top">
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                      <span className="inline-flex items-center gap-2">
-                        <Clock3 className="size-4 text-slate-400" />
-                        {formatDateTime(activity.createdAt)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{resolveActivityUser(activity)}</p>
-                      <p className="text-xs text-muted-foreground">{activity.userNip ?? "-"}</p>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-teal-700">{getFeatureLabel(activity.feature)}</td>
-                    <td className="px-4 py-3 text-slate-700">{formatActivityAction(activity)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
-                      {getActivityItemName(activity) ? <p>Nama Alat: {getActivityItemName(activity)}</p> : null}
-                      {getActivityItemCode(activity) ? <p>Kode Barang: {getActivityItemCode(activity)}</p> : null}
-                      {getActivityCode(activity) ? <p>No ID: {getActivityCode(activity)}</p> : null}
-                      {!getActivityItemName(activity) && !getActivityItemCode(activity) && !getActivityCode(activity) ? "-" : null}
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Memuat arsip aktivitas...</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : activities.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada aktivitas pada filter ini.</td>
+                  </tr>
+                ) : (
+                  activities.map((activity) => (
+                    <tr key={activity.id} className="align-top">
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        <span className="inline-flex items-center gap-2">
+                          <Clock3 className="size-4 text-slate-400" />
+                          {formatDateTime(activity.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-slate-900">{resolveActivityUser(activity)}</p>
+                        <p className="text-xs text-muted-foreground">{activity.userNip ?? "-"}</p>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-teal-700">{getFeatureLabel(activity.feature)}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatActivityAction(activity)}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600">
+                        {getActivityItemName(activity) ? <p>Nama Alat: {getActivityItemName(activity)}</p> : null}
+                        {getActivityItemCode(activity) ? <p>Kode Barang: {getActivityItemCode(activity)}</p> : null}
+                        {getActivityCode(activity) ? <p>No ID: {getActivityCode(activity)}</p> : null}
+                        {!getActivityItemName(activity) && !getActivityItemCode(activity) && !getActivityCode(activity) ? "-" : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
           <p className="text-xs text-muted-foreground">Halaman {page} dari {totalPages}</p>

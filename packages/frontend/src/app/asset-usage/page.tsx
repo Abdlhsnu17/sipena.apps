@@ -248,11 +248,50 @@ const locationIncludes = (source: string, target?: string | null) => {
   return Boolean(normalizedTarget && source.includes(normalizedTarget));
 };
 
+const ROOM_MATCH_IGNORED_WORDS = new Set(["ruang", "ruangan", "ranap", "rawat", "inap", "kamar", "unit", "sub", "instalasi"]);
+
+const getMeaningfulRoomTokens = (value: string) =>
+  normalizeLocationText(value)
+    .split(" ")
+    .filter((token) => token && !ROOM_MATCH_IGNORED_WORDS.has(token) && (token.length >= 3 || token === "ok"));
+
+const roomMatchesSubRoom = (assetRoomText: string, subRoom?: string | null) => {
+  const normalizedAssetRoom = normalizeLocationText(assetRoomText);
+  const normalizedSubRoom = normalizeLocationText(subRoom);
+  if (!normalizedAssetRoom || !normalizedSubRoom) return false;
+  if (normalizedAssetRoom.includes(normalizedSubRoom)) return true;
+
+  const subRoomSegments = String(subRoom || "")
+    .split(/[\/,;]/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return subRoomSegments.some((segment) => {
+    const normalizedSegment = normalizeLocationText(segment);
+    if (!normalizedSegment) return false;
+    if (normalizedAssetRoom.includes(normalizedSegment)) return true;
+
+    const meaningfulTokens = getMeaningfulRoomTokens(segment);
+    return meaningfulTokens.length > 0 && meaningfulTokens.some((token) => normalizedAssetRoom.includes(token));
+  });
+};
+
 const getUserUsageRoom = (user?: User | null) =>
   [user?.workUnit, user?.subWorkUnit].filter(Boolean).join(" - ");
 
 const getAutoUsageRoom = (item: DetailInventoryItem | undefined, user: User | null) =>
   getUserUsageRoom(user) || getAssetRoomOptions(item)[0] || "";
+
+const getAssetRoomSearchText = (item: DetailInventoryItem) =>
+  normalizeLocationText([item.roomName, item.assetLocation].filter(Boolean).join(" "));
+
+const isAssetInUserSubRoom = (item: DetailInventoryItem, user: User | null) => {
+  const userSubRoom = user?.subWorkUnit?.trim();
+  if (!userSubRoom) return false;
+
+  const assetRoomText = getAssetRoomSearchText(item);
+  return roomMatchesSubRoom(assetRoomText, userSubRoom);
+};
 
 const deriveUsageContextFromProfile = (
   item: DetailInventoryItem | undefined,
@@ -270,7 +309,7 @@ const deriveUsageContextFromProfile = (
     ].filter(Boolean).join(" ")
   );
   const sameUnit = locationIncludes(assetLocation, user.workUnit);
-  const sameSubRoom = locationIncludes(assetLocation, user.subWorkUnit);
+  const sameSubRoom = roomMatchesSubRoom(assetLocation, user.subWorkUnit);
 
   // Banyak data inventaris memakai nama ruangan detail saja, misalnya
   // "Ruangan Mawar Atas", tanpa menyimpan induk "Instalasi Rawat Inap".
@@ -468,8 +507,12 @@ export default function AssetUsagePage() {
   }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets]);
 
   const selectableAssets = useMemo(() => {
-    return availableAssets;
-  }, [availableAssets]);
+    return availableAssets.filter((item) => isAssetInUserSubRoom(item, currentUser));
+  }, [availableAssets, currentUser]);
+
+  const noSelectableAssetMessage = currentUser?.subWorkUnit?.trim()
+    ? "Tidak ada alat tersedia pada sub ruangan akun ini."
+    : "Sub ruangan akun belum diisi, sehingga alat penggunaan tidak dapat dipilih.";
 
   useEffect(() => {
     if (!form.inventoryKey) return;
@@ -597,6 +640,12 @@ export default function AssetUsagePage() {
         setForm((prev) => ({ ...initialForm, inventoryKey: prev.inventoryKey, roomName: prev.roomName, startedAt: toDateTimeLocalInputValue() }));
         await loadData();
         dispatchInventoryRefresh();
+      } else {
+        toast({
+          title: "Gagal menyimpan",
+          description: response.message || "Catatan penggunaan alat belum tersimpan.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error saving asset usage:", error);
@@ -832,17 +881,17 @@ export default function AssetUsagePage() {
     appendLine(sign, 'Keterangan', statusNotes)
 
     return [
-      { title: 'SURAT PENGGUNAAN', lines: main },
+      { title: 'PENGGUNAAN', lines: main },
       { title: 'PENUTUP & TANDA TANGAN', lines: sign },
     ]
   }
 
   const exportSingleUsageLetter = async (format: ExportFormat, log: AssetUsageLog) => {
     void exportNarrativeReport(format, {
-      title: `Surat Penggunaan - ${log.operatorName || log.id}`,
-      subtitle: 'SURAT PENGGUNAAN',
+      title: `Penggunaan - ${log.operatorName || log.id}`,
+      subtitle: 'PENGGUNAAN',
       entries: [log],
-      filePrefix: `surat-penggunaan-${log.id}`,
+      filePrefix: `penggunaan-${log.id}`,
       buildSections: buildUsageLetterSections,
       emptyMessage: 'Tidak ada data pemakaian yang dipilih.',
     })
@@ -967,12 +1016,12 @@ export default function AssetUsagePage() {
                             Status: {getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}
                           </span>
                         )}
-                        noResultsLabel="Tidak ada alat yang sesuai filter."
+                        noResultsLabel={noSelectableAssetMessage}
                       />
                     </div>
                     {selectableAssets.length === 0 && (
                       <p className="mt-1 text-xs font-medium text-red-600">
-                        Belum ada alat yang tersedia untuk dicatat.
+                        {noSelectableAssetMessage}
                       </p>
                     )}
                   </div>
@@ -1170,8 +1219,8 @@ export default function AssetUsagePage() {
                                     variant="outline"
                                     size="sm"
                                     className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                                    aria-label="Unduh surat penggunaan"
-                                    title="Unduh surat"
+                                    aria-label="Unduh penggunaan"
+                                    title="Unduh penggunaan"
                                   >
                                     <Download className="h-3.5 w-3.5" />
                                     Unduh

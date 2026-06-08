@@ -15,6 +15,8 @@ type ExportColorMode = 'color' | 'monochrome'
 
 const BASE_EXPORT_FONT_SIZE = 13
 const HEADING_EXPORT_FONT_SIZE = 13
+const EXPORT_BRAND_NAME = 'SiPeNa'
+const EXPORT_SYSTEM_NAME = 'Sistem Inventaris Peminjaman serta Pemeliharaan sarana (SiPeNa)'
 
 const getCellTextLength = (value: unknown) => {
   if (value === null || value === undefined) return 0
@@ -121,6 +123,18 @@ const renderTableCellHtml = (column: string, value: unknown, mode: ExportColorMo
   return `<td><span style="${featureStyle.htmlStyle}">${escapeTableHtml(featureStyle.label)}</span></td>`
 }
 
+const buildExportHeaderHtml = () => `
+  <header class="export-header">
+    <div class="export-header__brand">${escapeTableHtml(EXPORT_BRAND_NAME)}</div>
+  </header>
+`
+
+const buildExportFooterHtml = () => `
+  <footer class="export-footer">
+    ${escapeTableHtml(EXPORT_SYSTEM_NAME)}
+  </footer>
+`
+
 const buildHtml = (
   title: string,
   columns: string[],
@@ -155,6 +169,24 @@ const buildHtml = (
             color: ${bodyColor};
             font-size: ${BASE_EXPORT_FONT_SIZE}px;
           }
+          .export-header {
+            border-bottom: 1px solid ${borderColor};
+            margin: 0 0 22px;
+            padding: 0 0 10px;
+          }
+          .export-header__brand {
+            font-size: 16px;
+            font-weight: 700;
+            color: ${bodyColor};
+          }
+          .export-footer {
+            border-top: 1px solid ${borderColor};
+            color: ${isMonochrome ? '#555555' : '#64748b'};
+            font-size: 11px;
+            margin: 28px 0 0;
+            padding: 10px 0 0;
+            text-align: center;
+          }
           table {
             border-collapse: collapse;
             width: 100%;
@@ -169,9 +201,32 @@ const buildHtml = (
             background: ${headerBg};
             font-weight: 600;
           }
+          @media print {
+            @page {
+              margin: 24mm 14mm 20mm;
+            }
+            body {
+              padding: 0;
+            }
+            .export-header {
+              position: fixed;
+              top: -16mm;
+              left: 0;
+              right: 0;
+              margin: 0;
+            }
+            .export-footer {
+              position: fixed;
+              bottom: -13mm;
+              left: 0;
+              right: 0;
+              margin: 0;
+            }
+          }
         </style>
       </head>
       <body>
+        ${buildExportHeaderHtml()}
         <h2>${escapeTableHtml(title)}</h2>
         <table>
           <thead>
@@ -181,6 +236,7 @@ const buildHtml = (
             ${bodyRows}
           </tbody>
         </table>
+        ${buildExportFooterHtml()}
       </body>
     </html>
   `
@@ -326,6 +382,18 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '<br/>')
 
+const buildNarrativeExportHeaderHtml = () => `
+  <header class="export-header">
+    <div class="export-header__brand">${escapeHtml(EXPORT_BRAND_NAME)}</div>
+  </header>
+`
+
+const buildNarrativeExportFooterHtml = () => `
+  <footer class="export-footer">
+    ${escapeHtml(EXPORT_SYSTEM_NAME)}
+  </footer>
+`
+
 export type SectionLine = {
   label: string
   value: string
@@ -407,7 +475,7 @@ const buildNarrativeHtml = <T>(
         <title>${escapeHtml(title)}</title>
         <style>
           @page {
-            margin: 18mm 14mm;
+            margin: 24mm 14mm 20mm;
           }
           * {
             box-sizing: border-box;
@@ -420,6 +488,24 @@ const buildNarrativeHtml = <T>(
             background: ${pageBg};
             font-size: ${BASE_EXPORT_FONT_SIZE}px;
             line-height: 1.25;
+          }
+          .export-header {
+            border-bottom: 1px solid ${sectionBorder};
+            margin: 0 0 18px;
+            padding: 0 0 8px;
+          }
+          .export-header__brand {
+            font-size: 16px;
+            font-weight: 700;
+            color: ${bodyColor};
+          }
+          .export-footer {
+            border-top: 1px solid ${sectionBorder};
+            color: ${isMonochrome ? '#555555' : '#64748b'};
+            font-size: 11px;
+            margin: 24px 0 0;
+            padding: 8px 0 0;
+            text-align: center;
           }
           h1 {
             font-size: 18px;
@@ -506,13 +592,29 @@ const buildNarrativeHtml = <T>(
             .entry-card {
               page-break-inside: avoid;
             }
+            .export-header {
+              position: fixed;
+              top: -16mm;
+              left: 0;
+              right: 0;
+              margin: 0;
+            }
+            .export-footer {
+              position: fixed;
+              bottom: -13mm;
+              left: 0;
+              right: 0;
+              margin: 0;
+            }
           }
         </style>
       </head>
       <body>
+        ${buildNarrativeExportHeaderHtml()}
         <h1>${escapeHtml(normalizeCapsText(title))}</h1>
         <p class="subtitle">${escapeHtml(normalizeCapsText(subtitle))}</p>
         ${entriesHtml}
+        ${buildNarrativeExportFooterHtml()}
       </body>
     </html>
   `

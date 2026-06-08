@@ -41,6 +41,10 @@ interface ActiveBorrowingRow extends RowDataPacket {
   notes?: string | null;
 }
 
+interface UsageActorRoomRow extends RowDataPacket {
+  sub_work_unit?: string | null;
+}
+
 type UsageSyncOptions = {
   usageId?: number | string | null;
   detailId?: string | null;
@@ -127,6 +131,47 @@ export class AssetUsageService {
     return this.normalizeDetailIdentifier(value).toLowerCase();
   }
 
+  private normalizeLocationText(value?: string | number | null): string {
+    return this.normalizeDetailIdentifier(value)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private locationIncludes(source: string, target?: string | null): boolean {
+    const normalizedTarget = this.normalizeLocationText(target);
+    return Boolean(normalizedTarget && source.includes(normalizedTarget));
+  }
+
+  private getMeaningfulRoomTokens(value: string): string[] {
+    const ignoredWords = new Set(['ruang', 'ruangan', 'ranap', 'rawat', 'inap', 'kamar', 'unit', 'sub', 'instalasi']);
+    return this.normalizeLocationText(value)
+      .split(' ')
+      .filter((token) => token && !ignoredWords.has(token) && (token.length >= 3 || token === 'ok'));
+  }
+
+  private roomMatchesSubRoom(assetRoomText: string, subRoom?: string | null): boolean {
+    const normalizedAssetRoom = this.normalizeLocationText(assetRoomText);
+    const normalizedSubRoom = this.normalizeLocationText(subRoom);
+    if (!normalizedAssetRoom || !normalizedSubRoom) return false;
+    if (normalizedAssetRoom.includes(normalizedSubRoom)) return true;
+
+    const subRoomSegments = String(subRoom || '')
+      .split(/[\/,;]/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    return subRoomSegments.some((segment) => {
+      const normalizedSegment = this.normalizeLocationText(segment);
+      if (!normalizedSegment) return false;
+      if (normalizedAssetRoom.includes(normalizedSegment)) return true;
+
+      const meaningfulTokens = this.getMeaningfulRoomTokens(segment);
+      return meaningfulTokens.length > 0 && meaningfulTokens.some((token) => normalizedAssetRoom.includes(token));
+    });
+  }
+
   private matchesAssetDetail(
     detail: Record<string, any>,
     detailId?: string | null,
@@ -182,6 +227,74 @@ export class AssetUsageService {
     if (normalized.includes('cukup') || normalized.includes('fair')) return 'Cukup';
     if (normalized.includes('poor') || normalized.includes('buruk') || normalized.includes('kurang')) return 'Cukup';
     return 'Baik';
+  }
+
+  private getDetailRoomText(detail?: Record<string, any> | null): string {
+    if (!detail) return '';
+    return [
+      detail.roomName,
+      detail.room_name,
+      detail.ruangan,
+      detail.lokasi,
+      detail.location,
+      detail.room?.name,
+      detail.room?.roomName
+    ]
+      .map((value) => this.normalizeDetailIdentifier(value))
+      .filter((value) => value && !/^\d+$/.test(value))
+      .join(' ');
+  }
+
+  private async validateUsageSubRoomAccess(data: CreateAssetUsageLogDTO): Promise<ApiResponse<AssetUsageLog> | null> {
+    const actorId = Number(data.createdBy);
+    if (!Number.isFinite(actorId) || actorId <= 0) {
+      return null;
+    }
+
+    const [userRows] = await pool.query<UsageActorRoomRow[]>(
+      'SELECT sub_work_unit FROM users WHERE id = ? LIMIT 1',
+      [actorId]
+    );
+    const actorSubRoom = this.normalizeDetailIdentifier(userRows[0]?.sub_work_unit);
+    if (!actorSubRoom) {
+      return {
+        success: false,
+        message: 'Sub ruangan akun belum diisi, sehingga alat penggunaan tidak dapat dipilih.'
+      };
+    }
+
+    const assetType = this.normalizeAssetType(data.assetType);
+    const assetResponse = await this.assetService.getById(String(data.assetId), assetType);
+    if (!assetResponse.success || !assetResponse.data) {
+      return { success: false, message: 'Data alat tidak ditemukan' };
+    }
+
+    const specifications = this.parseAssetSpecifications(assetResponse.data.specifications);
+    const details = Array.isArray(specifications.details) ? specifications.details : [];
+    const normalizedDetailId = this.normalizeDetailIdentifier(data.assetDetailId);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, data.assetId, assetType);
+    const selectedDetail =
+      normalizedDetailId && !isFallbackDetail
+        ? details.find((detail) => this.matchesAssetDetail(detail, data.assetDetailId, data.assetDetailCode, data.assetDetailName))
+        : null;
+    const assetRoomText = this.normalizeLocationText(
+      [
+        this.getDetailRoomText(selectedDetail),
+        (assetResponse.data as any).roomName,
+        assetResponse.data.location
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    if (!this.roomMatchesSubRoom(assetRoomText, actorSubRoom)) {
+      return {
+        success: false,
+        message: 'Alat hanya dapat digunakan oleh akun pada sub ruangan yang sama.'
+      };
+    }
+
+    return null;
   }
 
   private normalizeAssetCondition(value?: string | null): 'good' | 'fair' | 'poor' | 'damaged' | null {
@@ -691,6 +804,9 @@ export class AssetUsageService {
     if (endedAt && new Date(endedAt).getTime() < new Date(startedAt).getTime()) {
       return { success: false, message: 'Waktu selesai tidak boleh lebih awal dari waktu mulai' };
     }
+
+    const subRoomValidation = await this.validateUsageSubRoomAccess(data);
+    if (subRoomValidation) return subRoomValidation;
 
     const generatedNo = data.no || generateUsageNumber(data.startedAt);
 
