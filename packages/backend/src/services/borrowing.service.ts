@@ -224,23 +224,26 @@ export class BorrowingService {
 
     if (!actorId) return;
 
-    const usageResponse = await this.assetUsageService.create({
-      borrowingId: borrowingId || undefined,
-      assetId,
-      assetType: assetType as any,
-      assetDetailId: detailId || undefined,
-      assetDetailName: data.assetDetailName || undefined,
-      assetDetailCode: data.assetDetailCode || undefined,
-      assetLocation: data.assetLocation || undefined,
-      roomName,
-      operatorUserId: data.operatorUserId || undefined,
-      usageContext: 'other',
-      startedAt,
-      usageCount: data.usageCount && data.usageCount > 0 ? data.usageCount : 1,
-      conditionBefore: conditionBefore || undefined,
-      notes: data.notes || undefined,
-      createdBy: actorId
-    });
+    const usageResponse = await this.assetUsageService.create(
+      {
+        borrowingId: borrowingId || undefined,
+        assetId,
+        assetType: assetType as any,
+        assetDetailId: detailId || undefined,
+        assetDetailName: data.assetDetailName || undefined,
+        assetDetailCode: data.assetDetailCode || undefined,
+        assetLocation: data.assetLocation || undefined,
+        roomName,
+        operatorUserId: data.operatorUserId || undefined,
+        usageContext: 'other',
+        startedAt,
+        usageCount: data.usageCount && data.usageCount > 0 ? data.usageCount : 1,
+        conditionBefore: conditionBefore || undefined,
+        notes: data.notes || undefined,
+        createdBy: actorId
+      },
+      { skipSubRoomValidation: true }
+    );
 
     if (!usageResponse.success) {
       throw new Error(usageResponse.message || 'Gagal membuat riwayat penggunaan alat');

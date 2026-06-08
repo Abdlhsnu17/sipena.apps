@@ -124,6 +124,9 @@ export class BorrowingController {
       if (!payload.destinationRoom && payload.room) {
         payload.destinationRoom = payload.room;
       }
+      if (!payload.destinationRoom && payload.purpose) {
+        payload.destinationRoom = payload.purpose;
+      }
       if (!payload.borrowerWorkUnit && authUser?.workUnit) {
         payload.borrowerWorkUnit = authUser.workUnit;
       }
@@ -216,7 +219,7 @@ export class BorrowingController {
         ownerPosition,
         ownerWorkUnit,
         purposeType,
-        destinationRoom: destinationRoom || room,
+        destinationRoom: destinationRoom || room || effectivePurpose,
         loanDurationValue,
         loanDurationUnit,
         quantity,

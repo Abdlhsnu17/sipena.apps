@@ -166,6 +166,7 @@ const buildClientFallbackRanking = async (
       detailId: item.detailId,
       detailName: item.detailName,
       detailCode: item.detailCode,
+      serialNumber: item.serialNumber,
       detailType: item.detailType,
       conditionLabel: item.conditionLabel || item.condition,
       statusLabel: item.statusLabel || item.availability,
@@ -296,6 +297,7 @@ export default function DssPage() {
     return rankings.filter((item) => [
       item.detailName,
       item.detailCode,
+      item.serialNumber,
       item.assetName,
       item.assetCode,
       item.assetLocation,
@@ -448,7 +450,7 @@ export default function DssPage() {
                     <Badge className="w-fit bg-slate-950 text-white">#{item.rank}</Badge>
                     <div className="min-w-0">
                       <div className="line-clamp-1 text-sm font-semibold text-slate-950">{item.detailName}</div>
-                      <div className="mt-0.5 text-xs leading-5 text-slate-500">{item.detailCode} · {item.assetLocation || item.assetName}</div>
+                      <div className="mt-0.5 text-xs leading-5 text-slate-500">{item.detailCode} · {item.serialNumber || "-"}</div>
                     </div>
                     <Badge variant="outline" className={cn("w-fit justify-self-start sm:justify-self-end", recommendationClassName(item.recommendation))}>
                       {item.recommendation}
@@ -535,7 +537,7 @@ export default function DssPage() {
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Cari aset, kode, ruangan"
+                placeholder="Cari aset, kode, nomor seri"
                 className="pl-9"
               />
             </div>
@@ -573,7 +575,7 @@ export default function DssPage() {
                         <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{item.rank}</td>
                         <td className="px-3 py-2.5 align-top">
                           <div className="font-semibold text-slate-950">{item.detailName}</div>
-                          <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.assetName}</div>
+                          <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.serialNumber || "-"}</div>
                         </td>
                         <td className="px-3 py-2.5 align-top text-slate-700">{item.assetLocation || "-"}</td>
                         <td className="px-3 py-2.5 align-top">

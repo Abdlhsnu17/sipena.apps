@@ -239,4 +239,65 @@ describe('AssetUsageService usage completion status sync', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('skips sub-room validation for usage logs generated from borrowing', async () => {
+    const validateSpy = jest.spyOn(service as any, 'validateUsageSubRoomAccess');
+    jest.spyOn(service as any, 'markAssetDetailInUse').mockResolvedValue(undefined);
+    jest.spyOn(service, 'getById').mockResolvedValue({
+      success: true,
+      message: 'Asset usage log retrieved successfully',
+      data: {
+        id: 11,
+        borrowingId: 42,
+        assetId: 12,
+        assetType: 'medical',
+        roomName: 'IGD Lt 4',
+        usageContext: 'other',
+        startedAt: new Date('2026-05-23T09:00:00'),
+        usageCount: 1,
+        createdBy: 5,
+      },
+    });
+    mockedQuery.mockResolvedValueOnce([{ insertId: 11 }]);
+
+    const result = await service.create(
+      {
+        borrowingId: 42,
+        assetId: 12,
+        assetType: 'medical',
+        roomName: 'IGD Lt 4',
+        operatorUserId: 5,
+        usageContext: 'other',
+        startedAt: '2026-05-23 09:00:00',
+        createdBy: 5,
+      },
+      { skipSubRoomValidation: true }
+    );
+
+    expect(result.success).toBe(true);
+    expect(validateSpy).not.toHaveBeenCalled();
+    expect(mockedQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO asset_usage_logs'),
+      expect.arrayContaining([42, 12, 'medical', 'IGD Lt 4'])
+    );
+  });
+
+  it('still applies sub-room validation for manually created usage logs', async () => {
+    jest.spyOn(service as any, 'validateUsageSubRoomAccess').mockResolvedValue({
+      success: false,
+      message: 'Sub ruangan akun belum diisi, sehingga alat penggunaan tidak dapat dipilih.',
+    });
+
+    const result = await service.create({
+      assetId: 12,
+      assetType: 'medical',
+      roomName: 'IGD Lt 4',
+      startedAt: '2026-05-23 09:00:00',
+      createdBy: 5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Sub ruangan');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
 });

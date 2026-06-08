@@ -22,6 +22,7 @@ export interface DssAssetRanking {
   detailId: string;
   detailName: string;
   detailCode: string;
+  serialNumber?: string | null;
   detailType?: string | null;
   conditionLabel: string;
   statusLabel: string;
@@ -126,6 +127,7 @@ type DetailAlternative = {
   detailId: string;
   detailName: string;
   detailCode: string;
+  serialNumber?: string | null;
   detailType?: string | null;
   conditionLabel: string;
   statusLabel: string;
@@ -361,6 +363,7 @@ export class DssService {
         const detailId = String(detail.id || detail.detailId || detail.assetDetailId || detail.assetCode || `${asset.id}-detail-${index}`);
         const detailCode = String(detail.assetCode || detail.detailCode || asset.asset_code);
         const detailName = String(detail.inventoryName || detail.name || asset.name);
+        const serialNumber = detail.serialNumber ? String(detail.serialNumber) : null;
         const conditionLabel = String(detail.condition || asset.condition || 'Baik');
         const statusLabel = String(detail.status || asset.status || 'Aktif');
         const purchaseDate = normalizeDate(detail.purchaseDate || asset.purchase_date);
@@ -385,6 +388,7 @@ export class DssService {
           detailId,
           detailName,
           detailCode,
+          serialNumber,
           detailType: detail.type || null,
           conditionLabel,
           statusLabel,

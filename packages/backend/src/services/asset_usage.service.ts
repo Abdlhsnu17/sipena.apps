@@ -54,6 +54,10 @@ type UsageSyncOptions = {
   endedAt?: string | Date | null;
 };
 
+type CreateAssetUsageOptions = {
+  skipSubRoomValidation?: boolean;
+};
+
 const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(String(value));
@@ -456,23 +460,26 @@ export class AssetUsageService {
         row.asset_detail_code || null
       );
 
-      await this.create({
-        borrowingId: row.id,
-        assetId,
-        assetType,
-        assetDetailId: detailId || undefined,
-        assetDetailName: row.asset_detail_name || undefined,
-        assetDetailCode: row.asset_detail_code || undefined,
-        assetLocation: row.asset_location || undefined,
-        roomName: row.destination_room || row.asset_location || '-',
-        operatorUserId: row.user_id,
-        usageContext: 'other',
-        startedAt: row.borrow_date,
-        usageCount: row.quantity && row.quantity > 0 ? row.quantity : 1,
-        conditionBefore: conditionBefore || undefined,
-        notes: row.notes || undefined,
-        createdBy: row.user_id
-      });
+      await this.create(
+        {
+          borrowingId: row.id,
+          assetId,
+          assetType,
+          assetDetailId: detailId || undefined,
+          assetDetailName: row.asset_detail_name || undefined,
+          assetDetailCode: row.asset_detail_code || undefined,
+          assetLocation: row.asset_location || undefined,
+          roomName: row.destination_room || row.asset_location || '-',
+          operatorUserId: row.user_id,
+          usageContext: 'other',
+          startedAt: row.borrow_date,
+          usageCount: row.quantity && row.quantity > 0 ? row.quantity : 1,
+          conditionBefore: conditionBefore || undefined,
+          notes: row.notes || undefined,
+          createdBy: row.user_id
+        },
+        { skipSubRoomValidation: true }
+      );
     }
   }
 
@@ -795,7 +802,7 @@ export class AssetUsageService {
     return { success: true, message: 'Asset usage log retrieved successfully', data: mapUsageRow(rows[0]) };
   }
 
-  async create(data: CreateAssetUsageLogDTO): Promise<ApiResponse<AssetUsageLog>> {
+  async create(data: CreateAssetUsageLogDTO, options: CreateAssetUsageOptions = {}): Promise<ApiResponse<AssetUsageLog>> {
     const startedAt = formatDateTimeForMySQL(data.startedAt);
     const endedAt = formatDateTimeForMySQL(data.endedAt);
     if (!startedAt) {
@@ -805,8 +812,10 @@ export class AssetUsageService {
       return { success: false, message: 'Waktu selesai tidak boleh lebih awal dari waktu mulai' };
     }
 
-    const subRoomValidation = await this.validateUsageSubRoomAccess(data);
-    if (subRoomValidation) return subRoomValidation;
+    if (!options.skipSubRoomValidation) {
+      const subRoomValidation = await this.validateUsageSubRoomAccess(data);
+      if (subRoomValidation) return subRoomValidation;
+    }
 
     const generatedNo = data.no || generateUsageNumber(data.startedAt);
 

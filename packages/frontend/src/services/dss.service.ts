@@ -21,6 +21,7 @@ export interface DssAssetRanking {
   detailId: string;
   detailName: string;
   detailCode: string;
+  serialNumber?: string | null;
   detailType?: string | null;
   conditionLabel: string;
   statusLabel: string;
