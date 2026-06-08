@@ -94,7 +94,7 @@ const borrowingStatusOptions: FilterOption[] = [
 ]
 
 const maintenanceStatusOptions: FilterOption[] = [
-  { value: "requested", label: "Request" },
+  { value: "requested", label: "Diminta" },
   { value: "scheduled", label: "Terjadwal" },
   { value: "in_progress", label: "Proses" },
   { value: "completed", label: "Selesai" },
@@ -107,10 +107,10 @@ const assetTypeOptions: FilterOption[] = [
 ]
 
 const maintenanceTypeOptions: FilterOption[] = [
-  { value: "preventive", label: "Preventive" },
-  { value: "corrective", label: "Corrective" },
-  { value: "calibration", label: "Calibration" },
-  { value: "inspection", label: "Inspection" },
+  { value: "preventive", label: "Rutin" },
+  { value: "corrective", label: "Perbaikan" },
+  { value: "calibration", label: "Kalibrasi" },
+  { value: "inspection", label: "Inspeksi" },
 ]
 
 const usageContextOptions: FilterOption[] = [

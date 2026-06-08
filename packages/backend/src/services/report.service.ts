@@ -151,23 +151,253 @@ const formatCellValue = (value: unknown): string | number | Date => {
   return value as string | number;
 };
 
+const exportColumnLabels: Record<string, string> = {
+  id: 'ID',
+  asset_code: 'Kode Aset',
+  asset_name: 'Nama Aset',
+  asset_detail_name: 'Nama Detail Aset',
+  asset_detail_code: 'Kode Detail Aset',
+  name: 'Nama',
+  category: 'Kategori',
+  type: 'Jenis',
+  asset_type: 'Jenis Aset',
+  status: 'Status',
+  usage_context: 'Konteks Penggunaan',
+  room_name: 'Nama Ruangan',
+  operator_name: 'Nama Operator',
+  operator_nip: 'NIP Operator',
+  started_at: 'Waktu Mulai',
+  ended_at: 'Waktu Selesai',
+  usage_count: 'Jumlah Penggunaan',
+  user_id: 'ID Pengguna',
+  user_name: 'Nama Pengguna',
+  user_nip: 'NIP Pengguna',
+  feature: 'Fitur',
+  action: 'Aksi',
+  description: 'Keterangan',
+  condition_before: 'Kondisi Sebelum',
+  condition_after: 'Kondisi Sesudah',
+  condition: 'Kondisi',
+  location: 'Lokasi',
+  nip: 'NIP',
+  borrow_date: 'Tanggal Pinjam',
+  due_date: 'Tanggal Jatuh Tempo',
+  return_date: 'Tanggal Kembali',
+  scheduled_date: 'Tanggal Terjadwal',
+  completed_date: 'Tanggal Selesai',
+  technician: 'Teknisi',
+  cost: 'Biaya',
+  purchase_date: 'Tanggal Pembelian',
+  purchase_price: 'Harga Pembelian',
+  warranty_expiry: 'Akhir Garansi',
+  specifications: 'Spesifikasi',
+  image_url: 'URL Gambar',
+  total_borrowings: 'Total Peminjaman',
+  total_maintenance: 'Total Pemeliharaan',
+  created_at: 'Dibuat Pada',
+  updated_at: 'Diperbarui Pada',
+  borrowing_code: 'Kode Peminjaman',
+  maintenance_code: 'Kode Pemeliharaan',
+  asset_location: 'Lokasi Aset',
+  asset_id: 'ID Aset',
+  asset_detail_id: 'ID Detail Aset',
+  no: 'Nomor',
+  borrowing_id: 'ID Peminjaman',
+  borrower_position: 'Jabatan Peminjam',
+  borrower_work_unit: 'Unit Kerja Peminjam',
+  owner_name: 'Nama Pemilik',
+  owner_position: 'Jabatan Pemilik',
+  owner_work_unit: 'Unit Kerja Pemilik',
+  purpose: 'Tujuan',
+  purpose_type: 'Jenis Tujuan',
+  destination_room: 'Ruangan Tujuan',
+  loan_duration_value: 'Durasi Pinjam',
+  loan_duration_unit: 'Satuan Durasi',
+  quantity: 'Jumlah',
+  approved_by: 'Disetujui Oleh',
+  approved_at: 'Disetujui Pada',
+  rejected_by: 'Ditolak Oleh',
+  rejected_at: 'Ditolak Pada',
+  rejection_reason: 'Alasan Penolakan',
+  return_condition: 'Kondisi Pengembalian',
+  return_notes: 'Catatan Pengembalian',
+  return_validated_by: 'Validasi Pengembalian Oleh',
+  return_validated_at: 'Validasi Pengembalian Pada',
+  returned_by: 'Dikembalikan Oleh',
+  overdue_days: 'Hari Terlambat',
+  sanction_status: 'Status Sanksi',
+  sanction_notes: 'Catatan Sanksi',
+  sanction_applied_at: 'Sanksi Diterapkan Pada',
+  extension_count: 'Jumlah Perpanjangan',
+  last_extended_date: 'Tanggal Perpanjangan Terakhir',
+  extension_notes: 'Catatan Perpanjangan',
+  is_extension_blocked: 'Perpanjangan Diblokir',
+  schedule_id: 'ID Jadwal',
+  cancellation_reason: 'Alasan Pembatalan',
+  completed_by: 'Diselesaikan Oleh',
+  created_by: 'Dibuat Oleh',
+  created_by_name: 'Nama Pembuat',
+  operator_user_id: 'ID Operator',
+  metadata_json: 'Metadata',
+  resource_type: 'Jenis Sumber Daya',
+  resource_id: 'ID Sumber Daya',
+  old_values: 'Nilai Lama',
+  new_values: 'Nilai Baru',
+  ip_address: 'Alamat IP',
+  user_agent: 'Agen Pengguna',
+  label: 'Label',
+  value: 'Nilai',
+  filename: 'Nama File',
+  content_type: 'Jenis Konten',
+  contentType: 'Jenis Konten',
+  size_bytes: 'Ukuran File',
+  sizeBytes: 'Ukuran File',
+  uploaded_at: 'Diunggah Pada',
+  uploadedAt: 'Diunggah Pada',
+  stored_path: 'Jalur Tersimpan',
+  notes: 'Catatan',
+  downloadPath: 'Jalur Unduhan',
+};
+
+const exportValueLabels: Record<string, Record<string, string>> = {
+  type: {
+    medical: 'Medis',
+    non_medical: 'Non Medis',
+    preventive: 'Rutin',
+    corrective: 'Perbaikan',
+    calibration: 'Kalibrasi',
+    inspection: 'Inspeksi',
+  },
+  asset_type: {
+    medical: 'Medis',
+    non_medical: 'Non Medis',
+  },
+  usage_context: {
+    own_room: 'Ruangan Sendiri',
+    borrowed: 'Dipinjam',
+    loaned: 'Dipinjamkan',
+    maintenance: 'Pemeliharaan',
+  },
+  status: {
+    available: 'Tersedia',
+    borrowed: 'Dipinjam',
+    maintenance: 'Pemeliharaan',
+    disposed: 'Dihapus',
+    pending: 'Menunggu',
+    approved: 'Disetujui',
+    rejected: 'Ditolak',
+    overdue: 'Terlambat',
+    returned: 'Dikembalikan',
+    scheduled: 'Terjadwal',
+    in_progress: 'Dalam Proses',
+    completed: 'Selesai',
+    validated: 'Tervalidasi',
+    cancelled: 'Dibatalkan',
+    active: 'Aktif',
+    requested: 'Diminta',
+  },
+  condition: {
+    good: 'Baik',
+    fair: 'Cukup',
+    poor: 'Buruk',
+    damaged: 'Rusak',
+  },
+  condition_before: {
+    good: 'Baik',
+    fair: 'Cukup',
+    poor: 'Buruk',
+    damaged: 'Rusak',
+  },
+  condition_after: {
+    good: 'Baik',
+    fair: 'Cukup',
+    poor: 'Buruk',
+    damaged: 'Rusak',
+  },
+  return_condition: {
+    good: 'Baik',
+    fair: 'Cukup',
+    poor: 'Buruk',
+    damaged: 'Rusak',
+  },
+  sanction_status: {
+    none: 'Tidak Ada',
+    active: 'Aktif',
+    resolved: 'Selesai',
+  },
+  purpose_type: {
+    own_room: 'Ruangan Sendiri',
+    other_room: 'Ruangan Lain',
+    event: 'Kegiatan',
+    emergency: 'Darurat',
+  },
+  loan_duration_unit: {
+    hour: 'Jam',
+    hours: 'Jam',
+    day: 'Hari',
+    days: 'Hari',
+    week: 'Minggu',
+    weeks: 'Minggu',
+    month: 'Bulan',
+    months: 'Bulan',
+  },
+  is_extension_blocked: {
+    '0': 'Tidak',
+    '1': 'Ya',
+    'false': 'Tidak',
+    'true': 'Ya',
+  },
+  action: {
+    create: 'Tambah',
+    update: 'Ubah',
+    delete: 'Hapus',
+    upload: 'Unggah',
+    download: 'Unduh',
+    login: 'Masuk',
+    logout: 'Keluar',
+    search: 'Cari',
+  },
+};
+
+const formatExportColumnLabel = (key: string): string =>
+  exportColumnLabels[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
+const formatExportValue = (key: string, value: unknown): string | number | Date => {
+  const valueMap = exportValueLabels[key];
+  if (valueMap && value !== null && value !== undefined && !(value instanceof Date)) {
+    const rawValue = String(value).trim();
+    if (valueMap[rawValue]) return valueMap[rawValue];
+  }
+
+  const formatted = formatCellValue(value);
+  if (formatted instanceof Date || typeof formatted === 'number') return formatted;
+  const normalized = String(formatted).trim();
+  return valueMap?.[normalized] ?? formatted;
+};
+
 const escapePdfText = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const formatPdfValue = (value: unknown): string => {
-  const formatted = formatCellValue(value);
+const formatPdfValue = (key: string, value: unknown): string => {
+  const formatted = formatExportValue(key, value);
   if (formatted instanceof Date) {
     return formatted.toLocaleString('id-ID');
   }
   return String(formatted).replace(/\s+/g, ' ').trim();
 };
 
+const formatFilterValue = (key: string, value?: string): string | null => {
+  if (!value) return null;
+  const formatted = formatExportValue(key, value);
+  return formatted instanceof Date ? formatted.toLocaleString('id-ID') : String(formatted);
+};
+
 const getFilterSummary = (filters: ReportFilters): string[] => [
   filters.startDate || filters.endDate ? `Periode: ${filters.startDate || 'awal'} s/d ${filters.endDate || 'akhir'}` : 'Periode: Semua data',
   filters.category ? `Kategori: ${filters.category}` : null,
-  filters.type ? `Jenis: ${filters.type}` : null,
-  filters.status ? `Status: ${filters.status}` : null,
-  filters.userId ? `User ID: ${filters.userId}` : null,
+  filters.type ? `Jenis: ${formatFilterValue('type', filters.type)}` : null,
+  filters.status ? `${normalizeExportType(filters.reportType) === 'usage' ? 'Konteks' : 'Status'}: ${formatFilterValue(normalizeExportType(filters.reportType) === 'usage' ? 'usage_context' : 'status', filters.status)}` : null,
+  filters.userId ? `ID Pengguna: ${filters.userId}` : null,
 ].filter((item): item is string => Boolean(item));
 
 const wrapText = (value: string, width: number): string[] => {
@@ -966,9 +1196,6 @@ export class ReportService {
     let operations: string[] = [];
     let y = pageHeight - margin;
 
-    const formatColumnLabel = (key: string): string =>
-      key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-
     const addPage = () => {
       operations = [];
       pages.push(operations);
@@ -1086,8 +1313,8 @@ export class ReportService {
           const rightKey = columns[columnIndex + 1];
           const cellGap = 8;
           const cellWidth = (contentWidth - cellGap) / 2;
-          const leftValue = formatPdfValue(row[leftKey]) || '-';
-          const rightValue = rightKey ? formatPdfValue(row[rightKey]) || '-' : '';
+          const leftValue = formatPdfValue(leftKey, row[leftKey]) || '-';
+          const rightValue = rightKey ? formatPdfValue(rightKey, row[rightKey]) || '-' : '';
           const leftLines = wrapPdfText(leftValue, cellWidth - 16, 8.5).length;
           const rightLines = rightKey ? wrapPdfText(rightValue, cellWidth - 16, 8.5).length : 1;
           const rowHeight = Math.max(42, 30 + Math.max(leftLines, rightLines) * 10);
@@ -1097,9 +1324,9 @@ export class ReportService {
             drawRecordHeader(`Data ${rowIndex + 1} (lanjutan)`);
           }
 
-          drawCell(margin, y, cellWidth, rowHeight, formatColumnLabel(leftKey), leftValue);
+          drawCell(margin, y, cellWidth, rowHeight, formatExportColumnLabel(leftKey), leftValue);
           if (rightKey) {
-            drawCell(margin + cellWidth + cellGap, y, cellWidth, rowHeight, formatColumnLabel(rightKey), rightValue);
+            drawCell(margin + cellWidth + cellGap, y, cellWidth, rowHeight, formatExportColumnLabel(rightKey), rightValue);
           } else {
             addRect(margin + cellWidth + cellGap, y - rowHeight, cellWidth, rowHeight, '#d7dee8', '#ffffff');
           }
@@ -1156,14 +1383,14 @@ export class ReportService {
       const columns = sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType);
 
       worksheet.columns = columns.map((key) => ({
-        header: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+        header: formatExportColumnLabel(key),
         key,
         width: Math.min(42, Math.max(14, key.length + 8)),
       }));
 
       sheet.rows.forEach((row) => {
         worksheet.addRow(columns.reduce<Record<string, string | number | Date>>((acc, key) => {
-          acc[key] = formatCellValue(row[key]);
+          acc[key] = formatExportValue(key, row[key]);
           return acc;
         }, {}));
       });
