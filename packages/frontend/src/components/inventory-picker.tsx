@@ -51,7 +51,7 @@ export function InventoryPicker<T>({
   placeholder = 'Cari inventaris...',
   buttonLabel = 'Pilih inventaris',
   buttonClassName,
-  popoverClassName = 'w-[min(92vw,680px)] p-0 sm:w-[var(--radix-popover-trigger-width)] sm:min-w-[320px] sm:max-w-[min(92vw,680px)]',
+  popoverClassName = 'max-h-[min(420px,calc(100vh-8rem))] w-[min(92vw,680px)] overflow-hidden p-0 sm:w-[var(--radix-popover-trigger-width)] sm:min-w-[320px] sm:max-w-[min(92vw,680px)]',
   listClassName,
   noResultsLabel = 'Tidak ada inventaris tersedia',
   searchValue,
@@ -220,8 +220,14 @@ export function InventoryPicker<T>({
           </span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={8} collisionPadding={12} className={popoverClassName}>
-        <Command className="max-h-115" shouldFilter={false}>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={8}
+        avoidCollisions={false}
+        className={popoverClassName}
+      >
+        <Command className="max-h-[min(420px,calc(100vh-8rem))]" shouldFilter={false}>
           <CommandInput
             ref={inputRef}
             placeholder={placeholder}
@@ -265,7 +271,7 @@ export function InventoryPicker<T>({
               </button>
             </div>
           )}
-          <CommandList className={`space-y-1 border-none bg-transparent px-2 pb-2 pt-1 max-h-85 ${listClassName ?? ''}`}>
+          <CommandList className={`max-h-[min(300px,calc(100vh-15rem))] space-y-1 border-none bg-transparent px-2 pb-2 pt-1 ${listClassName ?? ''}`}>
             {filteredAssets.map((asset, index) => {
               const searchText = matchValue(asset)
               return (
