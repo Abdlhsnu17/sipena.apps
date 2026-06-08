@@ -440,6 +440,31 @@ const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintena
   return 'assets';
 };
 
+const sanitizeExcelWorksheetName = (value: string): string => {
+  const sanitized = value
+    .replace(/[*?:\\/\[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^'+|'+$/g, '');
+
+  return (sanitized || 'Sheet').slice(0, 31);
+};
+
+const createUniqueExcelWorksheetName = (title: string, usedNames: Set<string>): string => {
+  const base = sanitizeExcelWorksheetName(title);
+  let candidate = base;
+  let index = 2;
+
+  while (usedNames.has(candidate.toLowerCase())) {
+    const suffix = ` (${index})`;
+    candidate = `${base.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+    index += 1;
+  }
+
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+};
+
 const toPositiveNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -473,6 +498,9 @@ const getTextValue = (...values: unknown[]): string | null => {
   }
   return null;
 };
+
+const getAssetRoomName = (row: Record<string, unknown>): string =>
+  getTextValue(row.location, row.room_name, row.asset_location) ?? 'Tanpa Ruangan';
 
 const isNumericText = (value: unknown): boolean => /^\d+$/.test(String(value ?? '').trim());
 
@@ -1152,6 +1180,10 @@ export class ReportService {
     const reportType = normalizeExportType(filters.reportType);
     if (reportType !== 'all') {
       const rows = await this.getExportRows(filters);
+      if (reportType === 'assets') {
+        return this.getAssetRoomExportSheets(rows as Record<string, unknown>[]);
+      }
+
       return [
         {
           title: this.getExportTitle(filters.reportType),
@@ -1173,11 +1205,7 @@ export class ReportService {
 
     return [
       { title: 'Ringkasan', rows: summaryRows, columns: ['label', 'value'] },
-      {
-        title: 'Aset',
-        rows: ((assetResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
-        columns: this.getExportColumns((assetResult.data ?? []) as RowDataPacket[], 'assets'),
-      },
+      ...this.getAssetRoomExportSheets(((assetResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[]),
       {
         title: 'Peminjaman',
         rows: ((borrowingResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
@@ -1204,6 +1232,30 @@ export class ReportService {
         columns: ['id', 'filename', 'contentType', 'sizeBytes', 'uploadedAt', 'notes', 'downloadPath'],
       },
     ];
+  }
+
+  private getAssetRoomExportSheets(rows: Record<string, unknown>[]): ExportSheet[] {
+    const columns = this.getExportColumns(rows as RowDataPacket[], 'assets');
+
+    if (rows.length === 0) {
+      return [{ title: 'Aset', rows, columns }];
+    }
+
+    const groupedRows = rows.reduce<Map<string, Record<string, unknown>[]>>((acc, row) => {
+      const roomName = getAssetRoomName(row);
+      const existing = acc.get(roomName) ?? [];
+      existing.push(row);
+      acc.set(roomName, existing);
+      return acc;
+    }, new Map());
+
+    return Array.from(groupedRows.entries())
+      .sort(([left], [right]) => left.localeCompare(right, 'id-ID', { sensitivity: 'base' }))
+      .map(([roomName, roomRows]) => ({
+        title: roomName,
+        rows: roomRows,
+        columns,
+      }));
   }
 
   private async getExportRows(filters: ReportFilters): Promise<RowDataPacket[]> {
@@ -1508,8 +1560,10 @@ export class ReportService {
   async exportToExcel(filters: ReportFilters): Promise<Buffer> {
     const sheets = await this.getExportSheets(filters);
     const workbook = new ExcelJS.Workbook();
+    const usedWorksheetNames = new Set<string>();
+
     sheets.forEach((sheet) => {
-      const worksheet = workbook.addWorksheet(sheet.title.slice(0, 31));
+      const worksheet = workbook.addWorksheet(createUniqueExcelWorksheetName(sheet.title, usedWorksheetNames));
       const columns = sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType);
 
       worksheet.columns = columns.map((key) => ({
