@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
+import { assetUsageService } from "@/services/asset-usage.service";
 import {
     assetSourceLabel,
     borrowingStatusLabel,
@@ -32,7 +33,7 @@ type NotificationItem = {
   subtitle: string
   description?: string
   href?: string
-  category: "schedule" | "maintenance" | "borrowing" | "returns"
+  category: "schedule" | "maintenance" | "borrowing" | "returns" | "usage"
   assetName: string
   assetCode: string
   recordNoId: string
@@ -46,6 +47,7 @@ const categoryLabelByKey: Record<NotificationItem["category"], string> = {
   maintenance: "Pemeliharaan Sarana",
   borrowing: "Peminjaman",
   returns: "Pengembalian",
+  usage: "Penggunaan Alat",
 }
 
 const getIdentityLabel = (name?: string, nip?: string) => {
@@ -169,9 +171,10 @@ export default function Topbar() {
       setIsCheckingNotifications(true)
 
       try {
-        const [maintenanceResponse, borrowingResponse] = await Promise.all([
+        const [maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
           maintenanceService.getAll({ page: 1, limit: 20 }),
           borrowingService.getAll({ page: 1, limit: 20 }),
+          assetUsageService.getAll({ page: 1, limit: 20 }),
         ])
 
         if (!isMounted) return
@@ -314,6 +317,34 @@ export default function Topbar() {
             identity: getIdentityLabel(focusBorrowing.userName, focusBorrowing.userNip),
             sourceLabel,
             roomLabel: focusBorrowing.assetLocation || focusBorrowing.purpose || "-",
+          })
+        }
+
+        const activeUsages = (usageResponse.data || []).filter((item) => !item.endedAt)
+        if (activeUsages.length > 0) {
+          const latestUsage = activeUsages[0]
+          const assetLabel = latestUsage.assetDetailName || latestUsage.assetName || "Aset penggunaan"
+          const assetCode = latestUsage.assetDetailCode || latestUsage.assetCode || "-"
+          const sourceLabel = assetSourceLabel(
+            deriveAssetSource(latestUsage.assetType, latestUsage.assetDetailCode || latestUsage.assetCode),
+          )
+          const operator = latestUsage.operatorName || latestUsage.operatorNip || latestUsage.createdByName || "Operator"
+          const startedLabel = latestUsage.startedAt
+            ? `Mulai: ${formatDateId(latestUsage.startedAt)}`
+            : "Waktu mulai belum dicatat"
+          nextNotifications.push({
+            id: "asset-usage-active",
+            category: "usage",
+            title: `${activeUsages.length} alat sedang dalam penggunaan`,
+            subtitle: `Penggunaan aktif • ${startedLabel}`,
+            description: `${assetLabel} • ${operator}`,
+            href: "/asset-usage",
+            assetName: assetLabel,
+            assetCode,
+            recordNoId: latestUsage.no || formatNoId("PG", latestUsage.id),
+            identity: getIdentityLabel(latestUsage.operatorName || latestUsage.createdByName, latestUsage.operatorNip),
+            sourceLabel,
+            roomLabel: latestUsage.roomName || latestUsage.assetLocation || "-",
           })
         }
 

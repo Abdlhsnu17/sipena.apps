@@ -5,7 +5,7 @@ import InventoryPicker from "@/components/inventory-picker";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
-import { borrowingService } from "@/services/borrowing.service";
+import { borrowingService, type Borrowing } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
@@ -338,6 +338,7 @@ export default function AssetUsagePage() {
   const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set());
   const [activeMaintenanceLocks, setActiveMaintenanceLocks] = useState<Set<string>>(new Set());
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set());
+  const [overdueBorrowings, setOverdueBorrowings] = useState<Borrowing[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
@@ -443,8 +444,10 @@ export default function AssetUsagePage() {
           nextBorrowingLocks.add(getInventoryLockKey(assetType, assetId));
         });
         setActiveBorrowingLocks(nextBorrowingLocks);
+        setOverdueBorrowings(borrowingResponse.data.filter((r) => r.status === "overdue"));
       } else {
         setActiveBorrowingLocks(new Set());
+        setOverdueBorrowings([]);
       }
     } catch (error) {
       console.error("Error loading asset usage:", error);
@@ -513,6 +516,20 @@ export default function AssetUsagePage() {
   const noSelectableAssetMessage = currentUser?.subWorkUnit?.trim()
     ? "Tidak ada alat tersedia pada sub ruangan akun ini."
     : "Sub ruangan akun belum diisi, sehingga alat penggunaan tidak dapat dipilih.";
+
+  const overdueEmergencyWarning = useMemo(() => {
+    if (!selectedAsset || form.usageContext !== "emergency") return null;
+    const assetId = selectedAsset.assetId;
+    const assetType = selectedAsset.assetType === "non_medical" ? "non_medical" : "medical";
+    const overdue = overdueBorrowings.find(
+      (b) => b.assetId === assetId && (b.assetType ?? "medical") === assetType
+    );
+    if (!overdue) return null;
+    const actorRole = currentUser?.role;
+    const isAllowed =
+      actorRole === "admin" || actorRole === "leader";
+    return { overdue, isAllowed };
+  }, [selectedAsset, form.usageContext, overdueBorrowings, currentUser]);
 
   useEffect(() => {
     if (!form.inventoryKey) return;
@@ -1050,8 +1067,27 @@ export default function AssetUsagePage() {
                   </div>
                 </div>
 
+                {overdueEmergencyWarning && (
+                  <div className={`rounded-xl border px-4 py-3 text-sm ${overdueEmergencyWarning.isAllowed ? "border-amber-200 bg-amber-50 text-amber-800" : "border-red-200 bg-red-50 text-red-800"}`}>
+                    <p className="font-semibold">
+                      {overdueEmergencyWarning.isAllowed
+                        ? "Peringatan: Alat melewati batas waktu peminjaman"
+                        : "Tidak Diizinkan: Alat melewati batas waktu peminjaman"}
+                    </p>
+                    <p className="mt-0.5">
+                      {overdueEmergencyWarning.isAllowed
+                        ? "Penggunaan darurat pada alat overdue diizinkan karena Anda memiliki akses admin/leader."
+                        : "Penggunaan darurat pada alat yang melebihi batas waktu peminjaman hanya dapat dilakukan oleh admin, leader, atau pengguna dengan role yang sama dengan peminjam asal."}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-3 flex justify-end">
-                  <Button className="w-full md:w-48 bg-teal-600 hover:bg-teal-700 text-white" onClick={handleSubmit} disabled={isSaving || isLoading}>
+                  <Button
+                    className="w-full md:w-48 bg-teal-600 hover:bg-teal-700 text-white"
+                    onClick={handleSubmit}
+                    disabled={isSaving || isLoading || (overdueEmergencyWarning !== null && !overdueEmergencyWarning.isAllowed)}
+                  >
                     <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
                   </Button>
                 </div>

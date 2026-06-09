@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -187,59 +186,87 @@ export default function DisposalPage() {
             ) : (
               <div className="space-y-3">
                 {filtered.map((record) => (
-                  <Card key={record.id}>
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {record.requestCode && (
-                              <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                {record.requestCode}
-                              </span>
-                            )}
-                            <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
-                            <Badge variant="outline">{assetTypeLabel[record.assetType] ?? record.assetType}</Badge>
-                          </div>
-                          <p className="font-semibold">{record.assetDetailName ?? `Aset #${record.assetId}`}</p>
+                  <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[13px] font-semibold text-slate-700">
+                          {record.requesterName}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">NIP: {record.requesterNip}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 shrink-0">
+                        <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
+                        <Badge variant="outline" className="text-[11px]">
+                          {assetTypeLabel[record.assetType] ?? record.assetType}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Main content */}
+                    <div className="space-y-2.5 bg-white px-3 py-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {record.assetDetailName ?? `Aset #${record.assetId}`}
+                          </p>
                           {record.assetDetailCode && (
-                            <p className="text-xs text-muted-foreground">Kode: {record.assetDetailCode}</p>
+                            <p className="text-[12px] font-medium text-slate-700">{record.assetDetailCode}</p>
                           )}
-                          <p className="text-sm">
-                            <span className="text-muted-foreground">Pengaju: </span>
-                            {record.requesterName} ({record.requesterNip})
-                          </p>
-                          <p className="text-sm">
-                            <span className="text-muted-foreground">Alasan: </span>
-                            {record.reason}
-                          </p>
-                          {record.conditionNotes && (
-                            <p className="text-xs text-muted-foreground italic">{record.conditionNotes}</p>
-                          )}
-                          {record.createdAt && (
-                            <p className="text-xs text-muted-foreground">
-                              Diajukan: {formatDayTimeLabel(record.createdAt)}
+                          <div className="mt-1.5 space-y-1">
+                            {record.requestCode && (
+                              <p className="text-[11px] text-muted-foreground">
+                                No Permintaan: <span className="font-mono font-medium text-slate-700">{record.requestCode}</span>
+                              </p>
+                            )}
+                            <p className="text-[11px] text-muted-foreground">
+                              Alasan: <span className="font-medium text-slate-700">{record.reason}</span>
                             </p>
-                          )}
-                          {record.reviewedAt && (
-                            <p className="text-xs text-muted-foreground">
-                              Ditinjau oleh {record.reviewerName ?? "admin"} pada {formatDayTimeLabel(record.reviewedAt)}
-                              {record.reviewNotes && ` — ${record.reviewNotes}`}
-                            </p>
-                          )}
+                            {record.conditionNotes && (
+                              <p className="text-[11px] text-muted-foreground italic">{record.conditionNotes}</p>
+                            )}
+                            {record.reviewedAt && (
+                              <p className="text-[11px] text-muted-foreground">
+                                Ditinjau oleh {record.reviewerName ?? "admin"} pada {formatDayTimeLabel(record.reviewedAt)}
+                                {record.reviewNotes && ` — ${record.reviewNotes}`}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        {record.status === "pending" && (
-                          <div className="flex gap-2 shrink-0">
-                            <Button size="sm" onClick={() => openReview(record, "approve")}>
-                              <CheckCircle className="h-4 w-4 mr-1" /> Setujui
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => openReview(record, "reject")}>
-                              <XCircle className="h-4 w-4 mr-1" /> Tolak
-                            </Button>
+                        {record.createdAt && (
+                          <div className="flex flex-col items-start gap-0.5 sm:items-end sm:text-right shrink-0">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground">Diajukan</span>
+                            <span className="text-[13px] font-semibold text-foreground">
+                              {formatDayTimeLabel(record.createdAt)}
+                            </span>
                           </div>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    {/* Footer action buttons */}
+                    {record.status === "pending" && (
+                      <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => openReview(record, "approve")}
+                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" /> Setujui
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openReview(record, "reject")}
+                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" /> Tolak
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 <p className="text-xs text-muted-foreground text-right">
                   {filtered.length} dari {total} data

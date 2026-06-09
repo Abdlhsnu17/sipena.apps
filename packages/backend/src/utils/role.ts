@@ -26,3 +26,12 @@ export const canManageInventory = (role: string | null | undefined): boolean => 
 export const canManageBorrowing = (role: string | null | undefined): boolean => {
   return hasAnyRole(role, ['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user']);
 };
+
+export const canManageOverdueEmergencyUsage = (
+  actorRole: string | null | undefined,
+  borrowerRole: string | null | undefined
+): boolean => {
+  if (hasAnyRole(actorRole, ['admin', 'leader'])) return true;
+  if (!actorRole || !borrowerRole) return false;
+  return normalizeRole(actorRole) === normalizeRole(borrowerRole);
+};

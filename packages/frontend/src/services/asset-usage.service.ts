@@ -5,6 +5,7 @@ export type AssetUsageContext = "own_room" | "same_unit_cross_room" | "cross_roo
 
 export interface AssetUsageLog {
   id: number;
+  no?: string;
   borrowingId?: number;
   assetId: number;
   assetType: "medical" | "non_medical";
@@ -82,6 +83,7 @@ export type UpdateAssetUsageData = Partial<Omit<CreateAssetUsageData, "assetId" 
 
 const normalizeUsage = (usage: any): AssetUsageLog => ({
   id: usage.id,
+  no: usage.no,
   borrowingId: usage.borrowingId ?? usage.borrowing_id,
   assetId: usage.assetId ?? usage.asset_id,
   assetType: usage.assetType ?? usage.asset_type,

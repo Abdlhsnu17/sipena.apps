@@ -50,6 +50,7 @@ export interface CreateAssetUsageLogDTO {
   conditionAfter?: string;
   notes?: string;
   createdBy: number;
+  actorRole?: string;
 }
 
 export interface UpdateAssetUsageLogDTO {

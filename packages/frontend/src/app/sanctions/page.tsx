@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -229,66 +229,88 @@ export default function SanctionsPage() {
             ) : (
               <div className="space-y-3">
                 {filteredRecords.map((record) => (
-                  <Card key={record.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold truncate">{record.userName}</span>
-                            <span className="text-muted-foreground text-xs">NIP: {record.userNip}</span>
-                            <Badge variant={sanctionStatusVariant[record.sanctionStatus]}>
-                              {sanctionStatusLabel[record.sanctionStatus]}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground">{record.assetName}</span>
-                            {record.assetCode && (
-                              <span className="ml-1 text-xs">({record.assetCode})</span>
+                  <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[13px] font-semibold text-slate-700">{record.userName}</span>
+                        <span className="text-[11px] text-muted-foreground">NIP: {record.userNip}</span>
+                      </div>
+                      <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="shrink-0">
+                        {sanctionStatusLabel[record.sanctionStatus]}
+                      </Badge>
+                    </div>
+
+                    {/* Main content */}
+                    <div className="space-y-2.5 bg-white px-3 py-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {record.assetName}
+                          </p>
+                          {record.assetCode && (
+                            <p className="text-[12px] font-medium text-slate-700">{record.assetCode}</p>
+                          )}
+                          <div className="mt-1.5 space-y-1">
+                            {record.borrowingCode && (
+                              <p className="text-[11px] text-muted-foreground">
+                                No Peminjaman: <span className="font-medium text-slate-700">{record.borrowingCode}</span>
+                              </p>
+                            )}
+                            {record.sanctionNotes && (
+                              <p className="text-[11px] text-muted-foreground italic">{record.sanctionNotes}</p>
+                            )}
+                            {record.resolvedAt && (
+                              <p className="text-[11px] text-green-600">
+                                Diselesaikan oleh {record.resolvedBy ?? "admin"} pada{" "}
+                                {formatDayTimeLabel(record.resolvedAt)}
+                                {record.resolvedNotes && ` — ${record.resolvedNotes}`}
+                              </p>
                             )}
                           </div>
-                          <div className="text-xs text-muted-foreground space-x-3">
-                            {record.borrowingCode && <span>No: {record.borrowingCode}</span>}
-                            {record.dueDate && (
-                              <span>Jatuh tempo: {formatDayTimeLabel(record.dueDate)}</span>
-                            )}
-                            <span className="text-red-500 font-medium">
+                        </div>
+                        <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right shrink-0">
+                          {record.dueDate && (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-semibold uppercase text-muted-foreground">Jatuh Tempo</span>
+                              <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(record.dueDate)}</span>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[12px] font-semibold text-red-500">
                               Terlambat {record.overdueDays} hari
                             </span>
                           </div>
-                          {record.sanctionNotes && (
-                            <p className="text-xs text-muted-foreground italic">{record.sanctionNotes}</p>
-                          )}
-                          {record.resolvedAt && (
-                            <p className="text-xs text-green-600">
-                              Diselesaikan oleh {record.resolvedBy ?? "admin"} pada{" "}
-                              {formatDayTimeLabel(record.resolvedAt)}
-                              {record.resolvedNotes && ` — ${record.resolvedNotes}`}
-                            </p>
-                          )}
                         </div>
-                        {record.sanctionStatus === "active" && (
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => openResolve(record, "resolve")}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Selesaikan
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openResolve(record, "waive")}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Bebaskan
-                            </Button>
-                          </div>
-                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    {/* Footer action buttons */}
+                    {record.sanctionStatus === "active" && (
+                      <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => openResolve(record, "resolve")}
+                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Selesaikan
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openResolve(record, "waive")}
+                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Bebaskan
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 <p className="text-xs text-muted-foreground text-right">
                   {filteredRecords.length} dari {totalCount} data

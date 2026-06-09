@@ -80,7 +80,7 @@ export class AssetUsageController {
         return;
       }
 
-      const result = await this.assetUsageService.create({ ...req.body, createdBy: actorId });
+      const result = await this.assetUsageService.create({ ...req.body, createdBy: actorId, actorRole: req.user?.role });
       if (result.success && result.data) {
         await recordUserActivity({
           userId: actorId,

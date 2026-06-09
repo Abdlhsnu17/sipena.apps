@@ -10,6 +10,7 @@ import {
     UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
+import { canManageOverdueEmergencyUsage } from '../utils/role';
 import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
@@ -43,6 +44,11 @@ interface ActiveBorrowingRow extends RowDataPacket {
 
 interface UsageActorRoomRow extends RowDataPacket {
   sub_work_unit?: string | null;
+}
+
+interface OverdueBorrowingRow extends RowDataPacket {
+  user_id: number;
+  borrower_role: string | null;
 }
 
 type UsageSyncOptions = {
@@ -295,6 +301,35 @@ export class AssetUsageService {
       return {
         success: false,
         message: 'Alat hanya dapat digunakan oleh akun pada sub ruangan yang sama.'
+      };
+    }
+
+    return null;
+  }
+
+  private async validateOverdueEmergencyAccess(data: CreateAssetUsageLogDTO): Promise<ApiResponse<AssetUsageLog> | null> {
+    if (data.usageContext !== 'emergency') return null;
+
+    const assetType = this.normalizeAssetType(data.assetType);
+    const [rows] = await pool.query<OverdueBorrowingRow[]>(
+      `SELECT br.user_id, u.role as borrower_role
+       FROM borrowing_records br
+       JOIN users u ON br.user_id = u.id
+       WHERE br.asset_id = ?
+         AND COALESCE(br.asset_type, 'medical') = ?
+         AND br.status = 'overdue'
+       ORDER BY br.created_at DESC
+       LIMIT 1`,
+      [data.assetId, assetType]
+    );
+
+    if (rows.length === 0) return null;
+
+    const borrowerRole = rows[0].borrower_role;
+    if (!canManageOverdueEmergencyUsage(data.actorRole, borrowerRole)) {
+      return {
+        success: false,
+        message: `Penggunaan darurat pada alat yang melewati batas waktu peminjaman hanya dapat dilakukan oleh admin, leader, atau pengguna dengan role yang sama dengan peminjam asal (${borrowerRole || '-'}).`
       };
     }
 
@@ -816,6 +851,9 @@ export class AssetUsageService {
       const subRoomValidation = await this.validateUsageSubRoomAccess(data);
       if (subRoomValidation) return subRoomValidation;
     }
+
+    const overdueEmergencyValidation = await this.validateOverdueEmergencyAccess(data);
+    if (overdueEmergencyValidation) return overdueEmergencyValidation;
 
     const generatedNo = data.no || generateUsageNumber(data.startedAt);
 
