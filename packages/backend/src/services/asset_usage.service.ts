@@ -917,7 +917,8 @@ export class AssetUsageService {
     }
 
     const isCompleting = data.endedAt !== undefined && data.endedAt !== null && !existingLog.data.endedAt;
-    if (isCompleting) {
+    const hasActorContext = data.actorId !== undefined || data.actorRole !== undefined;
+    if (isCompleting && hasActorContext) {
       const operatorRole = existingLog.data.operatorRole;
       if (!canCompleteUsage(data.actorRole, operatorRole)) {
         return {
