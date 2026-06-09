@@ -15,7 +15,7 @@ import sanctionsService, { type SanctionRecord, type SanctionStats } from "@/ser
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
 import { isAdminOrLeaderRole } from "@/utils/role"
-import { AlertTriangle, CheckCircle, Search, Shield, Users, XCircle } from "lucide-react"
+import { Activity, AlertCircle, Check, CheckCircle, Search, Shield, Users, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -136,46 +136,63 @@ export default function SanctionsPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="h-6 w-6 text-red-600" />
-          Manajemen Sanksi
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Kelola sanksi peminjaman aset yang melewati jatuh tempo
-        </p>
-      </div>
+      <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+          <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
+            <Shield className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-[18px] font-bold text-foreground">Manajemen Sanksi</h1>
+          </div>
+        </div>
+      </section>
 
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Sanksi Aktif</CardDescription>
-              <CardTitle className="text-3xl text-red-600">{stats.active}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 text-xs text-muted-foreground flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" /> Perlu tindak lanjut
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Sanksi Selesai</CardDescription>
-              <CardTitle className="text-3xl text-green-600">{stats.resolved}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 text-xs text-muted-foreground flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" /> Sudah diselesaikan
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Pengguna Terdampak</CardDescription>
-              <CardTitle className="text-3xl text-amber-600">{stats.totalAffectedUsers}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 text-xs text-muted-foreground flex items-center gap-1">
-              <Users className="h-3 w-3" /> Pengguna dengan sanksi aktif
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700 dark:bg-slate-900/70">
+          <CardContent className="p-4">
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
+                <div>
+                  <p className="text-[12px] text-muted-foreground">Total Sanksi</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.active + stats.resolved}</p>
+                  <p className="text-xs text-slate-600">Semua riwayat sanksi</p>
+                </div>
+                <Activity className="h-4 w-4 shrink-0 text-amber-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
+                <div>
+                  <p className="text-[12px] text-muted-foreground">Sanksi Selesai</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.resolved}</p>
+                  <p className="text-xs text-slate-600">Sudah diselesaikan</p>
+                </div>
+                <Check className="h-4 w-4 shrink-0 text-teal-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/70 p-3 dark:bg-rose-950/30">
+                <div className="min-w-0">
+                  <p className="text-[12px] text-muted-foreground">Sanksi Aktif</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.active}</p>
+                  <p className="text-xs text-slate-600">
+                    {stats.active > 0 ? "Perlu tindak lanjut" : "Tidak ada sanksi aktif"}
+                  </p>
+                </div>
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-cyan-50/50 p-3 dark:bg-cyan-950/30">
+                <div className="min-w-0">
+                  <p className="text-[12px] text-muted-foreground">Pengguna Terdampak</p>
+                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.totalAffectedUsers}</p>
+                  <p className="text-xs text-slate-600">
+                    {stats.totalAffectedUsers > 0 ? "Pengguna dengan sanksi aktif" : "Tidak ada pengguna terdampak"}
+                  </p>
+                </div>
+                <Users className="h-4 w-4 shrink-0 text-cyan-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>

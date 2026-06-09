@@ -135,15 +135,16 @@ export default function DisposalPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Trash2 className="h-6 w-6 text-destructive" />
-          Permintaan Penghapusan Aset
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Tinjau dan proses permintaan penghapusan (disposal) aset dari staff
-        </p>
-      </div>
+      <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+          <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
+            <Trash2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-[18px] font-bold text-foreground">Permintaan Penghapusan Aset</h1>
+          </div>
+        </div>
+      </section>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
