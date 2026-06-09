@@ -114,8 +114,13 @@ export class AssetUsageController {
         return;
       }
 
-      const result = await this.assetUsageService.update(req.params.id, req.body);
-      res.status(result.success ? 200 : 404).json(result);
+      const actorId = getActorUserId(req);
+      const result = await this.assetUsageService.update(req.params.id, {
+        ...req.body,
+        actorId: actorId ?? undefined,
+        actorRole: req.user?.role,
+      });
+      res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
       console.error('Update asset usage log error:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });

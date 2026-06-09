@@ -13,7 +13,7 @@ import {
     type AssetSourceKey,
 } from "@/utils/api-mappers";
 import { formatDayTimeLabel } from "@/utils/format";
-import { isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
+import { isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 
 import {
     Dialog,
@@ -41,9 +41,11 @@ import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
     appendLine,
     ExportFormat,
+    exportFormularReport,
     exportNarrativeReport,
     SectionBuilder,
     type DocumentSection,
+    type FormularData,
     type SectionLine,
     type TableExportColumn,
 } from "@/utils/export-table";
@@ -208,6 +210,8 @@ export default function ReturnsPage() {
     const user = getCurrentUser()
     if (!user) {
       router.replace(buildLoginRedirectUrl())
+    } else if (isTechnicianRole(user.role)) {
+      router.replace("/")
     } else {
       setCurrentUser(user)
     }
@@ -1312,13 +1316,19 @@ export default function ReturnsPage() {
                                 Pilih kartu
                               </label>
                               <div className="flex flex-wrap items-center justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenReturn(b)}
-                                  className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
-                                >
-                                  Kembalikan
-                                </Button>
+                                {(() => {
+                                  const isBorrower = currentUser && String(b.userId) === String(currentUser.id)
+                                  const canReturn = isBorrower || isAdminOrLeaderRole(currentUser?.role) || isStaffPjRole(currentUser?.role)
+                                  return canReturn ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleOpenReturn(b)}
+                                      className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
+                                    >
+                                      Kembalikan
+                                    </Button>
+                                  ) : null
+                                })()}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button

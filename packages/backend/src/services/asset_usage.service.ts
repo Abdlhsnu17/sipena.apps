@@ -10,7 +10,7 @@ import {
     UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
-import { canManageOverdueEmergencyUsage } from '../utils/role';
+import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
 import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
@@ -20,6 +20,7 @@ interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
   asset_location?: string | null;
   operator_name?: string | null;
   operator_nip?: string | null;
+  operator_role?: string | null;
   created_by_name?: string | null;
 }
 
@@ -93,6 +94,7 @@ const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => ({
   assetLocation: row.asset_location || row.assetLocation,
   operatorName: row.operator_name || row.operatorName,
   operatorNip: row.operator_nip || row.operatorNip,
+  operatorRole: row.operator_role || row.operatorRole,
   createdByName: row.created_by_name || row.createdByName,
   startedAt: toLocalIsoDateTime(row.startedAt ?? (row as any).started_at) as any,
   endedAt: toLocalIsoDateTime(row.endedAt ?? (row as any).ended_at) as any,
@@ -749,6 +751,7 @@ export class AssetUsageService {
         COALESCE(ma.location, na.location) as asset_location,
         op.name as operator_name,
         op.nip as operator_nip,
+        op.role as operator_role,
         creator.name as created_by_name
       FROM asset_usage_logs l
       LEFT JOIN medical_assets ma ON l.asset_type = 'medical' AND l.asset_id = ma.id
@@ -820,6 +823,7 @@ export class AssetUsageService {
         COALESCE(ma.location, na.location) as asset_location,
         op.name as operator_name,
         op.nip as operator_nip,
+        op.role as operator_role,
         creator.name as created_by_name
        FROM asset_usage_logs l
        LEFT JOIN medical_assets ma ON l.asset_type = 'medical' AND l.asset_id = ma.id
@@ -910,6 +914,17 @@ export class AssetUsageService {
     const existingLog = await this.getById(id);
     if (!existingLog.success || !existingLog.data) {
       return existingLog;
+    }
+
+    const isCompleting = data.endedAt !== undefined && data.endedAt !== null && !existingLog.data.endedAt;
+    if (isCompleting) {
+      const operatorRole = existingLog.data.operatorRole;
+      if (!canCompleteUsage(data.actorRole, operatorRole)) {
+        return {
+          success: false,
+          message: `Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, staff PJ, atau pengguna dengan role yang sama dengan operator pemakaian (${operatorRole || '-'}).`
+        };
+      }
     }
 
     const fields: string[] = [];

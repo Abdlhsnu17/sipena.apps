@@ -810,3 +810,256 @@ export async function exportMaintenanceHistory(format: ExportFormat, options: Ma
     emptyMessage: 'Tidak ada riwayat pemeliharaan yang dipilih.',
   })
 }
+
+// ===== FORMULIR RESMI ALAT MEDIS =====
+
+export interface FormularField {
+  label: string
+  value: string
+}
+
+export interface FormularSection {
+  numeral: string
+  title: string
+  fields: FormularField[]
+}
+
+export interface FormularAssetItem {
+  name: string
+  spec?: string
+  brand?: string
+  qty: string
+}
+
+export interface FormularSignatureCol {
+  title: string
+  name: string
+  nip?: string
+}
+
+export interface FormularData {
+  formTitle: string
+  formNo?: string
+  introText?: string
+  sections: FormularSection[]
+  assetsNumeral?: string
+  assetsTitle?: string
+  assets?: FormularAssetItem[]
+  signatureDate?: string
+  signatureLeft: FormularSignatureCol
+  signatureRight: FormularSignatureCol
+  approverLabel?: string
+  approverLeft?: FormularSignatureCol
+  approverRight?: FormularSignatureCol
+  notes?: string[]
+}
+
+export interface FormularReportOptions<T> {
+  entries: T[]
+  filePrefix?: string
+  buildFormular: (entry: T) => FormularData
+}
+
+const buildSigColHtml = (col: FormularSignatureCol) => `
+  <td class="f-sig-col">
+    <div class="f-sig-role">${escapeHtml(col.title)}</div>
+    <div class="f-sig-space"></div>
+    <div class="f-sig-name">${escapeHtml(col.name)}</div>
+    ${col.nip ? `<div class="f-sig-nip">NIP. ${escapeHtml(col.nip)}</div>` : ''}
+  </td>`
+
+const buildFormularEntryHtml = (data: FormularData): string => {
+  const sectionsHtml = data.sections.map(section => {
+    const fieldsHtml = section.fields.map(field => `
+      <div class="f-field-row">
+        <span class="f-field-label">${escapeHtml(field.label)}</span>
+        <span class="f-field-sep">:</span>
+        <span class="f-field-value">${escapeHtml(field.value)}</span>
+      </div>`).join('')
+    return `
+    <div class="f-section">
+      <div class="f-section-header">${escapeHtml(section.numeral)}. ${escapeHtml(section.title)}</div>
+      <div class="f-section-fields">${fieldsHtml}</div>
+    </div>`
+  }).join('')
+
+  let assetsHtml = ''
+  if (data.assets && data.assets.length > 0) {
+    const nextNumeral = data.assetsNumeral || ['I','II','III','IV','V','VI'][data.sections.length] || 'V'
+    const assetsTitle = data.assetsTitle || 'Alat Yang Dipinjam/Digunakan'
+    const itemsHtml = data.assets.map((asset, i) => {
+      const subItems = [
+        { label: 'a) Nama Alat', value: asset.name },
+        { label: 'b) Spesifikasi / Kode', value: asset.spec || '-' },
+        { label: 'c) Merk / Nomer Seri', value: asset.brand || '-' },
+        { label: 'd) Jumlah', value: asset.qty },
+      ].map(sub => `
+        <div class="f-field-row" style="padding-left:32px">
+          <span class="f-field-label">${escapeHtml(sub.label)}</span>
+          <span class="f-field-sep">:</span>
+          <span class="f-field-value">${escapeHtml(sub.value)}</span>
+        </div>`).join('')
+      return `
+      <div class="f-asset-item">
+        <div class="f-asset-num">${i + 1}.</div>
+        ${subItems}
+      </div>`
+    }).join('')
+    assetsHtml = `
+    <div class="f-section">
+      <div class="f-section-header">${escapeHtml(nextNumeral)}. ${escapeHtml(assetsTitle)}</div>
+      ${itemsHtml}
+    </div>`
+  }
+
+  const dateStr = data.signatureDate || 'Jakarta, ..................... 20.....'
+  let approverHtml = ''
+  if (data.approverLeft && data.approverRight) {
+    const label = data.approverLabel || 'MENGETAHUI'
+    approverHtml = `
+    <div class="f-approver">
+      <div class="f-approver-label">${escapeHtml(label)}</div>
+      <table class="f-sig-table"><tr>
+        ${buildSigColHtml(data.approverLeft)}
+        ${buildSigColHtml(data.approverRight)}
+      </tr></table>
+    </div>`
+  }
+
+  const notesHtml = data.notes && data.notes.length
+    ? `<div class="f-notes">${data.notes.map(n => `<div class="f-note">* ${escapeHtml(n)}</div>`).join('')}</div>`
+    : ''
+
+  return `
+  <div class="f-form">
+    <div class="f-title">${escapeHtml(data.formTitle)}</div>
+    ${data.formNo ? `<div class="f-no">Nomor: ${escapeHtml(data.formNo)}</div>` : '<div class="f-no">&nbsp;</div>'}
+    ${data.introText ? `<div class="f-intro">${escapeHtml(data.introText)}</div>` : ''}
+    ${sectionsHtml}
+    ${assetsHtml}
+    <div class="f-signature">
+      <div class="f-sig-date">${escapeHtml(dateStr)}</div>
+      <table class="f-sig-table"><tr>
+        ${buildSigColHtml(data.signatureLeft)}
+        ${buildSigColHtml(data.signatureRight)}
+      </tr></table>
+      ${approverHtml}
+    </div>
+    ${notesHtml}
+  </div>`
+}
+
+const buildFormularPageHtml = <T>(entries: T[], buildFormular: (entry: T) => FormularData): string => {
+  const formsHtml = entries
+    .map((entry, i) => {
+      const formHtml = buildFormularEntryHtml(buildFormular(entry))
+      return i > 0 ? `<div class="f-page-break"></div>${formHtml}` : formHtml
+    })
+    .join('')
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Formulir Alat Medis</title>
+  <style>
+    @page { margin: 25mm 20mm 20mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.55; color: #000; background: #fff; }
+    .f-page-break { page-break-after: always; height: 0; }
+    .f-form { max-width: 680px; margin: 0 auto; }
+    .f-title { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+    .f-no { text-align: center; font-size: 11pt; margin-bottom: 20px; }
+    .f-intro { margin-bottom: 14px; }
+    .f-section { margin-bottom: 10px; }
+    .f-section-header { font-weight: bold; margin-bottom: 4px; }
+    .f-section-fields { padding-left: 16px; }
+    .f-field-row { display: flex; align-items: baseline; margin-bottom: 4px; padding-left: 16px; }
+    .f-field-label { width: 190px; flex-shrink: 0; }
+    .f-field-sep { margin: 0 6px; flex-shrink: 0; }
+    .f-field-value { flex: 1; border-bottom: 1px dotted #555; min-height: 18px; padding-bottom: 1px; }
+    .f-asset-item { margin-bottom: 6px; }
+    .f-asset-num { font-weight: bold; padding-left: 16px; margin-bottom: 2px; }
+    .f-signature { margin-top: 28px; }
+    .f-sig-date { text-align: right; margin-bottom: 18px; }
+    .f-sig-table { width: 100%; border-collapse: collapse; }
+    .f-sig-col { width: 50%; text-align: center; vertical-align: top; padding: 0 12px; }
+    .f-sig-role { margin-bottom: 2px; }
+    .f-sig-space { height: 64px; }
+    .f-sig-name { border-top: 1px solid #000; padding-top: 4px; font-weight: bold; }
+    .f-sig-nip { font-size: 10pt; }
+    .f-approver { margin-top: 22px; }
+    .f-approver-label { text-align: center; font-weight: bold; margin-bottom: 10px; }
+    .f-notes { margin-top: 18px; border-top: 1px solid #ccc; padding-top: 8px; }
+    .f-note { font-size: 10pt; line-height: 1.4; color: #444; }
+    @media print { .f-page-break { page-break-after: always; } }
+  </style>
+</head>
+<body>${formsHtml}</body>
+</html>`
+}
+
+export async function exportFormularReport<T>(format: ExportFormat, options: FormularReportOptions<T>) {
+  const { entries, filePrefix = 'formulir', buildFormular } = options
+  if (!entries.length) return
+
+  const html = buildFormularPageHtml(entries, buildFormular)
+
+  if (format === 'pdf') {
+    const printWindow = window.open('', '_blank', 'width=900,height=700')
+    if (!printWindow) return
+    printWindow.document.write(html)
+    printWindow.document.close()
+    printWindow.focus()
+    void printWindow.print()
+    return
+  }
+
+  if (format === 'word') {
+    const blob = new Blob(['﻿', html], { type: 'application/msword' })
+    downloadBlob(blob, `${filePrefix}.doc`)
+    return
+  }
+
+  if (format === 'excel') {
+    const { Workbook } = await import('exceljs')
+    const workbook = new Workbook()
+    entries.forEach((entry, idx) => {
+      const data = buildFormular(entry)
+      const sheetName = `Formulir ${idx + 1}`.substring(0, 31)
+      const sheet = workbook.addWorksheet(sheetName)
+      sheet.columns = [{ width: 28 }, { width: 50 }]
+      sheet.addRow([data.formTitle])
+      if (data.formNo) sheet.addRow([`Nomor: ${data.formNo}`])
+      sheet.addRow([])
+      data.sections.forEach(section => {
+        sheet.addRow([`${section.numeral}. ${section.title}`])
+        section.fields.forEach(field => sheet.addRow([field.label, field.value]))
+        sheet.addRow([])
+      })
+      if (data.assets && data.assets.length) {
+        sheet.addRow([`${data.assetsNumeral || ''}. ${data.assetsTitle || 'Alat'}`])
+        data.assets.forEach((asset, i) => {
+          sheet.addRow([`${i + 1}. Nama Alat`, asset.name])
+          sheet.addRow(['   Spesifikasi / Kode', asset.spec || '-'])
+          sheet.addRow(['   Merk / Nomer Seri', asset.brand || '-'])
+          sheet.addRow(['   Jumlah', asset.qty])
+        })
+        sheet.addRow([])
+      }
+      sheet.addRow(['Tanggal', data.signatureDate || ''])
+      sheet.addRow([data.signatureLeft.title, data.signatureLeft.name])
+      sheet.addRow([data.signatureRight.title, data.signatureRight.name])
+      sheet.eachRow(row => {
+        row.eachCell(cell => {
+          cell.font = { name: 'Arial', size: BASE_EXPORT_FONT_SIZE, color: { argb: 'FF111111' } }
+          cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+        })
+      })
+      autoFitWorksheetColumns(sheet, { minWidth: 10, maxWidth: 40 })
+    })
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    downloadBlob(blob, `${filePrefix}.xlsx`)
+  }
+}

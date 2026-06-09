@@ -27,6 +27,15 @@ export const canManageBorrowing = (role: string | null | undefined): boolean => 
   return hasAnyRole(role, ['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user']);
 };
 
+export const canCompleteUsage = (
+  actorRole: string | null | undefined,
+  operatorRole: string | null | undefined
+): boolean => {
+  if (hasAnyRole(actorRole, ['admin', 'leader', 'staff_pj', 'staff pj'])) return true;
+  if (!actorRole || !operatorRole) return false;
+  return normalizeRole(actorRole) === normalizeRole(operatorRole);
+};
+
 export const canManageOverdueEmergencyUsage = (
   actorRole: string | null | undefined,
   borrowerRole: string | null | undefined

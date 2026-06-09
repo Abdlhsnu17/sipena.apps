@@ -18,6 +18,7 @@ export interface AssetUsageLog {
   operatorUserId?: number;
   operatorName?: string;
   operatorNip?: string;
+  operatorRole?: string;
   usageContext: AssetUsageContext;
   startedAt: Date;
   endedAt?: Date;
@@ -63,6 +64,8 @@ export interface UpdateAssetUsageLogDTO {
   conditionBefore?: string;
   conditionAfter?: string;
   notes?: string;
+  actorId?: number;
+  actorRole?: string;
 }
 
 export interface AssetUsageFilters {

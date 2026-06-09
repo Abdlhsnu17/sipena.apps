@@ -323,6 +323,14 @@ const deriveUsageContextFromProfile = (
 
 const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
+const canCompleteUsage = (actorRole: string | undefined, operatorRole: string | undefined): boolean => {
+  if (!actorRole) return false;
+  const role = actorRole.toLowerCase().replace(/[\s-]+/g, "_");
+  if (["admin", "leader", "staff_pj"].includes(role)) return true;
+  if (!operatorRole) return false;
+  return role === operatorRole.toLowerCase().replace(/[\s-]+/g, "_");
+};
+
 const dispatchInventoryRefresh = () => {
   window.dispatchEvent(new Event("inventory-refresh"));
 };
@@ -1230,15 +1238,25 @@ export default function AssetUsagePage() {
 
                           <div className="flex justify-end border-t border-slate-200 px-3 pb-3 pt-2 sm:px-3 sm:pb-3">
                             <div className="flex flex-wrap items-center justify-end gap-1">
-                              {!log.endedAt && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleStatusChange(log, "completed")}
-                                  className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
-                                >
-                                  Selesaikan
-                                </Button>
-                              )}
+                              {!log.endedAt && (() => {
+                                const allowed = canCompleteUsage(currentUser?.role, log.operatorRole);
+                                return allowed ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleStatusChange(log, "completed")}
+                                    className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
+                                  >
+                                    Selesaikan
+                                  </Button>
+                                ) : (
+                                  <span
+                                    className="inline-flex h-6 items-center rounded-full border border-slate-200 bg-slate-100 px-3 text-[12px] font-medium text-slate-400"
+                                    title="Hanya admin, leader, staff PJ, atau role yang sama dengan operator yang dapat menyelesaikan pemakaian ini"
+                                  >
+                                    Selesaikan
+                                  </span>
+                                );
+                              })()}
                               <Button
                                 variant="ghost"
                                 size="sm"

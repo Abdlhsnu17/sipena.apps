@@ -19,6 +19,7 @@ export interface AssetUsageLog {
   operatorUserId?: number;
   operatorName?: string;
   operatorNip?: string;
+  operatorRole?: string;
   usageContext: AssetUsageContext;
   startedAt: string;
   endedAt?: string;
@@ -97,6 +98,7 @@ const normalizeUsage = (usage: any): AssetUsageLog => ({
   operatorUserId: usage.operatorUserId ?? usage.operator_user_id,
   operatorName: usage.operatorName ?? usage.operator_name,
   operatorNip: usage.operatorNip ?? usage.operator_nip,
+  operatorRole: usage.operatorRole ?? usage.operator_role,
   usageContext: usage.usageContext ?? usage.usage_context,
   startedAt: toLocalDateTimeString(usage.startedAt ?? usage.started_at) ?? "",
   endedAt: toLocalDateTimeString(usage.endedAt ?? usage.ended_at),

@@ -11,7 +11,7 @@ import reportService from "@/services/report.service";
 import type { User } from "@/types/auth-types";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
-import { Archive, ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, ListChecks, RotateCcw, Settings, Stethoscope, UploadCloud, Users, Wrench } from "lucide-react";
+import { Archive, ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, ListChecks, RotateCcw, Settings, Shield, Stethoscope, Trash2, UploadCloud, Users, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
@@ -57,7 +57,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Lihat dan kelola data inventaris non-medis.",
     href: "/non-medical-assets",
     icon: Building2,
-    gradient: "from-teal-500/80 via-cyan-500/70 to-cyan-400/60",
+    gradient: "from-sky-500/80 via-cyan-500/70 to-teal-400/60",
   },
   {
     key: "reports",
@@ -81,7 +81,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Hitung prioritas aset dengan metode pendukung keputusan.",
     href: "/dss",
     icon: ListChecks,
-    gradient: "from-indigo-500/70 via-blue-500/70 to-cyan-500/60",
+    gradient: "from-violet-500/70 via-indigo-500/70 to-blue-500/60",
   },
   {
     key: "asset-usage",
@@ -89,7 +89,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Catat dan pantau penggunaan alat atau inventaris.",
     href: "/asset-usage",
     icon: ClipboardList,
-    gradient: "from-emerald-500/80 via-teal-500/70 to-cyan-500/60",
+    gradient: "from-teal-500/80 via-emerald-500/70 to-green-400/60",
   },
   {
     key: "borrowing",
@@ -105,7 +105,23 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Validasi dan kelola pengembalian alat.",
     href: "/returns",
     icon: RotateCcw,
-    gradient: "from-emerald-500/70 via-lime-500/60 to-emerald-400/50",
+    gradient: "from-lime-500/70 via-green-500/60 to-emerald-400/50",
+  },
+  {
+    key: "sanctions",
+    label: "Manajemen Sanksi",
+    description: "Kelola sanksi peminjaman aset yang melewati jatuh tempo.",
+    href: "/sanctions",
+    icon: Shield,
+    gradient: "from-rose-500/70 via-red-500/70 to-pink-500/60",
+  },
+  {
+    key: "disposal",
+    label: "Penghapusan Aset",
+    description: "Tinjau dan proses permintaan penghapusan aset.",
+    href: "/disposal",
+    icon: Trash2,
+    gradient: "from-stone-500/70 via-zinc-500/70 to-slate-400/60",
   },
   {
     key: "unggahan",
@@ -113,7 +129,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Unggah file atau folder dokumen pendukung.",
     href: "/unggahan",
     icon: UploadCloud,
-    gradient: "from-teal-500/70 via-emerald-500/70 to-green-400/60",
+    gradient: "from-cyan-400/70 via-sky-500/70 to-blue-400/60",
   },
   {
     key: "activity-archive",
@@ -121,7 +137,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Lihat rekam aktivitas pengguna dan perubahan data.",
     href: "/activity-archive",
     icon: Archive,
-    gradient: "from-slate-500/70 via-zinc-500/70 to-neutral-400/60",
+    gradient: "from-slate-600/70 via-gray-500/70 to-zinc-400/60",
   },
   {
     key: "users",
@@ -129,7 +145,7 @@ const quickActionLinks: QuickActionLink[] = [
     description: "Kelola akun, role, dan akses pengguna sistem.",
     href: "/users",
     icon: Users,
-    gradient: "from-amber-500/70 via-yellow-500/70 to-lime-500/60",
+    gradient: "from-amber-500/70 via-yellow-500/70 to-lime-400/60",
   },
 ]
 

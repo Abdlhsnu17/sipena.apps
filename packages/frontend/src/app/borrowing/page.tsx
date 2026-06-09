@@ -31,7 +31,7 @@ import {
 } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
-import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
+import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 import InventoryPicker from "@/components/inventory-picker";
@@ -60,10 +60,12 @@ import { useToast } from "@/hooks/use-toast";
 import {
     appendLine,
     ExportFormat,
+    exportFormularReport,
     exportNarrativeReport,
     SectionBuilder,
     TableExportColumn,
     type DocumentSection,
+    type FormularData,
     type SectionLine,
 } from "@/utils/export-table";
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
@@ -450,6 +452,8 @@ export default function BorrowingPage() {
     const user = getCurrentUser()
     if (!user) {
       router.replace(buildLoginRedirectUrl())
+    } else if (isTechnicianRole(user.role)) {
+      router.replace("/")
     } else {
       setCurrentUser(user)
     }
@@ -1286,27 +1290,106 @@ export default function BorrowingPage() {
     }
   }
 
+  const buildBorrowingFormular = (borrowing: ApiBorrowing): FormularData => {
+    const detail = resolveDetailForBorrowing(borrowing)
+    const assetName = borrowing.assetDetailName || detail?.detailInventoryName || detail?.detailName || borrowing.assetName || "-"
+    const assetCode = borrowing.assetDetailCode || detail?.detailCode || borrowing.assetCode || "-"
+    const brandModel = detail?.detailBrandModel || detail?.detailName || "-"
+    const assetRoom = getAssetRoom(detail, borrowing.assetLocation)
+    const borrowingNoId = getBorrowingNoId(borrowing)
+    const borrowDate = formatDayTimeLabel(borrowing.borrowDate, { showWeekday: false })
+    const dueDate = formatDayTimeLabel(borrowing.dueDate, { showWeekday: false })
+    const duration = formatBorrowingDuration(borrowing.loanDurationValue, borrowing.loanDurationUnit)
+    return {
+      formTitle: "FORMULIR PEMINJAMAN ALAT MEDIS",
+      formNo: borrowingNoId,
+      introText: "Saya yang bertanda tangan di bawah ini:",
+      sections: [
+        {
+          numeral: "I",
+          title: "Identitas Peminjam",
+          fields: [
+            { label: "Nama", value: borrowing.userName || "-" },
+            { label: "NIP", value: borrowing.userNip || "-" },
+            { label: "Jabatan", value: borrowing.borrowerPosition || "-" },
+            { label: "Unit Kerja", value: borrowing.borrowerWorkUnit || "-" },
+          ],
+        },
+        {
+          numeral: "II",
+          title: "Identitas Pemilik Alat",
+          fields: [
+            { label: "Nama", value: borrowing.ownerName || "-" },
+            { label: "Jabatan", value: borrowing.ownerPosition || "-" },
+            { label: "Unit Kerja", value: borrowing.ownerWorkUnit || "-" },
+          ],
+        },
+        {
+          numeral: "III",
+          title: "Keperluan Peminjaman",
+          fields: [
+            { label: "Jenis Keperluan", value: formatBorrowingPurposeType(borrowing.purposeType) },
+            { label: "Uraian Keperluan", value: borrowing.purpose || "-" },
+            { label: "Ruang / Instalasi Tujuan", value: borrowing.destinationRoom || "-" },
+          ],
+        },
+        {
+          numeral: "IV",
+          title: "Lama Peminjaman",
+          fields: [
+            { label: "Durasi", value: duration },
+            { label: "Tanggal Pinjam", value: borrowDate },
+            { label: "Batas Pengembalian", value: dueDate },
+            { label: "Ruangan Alat", value: assetRoom },
+          ],
+        },
+      ],
+      assetsNumeral: "V",
+      assetsTitle: "Alat Yang Dipinjam",
+      assets: [
+        {
+          name: assetName,
+          spec: assetCode,
+          brand: brandModel,
+          qty: String(borrowing.quantity || 1),
+        },
+      ],
+      signatureDate: `Jakarta, ..................... 20.....`,
+      signatureLeft: { title: "Yang Menyerahkan", name: borrowing.ownerName || "(.....)" },
+      signatureRight: { title: "Yang Menerima", name: borrowing.userName || "(.....)" },
+      approverLabel: "MENGETAHUI",
+      approverLeft: { title: "Kepala Unit (Pemilik Alat)", name: borrowing.ownerName || "(.....)" },
+      approverRight: { title: "Kepala Unit (Peminjam Alat)", name: borrowing.userName || "(.....)" },
+      notes: ["Formulir ini wajib diisi lengkap sebelum alat dipinjam.", "Peminjam bertanggung jawab atas keselamatan alat selama masa peminjaman."],
+    }
+  }
+
   const handleExport = (format: ExportFormat) => {
     const rowsToExport = selectedBorrowings.length ? selectedBorrowings : filteredBorrowings
     if (!rowsToExport.length) return
-    void exportNarrativeReport(format, {
-      title: "Daftar Peminjaman",
-      subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
-      entries: rowsToExport,
-      filePrefix: "daftar-peminjaman",
-      buildSections: buildBorrowingNarrativeSections(selectedBorrowingExportColumns),
-      emptyMessage: "Tidak ada data peminjaman yang dipilih.",
-    })
+    if (format === 'excel') {
+      void exportNarrativeReport(format, {
+        title: "Daftar Peminjaman",
+        subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
+        entries: rowsToExport,
+        filePrefix: "daftar-peminjaman",
+        buildSections: buildBorrowingNarrativeSections(selectedBorrowingExportColumns),
+        emptyMessage: "Tidak ada data peminjaman yang dipilih.",
+      })
+    } else {
+      void exportFormularReport(format, {
+        entries: rowsToExport,
+        filePrefix: "formulir-peminjaman",
+        buildFormular: buildBorrowingFormular,
+      })
+    }
   }
 
   const _exportSingleBorrowingNarrative = async (format: ExportFormat, borrowing: ApiBorrowing) => {
-    void exportNarrativeReport(format, {
-      title: "Detail Peminjaman",
-      subtitle: "LAPORAN OPERASIONAL PEMINJAMAN",
+    void exportFormularReport(format, {
       entries: [borrowing],
-      filePrefix: `detail-peminjaman-${borrowing.id}`,
-      buildSections: buildBorrowingNarrativeSections(selectedBorrowingExportColumns),
-      emptyMessage: "Tidak ada data peminjaman yang dipilih.",
+      filePrefix: `formulir-peminjaman-${borrowing.id}`,
+      buildFormular: buildBorrowingFormular,
     })
   }
 
