@@ -58,7 +58,6 @@ const staffPjRoutes = [
   "/activity-archive",
   "/borrowing",
   "/returns",
-  "/sanctions",
   "/disposal",
   "/settings",
 ]
@@ -117,8 +116,12 @@ export const canManageInventoryRole = (role?: string | null): boolean => {
   return isAdminOrLeaderRole(role) || isStaffPjRole(role)
 }
 
-export const canManageSanctionsAndDisposalRole = (role?: string | null): boolean => {
+export const canManageDisposalRole = (role?: string | null): boolean => {
   return isAdminOrLeaderRole(role) || isStaffPjRole(role)
+}
+
+export const canManageSanctionsRole = (role?: string | null): boolean => {
+  return isAdminOrLeaderRole(role)
 }
 
 export const canAccessBorrowingRole = (role?: string | null): boolean => {

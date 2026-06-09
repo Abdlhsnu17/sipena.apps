@@ -14,7 +14,7 @@ import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import sanctionsService, { type SanctionRecord, type SanctionStats } from "@/services/sanctions.service"
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
-import { canManageSanctionsAndDisposalRole } from "@/utils/role"
+import { canManageSanctionsRole } from "@/utils/role"
 import { Activity, AlertCircle, Check, CheckCircle, Search, Shield, Users, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -58,7 +58,7 @@ export default function SanctionsPage() {
       router.replace(buildLoginRedirectUrl())
       return
     }
-    if (!canManageSanctionsAndDisposalRole(currentUser.role)) {
+    if (!canManageSanctionsRole(currentUser.role)) {
       router.replace("/")
       return
     }

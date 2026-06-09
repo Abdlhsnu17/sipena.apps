@@ -12,7 +12,7 @@ import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import assetDisposalService, { type AssetDisposalRequest, type DisposalStatus } from "@/services/asset-disposal.service"
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
-import { canManageSanctionsAndDisposalRole } from "@/utils/role"
+import { canManageDisposalRole } from "@/utils/role"
 import { CheckCircle, Clock, Search, Trash2, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -59,7 +59,7 @@ export default function DisposalPage() {
       router.replace(buildLoginRedirectUrl())
       return
     }
-    if (!canManageSanctionsAndDisposalRole(currentUser.role)) {
+    if (!canManageDisposalRole(currentUser.role)) {
       router.replace("/")
       return
     }

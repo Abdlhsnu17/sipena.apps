@@ -500,7 +500,6 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
-    { href: "/sanctions", label: "Manajemen Sanksi", icon: Shield, iconColor: "text-red-600", searchKeywords: ["sanksi", "denda", "overdue", "terlambat", "penalti"] },
     { href: "/disposal", label: "Penghapusan Aset", icon: Trash2, iconColor: "text-destructive", searchKeywords: ["hapus", "disposal", "penghapusan", "scrapping"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
@@ -521,6 +520,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/uml", label: "Dokumentasi Sistem", icon: FileText, iconColor: "text-slate-500", searchKeywords: ["dokumentasi", "sistem", "uml", "panduan", "alur"] },
     { href: "/medical-assets", label: "Inventaris Medis", icon: Stethoscope, iconColor: "text-cyan-600", searchKeywords: ["medis", "alat medis", "inventaris medis"] },
     { href: "/non-medical-assets", label: "Inventaris Non-Medis", icon: Building, iconColor: "text-teal-600", searchKeywords: ["non medis", "sarana", "prasarana"] },
+    { href: "/maintenance", label: "Pemeliharaan Sarana", icon: Calendar, iconColor: "text-red-600", searchKeywords: ["jadwal", "maintenance", "perawatan", "pemeliharaan"] },
     { href: "/dss", label: "SPK Prioritas Aset", icon: ListChecks, iconColor: "text-indigo-600", searchKeywords: ["spk", "dss", "ahp", "topsis", "prioritas", "ranking"] },
     { href: "/asset-usage", label: "Penggunaan", icon: ClipboardList, iconColor: "text-emerald-600", searchKeywords: ["penggunaan", "pemakaian", "alat", "inventaris", "ruangan", "log"] },
     { href: "/reports", label: "Laporan & Analitik", icon: BarChart3, iconColor: "text-purple-600", searchKeywords: ["report", "analitik", "rekap"] },
