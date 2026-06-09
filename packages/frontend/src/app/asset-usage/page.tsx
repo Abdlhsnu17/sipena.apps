@@ -341,6 +341,7 @@ export default function AssetUsagePage() {
   const { confirm } = useConfirm();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const canDeleteAssetUsage = currentUser?.role === "admin" || currentUser?.role === "leader";
   const [assets, setAssets] = useState<DetailInventoryItem[]>([]);
   const [logs, setLogs] = useState<AssetUsageLog[]>([]);
   const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set());
@@ -681,6 +682,7 @@ export default function AssetUsagePage() {
   };
 
   const handleDelete = async (log: AssetUsageLog) => {
+    if (!canDeleteAssetUsage) return;
     const ok = await confirm({
       title: "Hapus log penggunaan?",
       description: `Log ${log.assetDetailName || log.assetName || "alat"} akan dihapus dari riwayat.`,
@@ -1289,9 +1291,11 @@ export default function AssetUsagePage() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                              <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              {canDeleteAssetUsage && (
+                                <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

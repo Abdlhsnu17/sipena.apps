@@ -3,6 +3,7 @@ import { query } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import reportController from '../controllers/report.controller';
+import { requireRole } from '../middlewares/authMiddleware';
 import { getReportUploadsDir } from '../utils/storage-paths';
 
 const router = Router();
@@ -117,7 +118,7 @@ router.get('/uploads', reportController.getUploads);
 router.post('/uploads', upload.single('file'), reportController.uploadReport);
 router.get('/uploads/:id/download', reportController.downloadUpload);
 router.get('/uploads/:id/preview', reportController.previewUpload);
-router.delete('/uploads/:id', reportController.deleteUpload);
+router.delete('/uploads/:id', requireRole(['admin']), reportController.deleteUpload);
 
 router.get(
   '/export/pdf',

@@ -807,7 +807,11 @@ export default function UsersPage() {
         )}
       </div>
 
-        {/* Information Section removed per request */}
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-[13px] text-muted-foreground">
+            Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
+          </p>
+        </div>
       </div>
     </div>
   )

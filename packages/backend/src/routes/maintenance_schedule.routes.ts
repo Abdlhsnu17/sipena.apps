@@ -19,6 +19,6 @@ router.put('/:id', scheduleController.updateSchedule);
 router.patch('/:id/status', scheduleController.updateScheduleStatus);
 
 // Delete schedule - only admin
-router.delete('/:id', scheduleController.deleteSchedule);
+router.delete('/:id', requireRole(['admin']), scheduleController.deleteSchedule);
 
 export default router;
