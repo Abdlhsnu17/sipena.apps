@@ -135,7 +135,12 @@ export default function SanctionsPage() {
   if (!user) return null
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <main
+      className="min-h-full min-w-0"
+      style={{ fontFamily: "Arial, sans-serif", fontSize: "14px" }}
+    >
+      <div>
+        <div className="w-full space-y-5">
       <section className="rounded-3xl border border-teal-100/80 bg-white/90 panel-gutter shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70">
         <div className="flex items-start gap-3 sm:items-center sm:gap-5">
           <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
@@ -342,6 +347,8 @@ export default function SanctionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </div>
+    </main>
   )
 }
