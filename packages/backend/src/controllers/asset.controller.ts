@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
+import { importAssetsFromBuffer, generateImportTemplate } from '../services/asset_import.service';
 import { AssetService } from '../services/asset.service';
 
 export class AssetController {
@@ -169,6 +170,43 @@ export class AssetController {
         success: false,
         message: 'Internal server error'
       });
+    }
+  };
+
+  importFromFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ success: false, message: 'File tidak ditemukan. Unggah file Excel (.xlsx).' });
+        return;
+      }
+
+      const assetType = (req.query.type as string) === 'non_medical' ? 'non_medical' : 'medical';
+      const createdBy = (req as any).user?.id ?? 0;
+
+      const result = await importAssetsFromBuffer(req.file.buffer, assetType, createdBy);
+
+      res.json({
+        success: true,
+        message: `Import selesai: ${result.success} berhasil, ${result.failed} gagal`,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('Import assets error:', error);
+      res.status(400).json({ success: false, message: error?.message ?? 'Gagal mengimpor aset' });
+    }
+  };
+
+  downloadTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const assetType = (req.query.type as string) === 'non_medical' ? 'non_medical' : 'medical';
+      const wb = generateImportTemplate(assetType);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="template-import-${assetType}.xlsx"`);
+      await wb.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      console.error('Download template error:', error);
+      res.status(500).json({ success: false, message: 'Gagal mengunduh template' });
     }
   };
 }

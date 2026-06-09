@@ -18,6 +18,7 @@ let ensuredUserActivityLogsTable = false;
 let ensuredBorrowingWorkflowColumns = false;
 let ensuredAssetUsageLogsTable = false;
 let ensuredUserAccessControlColumns = false;
+let ensuredAssetDisposalTable = false;
 let attemptedCoreSchemaBootstrap = false;
 
 const tableExists = async (tableName: string): Promise<boolean> => {
@@ -752,6 +753,18 @@ export async function ensureBorrowingWorkflowColumns(): Promise<void> {
       name: 'is_extension_blocked',
       sql: 'ALTER TABLE borrowing_records ADD COLUMN is_extension_blocked BOOLEAN NOT NULL DEFAULT FALSE AFTER extension_notes',
     },
+    {
+      name: 'resolved_at',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN resolved_at DATETIME DEFAULT NULL AFTER is_extension_blocked',
+    },
+    {
+      name: 'resolved_by_user_id',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN resolved_by_user_id INT(11) DEFAULT NULL AFTER resolved_at',
+    },
+    {
+      name: 'resolved_notes',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN resolved_notes TEXT DEFAULT NULL AFTER resolved_by_user_id',
+    },
   ] as const;
 
   const existingColumns = await getExistingColumns(
@@ -774,4 +787,43 @@ export async function ensureBorrowingWorkflowColumns(): Promise<void> {
   }
 
   ensuredBorrowingWorkflowColumns = true;
+}
+
+export async function ensureAssetDisposalTable(): Promise<void> {
+  if (ensuredAssetDisposalTable) return;
+
+  const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES LIKE 'asset_disposal_requests'");
+  if (tables.length === 0) {
+    await pool.query(`
+      CREATE TABLE asset_disposal_requests (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        request_code VARCHAR(50) DEFAULT NULL,
+        asset_id INT(11) NOT NULL,
+        asset_type VARCHAR(20) NOT NULL DEFAULT 'medical',
+        asset_detail_id VARCHAR(100) DEFAULT NULL,
+        asset_detail_name VARCHAR(255) DEFAULT NULL,
+        asset_detail_code VARCHAR(100) DEFAULT NULL,
+        reason TEXT NOT NULL,
+        condition_notes TEXT DEFAULT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'pending',
+        requested_by INT(11) NOT NULL,
+        reviewed_by INT(11) DEFAULT NULL,
+        reviewed_at DATETIME DEFAULT NULL,
+        review_notes TEXT DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        rejected_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+        PRIMARY KEY (id),
+        UNIQUE KEY uniq_disposal_code (request_code),
+        KEY idx_disposal_asset (asset_type, asset_id),
+        KEY idx_disposal_status (status),
+        KEY idx_disposal_requested_by (requested_by),
+        CONSTRAINT fk_disposal_requested_by FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+        CONSTRAINT fk_disposal_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+  }
+
+  ensuredAssetDisposalTable = true;
 }

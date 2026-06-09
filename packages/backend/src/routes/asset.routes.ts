@@ -1,9 +1,26 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
+import multer from 'multer';
 import assetController from '../controllers/asset.controller';
 import { requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'application/zip',
+    ];
+    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.xlsx') || file.originalname.endsWith('.xls')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Hanya file Excel (.xlsx, .xls) yang diizinkan'));
+    }
+  },
+});
 
 const ASSET_TYPES = ['medical', 'non_medical'];
 const ASSET_STATUSES = ['available', 'borrowed', 'maintenance', 'disposed'];
@@ -50,5 +67,13 @@ router.put(
 
 router.delete('/reset/all', requireRole(['admin']), assetController.resetInventory);
 router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), assetController.delete);
+
+router.get('/import/template', assetController.downloadTemplate);
+router.post(
+  '/import',
+  requireRole(['admin', 'leader', 'staff_pj', 'staff pj']),
+  importUpload.single('file'),
+  assetController.importFromFile
+);
 
 export default router;

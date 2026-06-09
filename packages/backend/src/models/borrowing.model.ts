@@ -14,6 +14,7 @@ export interface Borrowing {
   assetLocation?: string;
   userName?: string;
   userNip?: string;
+  userEmail?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   ownerName?: string;

@@ -3,7 +3,7 @@ import * as scheduleController from '../controllers/maintenance_schedule.control
 import { requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
-router.use(requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi', 'tekniksi']));
+router.use(requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi']));
 
 // Create schedule - only admin, leader, staff, staff_pj
 router.post('/', scheduleController.createSchedule);

@@ -10,6 +10,7 @@ import { authMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import {
+    ensureAssetDisposalTable,
     ensureAssetUsageLogsTable,
     ensureBorrowingWorkflowColumns,
     ensureCoreSchemaInitialized,
@@ -35,7 +36,9 @@ import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
 import maintenanceScheduleRoutes from './routes/maintenance_schedule.routes';
+import assetDisposalRoutes from './routes/asset_disposal.routes';
 import reportRoutes from './routes/report.routes';
+import sanctionsRoutes from './routes/sanctions.routes';
 import umlRoutes from './routes/uml.routes';
 import userRoutes from './routes/user.routes';
 import userActivityRoutes from './routes/user_activity.routes';
@@ -257,6 +260,8 @@ app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/uml', authMiddleware, umlRoutes);
 app.use('/api/maintenance-schedule', authMiddleware, maintenanceScheduleRoutes);
 app.use('/api/user-activities', authMiddleware, userActivityRoutes);
+app.use('/api/sanctions', authMiddleware, sanctionsRoutes);
+app.use('/api/asset-disposal', authMiddleware, assetDisposalRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -336,6 +341,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureUserProfileColumns();
         await ensureUserAccessControlColumns();
         await ensureUserActivityLogsTable();
+        await ensureAssetDisposalTable();
       });
       infrastructureStatus.schema = 'up';
 

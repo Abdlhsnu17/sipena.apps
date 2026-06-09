@@ -20,7 +20,9 @@ import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
 
 
-import { ChevronDown, ChevronUp, Edit2, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
+import { AssetImportDialog } from "@/components/asset-import-dialog";
+import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
+import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -34,6 +36,8 @@ export default function MedicalAssetsPage() {
   const [showAssetForm, setShowAssetForm] = useState(false)
   const [editingAsset, setEditingAsset] = useState<MedicalAsset | null>(null)
   const [editingRoom, setEditingRoom] = useState<MedicalRoom | null>(null)
+  const [disposalTarget, setDisposalTarget] = useState<{ roomId: string; asset: MedicalAsset } | null>(null)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [selectedRoomId, setSelectedRoomId] = useState("")
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
@@ -473,6 +477,14 @@ export default function MedicalAssetsPage() {
                       </Button>
                     )}
                     <Button
+                      variant="outline"
+                      onClick={() => setShowImportDialog(true)}
+                      className="w-full rounded-2xl px-4 sm:w-auto"
+                    >
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Import Excel
+                    </Button>
+                    <Button
                       onClick={startRoomCreation}
                       className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
                     >
@@ -806,7 +818,7 @@ export default function MedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {(canEditInventory || canDeleteInventory) && (
+                                {(canEditInventory || canDeleteInventory || canManageInventory) && (
                                   <div className="flex gap-1 shrink-0">
                                     {canEditInventory && (
                                       <Button
@@ -822,10 +834,22 @@ export default function MedicalAssetsPage() {
                                         <Edit2 className="w-4 h-4" />
                                       </Button>
                                     )}
+                                    {canManageInventory && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        title="Ajukan penghapusan aset"
+                                        className="h-9 w-9 p-1.5 text-orange-600 hover:bg-orange-50"
+                                        onClick={() => setDisposalTarget({ roomId: room.id, asset })}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    )}
                                     {canDeleteInventory && (
                                       <Button
                                         variant="ghost"
                                         size="sm"
+                                        title="Hapus permanen"
                                         className="h-9 w-9 p-1.5 text-red-600 hover:bg-red-50"
                                         onClick={() => handleDeleteAsset(room.id, asset.id)}
                                       >
@@ -854,6 +878,28 @@ export default function MedicalAssetsPage() {
           </p>
         </div>
       </div>
+
+      {/* Import Dialog */}
+      <AssetImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        assetType="medical"
+        onSuccess={() => { setShowImportDialog(false); void loadRooms() }}
+      />
+
+      {/* Disposal Request Dialog */}
+      {disposalTarget && (
+        <DisposalRequestDialog
+          open={true}
+          onOpenChange={(open) => { if (!open) setDisposalTarget(null) }}
+          assetId={Number(disposalTarget.asset.id)}
+          assetType="medical"
+          assetDetailId={disposalTarget.asset.id}
+          assetDetailName={disposalTarget.asset.name}
+          assetDetailCode={disposalTarget.asset.assetCode}
+          onSuccess={() => setDisposalTarget(null)}
+        />
+      )}
 
       {/* Asset Form Modal */}
       {showAssetForm && (

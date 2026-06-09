@@ -17,6 +17,7 @@ import {
 } from '../utils/helpers';
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
+import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
 
 /**
  * Parse datetime string as LOCAL time (not UTC)
@@ -811,7 +812,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type, 
-        u.name as user_name, u.nip as user_nip,
+        u.name as user_name, u.nip as user_nip, u.email as user_email,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
       FROM borrowing_records b
@@ -886,7 +887,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type,
-        u.name as user_name, u.nip as user_nip,
+        u.name as user_name, u.nip as user_nip, u.email as user_email,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
        FROM borrowing_records b
@@ -1285,6 +1286,25 @@ export class BorrowingService {
       // ignore logging errors
     }
 
+    // Send approval email (fire-and-forget)
+    try {
+      const updated = await this.getById(id);
+      const row = updated.data as any;
+      const toEmail = row?.user_email ?? row?.userEmail;
+      if (toEmail) {
+        const fmt = (d?: string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
+        sendBorrowingApprovedEmail(toEmail, {
+          userName: row.user_name ?? row.userName ?? 'Pengguna',
+          assetName: row.asset_detail_name ?? row.assetDetailName ?? row.asset_name ?? row.assetName ?? String(row.asset_id ?? id),
+          borrowDate: fmt(row.borrow_date ?? row.borrowDate),
+          dueDate: fmt(row.due_date ?? row.dueDate),
+          borrowingCode: row.borrowing_code ?? row.borrowingCode ?? String(id),
+        }).catch(() => {});
+      }
+    } catch {
+      // email errors never block the main flow
+    }
+
     return await this.getById(id);
   }
 
@@ -1365,6 +1385,22 @@ export class BorrowingService {
       detailId: borrowing.data.assetDetailId || null,
       detailCode: borrowing.data.assetDetailCode || null
     });
+
+    // Send rejection email (fire-and-forget)
+    try {
+      const row = borrowing.data as any;
+      const toEmail = row?.user_email ?? row?.userEmail;
+      if (toEmail) {
+        sendBorrowingRejectedEmail(toEmail, {
+          userName: row.user_name ?? row.userName ?? 'Pengguna',
+          assetName: row.asset_detail_name ?? row.assetDetailName ?? row.asset_name ?? row.assetName ?? String(row.asset_id ?? id),
+          borrowingCode: row.borrowing_code ?? row.borrowingCode ?? String(id),
+          reason,
+        }).catch(() => {});
+      }
+    } catch {
+      // email errors never block the main flow
+    }
 
     return await this.getById(id);
   }

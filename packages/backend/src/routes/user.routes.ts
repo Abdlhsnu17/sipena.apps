@@ -5,7 +5,7 @@ import { requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-const USER_ROLES = ['admin', 'leader', 'staff', 'teknisi', 'tekniksi', 'staff_pj', 'staff pj', 'user'];
+const USER_ROLES = ['admin', 'leader', 'staff', 'teknisi', 'staff_pj', 'staff pj', 'user'];
 const STAFF_ACCESS_TYPES = ['medis', 'non-medis', 'all'];
 const ACCOUNT_STATUSES = ['active', 'inactive', 'suspended'];
 

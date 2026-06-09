@@ -63,7 +63,7 @@ router.put(
     body('notes').optional().trim(),
     body('cancellationReason').optional().trim()
   ],
-  requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi', 'tekniksi']),
+  requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi']),
   maintenanceController.update
 );
 
@@ -74,7 +74,7 @@ router.patch(
     body('notes').optional().trim(),
     body('cost').optional().isFloat({ min: 0 })
   ],
-  requireRole(['admin', 'leader', 'teknisi', 'tekniksi']),
+  requireRole(['admin', 'leader', 'teknisi']),
   maintenanceController.complete
 );
 
