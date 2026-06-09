@@ -269,6 +269,20 @@ const exportColumnLabels: Record<string, string> = {
   stored_path: 'Jalur Tersimpan',
   notes: 'Catatan',
   downloadPath: 'Jalur Unduhan',
+  request_code: 'Kode Permintaan',
+  reason: 'Alasan',
+  condition_notes: 'Catatan Kondisi',
+  requested_by: 'Diminta Oleh',
+  requester_name: 'Nama Pemohon',
+  requester_nip: 'NIP Pemohon',
+  reviewed_by: 'Ditinjau Oleh',
+  reviewer_name: 'Nama Peninjau',
+  reviewed_at: 'Ditinjau Pada',
+  review_notes: 'Catatan Review',
+  resolved_at: 'Diselesaikan Pada',
+  resolved_by_name: 'Diselesaikan Oleh',
+  resolved_by_user_id: 'ID Penyelesai',
+  resolved_notes: 'Catatan Penyelesaian',
 };
 
 const exportValueLabels: Record<string, Record<string, string>> = {
@@ -442,8 +456,16 @@ const wrapText = (value: string, width: number): string[] => {
   });
 };
 
-const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'usage' | 'activity' | 'all' => {
-  if (value === 'borrowing' || value === 'maintenance' || value === 'usage' || value === 'activity' || value === 'all') return value;
+const normalizeExportType = (value?: string): 'assets' | 'borrowing' | 'maintenance' | 'usage' | 'activity' | 'disposal' | 'sanctions' | 'all' => {
+  if (
+    value === 'borrowing' ||
+    value === 'maintenance' ||
+    value === 'usage' ||
+    value === 'activity' ||
+    value === 'disposal' ||
+    value === 'sanctions' ||
+    value === 'all'
+  ) return value;
   return 'assets';
 };
 
@@ -1201,6 +1223,125 @@ export class ReportService {
     return { success: true, message: 'Upload report generated successfully', data: rows.map((row) => this.mapUploadRow(row)) };
   }
 
+  async getDisposalReport(filters: ReportFilters): Promise<ApiResponse> {
+    let query = `
+      SELECT
+        d.id,
+        d.request_code,
+        d.asset_id,
+        d.asset_type,
+        d.asset_detail_id,
+        d.asset_detail_name,
+        d.asset_detail_code,
+        COALESCE(d.asset_detail_name, ma.name, na.name) as asset_name,
+        COALESCE(d.asset_detail_code, ma.asset_code, na.asset_code) as asset_code,
+        d.reason,
+        d.condition_notes,
+        d.status,
+        d.requested_by,
+        requester.name as requester_name,
+        requester.nip as requester_nip,
+        d.reviewed_by,
+        reviewer.name as reviewer_name,
+        d.reviewed_at,
+        d.review_notes,
+        d.approved_at,
+        d.rejected_at,
+        d.created_at,
+        d.updated_at
+      FROM asset_disposal_requests d
+      LEFT JOIN medical_assets ma ON d.asset_type = 'medical' AND d.asset_id = ma.id
+      LEFT JOIN non_medical_assets na ON d.asset_type = 'non_medical' AND d.asset_id = na.id
+      LEFT JOIN users requester ON requester.id = d.requested_by
+      LEFT JOIN users reviewer ON reviewer.id = d.reviewed_by
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (filters.startDate) {
+      query += ' AND DATE(d.created_at) >= ?';
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query += ' AND DATE(d.created_at) <= ?';
+      params.push(filters.endDate);
+    }
+
+    if (filters.type) {
+      query += ' AND d.asset_type = ?';
+      params.push(filters.type);
+    }
+
+    if (filters.status) {
+      query += ' AND d.status = ?';
+      params.push(filters.status);
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+    return { success: true, message: 'Disposal report generated successfully', data: rows };
+  }
+
+  async getSanctionsReport(filters: ReportFilters): Promise<ApiResponse> {
+    let query = `
+      SELECT
+        br.id,
+        br.borrowing_code,
+        br.user_id,
+        u.name AS user_name,
+        u.nip AS user_nip,
+        COALESCE(br.asset_detail_name, ma.name, na.name, br.asset_id) AS asset_name,
+        COALESCE(br.asset_detail_code, ma.asset_code, na.asset_code) AS asset_code,
+        br.borrow_date,
+        br.due_date,
+        br.return_date,
+        br.overdue_days,
+        br.sanction_status,
+        br.sanction_notes,
+        br.sanction_applied_at,
+        br.resolved_at,
+        ru.name AS resolved_by_name,
+        br.resolved_by_user_id,
+        br.resolved_notes,
+        br.created_at,
+        br.updated_at
+      FROM borrowing_records br
+      LEFT JOIN users u ON u.id = br.user_id
+      LEFT JOIN users ru ON ru.id = br.resolved_by_user_id
+      LEFT JOIN medical_assets ma ON br.asset_id = ma.id AND (br.asset_type IS NULL OR br.asset_type = 'medical')
+      LEFT JOIN non_medical_assets na ON br.asset_id = na.id AND br.asset_type = 'non_medical'
+      WHERE br.sanction_status != 'none'
+    `;
+    const params: any[] = [];
+
+    if (filters.startDate) {
+      query += ' AND DATE(COALESCE(br.sanction_applied_at, br.updated_at, br.created_at)) >= ?';
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query += ' AND DATE(COALESCE(br.sanction_applied_at, br.updated_at, br.created_at)) <= ?';
+      params.push(filters.endDate);
+    }
+
+    if (filters.status) {
+      query += ' AND br.sanction_status = ?';
+      params.push(filters.status);
+    }
+
+    if (filters.userId) {
+      query += ' AND br.user_id = ?';
+      params.push(filters.userId);
+    }
+
+    query += ' ORDER BY br.sanction_applied_at DESC, br.updated_at DESC';
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+    return { success: true, message: 'Sanctions report generated successfully', data: rows };
+  }
+
   private async getDashboardSummaryRows(): Promise<Record<string, unknown>[]> {
     const dashboard = await this.getDashboardStats();
     if (!dashboard.success || !dashboard.data) {
@@ -1244,13 +1385,15 @@ export class ReportService {
       ];
     }
 
-    const [summaryRows, assetResult, borrowingResult, maintenanceResult, usageResult, activityResult, uploadResult] = await Promise.all([
+    const [summaryRows, assetResult, borrowingResult, maintenanceResult, usageResult, activityResult, disposalResult, sanctionsResult, uploadResult] = await Promise.all([
       this.getDashboardSummaryRows(),
       this.getAssetReport(filters),
       this.getBorrowingReport(filters),
       this.getMaintenanceReport(filters),
       this.getUsageReport(filters),
       this.getActivityReport(filters),
+      this.getDisposalReport(filters),
+      this.getSanctionsReport(filters),
       this.getUploadReport(filters),
     ]);
 
@@ -1276,6 +1419,16 @@ export class ReportService {
         title: 'Aktivitas',
         rows: ((activityResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
         columns: this.getExportColumns((activityResult.data ?? []) as RowDataPacket[], 'activity'),
+      },
+      {
+        title: 'Penghapusan Aset',
+        rows: ((disposalResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((disposalResult.data ?? []) as RowDataPacket[], 'disposal'),
+      },
+      {
+        title: 'Sanksi',
+        rows: ((sanctionsResult.data ?? []) as RowDataPacket[]) as Record<string, unknown>[],
+        columns: this.getExportColumns((sanctionsResult.data ?? []) as RowDataPacket[], 'sanctions'),
       },
       {
         title: 'Unggahan',
@@ -1327,6 +1480,14 @@ export class ReportService {
       const result = await this.getActivityReport(filters);
       return (result.data ?? []) as RowDataPacket[];
     }
+    if (reportType === 'disposal') {
+      const result = await this.getDisposalReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
+    if (reportType === 'sanctions') {
+      const result = await this.getSanctionsReport(filters);
+      return (result.data ?? []) as RowDataPacket[];
+    }
     const result = await this.getAssetReport(filters);
     return (result.data ?? []) as RowDataPacket[];
   }
@@ -1341,6 +1502,10 @@ export class ReportService {
         return 'Laporan Penggunaan';
       case 'activity':
         return 'Laporan Riwayat Aktivitas';
+      case 'disposal':
+        return 'Laporan Penghapusan Aset';
+      case 'sanctions':
+        return 'Laporan Sanksi';
       case 'all':
         return 'Laporan Terpadu';
       default:
@@ -1677,6 +1842,38 @@ export class ReportService {
     });
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  async exportToCsv(filters: ReportFilters): Promise<Buffer> {
+    const sheets = await this.getExportSheets(filters);
+    const lines: string[] = [];
+
+    const escapeCsvCell = (value: string | number | Date): string => {
+      const str = value instanceof Date ? value.toLocaleString('id-ID') : String(value ?? '');
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    sheets.forEach((sheet, sheetIndex) => {
+      if (sheetIndex > 0) lines.push('');
+      if (sheets.length > 1) lines.push(`# ${sheet.title}`);
+
+      const columns = sheet.columns ?? this.getExportColumns(sheet.rows as RowDataPacket[], filters.reportType);
+      lines.push(columns.map((key) => escapeCsvCell(formatExportColumnLabel(key))).join(','));
+
+      sheet.rows.forEach((row) => {
+        lines.push(
+          columns.map((key) => {
+            const value = formatExportValue(key, row[key]);
+            return escapeCsvCell(value instanceof Date ? value : String(value === null || value === undefined ? '' : value));
+          }).join(',')
+        );
+      });
+    });
+
+    return Buffer.from('﻿' + lines.join('\n'), 'utf8');
   }
 }
 

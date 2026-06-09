@@ -147,4 +147,18 @@ router.get(
   reportController.exportExcel
 );
 
+router.get(
+  '/export/csv',
+  [
+    query('reportType').optional().trim(),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('category').optional().trim(),
+    query('type').optional().trim(),
+    query('status').optional().trim(),
+    query('userId').optional().isInt({ min: 1 })
+  ],
+  reportController.exportCsv
+);
+
 export default router;

@@ -1051,7 +1051,7 @@ export default function AssetUsagePage() {
                 </div>
 
                 <div className="mt-3 flex justify-end">
-                  <Button className="w-full md:w-48" onClick={handleSubmit} disabled={isSaving || isLoading}>
+                  <Button className="w-full md:w-48 bg-teal-600 hover:bg-teal-700 text-white" onClick={handleSubmit} disabled={isSaving || isLoading}>
                     <Activity className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
                   </Button>
                 </div>

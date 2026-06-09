@@ -1171,7 +1171,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <div className="sm:col-span-2 flex gap-2">
                           <Button
                             size="sm"
-                            className="h-9 rounded-lg px-3 text-[13px]"
+                            className="h-9 rounded-lg px-3 text-[13px] bg-teal-600 hover:bg-teal-700 text-white"
                             onClick={() => handleComplete(h.id)}
                           >
                             Simpan

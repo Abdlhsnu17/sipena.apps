@@ -39,6 +39,8 @@ const fullAccessRoutes = [
   "/users",
   "/borrowing",
   "/returns",
+  "/sanctions",
+  "/disposal",
   "/settings",
 ]
 

@@ -108,7 +108,7 @@ class ReportService {
     return apiService.delete<ReportResponse<null>>(`/reports/uploads/${id}`)
   }
 
-  getExportEndpoint(format: "pdf" | "excel", params: Record<string, string> = {}): string {
+  getExportEndpoint(format: "excel" | "csv", params: Record<string, string> = {}): string {
     const query = new URLSearchParams(params).toString()
     return `/reports/export/${format}${query ? `?${query}` : ""}`
   }

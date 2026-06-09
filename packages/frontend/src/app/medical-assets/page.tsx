@@ -839,7 +839,7 @@ export default function MedicalAssetsPage() {
                                         variant="ghost"
                                         size="sm"
                                         title="Ajukan penghapusan aset"
-                                        className="h-9 w-9 p-1.5 text-orange-600 hover:bg-orange-50"
+                                        className="h-9 w-9 p-1.5 text-red-600 hover:bg-red-50"
                                         onClick={() => setDisposalTarget({ roomId: room.id, asset })}
                                       >
                                         <Trash2 className="w-4 h-4" />

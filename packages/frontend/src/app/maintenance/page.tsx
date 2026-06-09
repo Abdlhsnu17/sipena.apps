@@ -1737,7 +1737,7 @@ export default function MaintenancePage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                    className="h-8 w-8 rounded-lg p-0 text-teal-600 hover:bg-teal-50"
+                                    className="h-8 w-8 rounded-lg p-0 text-red-600 hover:bg-red-50"
                                   onClick={() => handleDeleteMaintenance(m.id)}
                                 >
                                   <Trash2 className="w-4 h-4" />

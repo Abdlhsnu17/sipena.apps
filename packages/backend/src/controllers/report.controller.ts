@@ -65,7 +65,7 @@ const buildReportExportFileName = (
   reportType: string | undefined,
   startDate: string | undefined,
   endDate: string | undefined,
-  extension: 'pdf' | 'xlsx',
+  extension: 'pdf' | 'xlsx' | 'csv',
 ): string => {
   const normalizedType = normalizeReportTypeForFileName(reportType);
   const typeLabel = reportFileNameLabels[normalizedType];
@@ -285,6 +285,40 @@ export class ReportController {
       res.status(501).json({
         success: false,
         message: error instanceof Error ? error.message : 'Fitur export Excel belum tersedia'
+      });
+    }
+  };
+
+  /**
+   * GET /api/reports/export/csv
+   */
+  exportCsv = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { reportType, startDate, endDate, category, type, status, userId } = req.query;
+
+      const csvBuffer = await this.reportService.exportToCsv({
+        reportType: reportType as string,
+        startDate: startDate as string,
+        endDate: endDate as string,
+        category: category as string,
+        type: type as string,
+        status: status as string,
+        userId: userId as string,
+        actorUserId: req.user?.id,
+        actorRole: req.user?.role
+      });
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${buildReportExportFileName(reportType as string, startDate as string, endDate as string, 'csv')}"`
+      );
+      res.send(csvBuffer);
+    } catch (error) {
+      console.error('Export CSV error:', error);
+      res.status(501).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Fitur export CSV belum tersedia'
       });
     }
   };
