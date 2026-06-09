@@ -295,6 +295,8 @@ describe('ReportService.getAssetReport', () => {
     jest.spyOn(service, 'getMaintenanceReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
     jest.spyOn(service, 'getUsageReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
     jest.spyOn(service, 'getActivityReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
+    jest.spyOn(service, 'getDisposalReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
+    jest.spyOn(service, 'getSanctionsReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
     jest.spyOn(service, 'getUploadReport').mockResolvedValue({ success: true, message: 'ok', data: [] });
 
     const buffer = await service.exportToExcel({ reportType: 'all', actorUserId: 1, actorRole: 'admin' });
@@ -309,6 +311,8 @@ describe('ReportService.getAssetReport', () => {
       'Pemeliharaan',
       'Penggunaan',
       'Aktivitas',
+      'Penghapusan Aset',
+      'Sanksi',
       'Unggahan',
     ]);
     expect(workbook.getWorksheet('Aset')).toBeUndefined();
