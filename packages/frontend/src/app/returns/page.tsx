@@ -268,6 +268,16 @@ export default function ReturnsPage() {
   }, [])
 
   const handleOpenReturn = (borrowing: ApiBorrowing) => {
+    const accessMessage = getStaffPjReturnAccessMessage(borrowing)
+    if (accessMessage) {
+      toast({
+        title: "Pengembalian tidak tersedia",
+        description: accessMessage,
+        variant: "destructive",
+      })
+      return
+    }
+
     setSelectedBorrowing(borrowing)
     setReturnNotes("")
     setReturnCondition("Baik")
@@ -276,6 +286,15 @@ export default function ReturnsPage() {
 
   const handleConfirmReturn = async () => {
     if (!selectedBorrowing) return
+    const accessMessage = getStaffPjReturnAccessMessage(selectedBorrowing)
+    if (accessMessage) {
+      toast({
+        title: "Pengembalian tidak tersedia",
+        description: accessMessage,
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       const response = await borrowingService.return(
@@ -429,6 +448,36 @@ export default function ReturnsPage() {
 
   const canValidateReturns = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteReturns = isAdminRole(currentUser?.role)
+
+  const normalizeWorkUnit = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() || ""
+
+  const getStaffPjReturnAccessMessage = (borrowing: ApiBorrowing) => {
+    if (!isStaffPjRole(currentUser?.role)) return ""
+
+    const actorWorkUnit = normalizeWorkUnit(currentUser?.workUnit)
+    if (!actorWorkUnit) {
+      return "Staff PJ wajib mengisi Unit Kerja / Instalasi di pengaturan akun sebelum mengembalikan peminjaman."
+    }
+
+    const borrowerWorkUnit = normalizeWorkUnit(borrowing.borrowerWorkUnit || borrowing.borrowerCurrentWorkUnit)
+    if (!borrowerWorkUnit) {
+      return "Instalasi peminjam belum terisi, sehingga Staff PJ belum dapat mengembalikan peminjaman ini."
+    }
+
+    if (actorWorkUnit !== borrowerWorkUnit) {
+      return "Staff PJ hanya dapat mengembalikan peminjaman dari instalasi yang sama."
+    }
+
+    return ""
+  }
+
+  const canProcessReturn = (borrowing: ApiBorrowing) => {
+    const isBorrower = currentUser && String(borrowing.userId) === String(currentUser.id)
+    if (isStaffPjRole(currentUser?.role)) {
+      return !getStaffPjReturnAccessMessage(borrowing)
+    }
+    return Boolean(isBorrower) || isAdminOrLeaderRole(currentUser?.role)
+  }
 
   const filteredReturnedBorrowings = returnedBorrowings.filter((b) => {
     const assetName = b.assetDetailName || b.assetName || ""
@@ -1317,12 +1366,12 @@ export default function ReturnsPage() {
                               </label>
                               <div className="flex flex-wrap items-center justify-end gap-2">
                                 {(() => {
-                                  const isBorrower = currentUser && String(b.userId) === String(currentUser.id)
-                                  const canReturn = isBorrower || isAdminOrLeaderRole(currentUser?.role) || isStaffPjRole(currentUser?.role)
+                                  const canReturn = canProcessReturn(b)
                                   return canReturn ? (
                                     <Button
                                       size="sm"
                                       onClick={() => handleOpenReturn(b)}
+                                      title={getStaffPjReturnAccessMessage(b) || "Kembalikan peminjaman"}
                                       className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
                                     >
                                       Kembalikan

@@ -17,6 +17,7 @@ export interface Borrowing {
   userEmail?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  borrowerCurrentWorkUnit?: string;
   ownerName?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
@@ -101,6 +102,7 @@ const normalizeBorrowing = (borrowing: any): Borrowing => ({
   userEmail: borrowing.userEmail ?? borrowing.user_email,
   borrowerPosition: borrowing.borrowerPosition ?? borrowing.borrower_position,
   borrowerWorkUnit: borrowing.borrowerWorkUnit ?? borrowing.borrower_work_unit,
+  borrowerCurrentWorkUnit: borrowing.borrowerCurrentWorkUnit ?? borrowing.borrower_current_work_unit,
   ownerName: borrowing.ownerName ?? borrowing.owner_name,
   ownerPosition: borrowing.ownerPosition ?? borrowing.owner_position,
   ownerWorkUnit: borrowing.ownerWorkUnit ?? borrowing.owner_work_unit,

@@ -253,7 +253,7 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(updateParams).toContain(2);
   });
 
-  it('rejects extension attempts from admin, leader, or any non-owner user', async () => {
+  it('rejects extension attempts from a non-owner without a privileged role', async () => {
     jest.spyOn(service, 'getById').mockResolvedValueOnce({
       success: true,
       message: 'Borrowing retrieved successfully',
@@ -274,6 +274,78 @@ describe('BorrowingService borrowing lock rules', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('peminjam sendiri');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
+
+  it('allows staff pj from the same installation to extend a borrowing', async () => {
+    jest.spyOn(service, 'getById')
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 24,
+          user_id: 8,
+          status: 'overdue',
+          borrower_work_unit: 'Instalasi Rawat Inap',
+          extension_count: 0,
+          is_extension_blocked: false,
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 24,
+          user_id: 8,
+          status: 'borrowed',
+          borrower_work_unit: 'Instalasi Rawat Inap',
+          extension_count: 1,
+          is_extension_blocked: false,
+        } as any,
+      });
+
+    mockedQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+
+    const result = await service.extend(
+      '24',
+      {
+        newDueDate: new Date(2099, 0, 1, 9, 0, 0),
+        actorRole: 'staff_pj',
+        actorWorkUnit: ' instalasi rawat inap ',
+      },
+      99,
+      'staff_pj'
+    );
+
+    expect(result.success).toBe(true);
+    expect(mockedQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects staff pj return when their installation is not set', async () => {
+    jest.spyOn(service as any, 'syncOverdueBorrowings').mockResolvedValue(undefined);
+    jest.spyOn(service as any, 'hasSanctionColumns').mockResolvedValue(true);
+    jest.spyOn(service, 'getById').mockResolvedValueOnce({
+      success: true,
+      message: 'Borrowing retrieved successfully',
+      data: {
+        id: 25,
+        user_id: 8,
+        status: 'borrowed',
+        borrower_work_unit: 'Instalasi Rawat Inap',
+        asset_id: 4,
+        asset_type: 'medical',
+      } as any,
+    });
+
+    const result = await service.return('25', {
+      condition: 'Baik',
+      returnedBy: 99,
+      actorRole: 'staff_pj',
+      actorWorkUnit: '',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Unit Kerja / Instalasi');
     expect(mockedQuery).not.toHaveBeenCalled();
   });
 

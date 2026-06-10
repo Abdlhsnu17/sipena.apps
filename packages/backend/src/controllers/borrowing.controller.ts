@@ -398,11 +398,19 @@ export class BorrowingController {
       const result = await this.borrowingService.return(id, {
         condition,
         notes,
-        returnedBy
+        returnedBy,
+        actorRole: authUser?.role,
+        actorWorkUnit: authUser?.workUnit
       });
 
       if (!result.success) {
-        res.status(404).json(result);
+        const message = result.message || '';
+        const status = message.includes('tidak ditemukan') || message.includes('not found')
+          ? 404
+          : message.includes('Staff PJ')
+            ? 403
+            : 400;
+        res.status(status).json(result);
         return;
       }
 
@@ -593,14 +601,16 @@ export class BorrowingController {
       const result = await this.borrowingService.extend(id, {
         newDueDate: req.body.newDueDate,
         extensionNotes: req.body.extensionNotes,
-        extendedBy: actorId
+        extendedBy: actorId,
+        actorRole: req.user?.role,
+        actorWorkUnit: req.user?.workUnit
       }, actorId, req.user?.role);
 
       if (!result.success) {
         const message = result.message || '';
         const status = message.includes('tidak ditemukan')
           ? 404
-          : message.includes('hanya dapat diajukan oleh user peminjam sendiri')
+          : message.includes('hanya dapat diajukan') || message.includes('Staff PJ') || message.includes('Instalasi peminjam')
             ? 403
             : 400;
         res.status(status).json(result);

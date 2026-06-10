@@ -14,6 +14,7 @@ interface AuthUserRow extends RowDataPacket {
   staff_access_type: string | null;
   gender: string | null;
   work_unit: string | null;
+  sub_work_unit: string | null;
   home_address: string | null;
   phone_number: string | null;
   photo_path: string | null;
@@ -52,7 +53,7 @@ export const authMiddleware = async (
     
     const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
     const [rows] = await pool.query<AuthUserRow[]>(
-      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
+      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -95,6 +96,7 @@ export const authMiddleware = async (
       staffAccessType: user.staff_access_type,
       gender: user.gender ?? undefined,
       workUnit: user.work_unit ?? undefined,
+      subWorkUnit: user.sub_work_unit ?? undefined,
       homeAddress: user.home_address ?? undefined,
       phoneNumber: user.phone_number ?? undefined,
       photoPath: user.photo_path ?? undefined,

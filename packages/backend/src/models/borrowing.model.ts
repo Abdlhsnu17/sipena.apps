@@ -17,6 +17,7 @@ export interface Borrowing {
   userEmail?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  borrowerCurrentWorkUnit?: string;
   ownerName?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
@@ -108,12 +109,16 @@ export interface ReturnBorrowingDTO {
   condition: string;
   notes?: string;
   returnedBy?: number;
+  actorRole?: string | null;
+  actorWorkUnit?: string | null;
 }
 
 export interface ExtendBorrowingDTO {
   newDueDate: Date | string;
   extensionNotes?: string;
   extendedBy?: number;
+  actorRole?: string | null;
+  actorWorkUnit?: string | null;
 }
 
 export interface BorrowingFilters {

@@ -31,7 +31,7 @@ import {
 } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
-import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role";
+import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 import InventoryPicker from "@/components/inventory-picker";
@@ -544,8 +544,32 @@ export default function BorrowingPage() {
   const isBorrowingOwner = (borrowing: ApiBorrowing) =>
     Number.isFinite(currentUserId) && currentUserId > 0 && Number(borrowing.userId) === currentUserId
 
+  const normalizeWorkUnit = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() || ""
+
+  const getStaffPjInstallationAccessMessage = (borrowing: ApiBorrowing) => {
+    if (!isStaffPjRole(currentUser?.role)) return ""
+
+    const actorWorkUnit = normalizeWorkUnit(currentUser?.workUnit)
+    if (!actorWorkUnit) {
+      return "Staff PJ wajib mengisi Unit Kerja / Instalasi di pengaturan akun sebelum memperpanjang peminjaman."
+    }
+
+    const borrowerWorkUnit = normalizeWorkUnit(borrowing.borrowerWorkUnit || borrowing.borrowerCurrentWorkUnit)
+    if (!borrowerWorkUnit) {
+      return "Instalasi peminjam belum terisi, sehingga Staff PJ belum dapat memperpanjang peminjaman ini."
+    }
+
+    if (actorWorkUnit !== borrowerWorkUnit) {
+      return "Staff PJ hanya dapat memperpanjang peminjaman dari instalasi yang sama."
+    }
+
+    return ""
+  }
+
   const canManageBorrowingExtension = (borrowing: ApiBorrowing) => {
-    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role)) return false
+    const staffPjAccessMessage = getStaffPjInstallationAccessMessage(borrowing)
+    if (staffPjAccessMessage) return false
+    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role) && !isStaffPjRole(currentUser?.role)) return false
     if (borrowing.status !== "overdue") return false
     if (borrowing.isExtensionBlocked) return false
     if ((borrowing.extensionCount || 0) >= 3) return false
@@ -553,8 +577,11 @@ export default function BorrowingPage() {
   }
 
   const getBorrowingExtensionLimitMessage = (borrowing: ApiBorrowing) => {
-    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role)) {
-      return "Perpanjangan hanya dapat diajukan oleh user peminjam sendiri, leader, atau admin."
+    const staffPjAccessMessage = getStaffPjInstallationAccessMessage(borrowing)
+    if (staffPjAccessMessage) return staffPjAccessMessage
+
+    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role) && !isStaffPjRole(currentUser?.role)) {
+      return "Perpanjangan hanya dapat diajukan oleh user peminjam sendiri, Staff PJ satu instalasi, leader, atau admin."
     }
 
     if (borrowing.isExtensionBlocked) {

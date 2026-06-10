@@ -65,6 +65,10 @@ const normalizeOptionalText = (value?: string | null): string | null => {
   return trimmed ? trimmed : null;
 };
 
+const normalizeComparableText = (value?: string | null): string => {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
+};
+
 const borrowingDateFields = [
   'borrow_date',
   'due_date',
@@ -135,6 +139,41 @@ export class BorrowingService {
   }
 
   private assetUsageService: AssetUsageService;
+
+  private getBorrowerWorkUnit(borrowing: any): string {
+    return (
+      borrowing.borrowerWorkUnit
+      ?? borrowing.borrower_work_unit
+      ?? borrowing.borrowerCurrentWorkUnit
+      ?? borrowing.borrower_current_work_unit
+      ?? ''
+    );
+  }
+
+  private validateStaffPjSameInstallation(
+    borrowing: any,
+    actorRole: string | null | undefined,
+    actorWorkUnit: string | null | undefined,
+    actionLabel: 'memperpanjang' | 'mengembalikan'
+  ): string | null {
+    if (!hasAnyRole(actorRole, ['staff_pj', 'staff pj'])) return null;
+
+    const normalizedActorWorkUnit = normalizeComparableText(actorWorkUnit);
+    if (!normalizedActorWorkUnit) {
+      return `Staff PJ wajib mengisi Unit Kerja / Instalasi di pengaturan akun sebelum ${actionLabel} peminjaman.`;
+    }
+
+    const normalizedBorrowerWorkUnit = normalizeComparableText(this.getBorrowerWorkUnit(borrowing));
+    if (!normalizedBorrowerWorkUnit) {
+      return `Instalasi peminjam belum terisi, sehingga Staff PJ belum dapat ${actionLabel} peminjaman ini.`;
+    }
+
+    if (normalizedActorWorkUnit !== normalizedBorrowerWorkUnit) {
+      return `Staff PJ hanya dapat ${actionLabel} peminjaman dari instalasi yang sama.`;
+    }
+
+    return null;
+  }
 
   private async hasActiveUsage(
     assetId: number,
@@ -814,7 +853,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type, 
-        u.name as user_name, u.nip as user_nip, u.email as user_email,
+        u.name as user_name, u.nip as user_nip, u.email as user_email, u.work_unit as borrower_current_work_unit,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
       FROM borrowing_records b
@@ -889,7 +928,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type,
-        u.name as user_name, u.nip as user_nip, u.email as user_email,
+        u.name as user_name, u.nip as user_nip, u.email as user_email, u.work_unit as borrower_current_work_unit,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
        FROM borrowing_records b
@@ -1421,6 +1460,16 @@ export class BorrowingService {
     const assetDetailId = borrowingRow.assetDetailId ?? borrowingRow.asset_detail_id ?? null;
     const assetDetailCode = borrowingRow.assetDetailCode ?? borrowingRow.asset_detail_code ?? null;
 
+    const staffPjAccessError = this.validateStaffPjSameInstallation(
+      borrowingRow,
+      data.actorRole,
+      data.actorWorkUnit,
+      'mengembalikan'
+    );
+    if (staffPjAccessError) {
+      return { success: false, message: staffPjAccessError };
+    }
+
     if (borrowingStatus !== 'approved' && borrowingStatus !== 'borrowed' && borrowingStatus !== 'overdue') {
       return { success: false, message: 'Only approved/borrowed/overdue items can be returned' };
     }
@@ -1852,12 +1901,23 @@ export class BorrowingService {
     }
 
     const isOwnBorrowing = Number.isFinite(borrowerId) && borrowerId === actorUserId;
-    const isManager = hasAnyRole(actorRole, ['admin', 'leader']);
+    const staffPjAccessError = this.validateStaffPjSameInstallation(
+      borrowData,
+      data.actorRole ?? actorRole,
+      data.actorWorkUnit,
+      'memperpanjang'
+    );
+    if (staffPjAccessError) {
+      return { success: false, message: staffPjAccessError };
+    }
 
-    if (!isOwnBorrowing && !isManager) {
+    const isManager = hasAnyRole(actorRole, ['admin', 'leader']);
+    const isSameInstallationStaffPj = hasAnyRole(actorRole, ['staff_pj', 'staff pj']);
+
+    if (!isOwnBorrowing && !isManager && !isSameInstallationStaffPj) {
       return {
         success: false,
-        message: 'Perpanjangan peminjaman hanya dapat diajukan oleh user peminjam sendiri, leader, atau admin.'
+        message: 'Perpanjangan peminjaman hanya dapat diajukan oleh user peminjam sendiri, Staff PJ satu instalasi, leader, atau admin.'
       };
     }
 
