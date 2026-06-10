@@ -111,7 +111,7 @@ export interface ReturnBorrowingDTO {
 }
 
 export interface ExtendBorrowingDTO {
-  newDueDate: Date;
+  newDueDate: Date | string;
   extensionNotes?: string;
   extendedBy?: number;
 }

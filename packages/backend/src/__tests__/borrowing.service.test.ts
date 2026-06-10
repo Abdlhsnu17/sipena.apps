@@ -211,4 +211,93 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(String(updateQuery)).toContain('status = ?');
     expect(updateParams[updateParams.length - 1]).toBe('18');
   });
+
+  it('allows only the borrowing owner to extend an overdue borrowing', async () => {
+    const getByIdSpy = jest.spyOn(service, 'getById')
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 21,
+          user_id: 8,
+          status: 'overdue',
+          extension_count: 1,
+          is_extension_blocked: false,
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 21,
+          user_id: 8,
+          status: 'borrowed',
+          extension_count: 2,
+          is_extension_blocked: false,
+        } as any,
+      });
+
+    mockedQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+
+    const result = await service.extend(
+      '21',
+      { newDueDate: new Date(2099, 0, 1, 9, 0, 0) },
+      8
+    );
+
+    expect(result.success).toBe(true);
+    expect(getByIdSpy).toHaveBeenCalledTimes(2);
+
+    const [updateQuery, updateParams] = mockedQuery.mock.calls[0] as [string, any[]];
+    expect(String(updateQuery)).toContain('extension_count = ?');
+    expect(updateParams).toContain(2);
+  });
+
+  it('rejects extension attempts from admin, leader, or any non-owner user', async () => {
+    jest.spyOn(service, 'getById').mockResolvedValueOnce({
+      success: true,
+      message: 'Borrowing retrieved successfully',
+      data: {
+        id: 22,
+        user_id: 8,
+        status: 'overdue',
+        extension_count: 0,
+        is_extension_blocked: false,
+      } as any,
+    });
+
+    const result = await service.extend(
+      '22',
+      { newDueDate: new Date(2099, 0, 1, 9, 0, 0) },
+      1
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('peminjam sendiri');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
+
+  it('rejects extension when the borrowing is extension-blocked even for its owner', async () => {
+    jest.spyOn(service, 'getById').mockResolvedValueOnce({
+      success: true,
+      message: 'Borrowing retrieved successfully',
+      data: {
+        id: 23,
+        user_id: 8,
+        status: 'overdue',
+        extension_count: 1,
+        is_extension_blocked: true,
+      } as any,
+    });
+
+    const result = await service.extend(
+      '23',
+      { newDueDate: new Date(2099, 0, 1, 9, 0, 0) },
+      8
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Perpanjangan telah dikunci');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
 });

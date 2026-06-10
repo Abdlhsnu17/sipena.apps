@@ -5,6 +5,7 @@ import {
     Borrowing,
     BorrowingFilters,
     CreateBorrowingDTO,
+    ExtendBorrowingDTO,
     PaginatedResponse,
     ReturnBorrowingDTO,
     UpdateBorrowingDTO
@@ -1835,14 +1836,26 @@ export class BorrowingService {
   /**
    * Extend borrowing due date (perpanjangan peminjaman)
    */
-  async extend(id: string, data: any): Promise<ApiResponse<Borrowing>> {
+  async extend(id: string, data: ExtendBorrowingDTO, actorUserId: number): Promise<ApiResponse<Borrowing>> {
     const borrowing = await this.getById(id);
 
     if (!borrowing.success || !borrowing.data) {
       return { success: false, message: 'Peminjaman tidak ditemukan' };
     }
 
-    const borrowData = borrowing.data;
+    const borrowData = borrowing.data as any;
+    const borrowerId = Number(borrowData.userId ?? borrowData.user_id);
+
+    if (!Number.isFinite(actorUserId) || actorUserId <= 0) {
+      return { success: false, message: 'Authentication required' };
+    }
+
+    if (!Number.isFinite(borrowerId) || borrowerId !== actorUserId) {
+      return {
+        success: false,
+        message: 'Perpanjangan peminjaman hanya dapat diajukan oleh user peminjam sendiri.'
+      };
+    }
 
     // Hanya status overdue yang bisa diperpanjang
     if (borrowData.status !== 'overdue') {
@@ -1867,7 +1880,15 @@ export class BorrowingService {
 
     const extensionNotes = normalizeOptionalText(data.extensionNotes) || 'Perpanjangan waktu peminjaman';
     const maxExtensions = 3; // Maksimal 3 kali perpanjangan
-    const currentExtensions = (borrowData.extensionCount || 0);
+    const currentExtensions = Number(borrowData.extensionCount ?? borrowData.extension_count ?? 0) || 0;
+    const isExtensionBlocked = Boolean(borrowData.isExtensionBlocked ?? borrowData.is_extension_blocked);
+
+    if (isExtensionBlocked) {
+      return {
+        success: false,
+        message: 'Perpanjangan telah dikunci. Alat harus segera dikembalikan.'
+      };
+    }
 
     if (currentExtensions >= maxExtensions) {
       return {

@@ -541,10 +541,11 @@ export default function BorrowingPage() {
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
   const currentUserId = Number(currentUser?.id)
 
-  const _isBorrowingOwner = (borrowing: ApiBorrowing) =>
+  const isBorrowingOwner = (borrowing: ApiBorrowing) =>
     Number.isFinite(currentUserId) && currentUserId > 0 && Number(borrowing.userId) === currentUserId
 
   const canManageBorrowingExtension = (borrowing: ApiBorrowing) => {
+    if (!isBorrowingOwner(borrowing)) return false
     if (borrowing.status !== "overdue") return false
     if (borrowing.isExtensionBlocked) return false
     if ((borrowing.extensionCount || 0) >= 3) return false
@@ -552,6 +553,10 @@ export default function BorrowingPage() {
   }
 
   const getBorrowingExtensionLimitMessage = (borrowing: ApiBorrowing) => {
+    if (!isBorrowingOwner(borrowing)) {
+      return "Perpanjangan hanya dapat diajukan oleh user peminjam sendiri."
+    }
+
     if (borrowing.isExtensionBlocked) {
       return "Perpanjangan telah dikunci. Alat harus segera dikembalikan."
     }

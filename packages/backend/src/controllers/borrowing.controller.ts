@@ -584,20 +584,26 @@ export class BorrowingController {
 
       const { id } = req.params;
       const actorId = getActorUserId(req);
-      const borrowing = await this.borrowingService.getById(id);
 
-      if (!borrowing.success || !borrowing.data) {
-        res.status(404).json({
-          success: false,
-          message: 'Peminjaman tidak ditemukan'
-        });
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
         return;
       }
 
-      const result = await this.borrowingService.extend(id, req.body);
+      const result = await this.borrowingService.extend(id, {
+        newDueDate: req.body.newDueDate,
+        extensionNotes: req.body.extensionNotes,
+        extendedBy: actorId
+      }, actorId);
 
       if (!result.success) {
-        res.status(400).json(result);
+        const message = result.message || '';
+        const status = message.includes('tidak ditemukan')
+          ? 404
+          : message.includes('hanya dapat diajukan oleh user peminjam sendiri')
+            ? 403
+            : 400;
+        res.status(status).json(result);
         return;
       }
 
