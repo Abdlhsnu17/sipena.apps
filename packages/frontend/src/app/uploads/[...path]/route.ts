@@ -31,7 +31,7 @@ const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
     return NextResponse.json(
       {
         success: false,
-        message: "API proxy request failed",
+        message: "Upload proxy request failed",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 502 },

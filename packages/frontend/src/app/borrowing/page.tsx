@@ -545,7 +545,7 @@ export default function BorrowingPage() {
     Number.isFinite(currentUserId) && currentUserId > 0 && Number(borrowing.userId) === currentUserId
 
   const canManageBorrowingExtension = (borrowing: ApiBorrowing) => {
-    if (!isBorrowingOwner(borrowing)) return false
+    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role)) return false
     if (borrowing.status !== "overdue") return false
     if (borrowing.isExtensionBlocked) return false
     if ((borrowing.extensionCount || 0) >= 3) return false
@@ -553,8 +553,8 @@ export default function BorrowingPage() {
   }
 
   const getBorrowingExtensionLimitMessage = (borrowing: ApiBorrowing) => {
-    if (!isBorrowingOwner(borrowing)) {
-      return "Perpanjangan hanya dapat diajukan oleh user peminjam sendiri."
+    if (!isBorrowingOwner(borrowing) && !isAdminOrLeaderRole(currentUser?.role)) {
+      return "Perpanjangan hanya dapat diajukan oleh user peminjam sendiri, leader, atau admin."
     }
 
     if (borrowing.isExtensionBlocked) {

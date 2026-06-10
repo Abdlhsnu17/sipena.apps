@@ -19,6 +19,7 @@ import {
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
 import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
+import { hasAnyRole } from '../utils/role';
 
 /**
  * Parse datetime string as LOCAL time (not UTC)
@@ -1836,7 +1837,7 @@ export class BorrowingService {
   /**
    * Extend borrowing due date (perpanjangan peminjaman)
    */
-  async extend(id: string, data: ExtendBorrowingDTO, actorUserId: number): Promise<ApiResponse<Borrowing>> {
+  async extend(id: string, data: ExtendBorrowingDTO, actorUserId: number, actorRole?: string | null): Promise<ApiResponse<Borrowing>> {
     const borrowing = await this.getById(id);
 
     if (!borrowing.success || !borrowing.data) {
@@ -1850,10 +1851,13 @@ export class BorrowingService {
       return { success: false, message: 'Authentication required' };
     }
 
-    if (!Number.isFinite(borrowerId) || borrowerId !== actorUserId) {
+    const isOwnBorrowing = Number.isFinite(borrowerId) && borrowerId === actorUserId;
+    const isManager = hasAnyRole(actorRole, ['admin', 'leader']);
+
+    if (!isOwnBorrowing && !isManager) {
       return {
         success: false,
-        message: 'Perpanjangan peminjaman hanya dapat diajukan oleh user peminjam sendiri.'
+        message: 'Perpanjangan peminjaman hanya dapat diajukan oleh user peminjam sendiri, leader, atau admin.'
       };
     }
 

@@ -594,7 +594,7 @@ export class BorrowingController {
         newDueDate: req.body.newDueDate,
         extensionNotes: req.body.extensionNotes,
         extendedBy: actorId
-      }, actorId);
+      }, actorId, req.user?.role);
 
       if (!result.success) {
         const message = result.message || '';
