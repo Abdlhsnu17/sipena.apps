@@ -17,7 +17,7 @@ RUN npm run build --workspace=inventory-backend
 
 WORKDIR /app/packages/backend
 
-RUN mkdir -p uploads/profiles uploads/reports
+RUN mkdir -p /data/uploads/profiles /data/uploads/reports uploads/profiles uploads/reports
 
 EXPOSE 4000
 

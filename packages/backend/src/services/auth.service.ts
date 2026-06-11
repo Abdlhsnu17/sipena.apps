@@ -36,6 +36,7 @@ interface UserRow extends RowDataPacket {
   phone_number: string | null;
   photo_path: string | null;
   created_at: Date;
+  updated_at: Date;
   last_login: Date;
   session_version: number;
   account_status: 'active' | 'inactive' | 'suspended' | null;
@@ -84,6 +85,7 @@ export class AuthService {
       phoneNumber: row.phone_number ?? undefined,
       photoPath: row.photo_path ?? undefined,
       createdAt: row.created_at,
+      updatedAt: row.updated_at,
       lastLogin: row.last_login,
       sessionVersion: Number(row.session_version) || 0,
       accountStatus: row.account_status || 'active',
@@ -111,7 +113,7 @@ export class AuthService {
     const identifier = nip.trim();
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
+      'SELECT id, nip, name, email, password, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, updated_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE nip = ? OR email = ? LIMIT 1',
       [identifier, identifier]
     );
 
@@ -185,7 +187,7 @@ export class AuthService {
     );
 
     const [newUserRows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, updated_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [result.insertId]
     );
 
@@ -331,7 +333,7 @@ export class AuthService {
 
   async getProfile(userId: number): Promise<AuthResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, updated_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -421,7 +423,7 @@ export class AuthService {
     }
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, updated_at, last_login, session_version, account_status, must_change_password, uml_access FROM users WHERE id = ?',
       [userId]
     );
 
@@ -462,6 +464,7 @@ export class AuthService {
       homeAddress: user.home_address,
       phoneNumber: user.phone_number,
       photoPath: user.photo_path,
+      updatedAt: user.updated_at,
       sessionVersion: Number(user.session_version) || 0,
       accountStatus: user.account_status || 'active',
       mustChangePassword: Boolean(user.must_change_password),

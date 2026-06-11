@@ -19,6 +19,7 @@ export interface User {
   phoneNumber?: string
   photoPath?: string
   createdAt?: string
+  updatedAt?: string
   lastLogin?: string
   accountStatus?: AccountStatus
   mustChangePassword?: boolean

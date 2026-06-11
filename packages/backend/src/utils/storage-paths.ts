@@ -1,7 +1,24 @@
 import fs from 'fs';
 import path from 'path';
 
-const uploadsRoot = path.resolve(process.env.UPLOADS_ROOT || path.join(process.cwd(), 'uploads'));
+const resolveDefaultUploadsRoot = (): string => {
+  if (process.env.UPLOADS_ROOT) {
+    return process.env.UPLOADS_ROOT;
+  }
+
+  const railwayVolumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  if (railwayVolumePath) {
+    return path.join(railwayVolumePath, 'uploads');
+  }
+
+  if (process.env.NODE_ENV === 'production' && fs.existsSync('/data')) {
+    return '/data/uploads';
+  }
+
+  return path.join(process.cwd(), 'uploads');
+};
+
+const uploadsRoot = path.resolve(resolveDefaultUploadsRoot());
 
 const ensureDirectory = (directoryPath: string): string => {
   fs.mkdirSync(directoryPath, { recursive: true });

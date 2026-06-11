@@ -612,9 +612,9 @@ export class BorrowingService {
          ON b.asset_id = na.id
          AND b.asset_type = 'non_medical'
        WHERE b.user_id = ?
-         AND b.status = 'overdue'
-         AND b.sanction_status = 'active'
-         AND (b.is_extension_blocked = TRUE OR COALESCE(b.extension_count, 0) = 0)
+         AND b.status IN ('approved', 'borrowed', 'overdue')
+         AND b.due_date IS NOT NULL
+         AND NOW() > b.due_date
        ORDER BY b.due_date ASC, b.created_at ASC
        LIMIT 1`,
       [userId]
@@ -1840,9 +1840,9 @@ export class BorrowingService {
     const query = `
       SELECT COUNT(*) as count FROM borrowing_records
       WHERE user_id = ?
-        AND status = 'overdue'
-        AND sanction_status = 'active'
-        AND (is_extension_blocked = TRUE OR COALESCE(extension_count, 0) = 0)
+        AND status IN ('approved', 'borrowed', 'overdue')
+        AND due_date IS NOT NULL
+        AND NOW() > due_date
       LIMIT 1
     `;
 
@@ -1860,9 +1860,9 @@ export class BorrowingService {
     const query = `
       SELECT * FROM borrowing_records
       WHERE user_id = ?
-        AND status = 'overdue'
-        AND sanction_status = 'active'
-        AND (is_extension_blocked = TRUE OR COALESCE(extension_count, 0) = 0)
+        AND status IN ('approved', 'borrowed', 'overdue')
+        AND due_date IS NOT NULL
+        AND NOW() > due_date
       ORDER BY due_date ASC
     `;
 

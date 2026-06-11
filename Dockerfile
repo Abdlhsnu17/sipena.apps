@@ -23,7 +23,7 @@ RUN npm run build
 
 ENV NODE_ENV=production
 
-RUN mkdir -p packages/backend/uploads/profiles packages/backend/uploads/reports
+RUN mkdir -p /data/uploads/profiles /data/uploads/reports packages/backend/uploads/profiles packages/backend/uploads/reports
 
 COPY scripts/start-production.sh scripts/start-production.sh
 RUN chmod +x scripts/start-production.sh

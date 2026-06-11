@@ -84,6 +84,41 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(assetGetByIdSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects a new borrowing when an active borrowed item is already past its due date', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 18,
+            borrowing_code: 'BRW-MQ81BE48-PSKJ',
+            asset_name: 'Cleaning Trolley Ruangan',
+            due_date: new Date(2026, 5, 11, 19, 17, 0),
+            status: 'borrowed',
+          },
+        ],
+        [],
+      ]);
+
+    const assetGetByIdSpy = jest.spyOn((service as any).assetService, 'getById');
+
+    const result = await service.create({
+      assetId: 13,
+      assetType: 'non_medical',
+      userId: 5,
+      borrowDate: new Date(2026, 5, 12, 8, 0, 0),
+      dueDate: new Date(2026, 5, 13, 8, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Peminjaman baru ditolak');
+    expect(result.message).toContain('belum dikembalikan');
+    expect(result.message).toContain('Cleaning Trolley Ruangan');
+    expect(assetGetByIdSpy).not.toHaveBeenCalled();
+  });
+
   it('rejects borrowing when the asset still has an active usage log', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])

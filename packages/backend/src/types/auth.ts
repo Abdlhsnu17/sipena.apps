@@ -16,6 +16,7 @@ export interface User {
   phoneNumber?: string
   photoPath?: string
   createdAt: Date | string
+  updatedAt?: Date | string
   lastLogin?: Date | string
   sessionVersion?: number
   accountStatus?: AccountStatus
@@ -81,6 +82,7 @@ export interface TokenPayload {
   homeAddress?: string
   phoneNumber?: string
   photoPath?: string
+  updatedAt?: Date | string
   sessionVersion?: number
   accountStatus?: AccountStatus
   mustChangePassword?: boolean

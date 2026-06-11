@@ -68,6 +68,7 @@ export interface User {
   phoneNumber?: string;
   photoPath?: string;
   createdAt?: string;
+  updatedAt?: string;
   lastLogin?: string;
   accountStatus?: "active" | "inactive" | "suspended";
   mustChangePassword?: boolean;
