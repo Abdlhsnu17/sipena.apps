@@ -31,6 +31,9 @@ interface UserRow extends RowDataPacket {
   photo_path: string | null;
   account_status: 'active' | 'inactive' | 'suspended' | null;
   must_change_password: number | boolean;
+  deleted_at: Date | null;
+  deleted_by: number | null;
+  delete_reason: string | null;
 }
 
 interface CountRow extends RowDataPacket {
@@ -42,8 +45,8 @@ export class UserService {
     const { page, limit, search, role } = filters;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE 1=1';
-    let countQuery = 'SELECT COUNT(*) as count FROM users WHERE 1=1';
+    let query = 'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password, deleted_at, deleted_by, delete_reason FROM users WHERE deleted_at IS NULL';
+    let countQuery = 'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL';
     const params: any[] = [];
 
     if (search) {
@@ -78,7 +81,7 @@ export class UserService {
 
   async getById(id: string): Promise<ApiResponse<User>> {
     const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE id = ?',
+        'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password, deleted_at, deleted_by, delete_reason FROM users WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 
@@ -96,7 +99,7 @@ export class UserService {
     }
 
     const [existingRows] = await pool.query<UserRow[]>(
-      'SELECT id FROM users WHERE nip = ? OR email = ? OR phone_number = ?',
+      'SELECT id FROM users WHERE deleted_at IS NULL AND (nip = ? OR email = ? OR phone_number = ?)',
       [data.nip, data.email, normalizedPhoneNumber]
     );
 
@@ -153,7 +156,7 @@ export class UserService {
 
       const normalizedPhoneNumber = data.phoneNumber ? normalizePhoneNumberForStorage(data.phoneNumber) : null;
       const [duplicateRows] = await pool.query<UserRow[]>(
-        'SELECT id FROM users WHERE phone_number = ? AND id <> ? LIMIT 1',
+        'SELECT id FROM users WHERE phone_number = ? AND id <> ? AND deleted_at IS NULL LIMIT 1',
         [normalizedPhoneNumber, id],
       );
 
@@ -195,21 +198,33 @@ export class UserService {
     await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
 
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password FROM users WHERE id = ?',
+      'SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, created_at, last_login, uml_access, account_status, must_change_password, deleted_at, deleted_by, delete_reason FROM users WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 
     return { success: true, message: 'User updated successfully', data: rows[0] as User };
   }
 
-  async delete(id: string): Promise<ApiResponse> {
-    const [result] = await pool.query<ResultSetHeader>('DELETE FROM users WHERE id = ?', [id]);
+  async delete(id: string, deletedBy?: number, deleteReason?: string): Promise<ApiResponse> {
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE users
+       SET deleted_at = NOW(),
+           deleted_by = ?,
+           delete_reason = ?,
+           account_status = 'inactive',
+           is_active = 0,
+           session_version = session_version + 1,
+           updated_at = NOW()
+       WHERE id = ?
+         AND deleted_at IS NULL`,
+      [deletedBy ?? null, deleteReason?.trim() || null, id]
+    );
 
     if (result.affectedRows === 0) {
       return { success: false, message: 'User not found' };
     }
 
-    return { success: true, message: 'User deleted successfully' };
+    return { success: true, message: 'Pengguna diarsipkan' };
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<ApiResponse> {

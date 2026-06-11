@@ -119,8 +119,8 @@ class UserService {
     return { ...response, data: normalizeUser(response.data) }
   }
 
-  async delete(id: number | string): Promise<UserResponse> {
-    return apiService.delete<UserResponse>(`/users/${id}`)
+  async delete(id: number | string, deleteReason?: string): Promise<UserResponse> {
+    return apiService.delete<UserResponse>(`/users/${id}`, { deleteReason })
   }
 
   async changePassword(id: number | string, currentPassword: string, newPassword: string): Promise<UserResponse> {

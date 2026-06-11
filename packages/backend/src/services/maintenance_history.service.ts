@@ -31,6 +31,9 @@ interface MaintenanceHistoryRow extends RowDataPacket {
   validated_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  deleted_at: Date | null;
+  deleted_by: number | null;
+  delete_reason: string | null;
   requester_name?: string;
   requester_nip?: string;
   validator_name?: string;
@@ -152,6 +155,9 @@ const mapRowToHistory = (row: MaintenanceHistoryRow): MaintenanceHistory => ({
   validatedAt: toIsoString(row.validated_at),
   createdAt: toIsoString(row.created_at),
   updatedAt: toIsoString(row.updated_at),
+  deletedAt: toIsoString(row.deleted_at),
+  deletedBy: row.deleted_by ?? undefined,
+  deleteReason: row.delete_reason ?? undefined,
   requesterName: row.requester_name ?? undefined,
   requesterNip: row.requester_nip ?? undefined,
   validatorName: row.validator_name ?? undefined,
@@ -167,7 +173,8 @@ const resolveMaintenanceAssetContext = async (
   const [maintenanceRows] = await pool.query<RowDataPacket[]>(
     `SELECT asset_id, COALESCE(asset_type, 'medical') AS asset_type
      FROM maintenance_records
-     WHERE id = ?
+    WHERE id = ?
+      AND deleted_at IS NULL
      LIMIT 1`,
     [maintenanceId]
   );
@@ -207,6 +214,7 @@ const hasOtherActiveMaintenance = async (
     WHERE asset_id = ?
       AND COALESCE(asset_type, 'medical') = ?
       AND status IN (?, ?, ?)
+      AND deleted_at IS NULL
   `;
 
   if (excludeMaintenanceId !== undefined) {
@@ -368,27 +376,33 @@ const syncAssetAvailability = async (
 };
 
 const getRawById = async (id: number): Promise<MaintenanceHistoryRow | null> => {
-  const [rows] = await pool.query<MaintenanceHistoryRow[]>(`SELECT * FROM maintenance_history WHERE id = ?`, [id]);
+  const [rows] = await pool.query<MaintenanceHistoryRow[]>(
+    `SELECT * FROM maintenance_history WHERE id = ? AND deleted_at IS NULL`,
+    [id]
+  );
   return rows.length ? rows[0] : null;
 };
 
 const getRawByMaintenanceId = async (maintenanceId: number): Promise<MaintenanceHistoryRow | null> => {
   const [rows] = await pool.query<MaintenanceHistoryRow[]>(
-    `SELECT * FROM maintenance_history WHERE maintenance_id = ? ORDER BY id DESC LIMIT 1`,
+    `SELECT * FROM maintenance_history WHERE maintenance_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`,
     [maintenanceId]
   );
   return rows.length ? rows[0] : null;
 };
 
 const getHistoryById = async (id: number): Promise<MaintenanceHistory | undefined> => {
-  const [rows] = await pool.query<MaintenanceHistoryRow[]>(`${SELECT_WITH_USERS} WHERE mh.id = ?`, [id]);
+  const [rows] = await pool.query<MaintenanceHistoryRow[]>(
+    `${SELECT_WITH_USERS} WHERE mh.id = ? AND mh.deleted_at IS NULL`,
+    [id]
+  );
   if (rows.length === 0) return undefined;
   return mapRowToHistory(rows[0]);
 };
 
 const getHistoryByMaintenanceId = async (maintenanceId: number): Promise<MaintenanceHistory | undefined> => {
   const [rows] = await pool.query<MaintenanceHistoryRow[]>(
-    `${SELECT_WITH_USERS} WHERE mh.maintenance_id = ? ORDER BY mh.id DESC LIMIT 1`,
+    `${SELECT_WITH_USERS} WHERE mh.maintenance_id = ? AND mh.deleted_at IS NULL ORDER BY mh.id DESC LIMIT 1`,
     [maintenanceId]
   );
   if (rows.length === 0) return undefined;
@@ -396,7 +410,9 @@ const getHistoryByMaintenanceId = async (maintenanceId: number): Promise<Mainten
 };
 
 export const getAll = async (): Promise<MaintenanceHistory[]> => {
-  const [rows] = await pool.query<MaintenanceHistoryRow[]>(`${SELECT_WITH_USERS} ORDER BY mh.created_at DESC`);
+  const [rows] = await pool.query<MaintenanceHistoryRow[]>(
+    `${SELECT_WITH_USERS} WHERE mh.deleted_at IS NULL ORDER BY mh.created_at DESC`
+  );
   return rows.map(mapRowToHistory);
 };
 
@@ -575,6 +591,36 @@ export const validateByMaintenanceId = async (
   return validate(existing.id, validatedBy, validatedAt);
 };
 
-export const remove = async (id: number): Promise<void> => {
-  await pool.query('DELETE FROM maintenance_history WHERE id = ?', [id]);
+export const remove = async (id: number, deletedBy?: number, deleteReason?: string): Promise<boolean> => {
+  const [result] = await pool.query<ResultSetHeader>(
+    `UPDATE maintenance_history
+     SET deleted_at = NOW(),
+         deleted_by = ?,
+         delete_reason = ?,
+         updated_at = NOW()
+     WHERE id = ?
+       AND deleted_at IS NULL`,
+    [deletedBy ?? null, deleteReason?.trim() || null, id]
+  );
+
+  return result.affectedRows > 0;
+};
+
+export const removeByMaintenanceId = async (
+  maintenanceId: number,
+  deletedBy?: number,
+  deleteReason?: string
+): Promise<boolean> => {
+  const [result] = await pool.query<ResultSetHeader>(
+    `UPDATE maintenance_history
+     SET deleted_at = NOW(),
+         deleted_by = ?,
+         delete_reason = ?,
+         updated_at = NOW()
+     WHERE maintenance_id = ?
+       AND deleted_at IS NULL`,
+    [deletedBy ?? null, deleteReason?.trim() || null, maintenanceId]
+  );
+
+  return result.affectedRows > 0;
 };

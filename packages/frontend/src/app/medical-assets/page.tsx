@@ -892,7 +892,7 @@ export default function MedicalAssetsPage() {
         <DisposalRequestDialog
           open={true}
           onOpenChange={(open) => { if (!open) setDisposalTarget(null) }}
-          assetId={Number(disposalTarget.asset.id)}
+          assetId={Number(disposalTarget.roomId)}
           assetType="medical"
           assetDetailId={disposalTarget.asset.id}
           assetDetailName={disposalTarget.asset.name}

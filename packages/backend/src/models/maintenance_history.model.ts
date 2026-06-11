@@ -18,6 +18,9 @@ export interface MaintenanceHistory {
   validatedAt?: Date | string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  deletedAt?: Date | string;
+  deletedBy?: number;
+  deleteReason?: string;
   requesterName?: string;
   requesterNip?: string;
   validatorName?: string;

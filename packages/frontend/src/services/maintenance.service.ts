@@ -182,8 +182,8 @@ class MaintenanceService {
     return mapSingleMaintenance(response);
   }
 
-  async delete(id: number | string): Promise<{ success: boolean; message: string }> {
-    return apiService.delete(`/maintenance/${id}`);
+  async delete(id: number | string, deleteReason?: string): Promise<{ success: boolean; message: string }> {
+    return apiService.delete(`/maintenance/${id}`, { deleteReason });
   }
 
   async getScheduledMaintenance(): Promise<MaintenanceResponse> {

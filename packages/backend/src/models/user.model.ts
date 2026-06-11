@@ -18,6 +18,9 @@ export interface User {
   umlAccess?: boolean;
   accountStatus?: AccountStatus;
   mustChangePassword?: boolean;
+  deletedAt?: Date;
+  deletedBy?: number;
+  deleteReason?: string;
 }
 
 export type UserRole = 'admin' | 'leader' | 'staff' | 'staff_pj' | 'teknisi' | 'user';

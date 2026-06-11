@@ -56,6 +56,7 @@ export const authMiddleware = async (
       `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
        FROM users
        WHERE id = ?
+        AND deleted_at IS NULL
        LIMIT 1`,
       [decoded.id],
     );

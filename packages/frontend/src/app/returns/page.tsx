@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
 import type { User } from "@/types/auth-types";
@@ -132,6 +133,9 @@ export default function ReturnsPage() {
   const [inventoryDetails, setInventoryDetails] = useState<DetailInventoryItem[]>([])
   const [returnEditOpen, setReturnEditOpen] = useState(false)
   const [editingReturn, setEditingReturn] = useState<ApiBorrowing | null>(null)
+  const [pendingDeleteReturn, setPendingDeleteReturn] = useState<ApiBorrowing | null>(null)
+  const [deleteReason, setDeleteReason] = useState("")
+  const [isDeletingReturn, setIsDeletingReturn] = useState(false)
   const [returnEditData, setReturnEditData] = useState({
     returnCondition: "Baik",
     returnNotes: "",
@@ -355,15 +359,31 @@ export default function ReturnsPage() {
       destructive: true,
     })
     if (!isConfirmed) return
+    setPendingDeleteReturn(borrowing)
+    setDeleteReason("")
+  }
+
+  const confirmDeleteReturn = async () => {
+    if (!pendingDeleteReturn) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      alert("Alasan penghapusan wajib diisi")
+      return
+    }
+    setIsDeletingReturn(true)
     try {
-      const response = await borrowingService.delete(borrowing.id)
+      const response = await borrowingService.delete(pendingDeleteReturn.id, reason)
       if (!response.success) {
         alert(response.message || "Gagal menghapus pengembalian")
         return
       }
+      setPendingDeleteReturn(null)
+      setDeleteReason("")
       await loadBorrowings()
     } catch (error: any) {
       alert(error.message || "Gagal menghapus pengembalian")
+    } finally {
+      setIsDeletingReturn(false)
     }
   }
 
@@ -2012,6 +2032,20 @@ export default function ReturnsPage() {
               </div>
         </div>
       </div>
+      <DeleteReasonDialog
+        open={Boolean(pendingDeleteReturn)}
+        title="Arsipkan data pengembalian?"
+        description={`Data pengembalian ${pendingDeleteReturn?.assetDetailName || pendingDeleteReturn?.assetName || "ini"} akan disembunyikan dari daftar utama, tetapi tetap tersimpan sebagai arsip Admin.`}
+        value={deleteReason}
+        isSubmitting={isDeletingReturn}
+        onValueChange={setDeleteReason}
+        onCancel={() => {
+          if (isDeletingReturn) return
+          setPendingDeleteReturn(null)
+          setDeleteReason("")
+        }}
+        onConfirm={confirmDeleteReturn}
+      />
     </main>
   )
 }

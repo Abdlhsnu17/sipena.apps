@@ -545,7 +545,7 @@ export default function MaintenancePage() {
     if (!isConfirmed) return
 
     try {
-      const response = await maintenanceService.delete(String(id))
+      const response = await maintenanceService.delete(String(id), "Dihapus oleh Admin dari daftar pemeliharaan")
       if (!response.success) {
         alert(response.message || "Gagal menghapus jadwal pemeliharaan")
         return

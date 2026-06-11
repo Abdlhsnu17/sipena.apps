@@ -62,8 +62,8 @@ export function DisposalRequestDialog({
       } else {
         toast({ title: res.message || "Gagal mengirim permintaan", variant: "destructive" })
       }
-    } catch {
-      toast({ title: "Terjadi kesalahan", variant: "destructive" })
+    } catch (error: any) {
+      toast({ title: error?.message || "Terjadi kesalahan", variant: "destructive" })
     } finally {
       setSubmitting(false)
     }

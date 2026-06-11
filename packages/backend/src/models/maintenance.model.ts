@@ -29,6 +29,9 @@ export interface Maintenance {
   completedBy?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  deletedAt?: Date;
+  deletedBy?: number;
+  deleteReason?: string;
 }
 
 export type MaintenanceType = 'preventive' | 'corrective' | 'calibration' | 'inspection';

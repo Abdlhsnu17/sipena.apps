@@ -35,6 +35,7 @@ import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTe
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 import InventoryPicker from "@/components/inventory-picker";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import {
     Dialog,
     DialogContent,
@@ -421,6 +422,9 @@ export default function BorrowingPage() {
   const [formData, setFormData] = useState(() => getDefaultFormData())
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingBorrowing, setEditingBorrowing] = useState<ApiBorrowing | null>(null)
+  const [pendingDeleteBorrowing, setPendingDeleteBorrowing] = useState<ApiBorrowing | null>(null)
+  const [deleteReason, setDeleteReason] = useState("")
+  const [isDeletingBorrowing, setIsDeletingBorrowing] = useState(false)
   const [editForm, setEditForm] = useState({
     borrowDate: "",
     dueDate: "",
@@ -927,17 +931,33 @@ export default function BorrowingPage() {
       destructive: true,
     })
     if (!isConfirmed) return
+    setPendingDeleteBorrowing(borrowing)
+    setDeleteReason("")
+  }
+
+  const confirmDeleteBorrowing = async () => {
+    if (!pendingDeleteBorrowing) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      alert("Alasan penghapusan wajib diisi")
+      return
+    }
+    setIsDeletingBorrowing(true)
     try {
-      const response = await borrowingService.delete(borrowing.id)
+      const response = await borrowingService.delete(pendingDeleteBorrowing.id, reason)
       if (!response.success) {
         alert(response.message || "Gagal menghapus peminjaman")
         return
       }
+      setPendingDeleteBorrowing(null)
+      setDeleteReason("")
       await loadBorrowings()
       await loadAssets()
       await loadActiveMaintenanceLocks()
     } catch (error: any) {
       alert(error.message || "Gagal menghapus peminjaman")
+    } finally {
+      setIsDeletingBorrowing(false)
     }
   }
 
@@ -2722,6 +2742,20 @@ export default function BorrowingPage() {
           </Button>
         </div>
       )}
+      <DeleteReasonDialog
+        open={Boolean(pendingDeleteBorrowing)}
+        title="Arsipkan data peminjaman?"
+        description={`Data ${pendingDeleteBorrowing?.assetDetailName || pendingDeleteBorrowing?.assetName || "peminjaman"} akan disembunyikan dari daftar utama, tetapi tetap tersimpan sebagai arsip Admin.`}
+        value={deleteReason}
+        isSubmitting={isDeletingBorrowing}
+        onValueChange={setDeleteReason}
+        onCancel={() => {
+          if (isDeletingBorrowing) return
+          setPendingDeleteBorrowing(null)
+          setDeleteReason("")
+        }}
+        onConfirm={confirmDeleteBorrowing}
+      />
     </main>
   )
 }

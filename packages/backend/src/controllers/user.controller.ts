@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { UserService } from '../services/user.service';
+import { recordUserActivity } from '../services/user_activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
 
 const getAuthenticatedUserId = (req: Request): number | null => {
@@ -198,12 +199,38 @@ export class UserController {
         return;
       }
 
-      const result = await this.userService.delete(id);
+      const deleteReason = typeof req.body?.deleteReason === 'string'
+        ? req.body.deleteReason.trim()
+        : undefined;
+      if (!deleteReason) {
+        res.status(400).json({ success: false, message: 'Alasan penghapusan wajib diisi' });
+        return;
+      }
+
+      const target = await this.userService.getById(id);
+      const result = await this.userService.delete(id, actorId, deleteReason);
 
       if (!result.success) {
         res.status(404).json(result);
         return;
       }
+
+      await recordUserActivity({
+        userId: actorId,
+        feature: 'pengguna',
+        action: 'delete',
+        description: `Mengarsipkan pengguna ${target.data?.name || `#${id}`}`,
+        metadata: {
+          targetUserId,
+          target_user_id: targetUserId,
+          targetName: target.data?.name,
+          target_name: target.data?.name,
+          targetNip: target.data?.nip,
+          target_nip: target.data?.nip,
+          deleteReason,
+          delete_reason: deleteReason,
+        },
+      });
 
       res.json(result);
     } catch (error) {

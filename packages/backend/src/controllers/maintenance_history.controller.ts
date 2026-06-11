@@ -58,6 +58,22 @@ export const validateMaintenanceHistory = async (req: Request, res: Response) =>
 
 export const deleteMaintenanceHistory = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await MaintenanceHistoryService.remove(Number(id));
-  res.status(204).send();
+  const deleteReason = typeof req.body?.deleteReason === 'string' ? req.body.deleteReason.trim() : undefined;
+  if (!deleteReason) {
+    res.status(400).json({ success: false, message: 'Alasan penghapusan wajib diisi' });
+    return;
+  }
+
+  const deleted = await MaintenanceHistoryService.remove(
+    Number(id),
+    req.user?.id ? Number(req.user.id) : undefined,
+    deleteReason
+  );
+
+  if (!deleted) {
+    res.status(404).json({ success: false, message: 'Riwayat pemeliharaan tidak ditemukan' });
+    return;
+  }
+
+  res.json({ success: true, message: 'Riwayat pemeliharaan diarsipkan' });
 };

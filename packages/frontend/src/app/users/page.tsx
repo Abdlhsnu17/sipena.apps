@@ -4,6 +4,7 @@
 import type React from "react";
 
 import { Button } from "@/components/ui/button";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
 import { getCurrentUser } from "@/services/auth-utils";
@@ -23,6 +24,10 @@ export default function UsersPage() {
   const [currentUser] = useState<AuthUser | null>(getCurrentUser())
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState<ApiUser | null>(null)
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<ApiUser | null>(null)
+  const [isDeleteAllUsersOpen, setIsDeleteAllUsersOpen] = useState(false)
+  const [deleteReason, setDeleteReason] = useState("")
+  const [isDeletingUser, setIsDeletingUser] = useState(false)
   const [resetPassword, setResetPassword] = useState("")
   const [isResettingPassword, setIsResettingPassword] = useState(false)
   const [editingId, setEditingId] = useState<string | number | null>(null)
@@ -224,22 +229,33 @@ export default function UsersPage() {
       return
     }
 
-    const isConfirmed = await confirm({
-      title: "Hapus pengguna",
-      description: "Yakin ingin menghapus pengguna ini?",
-      confirmText: "Ya, hapus",
-      destructive: true,
-    })
-    if (!isConfirmed) return
+    const target = users.find((user) => String(user.id) === String(userId)) || null
+    setPendingDeleteUser(target)
+    setDeleteReason("")
+  }
 
+  const confirmDeleteUser = async () => {
+    if (!pendingDeleteUser) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      setMessageType("error")
+      setMessage("Alasan penghapusan wajib diisi")
+      return
+    }
+
+    setIsDeletingUser(true)
     try {
-      const result = await userService.delete(userId)
+      const result = await userService.delete(pendingDeleteUser.id, reason)
       setMessageType(result.success ? "success" : "error")
       setMessage(result.message)
+      setPendingDeleteUser(null)
+      setDeleteReason("")
       loadUsers()
     } catch (error: any) {
       setMessageType("error")
       setMessage(error.message || "Gagal menghapus pengguna")
+    } finally {
+      setIsDeletingUser(false)
     }
   }
 
@@ -253,21 +269,37 @@ export default function UsersPage() {
       destructive: true,
     })
     if (!isConfirmed) return
+    setIsDeleteAllUsersOpen(true)
+    setDeleteReason("")
+  }
 
+  const confirmDeleteAllUsers = async () => {
+    if (!currentUser) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      setMessage("Alasan penghapusan wajib diisi")
+      setMessageType("error")
+      return
+    }
+
+    setIsDeletingUser(true)
     const deletions = users
       .filter((user) => String(user.id) !== String(currentUser.id))
-      .map((user) => userService.delete(user.id))
+      .map((user) => userService.delete(user.id, reason))
 
     Promise.all(deletions)
       .then(() => {
         setMessage("Pengguna berhasil dihapus")
         setMessageType("success")
+        setIsDeleteAllUsersOpen(false)
+        setDeleteReason("")
         loadUsers()
       })
       .catch((error: any) => {
         setMessageType("error")
         setMessage(error.message || "Gagal menghapus semua pengguna")
       })
+      .finally(() => setIsDeletingUser(false))
   }
 
   const openResetPassword = (user: ApiUser) => {
@@ -812,6 +844,34 @@ export default function UsersPage() {
             Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
           </p>
         </div>
+        <DeleteReasonDialog
+          open={Boolean(pendingDeleteUser)}
+          title="Arsipkan pengguna?"
+          description={`Pengguna ${pendingDeleteUser?.name || ""} akan disembunyikan dari daftar utama, tetapi tetap tersimpan sebagai arsip Admin.`}
+          value={deleteReason}
+          isSubmitting={isDeletingUser}
+          onValueChange={setDeleteReason}
+          onCancel={() => {
+            if (isDeletingUser) return
+            setPendingDeleteUser(null)
+            setDeleteReason("")
+          }}
+          onConfirm={confirmDeleteUser}
+        />
+        <DeleteReasonDialog
+          open={isDeleteAllUsersOpen}
+          title="Arsipkan semua pengguna?"
+          description="Semua pengguna selain akun Anda akan disembunyikan dari daftar utama dan tetap tersimpan sebagai arsip Admin."
+          value={deleteReason}
+          isSubmitting={isDeletingUser}
+          onValueChange={setDeleteReason}
+          onCancel={() => {
+            if (isDeletingUser) return
+            setIsDeleteAllUsersOpen(false)
+            setDeleteReason("")
+          }}
+          onConfirm={confirmDeleteAllUsers}
+        />
       </div>
     </div>
   )

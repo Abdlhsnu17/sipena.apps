@@ -3,6 +3,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
@@ -14,6 +22,7 @@ import {
 import apiService from "@/services/api.service";
 import { getUsers } from "@/services/auth-utils";
 import maintenanceService, { type Maintenance } from "@/services/maintenance.service";
+import { Textarea } from "@/components/ui/textarea";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { cn } from "@/utils";
@@ -140,6 +149,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     cost: ''
   });
   const [userLookup, setUserLookup] = useState<Record<string, User>>({});
+  const [pendingDeleteHistory, setPendingDeleteHistory] = useState<MaintenanceHistory | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
   useEffect(() => {
     const users = getUsers();
@@ -282,25 +294,56 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const openDeleteDialog = (history: MaintenanceHistory) => {
+    setPendingDeleteHistory(history);
+    setDeleteReason("");
+    setError(null);
+  };
+
+  const closeDeleteDialog = () => {
+    if (isDeletingHistory) return;
+    setPendingDeleteHistory(null);
+    setDeleteReason("");
+  };
+
+  const handleDelete = async () => {
+    if (!pendingDeleteHistory) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      setError("Alasan penghapusan wajib diisi");
+      return;
+    }
+
     try {
       if (!canDelete) {
         setError('Hanya admin yang dapat menghapus riwayat');
         return;
       }
 
+      setIsDeletingHistory(true);
+
       if (maintenance) {
-        const res = await maintenanceService.delete(String(id));
+        const res = await maintenanceService.delete(String(pendingDeleteHistory.id), reason);
         if (!res.success) throw new Error(res.message || "Gagal menghapus jadwal");
         await onRefresh?.();
       } else {
-        await apiService.delete(`/maintenance-history/${id}`);
+        await apiService.delete(`/maintenance-history/${pendingDeleteHistory.id}`, { deleteReason: reason });
       }
       window.dispatchEvent(new Event('inventory-refresh'))
+      setSelectedHistoryIds((prev) => {
+        if (!prev.has(pendingDeleteHistory.id)) return prev;
+        const next = new Set(prev);
+        next.delete(pendingDeleteHistory.id);
+        return next;
+      });
+      setPendingDeleteHistory(null);
+      setDeleteReason("");
       setError(null);
       if (!maintenance) fetchHistories();
     } catch (err: any) {
       setError(err?.message || 'Gagal menghapus riwayat');
+    } finally {
+      setIsDeletingHistory(false);
     }
   };
 
@@ -1112,7 +1155,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                             variant="ghost"
                             size="sm"
                             className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                            onClick={() => handleDelete(h.id)}
+                            onClick={() => openDeleteDialog(h)}
                             title="Hapus"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1251,11 +1294,56 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     wrapperClassName
   );
 
+  const pendingDeleteAssetLabel = pendingDeleteHistory?.assetDetailName
+    || pendingDeleteHistory?.assetName
+    || pendingDeleteHistory?.assetCode
+    || "aset ini";
+  const pendingDeleteRecordLabel = pendingDeleteHistory?.maintenanceCode ? ` (${pendingDeleteHistory.maintenanceCode})` : "";
+  const deleteDialog = (
+    <Dialog open={Boolean(pendingDeleteHistory)} onOpenChange={(open) => !open && closeDeleteDialog()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Arsipkan riwayat pemeliharaan?</DialogTitle>
+          <DialogDescription>
+            Riwayat {pendingDeleteAssetLabel}{pendingDeleteRecordLabel} akan disembunyikan dari daftar utama, tetapi tetap tersimpan sebagai arsip Admin.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="maintenance-delete-reason">
+            Alasan penghapusan
+          </label>
+          <Textarea
+            id="maintenance-delete-reason"
+            value={deleteReason}
+            onChange={(event) => setDeleteReason(event.target.value)}
+            placeholder="Contoh: data duplikat, salah input, atau koreksi audit"
+            disabled={isDeletingHistory}
+            className="min-h-24"
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={closeDeleteDialog} disabled={isDeletingHistory}>
+            Batal
+          </Button>
+          <Button
+            type="button"
+            className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
+            onClick={handleDelete}
+            disabled={isDeletingHistory || !deleteReason.trim()}
+          >
+            {isDeletingHistory ? "Mengarsipkan..." : "Hapus"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (disableWrapper) {
     return (
       <div className="space-y-2">
         {error && <div className="text-[14px] text-red-600">{error}</div>}
         {tableContent}
+        {deleteDialog}
       </div>
     );
   }
@@ -1266,6 +1354,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       <div className={wrapperClasses}>
         {tableContent}
       </div>
+      {deleteDialog}
     </div>
   );
 };

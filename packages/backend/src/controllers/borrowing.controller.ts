@@ -509,21 +509,28 @@ export class BorrowingController {
     try {
       const { id } = req.params;
       const beforeDelete = await this.borrowingService.getById(id);
-      const result = await this.borrowingService.delete(id);
+      const actorId = getActorUserId(req);
+      const deleteReason = typeof req.body?.deleteReason === 'string'
+        ? req.body.deleteReason.trim()
+        : undefined;
+      if (!deleteReason) {
+        res.status(400).json({ success: false, message: 'Alasan penghapusan wajib diisi' });
+        return;
+      }
+      const result = await this.borrowingService.delete(id, actorId ?? undefined, deleteReason);
 
       if (!result.success) {
         res.status(404).json(result);
         return;
       }
 
-      const actorId = getActorUserId(req);
       if (actorId) {
         const borrowingCode = getBorrowingCode(beforeDelete.data)
         await recordUserActivity({
           userId: actorId,
           feature: 'peminjaman_alat',
           action: 'delete',
-          description: `Menghapus data peminjaman ${borrowingCode ?? `#${id}`}`,
+          description: `Mengarsipkan data peminjaman/pengembalian ${borrowingCode ?? `#${id}`}`,
           metadata: {
             transactionId: borrowingCode ?? beforeDelete.data?.id ?? Number(id),
             transaction_id: borrowingCode ?? beforeDelete.data?.id ?? Number(id),
@@ -532,6 +539,8 @@ export class BorrowingController {
             borrowingId: beforeDelete.data?.id ? Number(beforeDelete.data.id) : Number(id),
             assetCode: beforeDelete.data?.assetCode,
             assetName: beforeDelete.data?.assetName,
+            deleteReason,
+            delete_reason: deleteReason,
           },
         });
       }

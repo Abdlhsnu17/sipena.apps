@@ -255,8 +255,8 @@ class BorrowingService {
     };
   }
 
-  async delete(id: number | string): Promise<{ success: boolean; message: string }> {
-    return apiService.delete(`/borrowing/${id}`);
+  async delete(id: number | string, deleteReason?: string): Promise<{ success: boolean; message: string }> {
+    return apiService.delete(`/borrowing/${id}`, { deleteReason });
   }
 
   async getMyBorrowings(filters: BorrowingFilters = {}): Promise<BorrowingResponse> {

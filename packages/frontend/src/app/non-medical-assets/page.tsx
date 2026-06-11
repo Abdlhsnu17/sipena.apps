@@ -933,7 +933,7 @@ export default function NonMedicalAssetsPage() {
         <DisposalRequestDialog
           open={true}
           onOpenChange={(open) => { if (!open) setDisposalTarget(null) }}
-          assetId={Number(disposalTarget.asset.id)}
+          assetId={Number(disposalTarget.roomId)}
           assetType="non_medical"
           assetDetailId={disposalTarget.asset.id}
           assetDetailName={disposalTarget.asset.name}

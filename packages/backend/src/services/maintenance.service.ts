@@ -357,6 +357,7 @@ export class MaintenanceService {
       WHERE asset_id = ?
         AND COALESCE(asset_type, 'medical') = ?
         AND status IN (?, ?, ?)
+        AND deleted_at IS NULL
     `;
 
     if (excludeMaintenanceId !== undefined && excludeMaintenanceId !== null) {
@@ -550,9 +551,9 @@ export class MaintenanceService {
       LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
       LEFT JOIN users u ON m.created_by = u.id
       LEFT JOIN users v ON m.completed_by = v.id
-      WHERE 1=1
+      WHERE m.deleted_at IS NULL
     `;
-    let countQuery = 'SELECT COUNT(*) as count FROM maintenance_records WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as count FROM maintenance_records WHERE deleted_at IS NULL';
     const params: any[] = [];
 
     if (status) {
@@ -630,7 +631,8 @@ export class MaintenanceService {
        LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
        LEFT JOIN users u ON m.created_by = u.id
        LEFT JOIN users v ON m.completed_by = v.id
-      WHERE m.id = ?`,
+      WHERE m.id = ?
+        AND m.deleted_at IS NULL`,
       [id]
     );
 
@@ -744,7 +746,10 @@ export class MaintenanceService {
       ]
     );
 
-    const [newRows] = await pool.query<MaintenanceRow[]>('SELECT * FROM maintenance_records WHERE id = ?', [result.insertId]);
+    const [newRows] = await pool.query<MaintenanceRow[]>(
+      'SELECT * FROM maintenance_records WHERE id = ? AND deleted_at IS NULL',
+      [result.insertId]
+    );
     const newMaintenance = newRows[0];
 
     await this.syncAssetAvailability(
@@ -955,7 +960,10 @@ export class MaintenanceService {
       });
     }
 
-    const [rows] = await pool.query<MaintenanceRow[]>('SELECT * FROM maintenance_records WHERE id = ?', [id]);
+    const [rows] = await pool.query<MaintenanceRow[]>(
+      'SELECT * FROM maintenance_records WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
 
     return { success: true, message: 'Maintenance record updated successfully', data: rows[0] };
   }
@@ -1102,7 +1110,7 @@ export class MaintenanceService {
     };
   }
 
-  async delete(id: string): Promise<ApiResponse> {
+  async delete(id: string, deletedBy?: number, deleteReason?: string): Promise<ApiResponse> {
     const existing = await this.getById(id);
     if (!existing.success || !existing.data) {
       return { success: false, message: 'Maintenance record not found' };
@@ -1123,11 +1131,22 @@ export class MaintenanceService {
       existingMaintenance.assetDetailCode ?? existingMaintenance.asset_detail_code
     );
 
-    const [result] = await pool.query<ResultSetHeader>('DELETE FROM maintenance_records WHERE id = ?', [id]);
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE maintenance_records
+       SET deleted_at = NOW(),
+           deleted_by = ?,
+           delete_reason = ?,
+           updated_at = NOW()
+       WHERE id = ?
+         AND deleted_at IS NULL`,
+      [deletedBy ?? null, deleteReason?.trim() || null, id]
+    );
 
     if (result.affectedRows === 0) {
       return { success: false, message: 'Maintenance record not found' };
     }
+
+    await MaintenanceHistoryService.removeByMaintenanceId(Number(id), deletedBy, deleteReason);
 
     if (existingAssetId) {
       await this.syncAssetAvailability(existingAssetId, existingAssetType, 'cancelled', id);
@@ -1140,7 +1159,7 @@ export class MaintenanceService {
       }
     }
 
-    return { success: true, message: 'Maintenance record deleted successfully' };
+    return { success: true, message: 'Riwayat pemeliharaan diarsipkan' };
   }
 }
 

@@ -56,6 +56,9 @@ export interface Borrowing {
   isExtensionBlocked?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  deletedAt?: Date;
+  deletedBy?: number;
+  deleteReason?: string;
 }
 
 export type BorrowingStatus = 'pending' | 'approved' | 'rejected' | 'borrowed' | 'returned' | 'overdue';

@@ -431,21 +431,28 @@ export class MaintenanceController {
     try {
       const { id } = req.params;
       const beforeDelete = await this.maintenanceService.getById(id);
-      const result = await this.maintenanceService.delete(id);
+      const actorId = getActorUserId(req);
+      const deleteReason = typeof req.body?.deleteReason === 'string'
+        ? req.body.deleteReason.trim()
+        : undefined;
+      if (!deleteReason) {
+        res.status(400).json({ success: false, message: 'Alasan penghapusan wajib diisi' });
+        return;
+      }
+      const result = await this.maintenanceService.delete(id, actorId ?? undefined, deleteReason);
 
       if (!result.success) {
         res.status(404).json(result);
         return;
       }
 
-      const actorId = getActorUserId(req);
       if (actorId) {
         const maintenanceCode = beforeDelete.data?.maintenanceCode || undefined;
         await recordUserActivity({
           userId: actorId,
           feature: 'jadwal_pemeliharaan',
           action: 'delete',
-          description: `Menghapus jadwal pemeliharaan ${maintenanceCode || `#${id}`}`,
+          description: `Mengarsipkan riwayat pemeliharaan ${maintenanceCode || `#${id}`}`,
           metadata: {
             transactionId: maintenanceCode ?? beforeDelete.data?.id ?? Number(id),
             transaction_id: maintenanceCode ?? beforeDelete.data?.id ?? Number(id),
@@ -454,6 +461,8 @@ export class MaintenanceController {
             maintenanceId: beforeDelete.data?.id ? Number(beforeDelete.data.id) : Number(id),
             assetCode: beforeDelete.data?.assetCode,
             assetName: beforeDelete.data?.assetName,
+            deleteReason,
+            delete_reason: deleteReason,
           },
         });
       }

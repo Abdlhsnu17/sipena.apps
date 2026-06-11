@@ -61,6 +61,60 @@ const generateCode = (id: number): string => {
   return `DISP/${yy}${mm}/${String(id).padStart(4, '0')}`;
 };
 
+const parseSpecifications = (raw: unknown): Record<string, any> => {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof raw === 'object' ? raw as Record<string, any> : {};
+};
+
+const normalizeDetailIdentifier = (value?: string | number | null): string => {
+  if (value === undefined || value === null) return '';
+  return String(value).trim();
+};
+
+const isRequestedDetail = (detail: Record<string, any>, request: AssetDisposalRequest): boolean => {
+  const requestCandidates = [
+    request.assetDetailId,
+    request.assetDetailCode,
+  ].map(normalizeDetailIdentifier).filter(Boolean);
+
+  if (requestCandidates.length === 0) return false;
+
+  const detailCandidates = [
+    detail.id,
+    detail.detailId,
+    detail.assetDetailId,
+    detail.assetCode,
+    detail.detailCode,
+    detail.serialNumber,
+  ].map(normalizeDetailIdentifier).filter(Boolean);
+
+  return requestCandidates.some((candidate) => detailCandidates.includes(candidate));
+};
+
+const deriveAggregateStatus = (details: Record<string, any>[]): string => {
+  const activeDetails = details.filter((detail) => detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
+  if (activeDetails.length === 0) return 'disposed';
+  if (activeDetails.some((detail) => detail.status === 'Dalam Perbaikan' || detail.status === 'maintenance')) return 'maintenance';
+  if (activeDetails.some((detail) => detail.status === 'Sedang Digunakan' || detail.status === 'Dalam Penggunaan' || detail.status === 'borrowed')) return 'borrowed';
+  return 'available';
+};
+
+const deriveAggregateCondition = (details: Record<string, any>[]): string => {
+  const activeDetails = details.filter((detail) => detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
+  if (activeDetails.length === 0) return 'damaged';
+  if (activeDetails.some((detail) => detail.condition === 'Rusak' || detail.condition === 'damaged')) return 'damaged';
+  if (activeDetails.some((detail) => detail.condition === 'Cukup' || detail.condition === 'fair')) return 'fair';
+  return 'good';
+};
+
 const BASE_SELECT = `
   SELECT d.*,
          u.name  AS requester_name,
@@ -122,6 +176,12 @@ export class AssetDisposalService {
   }
 
   async create(dto: CreateDisposalRequestDTO): Promise<ApiResponse<AssetDisposalRequest>> {
+    const table = dto.assetType === 'medical' ? 'medical_assets' : 'non_medical_assets';
+    const [assetRows] = await pool.query<RowDataPacket[]>(`SELECT id FROM ${table} WHERE id = ? LIMIT 1`, [dto.assetId]);
+    if (!assetRows.length) {
+      return { success: false, message: 'Aset tidak ditemukan' };
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO asset_disposal_requests
          (asset_id, asset_type, asset_detail_id, asset_detail_name, asset_detail_code, reason, condition_notes, status, requested_by)
@@ -163,7 +223,42 @@ export class AssetDisposalService {
       // Update asset status to disposed
       const { assetType, assetId } = existing.data;
       const table = assetType === 'medical' ? 'medical_assets' : 'non_medical_assets';
-      await conn.query(`UPDATE ${table} SET status = 'disposed', updated_at = NOW() WHERE id = ?`, [assetId]);
+      const [assetRows] = await conn.query<RowDataPacket[]>(`SELECT specifications FROM ${table} WHERE id = ? LIMIT 1`, [assetId]);
+      const specifications = parseSpecifications(assetRows[0]?.specifications);
+      const details = Array.isArray(specifications.details) ? specifications.details : [];
+
+      if (details.length > 0 && (existing.data.assetDetailId || existing.data.assetDetailCode)) {
+        let detailMatched = false;
+        const nextDetails = details.map((rawDetail: any) => {
+          if (!rawDetail || typeof rawDetail !== 'object' || !isRequestedDetail(rawDetail, existing.data!)) {
+            return rawDetail;
+          }
+
+          detailMatched = true;
+          return {
+            ...rawDetail,
+            status: 'Non-Aktif',
+            condition: rawDetail.condition ?? 'Rusak',
+          };
+        });
+
+        if (!detailMatched) {
+          await conn.rollback();
+          return { success: false, message: 'Detail aset yang diajukan tidak ditemukan' };
+        }
+
+        await conn.query(
+          `UPDATE ${table} SET status = ?, \`condition\` = ?, specifications = ?, updated_at = NOW() WHERE id = ?`,
+          [
+            deriveAggregateStatus(nextDetails),
+            deriveAggregateCondition(nextDetails),
+            JSON.stringify({ ...specifications, details: nextDetails }),
+            assetId,
+          ]
+        );
+      } else {
+        await conn.query(`UPDATE ${table} SET status = 'disposed', updated_at = NOW() WHERE id = ?`, [assetId]);
+      }
 
       await conn.commit();
     } catch (err) {

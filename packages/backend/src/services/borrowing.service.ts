@@ -543,6 +543,7 @@ export class BorrowingService {
         `UPDATE borrowing_records
          SET status = 'overdue', updated_at = NOW()
          WHERE status IN ('approved', 'borrowed')
+           AND deleted_at IS NULL
            AND due_date IS NOT NULL
            AND NOW() > due_date`
       );
@@ -564,6 +565,7 @@ export class BorrowingService {
            sanction_applied_at = COALESCE(sanction_applied_at, NOW()),
            updated_at = NOW()
        WHERE status IN ('approved', 'borrowed')
+         AND deleted_at IS NULL
          AND due_date IS NOT NULL
          AND NOW() > due_date`
     );
@@ -612,6 +614,7 @@ export class BorrowingService {
          ON b.asset_id = na.id
          AND b.asset_type = 'non_medical'
        WHERE b.user_id = ?
+         AND b.deleted_at IS NULL
          AND b.status IN ('approved', 'borrowed', 'overdue')
          AND b.due_date IS NOT NULL
          AND NOW() > b.due_date
@@ -679,6 +682,7 @@ export class BorrowingService {
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
          AND id <> ?
+         AND deleted_at IS NULL
          AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
        LIMIT 1`,
       [
@@ -746,6 +750,7 @@ export class BorrowingService {
        FROM borrowing_records
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
+         AND deleted_at IS NULL
          AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}`,
       [assetId, normalizedAssetType]
     );
@@ -755,6 +760,7 @@ export class BorrowingService {
        FROM maintenance_records
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
+         AND deleted_at IS NULL
          AND status IN (?, ?, ?)`,
       [assetId, normalizedAssetType, ...this.activeMaintenanceStatuses]
     );
@@ -866,10 +872,10 @@ export class BorrowingService {
       JOIN users u ON b.user_id = u.id
       LEFT JOIN users v ON b.return_validated_by = v.id
       LEFT JOIN users r ON b.returned_by = r.id
-      WHERE 1=1
+      WHERE b.deleted_at IS NULL
     `;
 
-    let countQuery = 'SELECT COUNT(*) as count FROM borrowing_records WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as count FROM borrowing_records WHERE deleted_at IS NULL';
     const params: any[] = [];
     const countParams: any[] = [];
 
@@ -941,7 +947,8 @@ export class BorrowingService {
        JOIN users u ON b.user_id = u.id
        LEFT JOIN users v ON b.return_validated_by = v.id
        LEFT JOIN users r ON b.returned_by = r.id
-       WHERE b.id = ?`,
+       WHERE b.id = ?
+         AND b.deleted_at IS NULL`,
       [id]
     );
 
@@ -1095,6 +1102,7 @@ export class BorrowingService {
         `SELECT id FROM borrowing_records
          WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ?
            AND (asset_detail_id IS NULL OR asset_detail_id IN (?, ?))
+           AND deleted_at IS NULL
            AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
          LIMIT 1`,
         [data.assetId, assetType, fallbackDetailIds[0], fallbackDetailIds[1]]
@@ -1108,6 +1116,7 @@ export class BorrowingService {
       const [activeRows] = await pool.query<RowDataPacket[]>(
         `SELECT id FROM borrowing_records
          WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ? AND asset_detail_id = ?
+           AND deleted_at IS NULL
            AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
          LIMIT 1`,
         [data.assetId, assetType, detailId]
@@ -1123,6 +1132,7 @@ export class BorrowingService {
       const [detailRows] = await pool.query<RowDataPacket[]>(
         `SELECT id FROM borrowing_records
          WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ? AND asset_detail_id IS NOT NULL
+           AND deleted_at IS NULL
            AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
          LIMIT 1`,
         [data.assetId, assetType]
@@ -1776,11 +1786,11 @@ export class BorrowingService {
     return this.getById(id);
   }
 
-  async delete(id: string): Promise<ApiResponse> {
+  async delete(id: string, deletedBy?: number, deleteReason?: string): Promise<ApiResponse> {
     await this.syncOverdueBorrowings();
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, asset_id, asset_type, asset_detail_id, status FROM borrowing_records WHERE id = ?',
+      'SELECT id, asset_id, asset_type, asset_detail_id, status FROM borrowing_records WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 
@@ -1809,6 +1819,7 @@ export class BorrowingService {
         `SELECT id FROM borrowing_records
          WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ?
            AND id <> ?
+           AND deleted_at IS NULL
            AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
          LIMIT 1`,
         [assetId, assetType, id]
@@ -1819,7 +1830,16 @@ export class BorrowingService {
       }
     }
 
-    const [result] = await pool.query<ResultSetHeader>('DELETE FROM borrowing_records WHERE id = ?', [id]);
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE borrowing_records
+       SET deleted_at = NOW(),
+           deleted_by = ?,
+           delete_reason = ?,
+           updated_at = NOW()
+       WHERE id = ?
+         AND deleted_at IS NULL`,
+      [deletedBy ?? null, deleteReason?.trim() || null, id]
+    );
 
     if (result.affectedRows === 0) {
       return { success: false, message: 'Borrowing not found' };
@@ -1829,7 +1849,7 @@ export class BorrowingService {
       detailId: assetDetailId || null
     });
 
-    return { success: true, message: 'Borrowing deleted successfully' };
+    return { success: true, message: 'Data peminjaman/pengembalian diarsipkan' };
   }
 
   /**
@@ -1840,6 +1860,7 @@ export class BorrowingService {
     const query = `
       SELECT COUNT(*) as count FROM borrowing_records
       WHERE user_id = ?
+        AND deleted_at IS NULL
         AND status IN ('approved', 'borrowed', 'overdue')
         AND due_date IS NOT NULL
         AND NOW() > due_date
@@ -1860,6 +1881,7 @@ export class BorrowingService {
     const query = `
       SELECT * FROM borrowing_records
       WHERE user_id = ?
+        AND deleted_at IS NULL
         AND status IN ('approved', 'borrowed', 'overdue')
         AND due_date IS NOT NULL
         AND NOW() > due_date
