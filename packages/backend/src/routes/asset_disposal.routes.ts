@@ -4,7 +4,6 @@ import { authMiddleware, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-const ADMIN_LEADER = ['admin', 'leader'];
 const REQUESTER_ROLES = ['admin', 'leader', 'staff', 'staff_pj'];
 
 router.get('/', disposalValidators.getAll, disposalController.getAll);
@@ -21,7 +20,7 @@ router.post(
 router.patch(
   '/:id/approve',
   authMiddleware,
-  requireRole(ADMIN_LEADER),
+  requireRole(['admin']),
   disposalValidators.review,
   disposalController.approve
 );
@@ -29,7 +28,7 @@ router.patch(
 router.patch(
   '/:id/reject',
   authMiddleware,
-  requireRole(ADMIN_LEADER),
+  requireRole(['admin']),
   disposalValidators.review,
   disposalController.reject
 );
@@ -37,7 +36,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
-  requireRole(ADMIN_LEADER),
+  requireRole(['admin']),
   disposalValidators.getById,
   disposalController.delete
 );

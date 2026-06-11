@@ -14,6 +14,7 @@ import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
+import deletionRequestService from "@/services/deletion-request.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
@@ -423,6 +424,7 @@ export default function BorrowingPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingBorrowing, setEditingBorrowing] = useState<ApiBorrowing | null>(null)
   const [pendingDeleteBorrowing, setPendingDeleteBorrowing] = useState<ApiBorrowing | null>(null)
+  const [pendingArchiveBorrowingRequest, setPendingArchiveBorrowingRequest] = useState<ApiBorrowing | null>(null)
   const [deleteReason, setDeleteReason] = useState("")
   const [isDeletingBorrowing, setIsDeletingBorrowing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -543,6 +545,7 @@ export default function BorrowingPage() {
 
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
+  const canRequestDeleteBorrowing = currentUser?.role === "leader"
   const currentUserId = Number(currentUser?.id)
 
   const isBorrowingOwner = (borrowing: ApiBorrowing) =>
@@ -956,6 +959,40 @@ export default function BorrowingPage() {
       await loadActiveMaintenanceLocks()
     } catch (error: any) {
       alert(error.message || "Gagal menghapus peminjaman")
+    } finally {
+      setIsDeletingBorrowing(false)
+    }
+  }
+
+  const handleRequestDeleteBorrowing = (borrowing: ApiBorrowing) => {
+    setPendingArchiveBorrowingRequest(borrowing)
+    setDeleteReason("")
+  }
+
+  const confirmRequestDeleteBorrowing = async () => {
+    if (!pendingArchiveBorrowingRequest) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      alert("Alasan penghapusan wajib diisi")
+      return
+    }
+    setIsDeletingBorrowing(true)
+    try {
+      const response = await deletionRequestService.create({
+        targetType: "borrowing",
+        targetId: Number(pendingArchiveBorrowingRequest.id),
+        targetLabel: pendingArchiveBorrowingRequest.assetDetailName || pendingArchiveBorrowingRequest.assetName || pendingArchiveBorrowingRequest.borrowingCode || `Peminjaman #${pendingArchiveBorrowingRequest.id}`,
+        reason,
+      })
+      if (!response.success) {
+        alert(response.message || "Gagal mengajukan penghapusan peminjaman")
+        return
+      }
+      setPendingArchiveBorrowingRequest(null)
+      setDeleteReason("")
+      toast({ title: "Permintaan penghapusan diajukan" })
+    } catch (error: any) {
+      alert(error.message || "Gagal mengajukan penghapusan peminjaman")
     } finally {
       setIsDeletingBorrowing(false)
     }
@@ -2456,6 +2493,17 @@ export default function BorrowingPage() {
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   )}
+                                  {canRequestDeleteBorrowing && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleRequestDeleteBorrowing(b)}
+                                      title="Ajukan hapus"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   {b.status === "returned" && !b.returnValidatedBy && (
                                     <Button
                                       variant="outline"
@@ -2755,6 +2803,20 @@ export default function BorrowingPage() {
           setDeleteReason("")
         }}
         onConfirm={confirmDeleteBorrowing}
+      />
+      <DeleteReasonDialog
+        open={Boolean(pendingArchiveBorrowingRequest)}
+        title="Ajukan penghapusan peminjaman?"
+        description={`Permintaan penghapusan ${pendingArchiveBorrowingRequest?.assetDetailName || pendingArchiveBorrowingRequest?.assetName || "peminjaman ini"} akan dikirim ke Admin untuk ditinjau.`}
+        value={deleteReason}
+        isSubmitting={isDeletingBorrowing}
+        onValueChange={setDeleteReason}
+        onCancel={() => {
+          if (isDeletingBorrowing) return
+          setPendingArchiveBorrowingRequest(null)
+          setDeleteReason("")
+        }}
+        onConfirm={confirmRequestDeleteBorrowing}
       />
     </main>
   )

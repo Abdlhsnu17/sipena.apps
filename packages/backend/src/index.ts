@@ -32,6 +32,7 @@ import assetRoutes from './routes/asset.routes';
 import assetUsageRoutes from './routes/asset_usage.routes';
 import authRoutes from './routes/auth.routes';
 import borrowingRoutes from './routes/borrowing.routes';
+import deletionRequestRoutes from './routes/deletion_request.routes';
 import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
@@ -245,6 +246,7 @@ app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/assets', authMiddleware, assetRoutes);
 app.use('/api/asset-usage', authMiddleware, assetUsageRoutes);
 app.use('/api/borrowing', authMiddleware, borrowingRoutes);
+app.use('/api/deletion-requests', authMiddleware, deletionRequestRoutes);
 app.use('/api/dss', authMiddleware, dssRoutes);
 // Development-only: expose DSS routes without auth for debugging only when explicitly allowed
 // Set ALLOW_DSS_DEBUG=true in your local env to enable this route.

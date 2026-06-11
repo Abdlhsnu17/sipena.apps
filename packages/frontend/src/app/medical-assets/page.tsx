@@ -131,6 +131,7 @@ export default function MedicalAssetsPage() {
   const canEditInventory = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteInventory = isAdminRole(currentUser?.role)
   const canManageInventory = canManageInventoryRole(currentUser?.role)
+  const canRequestInventoryDeletion = canManageInventory && !canDeleteInventory
   const usageCounts = rooms.reduce<Record<string, number>>((acc, room) => {
     room.assets.forEach((asset) => {
       const key = normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", MEDICAL_USAGE_OPTIONS)
@@ -818,7 +819,7 @@ export default function MedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {(canEditInventory || canDeleteInventory || canManageInventory) && (
+                                {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
                                   <div className="flex gap-1 shrink-0">
                                     {canEditInventory && (
                                       <Button
@@ -834,7 +835,7 @@ export default function MedicalAssetsPage() {
                                         <Edit2 className="w-4 h-4" />
                                       </Button>
                                     )}
-                                    {canManageInventory && (
+                                    {canRequestInventoryDeletion && (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -888,7 +889,7 @@ export default function MedicalAssetsPage() {
       />
 
       {/* Disposal Request Dialog */}
-      {disposalTarget && (
+      {disposalTarget && canRequestInventoryDeletion && (
         <DisposalRequestDialog
           open={true}
           onOpenChange={(open) => { if (!open) setDisposalTarget(null) }}

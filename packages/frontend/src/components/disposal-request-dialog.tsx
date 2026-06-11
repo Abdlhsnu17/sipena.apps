@@ -85,7 +85,7 @@ export function DisposalRequestDialog({
             Ajukan Penghapusan Aset
           </DialogTitle>
           <DialogDescription>
-            Permintaan akan dikirim ke admin/pimpinan untuk disetujui atau ditolak. Aset tidak langsung dihapus.
+            Permintaan akan dikirim ke admin untuk disetujui atau ditolak. Aset tidak langsung dihapus.
           </DialogDescription>
         </DialogHeader>
 

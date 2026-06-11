@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import assetDisposalService, { type AssetDisposalRequest, type DisposalStatus } from "@/services/asset-disposal.service"
+import deletionRequestService, { type DeletionRequest } from "@/services/deletion-request.service"
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
 import { canManageDisposalRole } from "@/utils/role"
@@ -34,6 +35,13 @@ const assetTypeLabel: Record<string, string> = {
   non_medical: "Non-Medis",
 }
 
+const targetTypeLabel: Record<string, string> = {
+  user: "Pengguna",
+  borrowing: "Peminjaman",
+  return: "Pengembalian",
+  maintenance: "Pemeliharaan",
+}
+
 export default function DisposalPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -41,6 +49,7 @@ export default function DisposalPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [records, setRecords] = useState<AssetDisposalRequest[]>([])
+  const [dataRequests, setDataRequests] = useState<DeletionRequest[]>([])
   const [total, setTotal] = useState(0)
   const [activeTab, setActiveTab] = useState<DisposalStatus | "all">("pending")
   const [search, setSearch] = useState("")
@@ -51,6 +60,12 @@ export default function DisposalPage() {
     mode: "approve" | "reject"
   }>({ open: false, record: null, mode: "approve" })
   const [reviewNotes, setReviewNotes] = useState("")
+  const [dataReviewDialog, setDataReviewDialog] = useState<{
+    open: boolean
+    record: DeletionRequest | null
+    mode: "approve" | "reject"
+  }>({ open: false, record: null, mode: "approve" })
+  const [dataReviewNotes, setDataReviewNotes] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -69,12 +84,20 @@ export default function DisposalPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await assetDisposalService.getAll({
+      const [res, dataRes] = await Promise.all([
+        assetDisposalService.getAll({
         status: activeTab === "all" ? undefined : activeTab,
-      })
+        }),
+        deletionRequestService.getAll({
+          status: activeTab === "all" ? undefined : activeTab,
+        }),
+      ])
       if (res.success) {
         setRecords(res.data.data)
         setTotal(res.data.total)
+      }
+      if (dataRes.success) {
+        setDataRequests(dataRes.data.data)
       }
     } catch {
       toast({ title: "Gagal memuat data", variant: "destructive" })
@@ -98,9 +121,25 @@ export default function DisposalPage() {
     )
   })
 
+  const filteredDataRequests = dataRequests.filter((r) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      r.requesterName?.toLowerCase().includes(q) ||
+      r.targetLabel?.toLowerCase().includes(q) ||
+      r.requestCode?.toLowerCase().includes(q) ||
+      targetTypeLabel[r.targetType]?.toLowerCase().includes(q)
+    )
+  })
+
   const openReview = (record: AssetDisposalRequest, mode: "approve" | "reject") => {
     setReviewNotes("")
     setReviewDialog({ open: true, record, mode })
+  }
+
+  const openDataReview = (record: DeletionRequest, mode: "approve" | "reject") => {
+    setDataReviewNotes("")
+    setDataReviewDialog({ open: true, record, mode })
   }
 
   const handleReview = async () => {
@@ -119,6 +158,33 @@ export default function DisposalPage() {
       if (res.success) {
         toast({ title: reviewDialog.mode === "approve" ? "Permintaan disetujui" : "Permintaan ditolak" })
         setReviewDialog({ open: false, record: null, mode: "approve" })
+        loadData()
+      } else {
+        toast({ title: res.message || "Gagal memproses", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Terjadi kesalahan", variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDataReview = async () => {
+    if (!dataReviewDialog.record) return
+    if (dataReviewDialog.mode === "reject" && !dataReviewNotes.trim()) {
+      toast({ title: "Alasan penolakan wajib diisi", variant: "destructive" })
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res =
+        dataReviewDialog.mode === "approve"
+          ? await deletionRequestService.approve(dataReviewDialog.record.id, dataReviewNotes || undefined)
+          : await deletionRequestService.reject(dataReviewDialog.record.id, dataReviewNotes)
+
+      if (res.success) {
+        toast({ title: dataReviewDialog.mode === "approve" ? "Permintaan arsip disetujui" : "Permintaan arsip ditolak" })
+        setDataReviewDialog({ open: false, record: null, mode: "approve" })
         loadData()
       } else {
         toast({ title: res.message || "Gagal memproses", variant: "destructive" })
@@ -245,7 +311,7 @@ export default function DisposalPage() {
                     </div>
 
                     {/* Footer action buttons */}
-                    {record.status === "pending" && (
+                    {record.status === "pending" && user?.role === "admin" && (
                       <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
@@ -276,6 +342,79 @@ export default function DisposalPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[16px] font-semibold text-slate-900">Permintaan Arsip Data</h2>
+            <p className="text-[12px] text-muted-foreground">Pengajuan dari Leader untuk pengguna, peminjaman, pengembalian, dan pemeliharaan.</p>
+          </div>
+          <Badge variant="outline">{filteredDataRequests.length} data</Badge>
+        </div>
+        {filteredDataRequests.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-muted-foreground">
+            Tidak ada permintaan arsip data.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredDataRequests.map((record) => (
+              <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-slate-700">{record.requesterName}</span>
+                    <span className="text-[11px] text-muted-foreground">NIP: {record.requesterNip}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1 shrink-0">
+                    <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
+                    <Badge variant="outline" className="text-[11px]">
+                      {targetTypeLabel[record.targetType] ?? record.targetType}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-2.5 bg-white px-3 py-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-slate-900">{record.targetLabel ?? `Data #${record.targetId}`}</p>
+                      {record.requestCode && (
+                        <p className="text-[11px] text-muted-foreground">
+                          No Permintaan: <span className="font-mono font-medium text-slate-700">{record.requestCode}</span>
+                        </p>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">
+                        Alasan: <span className="font-medium text-slate-700">{record.reason}</span>
+                      </p>
+                      {record.reviewedAt && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Ditinjau oleh {record.reviewerName ?? "admin"} pada {formatDayTimeLabel(record.reviewedAt)}
+                          {record.reviewNotes && ` — ${record.reviewNotes}`}
+                        </p>
+                      )}
+                    </div>
+                    {record.createdAt && (
+                      <div className="flex shrink-0 flex-col items-start gap-0.5 sm:items-end sm:text-right">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">Diajukan</span>
+                        <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(record.createdAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {record.status === "pending" && user?.role === "admin" && (
+                  <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={() => openDataReview(record, "approve")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
+                        <CheckCircle className="mr-1 h-3.5 w-3.5" /> Setujui
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => openDataReview(record, "reject")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
+                        <XCircle className="mr-1 h-3.5 w-3.5" /> Tolak
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <Dialog
         open={reviewDialog.open}
@@ -332,6 +471,49 @@ export default function DisposalPage() {
                 : reviewDialog.mode === "approve"
                 ? "Setujui"
                 : "Tolak"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={dataReviewDialog.open}
+        onOpenChange={(open) => !submitting && setDataReviewDialog((s) => ({ ...s, open }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dataReviewDialog.mode === "approve" ? "Setujui Permintaan Arsip Data" : "Tolak Permintaan Arsip Data"}
+            </DialogTitle>
+            <DialogDescription>
+              {dataReviewDialog.mode === "approve"
+                ? "Dengan menyetujui, data akan diarsipkan dan disembunyikan dari daftar utama."
+                : "Berikan alasan penolakan agar pengaju dapat melakukan perbaikan."}
+            </DialogDescription>
+          </DialogHeader>
+          {dataReviewDialog.record && (
+            <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
+              <p className="font-medium">{dataReviewDialog.record.targetLabel ?? `Data #${dataReviewDialog.record.targetId}`}</p>
+              <p className="text-muted-foreground">{dataReviewDialog.record.reason}</p>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="data-review-notes">
+              {dataReviewDialog.mode === "approve" ? "Catatan (opsional)" : "Alasan Penolakan *"}
+            </Label>
+            <Textarea
+              id="data-review-notes"
+              placeholder={dataReviewDialog.mode === "approve" ? "Tambahkan catatan persetujuan jika diperlukan..." : "Tuliskan alasan penolakan..."}
+              value={dataReviewNotes}
+              onChange={(e) => setDataReviewNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDataReviewDialog((s) => ({ ...s, open: false }))} disabled={submitting}>
+              Batal
+            </Button>
+            <Button variant={dataReviewDialog.mode === "approve" ? "default" : "destructive"} onClick={handleDataReview} disabled={submitting}>
+              {submitting ? "Memproses..." : dataReviewDialog.mode === "approve" ? "Setujui" : "Tolak"}
             </Button>
           </DialogFooter>
         </DialogContent>

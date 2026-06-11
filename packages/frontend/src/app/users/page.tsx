@@ -8,6 +8,7 @@ import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
 import { getCurrentUser } from "@/services/auth-utils";
+import deletionRequestService from "@/services/deletion-request.service";
 import type { User as ApiUser } from "@/services/user.service";
 import { userService } from "@/services/user.service";
 import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
@@ -25,6 +26,7 @@ export default function UsersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState<ApiUser | null>(null)
   const [pendingDeleteUser, setPendingDeleteUser] = useState<ApiUser | null>(null)
+  const [pendingArchiveUserRequest, setPendingArchiveUserRequest] = useState<ApiUser | null>(null)
   const [isDeleteAllUsersOpen, setIsDeleteAllUsersOpen] = useState(false)
   const [deleteReason, setDeleteReason] = useState("")
   const [isDeletingUser, setIsDeletingUser] = useState(false)
@@ -232,6 +234,40 @@ export default function UsersPage() {
     const target = users.find((user) => String(user.id) === String(userId)) || null
     setPendingDeleteUser(target)
     setDeleteReason("")
+  }
+
+  const handleRequestDelete = (user: ApiUser) => {
+    setPendingArchiveUserRequest(user)
+    setDeleteReason("")
+  }
+
+  const confirmRequestDeleteUser = async () => {
+    if (!pendingArchiveUserRequest) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      setMessageType("error")
+      setMessage("Alasan penghapusan wajib diisi")
+      return
+    }
+
+    setIsDeletingUser(true)
+    try {
+      const result = await deletionRequestService.create({
+        targetType: "user",
+        targetId: Number(pendingArchiveUserRequest.id),
+        targetLabel: `${pendingArchiveUserRequest.name} (${pendingArchiveUserRequest.nip})`,
+        reason,
+      })
+      setMessageType(result.success ? "success" : "error")
+      setMessage(result.message || "Permintaan penghapusan pengguna diajukan")
+      setPendingArchiveUserRequest(null)
+      setDeleteReason("")
+    } catch (error: any) {
+      setMessageType("error")
+      setMessage(error.message || "Gagal mengajukan penghapusan pengguna")
+    } finally {
+      setIsDeletingUser(false)
+    }
   }
 
   const confirmDeleteUser = async () => {
@@ -824,6 +860,15 @@ export default function UsersPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
+                      {isLeader && String(user.id) !== String(currentUser?.id) && !["admin", "leader"].includes(normalizeUserRole(user.role)) && (
+                        <button
+                          onClick={() => handleRequestDelete(user)}
+                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-red-600"
+                          title="Ajukan hapus"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -857,6 +902,20 @@ export default function UsersPage() {
             setDeleteReason("")
           }}
           onConfirm={confirmDeleteUser}
+        />
+        <DeleteReasonDialog
+          open={Boolean(pendingArchiveUserRequest)}
+          title="Ajukan penghapusan pengguna?"
+          description={`Permintaan penghapusan ${pendingArchiveUserRequest?.name || ""} akan dikirim ke Admin untuk ditinjau.`}
+          value={deleteReason}
+          isSubmitting={isDeletingUser}
+          onValueChange={setDeleteReason}
+          onCancel={() => {
+            if (isDeletingUser) return
+            setPendingArchiveUserRequest(null)
+            setDeleteReason("")
+          }}
+          onConfirm={confirmRequestDeleteUser}
         />
         <DeleteReasonDialog
           open={isDeleteAllUsersOpen}

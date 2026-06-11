@@ -148,6 +148,7 @@ export default function NonMedicalAssetsPage() {
   const canEditInventory = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteInventory = isAdminRole(currentUser?.role)
   const canManageInventory = canManageInventoryRole(currentUser?.role)
+  const canRequestInventoryDeletion = canManageInventory && !canDeleteInventory
 
   const handleAddRoom = async () => {
     if (!canManageInventory) {
@@ -864,7 +865,7 @@ export default function NonMedicalAssetsPage() {
                                     </div>
                                   )}
                                 </div>
-                                {(canEditInventory || canDeleteInventory || canManageInventory) && (
+                                {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
                                   <div className="flex gap-1 shrink-0">
                                     {canEditInventory && (
                                       <Button
@@ -881,7 +882,7 @@ export default function NonMedicalAssetsPage() {
                                         <Edit2 className="w-4 h-4" />
                                       </Button>
                                     )}
-                                    {canManageInventory && (
+                                    {canRequestInventoryDeletion && (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -929,7 +930,7 @@ export default function NonMedicalAssetsPage() {
       />
 
       {/* Disposal Request Dialog */}
-      {disposalTarget && (
+      {disposalTarget && canRequestInventoryDeletion && (
         <DisposalRequestDialog
           open={true}
           onOpenChange={(open) => { if (!open) setDisposalTarget(null) }}

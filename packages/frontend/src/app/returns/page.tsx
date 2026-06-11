@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
+import deletionRequestService from "@/services/deletion-request.service";
 import type { User } from "@/types/auth-types";
 import {
     assetSourceLabel,
@@ -134,6 +135,7 @@ export default function ReturnsPage() {
   const [returnEditOpen, setReturnEditOpen] = useState(false)
   const [editingReturn, setEditingReturn] = useState<ApiBorrowing | null>(null)
   const [pendingDeleteReturn, setPendingDeleteReturn] = useState<ApiBorrowing | null>(null)
+  const [pendingArchiveReturnRequest, setPendingArchiveReturnRequest] = useState<ApiBorrowing | null>(null)
   const [deleteReason, setDeleteReason] = useState("")
   const [isDeletingReturn, setIsDeletingReturn] = useState(false)
   const [returnEditData, setReturnEditData] = useState({
@@ -387,6 +389,40 @@ export default function ReturnsPage() {
     }
   }
 
+  const handleRequestDeleteReturn = (borrowing: ApiBorrowing) => {
+    setPendingArchiveReturnRequest(borrowing)
+    setDeleteReason("")
+  }
+
+  const confirmRequestDeleteReturn = async () => {
+    if (!pendingArchiveReturnRequest) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      alert("Alasan penghapusan wajib diisi")
+      return
+    }
+    setIsDeletingReturn(true)
+    try {
+      const response = await deletionRequestService.create({
+        targetType: "return",
+        targetId: Number(pendingArchiveReturnRequest.id),
+        targetLabel: pendingArchiveReturnRequest.assetDetailName || pendingArchiveReturnRequest.assetName || pendingArchiveReturnRequest.borrowingCode || `Pengembalian #${pendingArchiveReturnRequest.id}`,
+        reason,
+      })
+      if (!response.success) {
+        alert(response.message || "Gagal mengajukan penghapusan pengembalian")
+        return
+      }
+      setPendingArchiveReturnRequest(null)
+      setDeleteReason("")
+      toast({ title: "Permintaan penghapusan diajukan" })
+    } catch (error: any) {
+      alert(error.message || "Gagal mengajukan penghapusan pengembalian")
+    } finally {
+      setIsDeletingReturn(false)
+    }
+  }
+
   const openReturnEditDialog = (borrowing: ApiBorrowing) => {
     setEditingReturn(borrowing)
     setReturnEditData({
@@ -468,6 +504,7 @@ export default function ReturnsPage() {
 
   const canValidateReturns = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteReturns = isAdminRole(currentUser?.role)
+  const canRequestDeleteReturns = currentUser?.role === "leader"
 
   const normalizeWorkUnit = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() || ""
 
@@ -1768,6 +1805,17 @@ export default function ReturnsPage() {
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   )}
+                                  {canRequestDeleteReturns && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleRequestDeleteReturn(b)}
+                                      title="Ajukan hapus"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               ) : (
                                 <span className="text-[13px] text-muted-foreground">Aksi terbatas</span>
@@ -2045,6 +2093,20 @@ export default function ReturnsPage() {
           setDeleteReason("")
         }}
         onConfirm={confirmDeleteReturn}
+      />
+      <DeleteReasonDialog
+        open={Boolean(pendingArchiveReturnRequest)}
+        title="Ajukan penghapusan pengembalian?"
+        description={`Permintaan penghapusan ${pendingArchiveReturnRequest?.assetDetailName || pendingArchiveReturnRequest?.assetName || "pengembalian ini"} akan dikirim ke Admin untuk ditinjau.`}
+        value={deleteReason}
+        isSubmitting={isDeletingReturn}
+        onValueChange={setDeleteReason}
+        onCancel={() => {
+          if (isDeletingReturn) return
+          setPendingArchiveReturnRequest(null)
+          setDeleteReason("")
+        }}
+        onConfirm={confirmRequestDeleteReturn}
       />
     </main>
   )

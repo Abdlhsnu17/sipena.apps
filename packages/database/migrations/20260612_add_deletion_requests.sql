@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `deletion_requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `request_code` varchar(50) DEFAULT NULL,
+  `target_type` varchar(50) NOT NULL,
+  `target_id` int(11) NOT NULL,
+  `target_label` varchar(255) DEFAULT NULL,
+  `reason` text NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `requested_by` int(11) NOT NULL,
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `review_notes` text DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_deletion_requests_status` (`status`),
+  KEY `idx_deletion_requests_target` (`target_type`, `target_id`),
+  KEY `idx_deletion_requests_requested_by` (`requested_by`),
+  KEY `idx_deletion_requests_reviewed_by` (`reviewed_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

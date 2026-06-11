@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import {
     Dialog,
     DialogContent,
@@ -20,6 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import apiService from "@/services/api.service";
+import deletionRequestService from "@/services/deletion-request.service";
 import { getUsers } from "@/services/auth-utils";
 import maintenanceService, { type Maintenance } from "@/services/maintenance.service";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,6 +152,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
   });
   const [userLookup, setUserLookup] = useState<Record<string, User>>({});
   const [pendingDeleteHistory, setPendingDeleteHistory] = useState<MaintenanceHistory | null>(null);
+  const [pendingArchiveHistoryRequest, setPendingArchiveHistoryRequest] = useState<MaintenanceHistory | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
@@ -173,6 +176,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
   const canComplete = canManageMaintenanceStatusRole(safeUser.role);
   const canValidate = canManageMaintenanceStatusRole(safeUser.role);
   const canDelete = isAdminRole(safeUser.role);
+  const canRequestDelete = safeUser.role === "leader";
 
   const getValidatorLabel = (history: MaintenanceHistory): ValidatorInfo | null => {
     const explicitName = history.validatorName?.trim();
@@ -342,6 +346,41 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       if (!maintenance) fetchHistories();
     } catch (err: any) {
       setError(err?.message || 'Gagal menghapus riwayat');
+    } finally {
+      setIsDeletingHistory(false);
+    }
+  };
+
+  const openArchiveRequestDialog = (history: MaintenanceHistory) => {
+    setPendingArchiveHistoryRequest(history);
+    setDeleteReason("");
+    setError(null);
+  };
+
+  const confirmArchiveRequest = async () => {
+    if (!pendingArchiveHistoryRequest) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      setError("Alasan penghapusan wajib diisi");
+      return;
+    }
+
+    setIsDeletingHistory(true);
+    try {
+      const response = await deletionRequestService.create({
+        targetType: "maintenance",
+        targetId: pendingArchiveHistoryRequest.id,
+        targetLabel: pendingArchiveHistoryRequest.assetDetailName || pendingArchiveHistoryRequest.assetName || pendingArchiveHistoryRequest.maintenanceCode || `Pemeliharaan #${pendingArchiveHistoryRequest.id}`,
+        reason,
+      });
+      if (!response.success) {
+        throw new Error(response.message || "Gagal mengajukan penghapusan riwayat");
+      }
+      setPendingArchiveHistoryRequest(null);
+      setDeleteReason("");
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || "Gagal mengajukan penghapusan riwayat");
     } finally {
       setIsDeletingHistory(false);
     }
@@ -1161,6 +1200,17 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
+                        {canRequestDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                            onClick={() => openArchiveRequestDialog(h)}
+                            title="Ajukan hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -1337,6 +1387,22 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       </DialogContent>
     </Dialog>
   );
+  const archiveRequestDialog = (
+    <DeleteReasonDialog
+      open={Boolean(pendingArchiveHistoryRequest)}
+      title="Ajukan penghapusan riwayat pemeliharaan?"
+      description={`Permintaan penghapusan ${pendingArchiveHistoryRequest?.assetDetailName || pendingArchiveHistoryRequest?.assetName || "riwayat ini"} akan dikirim ke Admin untuk ditinjau.`}
+      value={deleteReason}
+      isSubmitting={isDeletingHistory}
+      onValueChange={setDeleteReason}
+      onCancel={() => {
+        if (isDeletingHistory) return;
+        setPendingArchiveHistoryRequest(null);
+        setDeleteReason("");
+      }}
+      onConfirm={confirmArchiveRequest}
+    />
+  );
 
   if (disableWrapper) {
     return (
@@ -1344,6 +1410,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         {error && <div className="text-[14px] text-red-600">{error}</div>}
         {tableContent}
         {deleteDialog}
+        {archiveRequestDialog}
       </div>
     );
   }
@@ -1355,6 +1422,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         {tableContent}
       </div>
       {deleteDialog}
+      {archiveRequestDialog}
     </div>
   );
 };
