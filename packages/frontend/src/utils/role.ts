@@ -58,7 +58,6 @@ const staffPjRoutes = [
   "/activity-archive",
   "/borrowing",
   "/returns",
-  "/disposal",
   "/settings",
 ]
 const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/dss", "/reports", "/activity-archive", "/settings"]
@@ -117,7 +116,7 @@ export const canManageInventoryRole = (role?: string | null): boolean => {
 }
 
 export const canManageDisposalRole = (role?: string | null): boolean => {
-  return isAdminOrLeaderRole(role) || isStaffPjRole(role)
+  return isAdminOrLeaderRole(role)
 }
 
 export const canManageSanctionsRole = (role?: string | null): boolean => {

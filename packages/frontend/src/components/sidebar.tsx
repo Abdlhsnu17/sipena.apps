@@ -500,7 +500,6 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     { href: "/activity-archive", label: "Arsip Riwayat Aktivitas", icon: Archive, iconColor: "text-slate-600", searchKeywords: ["arsip", "aktivitas", "riwayat"] },
     { href: "/borrowing", label: "Peminjaman", icon: HandHelping, iconColor: "text-amber-600", searchKeywords: ["pinjam", "peminjaman", "borrow"] },
     { href: "/returns", label: "Pengembalian", icon: RotateCcw, iconColor: featureIconColor, searchKeywords: ["kembali", "pengembalian", "return"] },
-    { href: "/disposal", label: "Penghapusan Aset", icon: Trash2, iconColor: "text-destructive", searchKeywords: ["hapus", "disposal", "penghapusan", "scrapping"] },
     { href: "/settings", label: "Pengaturan", icon: Settings, iconColor: "text-orange-700", searchKeywords: ["setting", "settings", "akun", "profil", "nip", "nik", "password", "tema"] },
   ].sort((a, b) => a.label.localeCompare(b.label, 'id'))
 
