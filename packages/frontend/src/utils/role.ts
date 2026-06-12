@@ -63,7 +63,7 @@ const staffPjRoutes = [
 ]
 const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/dss", "/reports", "/activity-archive", "/settings"]
 const inventoryRoutes = ["/medical-assets", "/non-medical-assets"]
-const userRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/dss", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
+const userRoutes = ["/", "/uml", "/unggahan", "/dss", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
 
 export const getAllowedRoutesForRole = (role?: string | UserRole | null): string[] => {
   switch (normalizeUserRole(role)) {
@@ -109,7 +109,7 @@ export const canManageMaintenanceStatusRole = (role?: string | null): boolean =>
 
 export const canCreateMaintenanceRole = (role?: string | null): boolean => {
   const normalized = normalizeUserRole(role)
-  return ["admin", "leader", "staff", "staff_pj", "user"].includes(normalized)
+  return ["admin", "leader", "staff", "staff_pj"].includes(normalized)
 }
 
 export const canManageInventoryRole = (role?: string | null): boolean => {

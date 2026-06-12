@@ -60,7 +60,7 @@ import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanc
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole, isUserRole } from "@/utils/role";
+import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
@@ -352,11 +352,10 @@ export default function MaintenancePage() {
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canDeleteMaintenance = isAdminRole(currentUser?.role)
   const isTechnician = isTechnicianRole(currentUser?.role)
-  const isRequesterOnly = isUserRole(currentUser?.role)
   const canCreateMaintenance = canCreateMaintenanceRole(currentUser?.role)
   const canEditMaintenance = hasFullAccess || isTechnician
   const canManageAdvancedStatuses = canManageMaintenanceStatusRole(currentUser?.role)
-  const createMaintenanceActionLabel = isRequesterOnly ? "Ajukan Pemeliharaan" : "Tambah Pemeliharaan"
+  const createMaintenanceActionLabel = "Tambah Pemeliharaan"
 
   const handleStatusSelection = (id: string | number, newStatus: string) => {
     if (newStatus === "cancelled") {
