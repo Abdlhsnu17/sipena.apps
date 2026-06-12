@@ -110,7 +110,7 @@ router.patch(
 router.patch(
   '/:id/reject',
   authMiddleware,
-  requireRole(['admin', 'leader', 'staff']),
+  requireRole(['admin', 'leader', 'staff', 'user']),
   [
     param('id').isInt({ min: 1 }),
     body('reason').trim().notEmpty()
