@@ -37,6 +37,8 @@ router.get(
   assetController.getAll
 );
 
+router.get('/import/template', assetController.downloadTemplate);
+
 router.get('/:id', [param('id').isInt({ min: 1 })], assetController.getById);
 
 router.post(
@@ -68,7 +70,6 @@ router.put(
 router.delete('/reset/all', requireRole(['admin']), assetController.resetInventory);
 router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), assetController.delete);
 
-router.get('/import/template', assetController.downloadTemplate);
 router.post(
   '/import',
   requireRole(['admin', 'leader', 'staff_pj', 'staff pj']),

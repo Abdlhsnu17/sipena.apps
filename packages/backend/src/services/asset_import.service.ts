@@ -56,6 +56,20 @@ const normalizeStatus = (v?: string) =>
 const normalizeCondition = (v?: string) =>
   conditionMap[(v ?? '').toLowerCase().trim()] ?? 'good';
 
+const statusLabelMap: Record<string, string> = {
+  available: 'Aktif',
+  borrowed: 'Sedang Digunakan',
+  maintenance: 'Dalam Perbaikan',
+  disposed: 'Non-Aktif',
+};
+
+const conditionLabelMap: Record<string, string> = {
+  good: 'Baik',
+  fair: 'Cukup',
+  poor: 'Rusak',
+  damaged: 'Rusak',
+};
+
 const normalizeDate = (v: any): string | null => {
   if (!v) return null;
   if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -65,8 +79,25 @@ const normalizeDate = (v: any): string | null => {
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 };
 
-const cellStr = (cell: ExcelJS.Cell): string =>
-  cell?.value == null ? '' : String(cell.value).trim();
+const buildMedicalSpecifications = (row: ImportRow, code: string, status: string, condition: string) => ({
+  details: [
+    {
+      id: row.serialNumber || code,
+      assetCode: code,
+      inventoryName: row.name,
+      type: row.category,
+      name: row.brand || '',
+      brandModel: [row.brand, row.model].filter(Boolean).join(' / '),
+      serialNumber: row.serialNumber || '',
+      purchaseDate: normalizeDate(row.purchaseDate) || '',
+      condition: conditionLabelMap[condition] || 'Baik',
+      status: statusLabelMap[status] || 'Aktif',
+      notes: '',
+      usagePurpose: row.usagePurpose || 'Operasional Bersama',
+      roomId: row.location || '',
+    },
+  ],
+});
 
 const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
   const rows: ImportRow[] = [];
@@ -168,16 +199,30 @@ export async function importAssetsFromBuffer(
         );
         result.inserted.push(res.insertId);
       } else {
-        const fields = ['asset_code', 'name', 'category', 'status', '`condition`', 'created_by'];
-        const values: any[] = [code, row.name, row.category, status, condition, createdBy];
-
-        if (row.brand) { fields.push('brand'); values.push(row.brand); }
-        if (row.model) { fields.push('model'); values.push(row.model); }
-        if (row.serialNumber) { fields.push('serial_number'); values.push(row.serialNumber); }
-        if (purchaseDate) { fields.push('purchase_date'); values.push(purchaseDate); }
-        if (warrantyExpiry) { fields.push('warranty_expiry'); values.push(warrantyExpiry); }
-        if (row.location) { fields.push('location'); values.push(row.location); }
-        if (row.usagePurpose) { fields.push('usage_purpose'); values.push(row.usagePurpose); }
+        const fields = [
+          'asset_code',
+          'name',
+          'category',
+          'type',
+          'status',
+          '`condition`',
+          'location',
+          'purchase_date',
+          'warranty_expiry',
+          'specifications',
+        ];
+        const values: any[] = [
+          code,
+          row.location || row.name,
+          row.category,
+          'medical',
+          status,
+          condition,
+          row.location || null,
+          purchaseDate,
+          warrantyExpiry,
+          JSON.stringify(buildMedicalSpecifications(row, code, status, condition)),
+        ];
 
         const [res] = await pool.query<ResultSetHeader>(
           `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`,
