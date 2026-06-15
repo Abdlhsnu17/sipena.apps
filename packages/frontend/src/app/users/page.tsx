@@ -13,7 +13,7 @@ import deletionRequestService from "@/services/deletion-request.service";
 import type { User as ApiUser } from "@/services/user.service";
 import { userService } from "@/services/user.service";
 import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
-import { canAccessRoute, normalizeUserRole } from "@/utils/role";
+import { isAdminRole, normalizeUserRole } from "@/utils/role";
 
 import { AlertCircle, Check, Edit, KeyRound, Plus, Save, Shield, Smartphone, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -57,16 +57,16 @@ export default function UsersPage() {
   const [selectedMenuCodes, setSelectedMenuCodes] = useState<string[]>([])
   const [isSavingAccess, setIsSavingAccess] = useState(false)
 
-  const isAdmin = currentUser?.role === "admin"
-  const isLeader = currentUser?.role === "leader"
+  const isAdmin = isAdminRole(currentUser?.role)
+  const isLeader = normalizeUserRole(currentUser?.role) === "leader"
   const canViewUsers = isAdmin || isLeader
   const canCreateUsers = isAdmin || isLeader
   const canDeleteUsers = isAdmin
   const canEditAdminUsers = isAdmin
   const editableRoles = (isLeader ? ["user", "staff", "staff_pj", "teknisi"] : ["user", "admin", "leader", "staff", "staff_pj", "teknisi"]) as ManagedRole[]
   const sortedAccessMenus = [...(accessMatrix?.menus || [])].sort((a, b) => a.label.localeCompare(b.label, "id"))
-  const getValidMenuCodesForRole = (roleCode: string, matrix: AccessMatrix | null = accessMatrix) => {
-    return new Set((matrix?.menus || []).filter((menu) => canAccessRoute(roleCode, menu.path)).map((menu) => menu.code))
+  const getValidMenuCodesForRole = (_roleCode: string, matrix: AccessMatrix | null = accessMatrix) => {
+    return new Set((matrix?.menus || []).map((menu) => menu.code))
   }
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function UsersPage() {
 
   const toggleMenuAccess = (menuCode: string) => {
     const menu = accessMatrix?.menus.find((item) => item.code === menuCode)
-    if (!menu || !canAccessRoute(selectedRoleCode, menu.path)) return
+    if (!menu) return
 
     setSelectedMenuCodes((current) =>
       current.includes(menuCode)
@@ -596,7 +596,7 @@ export default function UsersPage() {
                     Tambah Pengguna
                   </Button>
                 )}
-                {currentUser?.role === "admin" && (
+                {isAdmin && (
                   <Button variant="destructive" size="sm" className="w-full rounded-2xl sm:w-auto" onClick={handleDeleteAllUsers}>
                     <Trash2 className="mr-1 h-4 w-4" />
                     Hapus Semua
@@ -900,7 +900,7 @@ export default function UsersPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-foreground">Menu yang Diizinkan</h2>
-                  <p className="text-xs text-muted-foreground">Centang menu yang boleh tampil dan diakses oleh role terpilih. Menu di luar cakupan role dinonaktifkan.</p>
+                  <p className="text-xs text-muted-foreground">Centang menu yang boleh tampil dan diakses oleh role terpilih.</p>
                 </div>
                 <Button
                   type="button"
@@ -915,32 +915,22 @@ export default function UsersPage() {
               </div>
 
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {sortedAccessMenus.map((menu) => {
-                  const isValidForRole = canAccessRoute(selectedRoleCode, menu.path)
-
-                  return (
-                    <label
-                      key={menu.code}
-                      className={`flex items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm ${
-                        isValidForRole ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed opacity-55"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isValidForRole && selectedMenuCodes.includes(menu.code)}
-                        onChange={() => toggleMenuAccess(menu.code)}
-                        disabled={!isValidForRole}
-                        className="mt-1"
-                      />
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-foreground">{menu.label}</span>
-                        {!isValidForRole && (
-                          <span className="block text-xs text-muted-foreground">Tidak tersedia untuk role ini</span>
-                        )}
-                      </span>
-                    </label>
-                  )
-                })}
+                {sortedAccessMenus.map((menu) => (
+                  <label
+                    key={menu.code}
+                    className="flex items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMenuCodes.includes(menu.code)}
+                      onChange={() => toggleMenuAccess(menu.code)}
+                      className="mt-1"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-foreground">{menu.label}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
 
               {accessMatrix && accessMatrix.menus.length === 0 && (

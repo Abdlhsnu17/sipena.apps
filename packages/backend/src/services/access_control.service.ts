@@ -99,8 +99,6 @@ const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
   ],
 };
 
-const ROLE_MENU_CODES = DEFAULT_ROLE_MENU_CODES;
-
 export class AccessControlService {
   async ensureDefaults(): Promise<void> {
     for (const [code, description] of Object.entries(DEFAULT_ROLE_DESCRIPTIONS)) {
@@ -122,12 +120,15 @@ export class AccessControlService {
     }
 
     for (const [roleCode, menuCodes] of Object.entries(DEFAULT_ROLE_MENU_CODES)) {
+      // Only seed defaults the first time a role has no permissions configured yet.
+      // Otherwise this would silently re-add menus an admin has deliberately removed.
       await pool.query(
         `INSERT IGNORE INTO role_menu_permissions (role_id, menu_id)
          SELECT r.id, m.id
          FROM roles r
          JOIN menus m ON m.code IN (?)
-         WHERE r.code = ?`,
+         WHERE r.code = ?
+           AND NOT EXISTS (SELECT 1 FROM role_menu_permissions WHERE role_id = r.id)`,
         [menuCodes, roleCode],
       );
     }
@@ -169,6 +170,22 @@ export class AccessControlService {
     await this.ensureDefaults();
 
     const normalizedRole = normalizeRole(role);
+
+    // Admin always has unrestricted access to every menu, regardless of how
+    // role_menu_permissions is configured. Otherwise an admin could lock
+    // themselves out of /users and have no way to fix the access matrix.
+    if (normalizedRole === 'admin') {
+      const [menus] = await pool.query<MenuRow[]>(
+        'SELECT id, code, label, path, sort_order FROM menus ORDER BY label ASC, code ASC',
+      );
+
+      return {
+        success: true,
+        message: 'Role menus retrieved successfully',
+        data: menus,
+      };
+    }
+
     const [menus] = await pool.query<MenuRow[]>(
       `SELECT m.id, m.code, m.label, m.path, m.sort_order
        FROM roles r
@@ -195,14 +212,16 @@ export class AccessControlService {
       return { success: false, message: 'Role tidak ditemukan' };
     }
 
-    const allowedMenuCodes = new Set(ROLE_MENU_CODES[normalizedRole] || ROLE_MENU_CODES.user);
     const sanitizedMenuCodes = Array.from(new Set(menuCodes.map((code) => String(code).trim()).filter(Boolean)));
-    const invalidForRole = sanitizedMenuCodes.filter((code) => !allowedMenuCodes.has(code));
 
-    if (invalidForRole.length > 0) {
+    const [menuRows] = await pool.query<MenuRow[]>('SELECT code FROM menus');
+    const availableMenuCodes = new Set(menuRows.map((row) => row.code));
+    const unknownMenuCodes = sanitizedMenuCodes.filter((code) => !availableMenuCodes.has(code));
+
+    if (unknownMenuCodes.length > 0) {
       return {
         success: false,
-        message: 'Menu yang dipilih tidak sesuai dengan role terkait',
+        message: 'Menu yang dipilih tidak valid',
       };
     }
 

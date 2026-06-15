@@ -172,7 +172,7 @@ export default function ClientLayout({
 
   const shouldBlockProtectedPage =
     showLayout &&
-    (!user || (user && !isAllowedPath) || (user?.mustChangePassword && pathname !== "/settings"))
+    (!user || (user && !isAllowedByDatabase) || (user?.mustChangePassword && pathname !== "/settings"))
 
   if (loading) {
     return (
