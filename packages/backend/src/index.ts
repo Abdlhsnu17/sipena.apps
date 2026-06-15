@@ -19,6 +19,7 @@ import {
     ensureMaintenanceCancellationReasonColumn,
     ensureMaintenanceDetailColumns,
     ensureNonMedicalSpecificationsColumn,
+    ensureRoleMenuAccessControlTables,
     ensureReportUploadsTable,
     ensureScheduleAssetForeignKeyRemoved,
     ensureUserAccessControlColumns,
@@ -31,6 +32,7 @@ import { getProfileUploadsDir } from './utils/storage-paths';
 // Routes
 import assetRoutes from './routes/asset.routes';
 import assetUsageRoutes from './routes/asset_usage.routes';
+import accessControlRoutes from './routes/access_control.routes';
 import authRoutes from './routes/auth.routes';
 import borrowingRoutes from './routes/borrowing.routes';
 import deletionRequestRoutes from './routes/deletion_request.routes';
@@ -243,6 +245,7 @@ app.get('/api/health', healthHandler);
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/access-control', authMiddleware, accessControlRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/assets', authMiddleware, assetRoutes);
 app.use('/api/asset-usage', authMiddleware, assetUsageRoutes);
@@ -343,6 +346,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureScheduleAssetForeignKeyRemoved();
         await ensureUserProfileColumns();
         await ensureUserAccessControlColumns();
+        await ensureRoleMenuAccessControlTables();
         await ensureUserActivityLogsTable();
         await ensureDeletionRequestsTable();
         await ensureAssetDisposalTable();

@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { buildLoginRedirectUrl, isLocalAuthSession } from "@/services/auth-utils";
 import type { User } from "@/services/auth.service";
 import authService from "@/services/auth.service";
@@ -311,6 +312,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [profileImageError, setProfileImageError] = useState(false)
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([])
+  const [allowedMenus, setAllowedMenus] = useState<AccessMenu[] | null>(null)
   const [isActivityHistoryExpanded, setIsActivityHistoryExpanded] = useState(() => {
     if (typeof window === "undefined") return false
     const saved = localStorage.getItem("sidebar-activity-expanded")
@@ -418,6 +420,29 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   useEffect(() => {
     loadActivities()
   }, [loadActivities, pathname])
+
+  useEffect(() => {
+    if (!currentUser?.id || isLocalAuthSession()) {
+      setAllowedMenus(null)
+      return
+    }
+
+    let isMounted = true
+    accessControlService.getMyMenus()
+      .then((response) => {
+        if (isMounted && response.success) {
+          setAllowedMenus(response.data)
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load role menus:", error)
+        if (isMounted) setAllowedMenus(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentUser?.id, currentUser?.role])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -542,7 +567,14 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         : isRegularUser
           ? userLinks
           : staffLinks
-  const visibleLinks = isCollapsed ? links : links
+  const allowedPathOrder = allowedMenus
+    ? new Map(allowedMenus.map((menu, index) => [menu.path, index]))
+    : null
+  const visibleLinks = allowedPathOrder
+    ? fullAccessLinks
+        .filter((link) => allowedPathOrder.has(link.href))
+        .sort((a, b) => (allowedPathOrder.get(a.href) ?? 0) - (allowedPathOrder.get(b.href) ?? 0))
+    : links
 
   const saveSidebarScrollTop = useCallback((scrollTop: number) => {
     if (typeof window === "undefined") return

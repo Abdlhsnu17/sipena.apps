@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
+import accessControlService, { type AccessMatrix } from "@/services/access-control.service";
 import { getCurrentUser } from "@/services/auth-utils";
 import deletionRequestService from "@/services/deletion-request.service";
 import type { User as ApiUser } from "@/services/user.service";
@@ -14,7 +15,7 @@ import { userService } from "@/services/user.service";
 import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
 import { normalizeUserRole } from "@/utils/role";
 
-import { AlertCircle, Check, Edit, KeyRound, Plus, Smartphone, Trash2, Users } from "lucide-react";
+import { AlertCircle, Check, Edit, KeyRound, Plus, Save, Shield, Smartphone, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function UsersPage() {
@@ -50,6 +51,11 @@ export default function UsersPage() {
   })
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error">("success")
+  const [activeTab, setActiveTab] = useState<"users" | "access">("users")
+  const [accessMatrix, setAccessMatrix] = useState<AccessMatrix | null>(null)
+  const [selectedRoleCode, setSelectedRoleCode] = useState("admin")
+  const [selectedMenuCodes, setSelectedMenuCodes] = useState<string[]>([])
+  const [isSavingAccess, setIsSavingAccess] = useState(false)
 
   const isAdmin = currentUser?.role === "admin"
   const isLeader = currentUser?.role === "leader"
@@ -63,6 +69,12 @@ export default function UsersPage() {
     loadUsers()
   }, [])
 
+  useEffect(() => {
+    if (isAdmin) {
+      loadAccessMatrix()
+    }
+  }, [isAdmin])
+
   const loadUsers = async () => {
     try {
       const response = await userService.getAll({ page: 1, limit: 1000 })
@@ -71,6 +83,51 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error("Failed to load users:", error)
+    }
+  }
+
+  const loadAccessMatrix = async () => {
+    try {
+      const response = await accessControlService.getMatrix()
+      if (response.success) {
+        setAccessMatrix(response.data)
+        const roleCode = selectedRoleCode || response.data.roles[0]?.code || "admin"
+        setSelectedRoleCode(roleCode)
+        setSelectedMenuCodes(response.data.permissions[roleCode] || [])
+      }
+    } catch (error) {
+      console.error("Failed to load access matrix:", error)
+    }
+  }
+
+  const handleSelectRoleAccess = (roleCode: string) => {
+    setSelectedRoleCode(roleCode)
+    setSelectedMenuCodes(accessMatrix?.permissions[roleCode] || [])
+  }
+
+  const toggleMenuAccess = (menuCode: string) => {
+    setSelectedMenuCodes((current) =>
+      current.includes(menuCode)
+        ? current.filter((code) => code !== menuCode)
+        : [...current, menuCode],
+    )
+  }
+
+  const saveRoleAccess = async () => {
+    if (!selectedRoleCode) return
+    setIsSavingAccess(true)
+    try {
+      const result = await accessControlService.updateRoleMenus(selectedRoleCode, selectedMenuCodes)
+      setMessageType(result.success ? "success" : "error")
+      setMessage(result.message)
+      if (result.success) {
+        await loadAccessMatrix()
+      }
+    } catch (error: any) {
+      setMessageType("error")
+      setMessage(error.message || "Gagal menyimpan hak akses")
+    } finally {
+      setIsSavingAccess(false)
     }
   }
 
@@ -557,6 +614,31 @@ export default function UsersPage() {
           </div>
         )}
 
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-white/90 p-2 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+              activeTab === "users" ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Data Pengguna
+          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("access")}
+              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+                activeTab === "access" ? "bg-teal-600 text-white" : "text-foreground hover:bg-muted"
+              }`}
+            >
+              <Shield className="h-4 w-4" />
+              Hak Akses Role
+            </button>
+          )}
+        </div>
+
         {/* Form Modal */}
         {isFormOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -772,7 +854,84 @@ export default function UsersPage() {
           </div>
         )}
 
+        {activeTab === "access" && isAdmin && (
+          <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+            <div className="rounded-2xl border border-border/60 bg-white/90 p-3 shadow-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <Shield className="h-4 w-4 text-teal-600" />
+                <h2 className="text-sm font-bold text-foreground">Role</h2>
+              </div>
+              <div className="space-y-1">
+                {(accessMatrix?.roles || []).map((role) => (
+                  <button
+                    key={role.code}
+                    type="button"
+                    onClick={() => handleSelectRoleAccess(role.code)}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                      selectedRoleCode === role.code ? "bg-teal-600 text-white" : "hover:bg-muted"
+                    }`}
+                  >
+                    <span className="block font-semibold">{role.name}</span>
+                    {role.description && (
+                      <span className={`block text-xs ${selectedRoleCode === role.code ? "text-white/80" : "text-muted-foreground"}`}>
+                        {role.description}
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {!accessMatrix && (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">Memuat role...</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/60 bg-white/90 p-4 shadow-sm">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-foreground">Menu yang Diizinkan</h2>
+                  <p className="text-xs text-muted-foreground">Centang menu yang boleh tampil dan diakses oleh role terpilih.</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={saveRoleAccess}
+                  disabled={isSavingAccess || !accessMatrix}
+                  className="rounded-xl bg-teal-600 text-white hover:bg-teal-700"
+                >
+                  <Save className="mr-1 h-4 w-4" />
+                  {isSavingAccess ? "Menyimpan..." : "Simpan Hak Akses"}
+                </Button>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {(accessMatrix?.menus || []).map((menu) => (
+                  <label
+                    key={menu.code}
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm hover:bg-muted/50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMenuCodes.includes(menu.code)}
+                      onChange={() => toggleMenuAccess(menu.code)}
+                      className="mt-1"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-foreground">{menu.label}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{menu.path}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {accessMatrix && accessMatrix.menus.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">Belum ada menu terdaftar.</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Users Management Table */}
+        {activeTab === "users" && (
         <div className="bg-white/90 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
             <div className="border-b border-border/70 bg-slate-50/70 px-4 py-3">
               <p className="text-xs text-muted-foreground">
@@ -883,6 +1042,7 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+      )}
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">

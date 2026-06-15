@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Topbar from "@/components/topbar";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import accessControlService from "@/services/access-control.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import { cn } from "@/utils";
@@ -26,6 +27,7 @@ export default function ClientLayout({
   const router = useRouter()
   const { toast } = useToast()
   const [user, setUser] = useState<User | null>(null)
+  const [allowedPaths, setAllowedPaths] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === "undefined") return false
@@ -53,6 +55,12 @@ export default function ClientLayout({
   const showLayout = !isAuthPage
 
   const isAllowedPath = canAccessRoute(user?.role, pathname)
+  const isAllowedByDatabase = allowedPaths
+    ? allowedPaths.some((path) => {
+        if (path === "/") return pathname === "/"
+        return pathname === path || pathname.startsWith(`${path}/`)
+      })
+    : isAllowedPath
 
   useEffect(() => {
     if (!loading && showLayout && !user) {
@@ -61,10 +69,33 @@ export default function ClientLayout({
   }, [loading, router, showLayout, user])
 
   useEffect(() => {
-    if (!loading && showLayout && user && !isAllowedPath) {
-      router.replace(getDefaultRouteForRole(user.role))
+    if (!loading && showLayout && user && !isAllowedByDatabase) {
+      router.replace(allowedPaths?.[0] || getDefaultRouteForRole(user.role))
     }
-  }, [isAllowedPath, loading, pathname, router, showLayout, user])
+  }, [allowedPaths, isAllowedByDatabase, loading, pathname, router, showLayout, user])
+
+  useEffect(() => {
+    if (!user || isAuthPage) {
+      setAllowedPaths(null)
+      return
+    }
+
+    let isMounted = true
+    accessControlService.getMyMenus()
+      .then((response) => {
+        if (isMounted && response.success) {
+          setAllowedPaths(response.data.map((menu) => menu.path))
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load route permissions:", error)
+        if (isMounted) setAllowedPaths(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [isAuthPage, user?.id, user?.role])
 
   useEffect(() => {
     if (!loading && showLayout && user?.mustChangePassword && pathname !== "/settings") {
