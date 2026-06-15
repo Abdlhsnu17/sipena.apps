@@ -69,7 +69,7 @@ import {
     type FormularData,
     type SectionLine,
 } from "@/utils/export-table";
-import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, HandHelping, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -77,6 +77,27 @@ type BorrowableAsset = DetailInventoryItem
 
 type BorrowingExportColumn = TableExportColumn<ApiBorrowing> & {
   defaultSelected?: boolean
+}
+
+const BORROWING_ROWS_PER_PAGE = 2
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right)
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1]
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page]
+    }
+    return [page]
+  })
 }
 
 const toDateTimeLocalInputValue = (value?: string | Date | null) => {
@@ -409,9 +430,9 @@ export default function BorrowingPage() {
   const [inventoryDetails, setInventoryDetails] = useState<DetailInventoryItem[]>([])
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("Semua")
   const [filterSource, setFilterSource] = useState<AssetSourceKey>("Semua")
   const [isBorrowingListMinimized, setIsBorrowingListMinimized] = useState(false)
+  const [borrowingPage, setBorrowingPage] = useState(1)
   const [selectedBorrowingIds, setSelectedBorrowingIds] = useState<Set<number>>(() => new Set())
   const [selectedBorrowingExportColumns, setSelectedBorrowingExportColumns] = useState<string[]>(() =>
     borrowingExportColumnDefinitions.map((column) => column.key)
@@ -1188,6 +1209,17 @@ export default function BorrowingPage() {
     }
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
+
+  const getBorrowingRestrictionBadge = (status: string) => {
+    if (status !== "overdue") return null
+
+    return (
+      <Badge className="border border-red-200 bg-red-50 text-red-700 hover:bg-red-50">
+        Diblokir meminjam
+      </Badge>
+    )
+  }
+
   const getBorrowingNoId = (borrowing: ApiBorrowing) =>
     formatNoId("PMJ", borrowing.id, borrowing.borrowingCode)
 
@@ -1213,19 +1245,29 @@ export default function BorrowingPage() {
       b.notes,
     ])
 
-    const matchesStatus =
-      filterStatus === "Semua" ||
-      (filterStatus === "Dipinjam" && ["approved", "borrowed"].includes(b.status)) ||
-      (filterStatus === "Menunggu Validasi" && b.status === "returned" && !b.returnValidatedAt) ||
-      (filterStatus === "Terlambat" && b.status === "overdue") ||
-      (filterStatus === "Menunggu" && b.status === "pending")
-
     const assetSource = deriveAssetSource(b.assetType, b.assetCode)
     const matchesSource = filterSource === "Semua" || assetSource === filterSource
-    return matchesSearch && matchesStatus && matchesSource
+    return matchesSearch && matchesSource
   })
 
   const selectedBorrowings = filteredBorrowings.filter((b) => selectedBorrowingIds.has(b.id))
+
+  useEffect(() => {
+    setBorrowingPage(1)
+  }, [visibleBorrowings.length, filterSource, searchTerm])
+
+  const totalBorrowingPages = Math.max(1, Math.ceil(filteredBorrowings.length / BORROWING_ROWS_PER_PAGE))
+  const currentBorrowingPage = Math.min(borrowingPage, totalBorrowingPages)
+  const borrowingStartIndex = (currentBorrowingPage - 1) * BORROWING_ROWS_PER_PAGE
+  const paginatedBorrowings = filteredBorrowings.slice(
+    borrowingStartIndex,
+    borrowingStartIndex + BORROWING_ROWS_PER_PAGE,
+  )
+  const visibleBorrowingPages = buildVisiblePageItems(currentBorrowingPage, totalBorrowingPages)
+  const goToBorrowingPage = (page: number) => {
+    setBorrowingPage(Math.min(totalBorrowingPages, Math.max(1, page)))
+  }
+
   const getAssetRoom = (detail?: DetailInventoryItem, fallback?: string) => {
     return (
       detail?.roomName ||
@@ -2166,6 +2208,16 @@ export default function BorrowingPage() {
                 </CardDescription>
               </div>
                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      aria-label="Pilih semua peminjaman"
+                      className="h-4 w-4 accent-blue-600"
+                      checked={allBorrowingsSelected}
+                      onChange={handleSelectAllBorrowings}
+                    />
+                    Pilih semua
+                  </label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2188,7 +2240,7 @@ export default function BorrowingPage() {
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
-                        Export
+                        Ekspor
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
@@ -2211,18 +2263,10 @@ export default function BorrowingPage() {
                       <DropdownMenuItem onClick={() => void handleExport("word")}>Word</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
-                  onClick={handleSelectAllBorrowings}
-                >
-                  {allBorrowingsSelected ? "Batal pilih semua" : "Pilih semua"}
-                </Button>
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedBorrowings.length
                     ? `${selectedBorrowings.length} baris dipilih`
-                    : `Semua ${filteredBorrowings.length} baris siap cetak`}
+                    : `Semua ${filteredBorrowings.length} baris`}
                 </span>
               </div>
               </div>
@@ -2234,7 +2278,7 @@ export default function BorrowingPage() {
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_190px_220px] lg:px-6">
+                  <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:px-6">
                     <div>
                       <label className="sr-only">Cari aset atau peminjam</label>
                       <div className="relative">
@@ -2249,17 +2293,6 @@ export default function BorrowingPage() {
                       </div>
                     </div>
                     <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
-                    >
-                      <option>Semua</option>
-                      <option>Menunggu</option>
-                      <option>Dipinjam</option>
-                      <option>Menunggu Validasi</option>
-                      <option>Terlambat</option>
-                    </select>
-                    <select
                       value={filterSource}
                       onChange={(e) => setFilterSource(e.target.value as AssetSourceKey)}
                       className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
@@ -2272,9 +2305,9 @@ export default function BorrowingPage() {
                   {filteredBorrowings.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
                   ) : (
-                    <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
-                      <div className="space-y-4">
-                        {filteredBorrowings.map((b) => {
+                    <div className="px-3 pb-4 sm:px-4 sm:pb-4">
+                      <div className="space-y-4 py-3">
+                        {paginatedBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
                       const assetName =
                         detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
@@ -2319,29 +2352,11 @@ export default function BorrowingPage() {
                                   <div className="mt-1.5 space-y-1.5">
                                     <p className="text-[11px] text-muted-foreground">No ID: {borrowingNoId}</p>
                                     <p className="text-[11px] text-muted-foreground">
-                                      Identias Karyawan: <span className="font-medium text-slate-700">{b.userName || "-"} / {b.userNip || "-"}</span>
+                                      Identitas Karyawan: <span className="font-medium text-slate-700">{b.userName || "-"} / {b.userNip || "-"}</span>
                                     </p>
                                     <p className="text-[11px] text-muted-foreground">
                                       Unit kerja: <span className="font-medium text-slate-700">{b.borrowerWorkUnit || "-"}</span> • {formatBorrowingPurposeType(b.purposeType)}
                                     </p>
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {inventoryTypeLabel}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {b.destinationRoom || roomNameLabel}
-                                    </Badge>
-                                    {b.status === "overdue" ? (
-                                      <Badge className="border-red-200 bg-red-50 text-[10px] text-red-700 hover:bg-red-50">
-                                        Diblokir Meminjam
-                                      </Badge>
-                                    ) : null}
-                                    {b.status === "overdue" ? (
-                                      <Badge variant="outline" className="text-[10px]">
-                                        Perpanjangan {extensionCountLabel}
-                                      </Badge>
-                                    ) : null}
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
@@ -2349,13 +2364,30 @@ export default function BorrowingPage() {
                                     <span className="text-[10px] font-semibold uppercase text-muted-foreground">Batas Pengembalian</span>
                                     <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
                                   </div>
-                                  <div>{getStatusBadge(b.status)}</div>
+                                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                                    {getStatusBadge(b.status)}
+                                    {getBorrowingRestrictionBadge(b.status)}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           )}
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                              <div className="flex flex-wrap items-center gap-1">
+                                <Badge variant="outline" className="text-[11px]">
+                                  {inventoryTypeLabel}
+                                </Badge>
+                                <Badge variant="outline" className="text-[11px]">
+                                  {b.destinationRoom || roomNameLabel}
+                                </Badge>
+                                {getBorrowingRestrictionBadge(b.status)}
+                                {b.status === "overdue" ? (
+                                  <Badge variant="outline" className="text-[11px]">
+                                    Perpanjangan {extensionCountLabel}
+                                  </Badge>
+                                ) : null}
+                              </div>
                               {borrowingSections.length ? (
                                 <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">
                                   {borrowingSections.map((section) => (
@@ -2485,6 +2517,55 @@ export default function BorrowingPage() {
                         </div>
                       )
                         })}
+                      </div>
+                      <div className="flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-slate-500">
+                          Menampilkan {borrowingStartIndex + 1}-{Math.min(borrowingStartIndex + BORROWING_ROWS_PER_PAGE, filteredBorrowings.length)} dari {filteredBorrowings.length} peminjaman
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={currentBorrowingPage === 1}
+                            onClick={() => setBorrowingPage((page) => Math.max(1, page - 1))}
+                            aria-label="Halaman peminjaman sebelumnya"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          {visibleBorrowingPages.map((page) => (
+                            typeof page === "number" ? (
+                              <Button
+                                key={page}
+                                type="button"
+                                variant={page === currentBorrowingPage ? "default" : "outline"}
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => goToBorrowingPage(page)}
+                                aria-label={`Halaman peminjaman ${page}`}
+                                aria-current={page === currentBorrowingPage ? "page" : undefined}
+                              >
+                                {page}
+                              </Button>
+                            ) : (
+                              <span key={page} className="flex h-8 w-8 items-center justify-center text-sm text-slate-400">
+                                ...
+                              </span>
+                            )
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={currentBorrowingPage === totalBorrowingPages}
+                            onClick={() => setBorrowingPage((page) => Math.min(totalBorrowingPages, page + 1))}
+                            aria-label="Halaman peminjaman berikutnya"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

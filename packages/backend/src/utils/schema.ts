@@ -18,6 +18,7 @@ let ensuredUserActivityLogsTable = false;
 let ensuredBorrowingWorkflowColumns = false;
 let ensuredAssetUsageLogsTable = false;
 let ensuredUserAccessControlColumns = false;
+let ensuredDeletionRequestsTable = false;
 let ensuredAssetDisposalTable = false;
 let attemptedCoreSchemaBootstrap = false;
 
@@ -826,4 +827,38 @@ export async function ensureAssetDisposalTable(): Promise<void> {
   }
 
   ensuredAssetDisposalTable = true;
+}
+
+export async function ensureDeletionRequestsTable(): Promise<void> {
+  if (ensuredDeletionRequestsTable) return;
+
+  const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES LIKE 'deletion_requests'");
+  if (tables.length === 0) {
+    await pool.query(`
+      CREATE TABLE deletion_requests (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        request_code VARCHAR(50) DEFAULT NULL,
+        target_type VARCHAR(50) NOT NULL,
+        target_id INT(11) NOT NULL,
+        target_label VARCHAR(255) DEFAULT NULL,
+        reason TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        requested_by INT(11) NOT NULL,
+        reviewed_by INT(11) DEFAULT NULL,
+        reviewed_at DATETIME DEFAULT NULL,
+        review_notes TEXT DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        rejected_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
+        PRIMARY KEY (id),
+        KEY idx_deletion_requests_status (status),
+        KEY idx_deletion_requests_target (target_type, target_id),
+        KEY idx_deletion_requests_requested_by (requested_by),
+        KEY idx_deletion_requests_reviewed_by (reviewed_by)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+  }
+
+  ensuredDeletionRequestsTable = true;
 }

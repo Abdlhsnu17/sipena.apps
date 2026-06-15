@@ -14,6 +14,7 @@ import {
     ensureAssetUsageLogsTable,
     ensureBorrowingWorkflowColumns,
     ensureCoreSchemaInitialized,
+    ensureDeletionRequestsTable,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
     ensureMaintenanceDetailColumns,
@@ -343,6 +344,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureUserProfileColumns();
         await ensureUserAccessControlColumns();
         await ensureUserActivityLogsTable();
+        await ensureDeletionRequestsTable();
         await ensureAssetDisposalTable();
       });
       infrastructureStatus.schema = 'up';

@@ -19,12 +19,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -44,6 +47,16 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
 };
 
 const HISTORY_ROWS_PER_PAGE = 2;
+const usageExportColumnDefinitions = [
+  { key: "basic", label: "Data Alat Digunakan" },
+  { key: "usage", label: "Data Pemakaian" },
+  { key: "operator", label: "Operator Pemakaian" },
+  { key: "notes", label: "Catatan Pemakaian" },
+  { key: "status", label: "Status Pemakaian" },
+] as const;
+
+type UsageExportColumnKey = (typeof usageExportColumnDefinitions)[number]["key"];
+type UsageSourceFilter = "Semua" | "medical" | "non_medical";
 
 const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
   if (totalPages <= 7) {
@@ -349,7 +362,11 @@ export default function AssetUsagePage() {
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set());
   const [overdueBorrowings, setOverdueBorrowings] = useState<Borrowing[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roomFilter, setRoomFilter] = useState("");
+  const [usageSourceFilter, setUsageSourceFilter] = useState<UsageSourceFilter>("Semua");
+  const [selectedUsageIds, setSelectedUsageIds] = useState<number[]>([]);
+  const [selectedUsageColumns, setSelectedUsageColumns] = useState<UsageExportColumnKey[]>(
+    usageExportColumnDefinitions.map((column) => column.key)
+  );
   const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [expandedUsageHistoryIds, setExpandedUsageHistoryIds] = useState<number[]>([]);
@@ -550,6 +567,8 @@ export default function AssetUsagePage() {
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
+      if (usageSourceFilter !== "Semua" && log.assetType !== usageSourceFilter) return false;
+
       const matchesSearch = matchesSearchKeyword(searchTerm, [
         getUsageNoId(log),
         log.assetDetailName,
@@ -561,13 +580,13 @@ export default function AssetUsagePage() {
         log.notes,
         log.endedAt ? "Selesai" : "Sedang Digunakan",
       ]);
-      return matchesSearch && matchesSearchKeyword(roomFilter, [log.roomName]);
+      return matchesSearch;
     });
-  }, [logs, roomFilter, searchTerm]);
+  }, [logs, searchTerm, usageSourceFilter]);
 
   useEffect(() => {
     setUsageHistoryPage(1);
-  }, [logs.length, roomFilter, searchTerm]);
+  }, [logs.length, searchTerm, usageSourceFilter]);
 
   const totalUsageHistoryPages = Math.max(1, Math.ceil(filteredLogs.length / HISTORY_ROWS_PER_PAGE));
   const currentUsageHistoryPage = Math.min(usageHistoryPage, totalUsageHistoryPages);
@@ -577,6 +596,32 @@ export default function AssetUsagePage() {
   const goToUsageHistoryPage = (page: number) => {
     setUsageHistoryPage(Math.min(totalUsageHistoryPages, Math.max(1, page)));
   };
+  const selectedUsageRows = useMemo(
+    () => filteredLogs.filter((log) => selectedUsageIds.includes(log.id)),
+    [filteredLogs, selectedUsageIds]
+  );
+  const usageAllSelected = filteredLogs.length > 0 && selectedUsageRows.length === filteredLogs.length;
+  const handleUsageSelectAll = () => {
+    setSelectedUsageIds((prev) => {
+      const filteredIds = filteredLogs.map((log) => log.id);
+      const allSelected = filteredIds.every((id) => prev.includes(id));
+      if (allSelected) return prev.filter((id) => !filteredIds.includes(id));
+      return Array.from(new Set([...prev, ...filteredIds]));
+    });
+  };
+  const toggleUsageSelection = (id: number) => {
+    setSelectedUsageIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+  const toggleUsageColumn = (key: UsageExportColumnKey) => {
+    setSelectedUsageColumns((prev) => {
+      if (prev.includes(key)) return prev.length === 1 ? prev : prev.filter((item) => item !== key);
+      return [...prev, key];
+    });
+  };
+
+  useEffect(() => {
+    setSelectedUsageIds((prev) => prev.filter((id) => filteredLogs.some((log) => log.id === id)));
+  }, [filteredLogs]);
 
   const summary = useMemo(() => {
     const totalRecords = filteredLogs.length;
@@ -821,11 +866,18 @@ export default function AssetUsagePage() {
 
   const getUsageStatusLabel = (log: AssetUsageLog) => (log.endedAt ? "Selesai" : "Sedang Digunakan");
 
-  const getUsageDetailSections = (log: AssetUsageLog): UsageDetailSection[] => {
+  const getUsageDetailSections = (
+    log: AssetUsageLog,
+    visibleColumns: UsageExportColumnKey[] = selectedUsageColumns,
+  ): UsageDetailSection[] => {
     const sections: UsageDetailSection[] = [];
     const usageContextLabel = usageContextLabels[log.usageContext] || log.usageContext || "-";
 
-    sections.push({
+    const pushIfVisible = (key: UsageExportColumnKey, section: UsageDetailSection) => {
+      if (visibleColumns.includes(key)) sections.push(section);
+    };
+
+    pushIfVisible("basic", {
       title: "Data Alat Digunakan",
       lines: [
         { label: "No ID Pemakaian", value: getUsageNoId(log) },
@@ -836,7 +888,7 @@ export default function AssetUsagePage() {
       ],
     });
 
-    sections.push({
+    pushIfVisible("usage", {
       title: "Data Pemakaian",
       lines: [
         { label: "Ruangan Pengguna", value: getUsageRoomDisplay(log).primary },
@@ -848,7 +900,7 @@ export default function AssetUsagePage() {
       ],
     });
 
-    sections.push({
+    pushIfVisible("operator", {
       title: "Operator Pemakaian",
       lines: [
         { label: "Nama Operator", value: log.operatorName || "-" },
@@ -856,7 +908,7 @@ export default function AssetUsagePage() {
       ],
     });
 
-    sections.push({
+    pushIfVisible("notes", {
       title: "Catatan Pemakaian",
       lines: [
         { label: "Waktu Selesai", value: formatDayTimeLabel(log.endedAt) || "-" },
@@ -865,7 +917,7 @@ export default function AssetUsagePage() {
       ],
     });
 
-    sections.push({
+    pushIfVisible("status", {
       title: "Status Pemakaian",
       lines: [
         { label: "Status", value: getUsageStatusLabel(log) },
@@ -923,6 +975,18 @@ export default function AssetUsagePage() {
       emptyMessage: 'Tidak ada data pemakaian yang dipilih.',
     })
   }
+
+  const exportUsageList = async (format: ExportFormat) => {
+    const entries = selectedUsageRows.length ? selectedUsageRows : filteredLogs;
+    await exportNarrativeReport(format, {
+      title: "Riwayat Penggunaan",
+      subtitle: "PENGGUNAAN",
+      entries,
+      filePrefix: "riwayat-penggunaan",
+      buildSections: (log) => getUsageDetailSections(log, selectedUsageColumns),
+      emptyMessage: "Tidak ada data pemakaian yang dipilih.",
+    });
+  };
 
   const toggleUsageHistoryCard = (id: number) => {
     setExpandedUsageHistoryIds((prev) =>
@@ -1109,41 +1173,107 @@ export default function AssetUsagePage() {
         <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <CardTitle className="text-base">Riwayat Pemakaian</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsUsageHistoryMinimized((prev) => !prev)}
-                className="w-full rounded-2xl px-3 sm:w-auto"
+              <div>
+                <CardTitle className="text-lg">Riwayat Pemakaian</CardTitle>
+                <CardDescription className="text-[13px] text-muted-foreground">
+                  Total: {filteredLogs.length} catatan penggunaan
+                </CardDescription>
+              </div>
+              <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    aria-label="Pilih semua riwayat penggunaan"
+                    className="h-4 w-4 accent-blue-600"
+                    checked={usageAllSelected}
+                    onChange={handleUsageSelectAll}
+                  />
+                  Pilih semua
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsUsageHistoryMinimized((prev) => !prev)}
+                  className="w-full rounded-2xl px-3 sm:w-auto"
+                >
+                  {isUsageHistoryMinimized ? (
+                    <>
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                      Tampilkan
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="mr-2 h-4 w-4" />
+                      Sembunyikan
+                    </>
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
+                      <Download className="mr-2 h-4 w-4" />
+                      Ekspor
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
+                    <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
+                    <div className="max-h-44 overflow-y-auto">
+                      {usageExportColumnDefinitions.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={`usage-column-${column.key}`}
+                          checked={selectedUsageColumns.includes(column.key)}
+                          onCheckedChange={() => toggleUsageColumn(column.key)}
+                        >
+                          {column.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => void exportUsageList("pdf")}>PDF</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void exportUsageList("word")}>Word</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
+                  {selectedUsageRows.length
+                    ? `${selectedUsageRows.length} baris dipilih`
+                    : `Semua ${filteredLogs.length} baris`}
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+              <div>
+                <label className="sr-only">Cari alat atau operator</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Cari No ID, aset, atau operator..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                  />
+                </div>
+              </div>
+              <select
+                value={usageSourceFilter}
+                onChange={(event) => setUsageSourceFilter(event.target.value as UsageSourceFilter)}
+                className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] transition focus:border-teal-500"
               >
-                {isUsageHistoryMinimized ? (
-                  <>
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                    Tampilkan
-                  </>
-                ) : (
-                  <>
-                    <ChevronUp className="mr-2 h-4 w-4" />
-                    Sembunyikan
-                  </>
-                )}
-              </Button>
+                <option value="Semua">Semua Sumber</option>
+                <option value="medical">Inventaris Medis</option>
+                <option value="non_medical">Inventaris Non-Medis</option>
+              </select>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="px-0">
             {isUsageHistoryMinimized ? (
               <div className="rounded-2xl border border-green-100 bg-green-50/80 px-4 py-4 text-center text-sm text-green-900">
                 Section riwayat pemakaian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
               </div>
             ) : (
               <>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input className="pl-9" placeholder="Cari alat/operator" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
-                  </div>
-                  <Input placeholder="Filter ruangan" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)} />
-                </div>
                 <div className="px-3 pb-4 sm:px-4 sm:pb-4">
                   <div className="space-y-4 py-3">
                   {filteredLogs.length === 0 ? (
@@ -1162,7 +1292,7 @@ export default function AssetUsagePage() {
                       return (
                         <div key={log.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>Informasi Dasar Pemakaian</span>
+                            <span>Informasi Dasar Inventaris</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1183,22 +1313,16 @@ export default function AssetUsagePage() {
                                   <div className="mt-1.5 space-y-1.5">
                                     <p className="text-[11px] text-muted-foreground">No ID: {getUsageNoId(log)}</p>
                                     <p className="text-[11px] text-muted-foreground">
-                                      Ruangan alat: <span className="font-medium text-slate-700">{log.assetLocation || "-"}</span>
+                                      Identitas Karyawan: <span className="font-medium text-slate-700">{userLabel} / {log.operatorNip || "-"}</span>
                                     </p>
                                     <p className="text-[11px] text-muted-foreground">
-                                      Ruangan pengguna: <span className="font-medium text-slate-700">{roomDisplay.primary}</span>
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Pengguna: <span className="font-medium text-slate-700">{userLabel}</span>
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Kondisi: <span className="font-medium text-slate-700">{getUsageConditionLabel(log)}</span>
+                                      Unit kerja: <span className="font-medium text-slate-700">{roomDisplay.primary}</span> • {usageContextLabels[log.usageContext] || log.usageContext || "-"}
                                     </p>
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
                                   <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu</span>
+                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu Mulai</span>
                                     <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(log.startedAt) || "-"}</span>
                                   </div>
                                   <div className="flex flex-col items-start gap-1 sm:items-end">
@@ -1214,32 +1338,48 @@ export default function AssetUsagePage() {
 
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">
-                                {[leftSections, rightSections].map((columnSections, columnIndex) => (
-                                  <div key={columnIndex} className="mb-3 break-inside-avoid space-y-3">
-                                    {columnSections.map((section) => (
-                                      <div key={section.title} className="space-y-2">
-                                        <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700">
-                                          {section.title}
+                              {detailSections.length ? (
+                                <div className="columns-1 gap-3 border-t border-slate-200 pt-3 lg:columns-2">
+                                  {[leftSections, rightSections].map((columnSections, columnIndex) => (
+                                    <div key={columnIndex} className="mb-3 break-inside-avoid space-y-3">
+                                      {columnSections.map((section) => (
+                                        <div key={section.title} className="space-y-2">
+                                          <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                            {section.title}
+                                          </div>
+                                          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                            {section.lines.map((line) => (
+                                              <div key={`${section.title}-${line.label}`} className="detail-labeled-row">
+                                                <span className="font-medium text-slate-600">{line.label}</span>
+                                                <span className="font-medium text-slate-900">{line.value}</span>
+                                              </div>
+                                            ))}
+                                          </div>
                                         </div>
-                                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                          {section.lines.map((line) => (
-                                            <div key={`${section.title}-${line.label}`} className="detail-labeled-row border-b border-slate-200 last:border-b-0">
-                                              <span className="font-medium text-slate-600">{line.label}</span>
-                                              <span className="font-medium text-slate-900">{line.value}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ))}
-                              </div>
+                                      ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-[13px] text-slate-700">
+                                  Aktifkan minimal satu kolom untuk melihat detail penggunaan.
+                                </div>
+                              )}
                             </div>
                           )}
 
-                          <div className="flex justify-end border-t border-slate-200 px-3 pb-3 pt-2 sm:px-3 sm:pb-3">
-                            <div className="flex flex-wrap items-center justify-end gap-1">
+                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
+                            <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                checked={selectedUsageIds.includes(log.id)}
+                                onChange={() => toggleUsageSelection(log.id)}
+                                className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
+                                aria-label={`Pilih riwayat penggunaan ${log.assetDetailName || log.assetName || "-"}`}
+                              />
+                              Pilih kartu
+                            </label>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               {!log.endedAt && (() => {
                                 const allowed = canCompleteUsage(currentUser?.role, log.operatorRole);
                                 return allowed ? (

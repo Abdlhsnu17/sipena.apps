@@ -2,22 +2,41 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { useConfirm } from "@/hooks/use-confirm"
 import { useToast } from "@/hooks/use-toast"
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import sanctionsService, { type SanctionRecord, type SanctionStats } from "@/services/sanctions.service"
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
 import { canManageSanctionsRole } from "@/utils/role"
-import { Activity, AlertCircle, Check, CheckCircle, ChevronDown, ChevronUp, Search, Shield, Users, XCircle } from "lucide-react"
+import { Activity, AlertCircle, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Search, Shield, Users, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+
+const CARD_ROWS_PER_PAGE = 2
+
+const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right)
+
+  return sortedPages.flatMap((page, index) => {
+    const previousPage = sortedPages[index - 1]
+    if (index > 0 && previousPage && page - previousPage > 1) {
+      return [`ellipsis-${previousPage}-${page}`, page]
+    }
+    return [page]
+  })
+}
 
 const sanctionStatusLabel: Record<string, string> = {
   active: "Aktif",
@@ -34,7 +53,6 @@ const sanctionStatusVariant: Record<string, "default" | "secondary" | "destructi
 export default function SanctionsPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { confirm } = useConfirm()
 
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,6 +62,9 @@ export default function SanctionsPage() {
   const [search, setSearch] = useState("")
   const [totalCount, setTotalCount] = useState(0)
   const [isSanctionsListMinimized, setIsSanctionsListMinimized] = useState(false)
+  const [selectedSanctionIds, setSelectedSanctionIds] = useState<Set<number>>(() => new Set())
+  const [expandedSanctionIds, setExpandedSanctionIds] = useState<Set<number>>(() => new Set())
+  const [sanctionsPage, setSanctionsPage] = useState(1)
 
   const [resolveDialog, setResolveDialog] = useState<{ open: boolean; record: SanctionRecord | null; mode: "resolve" | "waive" }>({
     open: false,
@@ -91,7 +112,7 @@ export default function SanctionsPage() {
     if (user) loadData()
   }, [user, loadData])
 
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = useMemo(() => records.filter(r => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
@@ -100,7 +121,56 @@ export default function SanctionsPage() {
       r.assetName?.toLowerCase().includes(q) ||
       r.borrowingCode?.toLowerCase().includes(q)
     )
-  })
+  }), [records, search])
+
+  useEffect(() => {
+    setSanctionsPage(1)
+  }, [activeTab, records.length, search])
+
+  const totalSanctionsPages = Math.max(1, Math.ceil(filteredRecords.length / CARD_ROWS_PER_PAGE))
+  const currentSanctionsPage = Math.min(sanctionsPage, totalSanctionsPages)
+  const sanctionsStartIndex = (currentSanctionsPage - 1) * CARD_ROWS_PER_PAGE
+  const paginatedRecords = filteredRecords.slice(sanctionsStartIndex, sanctionsStartIndex + CARD_ROWS_PER_PAGE)
+  const visibleSanctionsPages = buildVisiblePageItems(currentSanctionsPage, totalSanctionsPages)
+  const selectedSanctionRows = filteredRecords.filter((record) => selectedSanctionIds.has(record.id))
+  const allSanctionsSelected =
+    filteredRecords.length > 0 && filteredRecords.every((record) => selectedSanctionIds.has(record.id))
+
+  const goToSanctionsPage = (page: number) => {
+    setSanctionsPage(Math.min(totalSanctionsPages, Math.max(1, page)))
+  }
+
+  const handleSelectAllSanctions = () => {
+    if (allSanctionsSelected) {
+      setSelectedSanctionIds(new Set())
+      return
+    }
+    setSelectedSanctionIds(new Set(filteredRecords.map((record) => record.id)))
+  }
+
+  const toggleSanctionSelection = (id: number) => {
+    setSelectedSanctionIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleCardCollapse = (id: number) => {
+    setExpandedSanctionIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const openResolve = (record: SanctionRecord, mode: "resolve" | "waive") => {
     setResolveNotes("")
@@ -201,150 +271,309 @@ export default function SanctionsPage() {
         </Card>
       )}
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="active">Aktif</TabsTrigger>
-            <TabsTrigger value="resolved">Selesai</TabsTrigger>
-            <TabsTrigger value="all">Semua</TabsTrigger>
-          </TabsList>
-          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSanctionsListMinimized((prev) => !prev)}
-              className="w-full rounded-2xl px-3 sm:w-auto"
-            >
-              {isSanctionsListMinimized ? (
-                <>
-                  <ChevronDown className="mr-2 h-4 w-4" />
-                  Tampilkan
-                </>
-              ) : (
-                <>
-                  <ChevronUp className="mr-2 h-4 w-4" />
-                  Sembunyikan
-                </>
-              )}
-            </Button>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari nama, NIP, kode..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+      <Card className="rounded-3xl border border-slate-200 bg-white/70 shadow-xl dark:border-slate-700 dark:bg-slate-900/70">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "resolved" | "all")}>
+          <CardHeader className="space-y-3 pb-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-lg">Daftar Manajemen Sanksi</CardTitle>
+                <CardDescription className="text-[13px] text-muted-foreground">
+                  Total: {filteredRecords.length} data sanksi
+                </CardDescription>
+              </div>
+              <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSanctionsListMinimized((prev) => !prev)}
+                  className="w-full rounded-2xl px-3 sm:w-auto"
+                >
+                  {isSanctionsListMinimized ? (
+                    <>
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                      Tampilkan
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="mr-2 h-4 w-4" />
+                      Sembunyikan
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
+                  onClick={handleSelectAllSanctions}
+                >
+                  {allSanctionsSelected ? "Batal pilih semua" : "Pilih semua"}
+                </Button>
+                <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
+                  {selectedSanctionRows.length
+                    ? `${selectedSanctionRows.length} baris dipilih`
+                    : `Semua ${filteredRecords.length} baris`}
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {(["active", "resolved", "all"] as const).map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
-            {isSanctionsListMinimized ? (
-              <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-sm text-teal-900">
-                Section manajemen sanksi disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div>
+                <label className="sr-only">Cari sanksi</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Cari No ID, aset, nama, atau NIP..."
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                  />
+                </div>
               </div>
-            ) : loading ? (
-              <div className="text-center py-10 text-muted-foreground">Memuat data...</div>
-            ) : filteredRecords.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                {search ? "Tidak ada hasil pencarian." : "Tidak ada data sanksi."}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredRecords.map((record) => (
-                  <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    {/* Header bar */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[13px] font-semibold text-slate-700">{record.userName}</span>
-                        <span className="text-[11px] text-muted-foreground">NIP: {record.userNip}</span>
-                      </div>
-                      <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="shrink-0">
-                        {sanctionStatusLabel[record.sanctionStatus]}
-                      </Badge>
-                    </div>
+              <TabsList className="w-full overflow-x-auto justify-start">
+                <TabsTrigger value="active" className="shrink-0">Aktif</TabsTrigger>
+                <TabsTrigger value="resolved" className="shrink-0">Selesai</TabsTrigger>
+                <TabsTrigger value="all" className="shrink-0">Semua</TabsTrigger>
+              </TabsList>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0">
+            {(["active", "resolved", "all"] as const).map((tab) => (
+              <TabsContent key={tab} value={tab} className="m-0">
+                {isSanctionsListMinimized ? (
+                  <div className="mx-3 rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-sm text-teal-900 sm:mx-4 lg:mx-6">
+                    Section manajemen sanksi disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+                  </div>
+                ) : loading ? (
+                  <div className="px-3 py-10 text-center text-muted-foreground sm:px-4 lg:px-6">Memuat data...</div>
+                ) : filteredRecords.length === 0 ? (
+                  <div className="px-3 py-10 text-center text-muted-foreground sm:px-4 lg:px-6">
+                    {search ? "Tidak ada hasil pencarian." : "Tidak ada data sanksi."}
+                  </div>
+                ) : (
+                  <div className="space-y-3 px-3 sm:px-4 lg:px-6">
+                    {paginatedRecords.map((record) => {
+                      const isExpanded = expandedSanctionIds.has(record.id)
+                      const dueDateLabel = record.dueDate ? formatDayTimeLabel(record.dueDate, { showWeekday: true }) : "-"
+                      const borrowDateLabel = record.borrowDate ? formatDayTimeLabel(record.borrowDate, { showWeekday: true }) : "-"
+                      const appliedDateLabel = record.sanctionAppliedAt ? formatDayTimeLabel(record.sanctionAppliedAt, { showWeekday: true }) : "-"
+                      const resolvedDateLabel = record.resolvedAt ? formatDayTimeLabel(record.resolvedAt, { showWeekday: true }) : "-"
 
-                    {/* Main content */}
-                    <div className="space-y-2.5 bg-white px-3 py-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
-                            {record.assetName}
-                          </p>
-                          {record.assetCode && (
-                            <p className="text-[12px] font-medium text-slate-700">{record.assetCode}</p>
-                          )}
-                          <div className="mt-1.5 space-y-1">
-                            {record.borrowingCode && (
-                              <p className="text-[11px] text-muted-foreground">
-                                No Peminjaman: <span className="font-medium text-slate-700">{record.borrowingCode}</span>
-                              </p>
-                            )}
-                            {record.sanctionNotes && (
-                              <p className="text-[11px] text-muted-foreground italic">{record.sanctionNotes}</p>
-                            )}
-                            {record.resolvedAt && (
-                              <p className="text-[11px] text-green-600">
-                                Diselesaikan oleh {record.resolvedBy ?? "admin"} pada{" "}
-                                {formatDayTimeLabel(record.resolvedAt)}
-                                {record.resolvedNotes && ` — ${record.resolvedNotes}`}
-                              </p>
-                            )}
+                      return (
+                        <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                            <span>Informasi Dasar Sanksi</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
+                              onClick={() => toggleCardCollapse(record.id)}
+                              aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
+                            >
+                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </Button>
                           </div>
-                        </div>
-                        <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right shrink-0">
-                          {record.dueDate && (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-semibold uppercase text-muted-foreground">Jatuh Tempo</span>
-                              <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(record.dueDate)}</span>
+
+                          {!isExpanded && (
+                            <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                    {record.assetName || "-"}
+                                  </p>
+                                  <p className="text-[12px] font-medium text-slate-700">{record.assetCode || "-"}</p>
+                                  <div className="mt-1.5 space-y-1.5">
+                                    <p className="text-[11px] text-muted-foreground">No ID: {record.borrowingCode || `SNK-${record.id}`}</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Identitas Karyawan: <span className="font-medium text-slate-700">{record.userName || "-"} / {record.userNip || "-"}</span>
+                                    </p>
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                                    <Badge variant="outline" className="text-[10px]">
+                                      Peminjaman
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px]">
+                                      Terlambat {record.overdueDays} hari
+                                    </Badge>
+                                    <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[10px]">
+                                      {sanctionStatusLabel[record.sanctionStatus]}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end sm:text-right">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Jatuh Tempo</span>
+                                    <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
+                                  </div>
+                                  <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
+                                    {sanctionStatusLabel[record.sanctionStatus]}
+                                  </Badge>
+                                </div>
+                              </div>
                             </div>
                           )}
-                          <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-[12px] font-semibold text-red-500">
-                              Terlambat {record.overdueDays} hari
-                            </span>
+
+                          {isExpanded && (
+                            <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                              <div className="columns-1 gap-3 lg:columns-2">
+                                <div className="mb-3 break-inside-avoid space-y-2">
+                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                    Informasi Peminjaman
+                                  </div>
+                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">No ID</span>
+                                      <span className="font-medium text-slate-900">{record.borrowingCode || `SNK-${record.id}`}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Nama Alat</span>
+                                      <span className="font-medium text-slate-900">{record.assetName || "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Kode Alat</span>
+                                      <span className="font-medium text-slate-900">{record.assetCode || "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Tanggal Pinjam</span>
+                                      <span className="font-medium text-slate-900">{borrowDateLabel}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="mb-3 break-inside-avoid space-y-2">
+                                  <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                    Detail Sanksi
+                                  </div>
+                                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Pengguna</span>
+                                      <span className="font-medium text-slate-900">{record.userName || "-"} / {record.userNip || "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Jatuh Tempo</span>
+                                      <span className="font-medium text-slate-900">{dueDateLabel}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Sanksi Diterapkan</span>
+                                      <span className="font-medium text-slate-900">{appliedDateLabel}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Status</span>
+                                      <span className="font-medium text-slate-900">{sanctionStatusLabel[record.sanctionStatus]}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                      <span className="font-medium text-slate-600">Catatan</span>
+                                      <span className="font-medium text-slate-900">{record.sanctionNotes || record.resolvedNotes || "-"}</span>
+                                    </div>
+                                    {record.resolvedAt && (
+                                      <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                        <span className="font-medium text-slate-600">Diselesaikan</span>
+                                        <span className="font-medium text-slate-900">{record.resolvedBy ?? "admin"} pada {resolvedDateLabel}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
+                            <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                checked={selectedSanctionIds.has(record.id)}
+                                onChange={() => toggleSanctionSelection(record.id)}
+                                className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
+                                aria-label={`Pilih sanksi ${record.assetName || record.borrowingCode || record.id}`}
+                              />
+                              Pilih kartu
+                            </label>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              {record.sanctionStatus === "active" ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => openResolve(record, "resolve")}
+                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                                  >
+                                    <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                                    Selesaikan
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openResolve(record, "waive")}
+                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                                  >
+                                    <XCircle className="mr-1 h-3.5 w-3.5" />
+                                    Bebaskan
+                                  </Button>
+                                </>
+                              ) : (
+                                <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
+                                  {sanctionStatusLabel[record.sanctionStatus]}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
+                      )
+                    })}
+
+                    <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-xs text-slate-500">
+                        Menampilkan {sanctionsStartIndex + 1}-{Math.min(sanctionsStartIndex + CARD_ROWS_PER_PAGE, filteredRecords.length)} dari {filteredRecords.length} data
+                        {totalCount !== filteredRecords.length ? ` (${totalCount} total server)` : ""}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentSanctionsPage === 1}
+                          onClick={() => goToSanctionsPage(currentSanctionsPage - 1)}
+                          aria-label="Halaman sanksi sebelumnya"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {visibleSanctionsPages.map((page) =>
+                          typeof page === "number" ? (
+                            <Button
+                              key={`sanctions-page-${page}`}
+                              type="button"
+                              variant={page === currentSanctionsPage ? "default" : "outline"}
+                              size="sm"
+                              className="h-8 min-w-8 px-2"
+                              onClick={() => goToSanctionsPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          ) : (
+                            <span key={page} className="px-1 text-xs text-slate-400">
+                              ...
+                            </span>
+                          )
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={currentSanctionsPage === totalSanctionsPages}
+                          onClick={() => goToSanctionsPage(currentSanctionsPage + 1)}
+                          aria-label="Halaman sanksi berikutnya"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-
-                    {/* Footer action buttons */}
-                    {record.sanctionStatus === "active" && (
-                      <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => openResolve(record, "resolve")}
-                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                            Selesaikan
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openResolve(record, "waive")}
-                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1" />
-                            Bebaskan
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                ))}
-                <p className="text-xs text-muted-foreground text-right">
-                  {filteredRecords.length} dari {totalCount} data
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+                )}
+              </TabsContent>
+            ))}
+          </CardContent>
+        </Tabs>
+      </Card>
 
       <Dialog
         open={resolveDialog.open}
