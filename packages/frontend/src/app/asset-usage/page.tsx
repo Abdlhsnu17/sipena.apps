@@ -43,7 +43,7 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   other: "Lainnya",
 };
 
-const HISTORY_ROWS_PER_PAGE = 3;
+const HISTORY_ROWS_PER_PAGE = 2;
 
 const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
   if (totalPages <= 7) {

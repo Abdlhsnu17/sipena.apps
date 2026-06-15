@@ -70,7 +70,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type ReturnExportColumn = TableExportColumn<ApiBorrowing>
 
-const RETURN_ROWS_PER_PAGE = 3
+const RETURN_ROWS_PER_PAGE = 2
 
 const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
   if (totalPages <= 7) {
@@ -1589,79 +1589,85 @@ export default function ReturnsPage() {
               </div>
             </CardHeader>
             <CardContent className="px-0">
-              <div className="px-4 pb-4">
-                <div className="rounded-2xl border border-border/70 bg-slate-50/60 p-3 dark:bg-slate-800/40">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] font-semibold text-muted-foreground">
-                      Cari & Filter Riwayat
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-[14px]"
-                      onClick={() => {
-                        setHistorySearchTerm("")
-                        setHistoryFilterSource("Semua")
-                        setHistoryFilterCondition("Semua")
-                        setHistoryFilterValidation("Semua")
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                  <div className="mt-3 grid gap-3 lg:grid-cols-5">
-                    <div className="lg:col-span-2">
-                      <label className="sr-only">Cari riwayat pengembalian</label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                          type="text"
-                          placeholder="Cari No ID, alat, peminjam, validator..."
-                          value={historySearchTerm}
-                          onChange={(event) => setHistorySearchTerm(event.target.value)}
-                          className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
-                        />
+              {isHistorySectionMinimized ? (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-sm text-teal-900">
+                  Section riwayat pengembalian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+                </div>
+              ) : (
+                <>
+                  <div className="px-4 pb-4">
+                    <div className="rounded-2xl border border-border/70 bg-slate-50/60 p-3 dark:bg-slate-800/40">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-muted-foreground">
+                          Cari & Filter Riwayat
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[14px]"
+                          onClick={() => {
+                            setHistorySearchTerm("")
+                            setHistoryFilterSource("Semua")
+                            setHistoryFilterCondition("Semua")
+                            setHistoryFilterValidation("Semua")
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                      <div className="mt-3 grid gap-3 lg:grid-cols-5">
+                        <div className="lg:col-span-2">
+                          <label className="sr-only">Cari riwayat pengembalian</label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                              type="text"
+                              placeholder="Cari No ID, alat, peminjam, validator..."
+                              value={historySearchTerm}
+                              onChange={(event) => setHistorySearchTerm(event.target.value)}
+                              className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                            />
+                          </div>
+                        </div>
+                        <select
+                          value={historyFilterSource}
+                          onChange={(event) => setHistoryFilterSource(event.target.value as AssetSourceKey)}
+                          className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
+                        >
+                          <option value="Semua">Semua Sumber</option>
+                          <option value="medis">Inventaris Medis</option>
+                          <option value="non_medis">Inventaris Non-Medis</option>
+                        </select>
+                        <select
+                          value={historyFilterCondition}
+                          onChange={(event) => setHistoryFilterCondition(event.target.value)}
+                          className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
+                        >
+                          <option value="Semua">Semua Kondisi</option>
+                          <option value="Baik">Baik</option>
+                          <option value="Cukup">Cukup</option>
+                          <option value="Rusak">Rusak</option>
+                        </select>
+                        <select
+                          value={historyFilterValidation}
+                          onChange={(event) => setHistoryFilterValidation(event.target.value)}
+                          className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
+                        >
+                          <option value="Semua">Semua Validasi</option>
+                          <option value="Tervalidasi">Tervalidasi</option>
+                          <option value="Belum Tervalidasi">Belum Tervalidasi</option>
+                        </select>
                       </div>
                     </div>
-                    <select
-                      value={historyFilterSource}
-                      onChange={(event) => setHistoryFilterSource(event.target.value as AssetSourceKey)}
-                      className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
-                    >
-                      <option value="Semua">Semua Sumber</option>
-                      <option value="medis">Inventaris Medis</option>
-                      <option value="non_medis">Inventaris Non-Medis</option>
-                    </select>
-                    <select
-                      value={historyFilterCondition}
-                      onChange={(event) => setHistoryFilterCondition(event.target.value)}
-                      className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
-                    >
-                      <option value="Semua">Semua Kondisi</option>
-                      <option value="Baik">Baik</option>
-                      <option value="Cukup">Cukup</option>
-                      <option value="Rusak">Rusak</option>
-                    </select>
-                    <select
-                      value={historyFilterValidation}
-                      onChange={(event) => setHistoryFilterValidation(event.target.value)}
-                      className="rounded-xl border border-border/80 bg-background px-3 py-2 text-[13px] transition focus:border-teal-500"
-                    >
-                      <option value="Semua">Semua Validasi</option>
-                      <option value="Tervalidasi">Tervalidasi</option>
-                      <option value="Belum Tervalidasi">Belum Tervalidasi</option>
-                    </select>
                   </div>
-                </div>
-              </div>
-              {filteredReturnedBorrowings.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8 text-[13px]">
-                  Tidak ada riwayat pengembalian yang sesuai pencarian/filter.
-                </p>
-              ) : (
-                <div className="px-3 pb-4 sm:px-4 sm:pb-4">
-                  <div className="space-y-4 py-3">
-                    {paginatedReturnedBorrowings.map((b) => {
+                  {filteredReturnedBorrowings.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8 text-[13px]">
+                      Tidak ada riwayat pengembalian yang sesuai pencarian/filter.
+                    </p>
+                  ) : (
+                    <div className="px-3 pb-4 sm:px-4 sm:pb-4">
+                      <div className="space-y-4 py-3">
+                        {paginatedReturnedBorrowings.map((b) => {
                     const detailInfo = resolveDetailForBorrowing(b)
                     const historyDetailColumns = historySelectedReturnColumns.includes("tanggalPinjam")
                       ? historySelectedReturnColumns
@@ -1916,7 +1922,9 @@ export default function ReturnsPage() {
                       </Button>
                     </div>
                   </div>
-                </div>
+                    </div>
+                  )}
+                </>
               )}
           </CardContent>
           </Card>

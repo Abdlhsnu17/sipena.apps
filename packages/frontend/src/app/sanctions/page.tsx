@@ -15,7 +15,7 @@ import sanctionsService, { type SanctionRecord, type SanctionStats } from "@/ser
 import type { User } from "@/types/auth-types"
 import { formatDayTimeLabel } from "@/utils/format"
 import { canManageSanctionsRole } from "@/utils/role"
-import { Activity, AlertCircle, Check, CheckCircle, Search, Shield, Users, XCircle } from "lucide-react"
+import { Activity, AlertCircle, Check, CheckCircle, ChevronDown, ChevronUp, Search, Shield, Users, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -43,6 +43,7 @@ export default function SanctionsPage() {
   const [activeTab, setActiveTab] = useState<"active" | "resolved" | "all">("active")
   const [search, setSearch] = useState("")
   const [totalCount, setTotalCount] = useState(0)
+  const [isSanctionsListMinimized, setIsSanctionsListMinimized] = useState(false)
 
   const [resolveDialog, setResolveDialog] = useState<{ open: boolean; record: SanctionRecord | null; mode: "resolve" | "waive" }>({
     open: false,
@@ -207,20 +208,44 @@ export default function SanctionsPage() {
             <TabsTrigger value="resolved">Selesai</TabsTrigger>
             <TabsTrigger value="all">Semua</TabsTrigger>
           </TabsList>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari nama, NIP, kode..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSanctionsListMinimized((prev) => !prev)}
+              className="w-full rounded-2xl px-3 sm:w-auto"
+            >
+              {isSanctionsListMinimized ? (
+                <>
+                  <ChevronDown className="mr-2 h-4 w-4" />
+                  Tampilkan
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  Sembunyikan
+                </>
+              )}
+            </Button>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama, NIP, kode..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         {(["active", "resolved", "all"] as const).map((tab) => (
           <TabsContent key={tab} value={tab} className="mt-4">
-            {loading ? (
+            {isSanctionsListMinimized ? (
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-sm text-teal-900">
+                Section manajemen sanksi disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+              </div>
+            ) : loading ? (
               <div className="text-center py-10 text-muted-foreground">Memuat data...</div>
             ) : filteredRecords.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">

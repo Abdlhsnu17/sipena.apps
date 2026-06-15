@@ -55,7 +55,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
@@ -412,7 +411,7 @@ export default function BorrowingPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("Semua")
   const [filterSource, setFilterSource] = useState<AssetSourceKey>("Semua")
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false)
+  const [isBorrowingListMinimized, setIsBorrowingListMinimized] = useState(false)
   const [selectedBorrowingIds, setSelectedBorrowingIds] = useState<Set<number>>(() => new Set())
   const [selectedBorrowingExportColumns, setSelectedBorrowingExportColumns] = useState<string[]>(() =>
     borrowingExportColumnDefinitions.map((column) => column.key)
@@ -1728,8 +1727,6 @@ export default function BorrowingPage() {
     }, 120)
   }
 
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
-  const searchDropdownRef = useRef<HTMLDivElement | null>(null)
   const borrowingFormRef = useRef<HTMLDivElement | null>(null)
   const borrowingAssetPickerRef = useRef<HTMLDivElement | null>(null)
   const borrowDateInputRef = useRef<HTMLInputElement | null>(null)
@@ -1750,45 +1747,6 @@ export default function BorrowingPage() {
       pickerButton?.focus({ preventScroll: true })
     })
   }, [showForm])
-
-  useEffect(() => {
-    const handler = (event: MouseEvent) => {
-      const target = event.target as Node | null
-      if (
-        searchDropdownOpen &&
-        target &&
-        !searchInputRef.current?.contains(target) &&
-        !searchDropdownRef.current?.contains(target)
-      ) {
-        setSearchDropdownOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handler)
-    return () => {
-      document.removeEventListener("mousedown", handler)
-    }
-  }, [searchDropdownOpen])
-
-  const assetSearchResults = useMemo(() => {
-    const normalizedQuery = searchTerm.trim().toLowerCase()
-    if (!normalizedQuery) {
-      return borrowableAssets
-    }
-    return borrowableAssets.filter((asset) =>
-      matchesSearchKeyword(searchTerm, [
-        buildInventorySearchKey(asset),
-        formatInventoryLabel(asset),
-        formatInventoryDisplayLabel(asset),
-        formatNoId(asset.source === "medis" ? "IMD" : "INM", asset.assetId),
-        formatNoId(asset.source === "medis" ? "IMD-DTL" : "INM-DTL", asset.detailId),
-        asset.assetId,
-        asset.detailId,
-        asset.assetCode,
-        asset.detailCode,
-        asset.serialNumber,
-      ])
-    )
-  }, [borrowableAssets, searchTerm])
 
   const blockedBorrowingLabels = currentUserOverdueBorrowings.slice(0, 3).map((borrowing) => {
     const noId = getBorrowingNoId(borrowing)
@@ -2208,6 +2166,24 @@ export default function BorrowingPage() {
                 </CardDescription>
               </div>
                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsBorrowingListMinimized((prev) => !prev)}
+                    className="w-full rounded-2xl px-3 sm:w-auto"
+                  >
+                    {isBorrowingListMinimized ? (
+                      <>
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                        Tampilkan
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp className="mr-2 h-4 w-4" />
+                        Sembunyikan
+                      </>
+                    )}
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
@@ -2250,90 +2226,55 @@ export default function BorrowingPage() {
                 </span>
               </div>
               </div>
-
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px_220px]">
-                <div>
-                  <label className="sr-only">Cari aset atau peminjam</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder="Cari No ID, aset, atau peminjam..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onFocus={() => setSearchDropdownOpen(true)}
-                      className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
-                    />
-                    {searchDropdownOpen && (
-                      <div
-                        ref={searchDropdownRef}
-                        className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border/80 bg-background shadow-xl"
-                      >
-                        <ScrollArea className="h-70 w-full rounded-b-2xl">
-                          <div className="space-y-1 px-3 py-3">
-                            {assetSearchResults.length === 0 ? (
-                              <p className="py-2 text-center text-[13px] text-muted-foreground">
-                                Tidak ada inventaris
-                              </p>
-                            ) : (
-                              assetSearchResults.map((asset, index) => (
-                                <button
-                                  key={getBorrowableAssetKey(asset, index)}
-                                  type="button"
-                                  className="w-full rounded-xl px-2 py-2 text-left text-[14px] text-foreground transition hover:bg-border"
-                                  onMouseDown={(event) => {
-                                    event.preventDefault()
-                                    const label = formatInventoryLabel(asset)
-                                    setSearchTerm(label)
-                                    setSearchDropdownOpen(false)
-                                  }}
-                                >
-                                  <div className="font-medium">{formatInventoryLabel(asset)}</div>
-                                  <p className="text-[13px] text-muted-foreground">
-                                    {asset.detailCode || asset.assetCode || "-"} · {asset.serialNumber || "-"}
-                                  </p>
-                                  <p className="text-[13px] text-muted-foreground">
-                                    No ID: {formatNoId(asset.source === "medis" ? "IMD-DTL" : "INM-DTL", asset.detailId)}
-                                  </p>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
-                >
-                  <option>Semua</option>
-                  <option>Menunggu</option>
-                  <option>Dipinjam</option>
-                  <option>Menunggu Validasi</option>
-                  <option>Terlambat</option>
-                </select>
-                <select
-                  value={filterSource}
-                  onChange={(e) => setFilterSource(e.target.value as AssetSourceKey)}
-                  className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
-                >
-                  <option value="Semua">Semua Sumber</option>
-                  <option value="medis">Inventaris Medis</option>
-                  <option value="non_medis">Inventaris Non-Medis</option>
-                </select>
-              </div>
             </CardHeader>
             <CardContent className="px-0">
-              {filteredBorrowings.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
+              {isBorrowingListMinimized ? (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-[14px] text-blue-900">
+                  Section daftar peminjaman disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+                </div>
               ) : (
-                <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
-                  <div className="space-y-4">
-                    {filteredBorrowings.map((b) => {
+                <>
+                  <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_190px_220px] lg:px-6">
+                    <div>
+                      <label className="sr-only">Cari aset atau peminjam</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Cari No ID, aset, atau peminjam..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                    >
+                      <option>Semua</option>
+                      <option>Menunggu</option>
+                      <option>Dipinjam</option>
+                      <option>Menunggu Validasi</option>
+                      <option>Terlambat</option>
+                    </select>
+                    <select
+                      value={filterSource}
+                      onChange={(e) => setFilterSource(e.target.value as AssetSourceKey)}
+                      className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                    >
+                      <option value="Semua">Semua Sumber</option>
+                      <option value="medis">Inventaris Medis</option>
+                      <option value="non_medis">Inventaris Non-Medis</option>
+                    </select>
+                  </div>
+                  {filteredBorrowings.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
+                  ) : (
+                    <div className="max-h-180 overflow-y-auto px-3 pb-4 pr-0 sm:px-4 sm:pb-4">
+                      <div className="space-y-4">
+                        {filteredBorrowings.map((b) => {
                       const detailInfo = resolveDetailForBorrowing(b)
                       const assetName =
                         detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
@@ -2543,9 +2484,11 @@ export default function BorrowingPage() {
                           </div>
                         </div>
                       )
-                    })}
-                  </div>
-                </div>
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
 
