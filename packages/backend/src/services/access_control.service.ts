@@ -31,22 +31,22 @@ const DEFAULT_ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const DEFAULT_MENUS = [
-  { code: 'dashboard', label: 'Dashboard', path: '/', sortOrder: 10 },
-  { code: 'uml', label: 'Dokumentasi Sistem', path: '/uml', sortOrder: 20 },
-  { code: 'medical_assets', label: 'Inventaris Medis', path: '/medical-assets', sortOrder: 30 },
-  { code: 'non_medical_assets', label: 'Inventaris Non-Medis', path: '/non-medical-assets', sortOrder: 40 },
-  { code: 'maintenance', label: 'Pemeliharaan Sarana', path: '/maintenance', sortOrder: 50 },
-  { code: 'dss', label: 'SPK Prioritas Aset', path: '/dss', sortOrder: 60 },
-  { code: 'asset_usage', label: 'Penggunaan', path: '/asset-usage', sortOrder: 70 },
-  { code: 'reports', label: 'Laporan & Analitik', path: '/reports', sortOrder: 80 },
-  { code: 'uploads', label: 'Unggah Dokumen', path: '/unggahan', sortOrder: 90 },
-  { code: 'activity_archive', label: 'Arsip Riwayat Aktivitas', path: '/activity-archive', sortOrder: 100 },
-  { code: 'users', label: 'Manajemen Pengguna', path: '/users', sortOrder: 110 },
-  { code: 'borrowing', label: 'Peminjaman', path: '/borrowing', sortOrder: 120 },
-  { code: 'returns', label: 'Pengembalian', path: '/returns', sortOrder: 130 },
-  { code: 'sanctions', label: 'Manajemen Sanksi', path: '/sanctions', sortOrder: 140 },
-  { code: 'disposal', label: 'Penghapusan Aset', path: '/disposal', sortOrder: 150 },
-  { code: 'settings', label: 'Pengaturan', path: '/settings', sortOrder: 160 },
+  { code: 'activity_archive', label: 'Arsip Riwayat Aktivitas', path: '/activity-archive', sortOrder: 10 },
+  { code: 'dashboard', label: 'Dashboard', path: '/', sortOrder: 20 },
+  { code: 'uml', label: 'Dokumentasi Sistem', path: '/uml', sortOrder: 30 },
+  { code: 'medical_assets', label: 'Inventaris Medis', path: '/medical-assets', sortOrder: 40 },
+  { code: 'non_medical_assets', label: 'Inventaris Non-Medis', path: '/non-medical-assets', sortOrder: 50 },
+  { code: 'reports', label: 'Laporan & Analitik', path: '/reports', sortOrder: 60 },
+  { code: 'users', label: 'Manajemen Pengguna', path: '/users', sortOrder: 70 },
+  { code: 'sanctions', label: 'Manajemen Sanksi', path: '/sanctions', sortOrder: 80 },
+  { code: 'borrowing', label: 'Peminjaman', path: '/borrowing', sortOrder: 90 },
+  { code: 'maintenance', label: 'Pemeliharaan Sarana', path: '/maintenance', sortOrder: 100 },
+  { code: 'returns', label: 'Pengembalian', path: '/returns', sortOrder: 110 },
+  { code: 'settings', label: 'Pengaturan', path: '/settings', sortOrder: 120 },
+  { code: 'asset_usage', label: 'Penggunaan', path: '/asset-usage', sortOrder: 130 },
+  { code: 'disposal', label: 'Penghapusan Aset', path: '/disposal', sortOrder: 140 },
+  { code: 'dss', label: 'SPK Prioritas Aset', path: '/dss', sortOrder: 150 },
+  { code: 'uploads', label: 'Unggah Dokumen', path: '/unggahan', sortOrder: 160 },
 ] as const;
 
 const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
@@ -99,6 +99,8 @@ const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
   ],
 };
 
+const ROLE_MENU_CODES = DEFAULT_ROLE_MENU_CODES;
+
 export class AccessControlService {
   async ensureDefaults(): Promise<void> {
     for (const [code, description] of Object.entries(DEFAULT_ROLE_DESCRIPTIONS)) {
@@ -136,14 +138,14 @@ export class AccessControlService {
 
     const [roles] = await pool.query<RoleRow[]>('SELECT id, code, name, description FROM roles ORDER BY id ASC');
     const [menus] = await pool.query<MenuRow[]>(
-      'SELECT id, code, label, path, sort_order FROM menus ORDER BY sort_order ASC, label ASC',
+      'SELECT id, code, label, path, sort_order FROM menus ORDER BY label ASC, code ASC',
     );
     const [permissionRows] = await pool.query<RowDataPacket[]>(
       `SELECT r.code AS role_code, m.code AS menu_code
        FROM role_menu_permissions rmp
        JOIN roles r ON r.id = rmp.role_id
        JOIN menus m ON m.id = rmp.menu_id
-       ORDER BY r.id ASC, m.sort_order ASC`,
+       ORDER BY r.id ASC, m.label ASC, m.code ASC`,
     );
 
     const permissions: Record<string, string[]> = {};
@@ -173,7 +175,7 @@ export class AccessControlService {
        JOIN role_menu_permissions rmp ON rmp.role_id = r.id
        JOIN menus m ON m.id = rmp.menu_id
        WHERE r.code = ?
-       ORDER BY m.sort_order ASC, m.label ASC`,
+       ORDER BY m.label ASC, m.code ASC`,
       [normalizedRole],
     );
 
@@ -193,7 +195,17 @@ export class AccessControlService {
       return { success: false, message: 'Role tidak ditemukan' };
     }
 
+    const allowedMenuCodes = new Set(ROLE_MENU_CODES[normalizedRole] || ROLE_MENU_CODES.user);
     const sanitizedMenuCodes = Array.from(new Set(menuCodes.map((code) => String(code).trim()).filter(Boolean)));
+    const invalidForRole = sanitizedMenuCodes.filter((code) => !allowedMenuCodes.has(code));
+
+    if (invalidForRole.length > 0) {
+      return {
+        success: false,
+        message: 'Menu yang dipilih tidak sesuai dengan role terkait',
+      };
+    }
+
     const connection = await pool.getConnection();
 
     try {

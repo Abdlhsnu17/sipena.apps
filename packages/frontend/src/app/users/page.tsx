@@ -13,7 +13,7 @@ import deletionRequestService from "@/services/deletion-request.service";
 import type { User as ApiUser } from "@/services/user.service";
 import { userService } from "@/services/user.service";
 import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
-import { normalizeUserRole } from "@/utils/role";
+import { canAccessRoute, normalizeUserRole } from "@/utils/role";
 
 import { AlertCircle, Check, Edit, KeyRound, Plus, Save, Shield, Smartphone, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -64,6 +64,10 @@ export default function UsersPage() {
   const canDeleteUsers = isAdmin
   const canEditAdminUsers = isAdmin
   const editableRoles = (isLeader ? ["user", "staff", "staff_pj", "teknisi"] : ["user", "admin", "leader", "staff", "staff_pj", "teknisi"]) as ManagedRole[]
+  const sortedAccessMenus = [...(accessMatrix?.menus || [])].sort((a, b) => a.label.localeCompare(b.label, "id"))
+  const getValidMenuCodesForRole = (roleCode: string, matrix: AccessMatrix | null = accessMatrix) => {
+    return new Set((matrix?.menus || []).filter((menu) => canAccessRoute(roleCode, menu.path)).map((menu) => menu.code))
+  }
 
   useEffect(() => {
     loadUsers()
@@ -92,8 +96,9 @@ export default function UsersPage() {
       if (response.success) {
         setAccessMatrix(response.data)
         const roleCode = selectedRoleCode || response.data.roles[0]?.code || "admin"
+        const validMenuCodes = getValidMenuCodesForRole(roleCode, response.data)
         setSelectedRoleCode(roleCode)
-        setSelectedMenuCodes(response.data.permissions[roleCode] || [])
+        setSelectedMenuCodes((response.data.permissions[roleCode] || []).filter((code) => validMenuCodes.has(code)))
       }
     } catch (error) {
       console.error("Failed to load access matrix:", error)
@@ -101,11 +106,15 @@ export default function UsersPage() {
   }
 
   const handleSelectRoleAccess = (roleCode: string) => {
+    const validMenuCodes = getValidMenuCodesForRole(roleCode)
     setSelectedRoleCode(roleCode)
-    setSelectedMenuCodes(accessMatrix?.permissions[roleCode] || [])
+    setSelectedMenuCodes((accessMatrix?.permissions[roleCode] || []).filter((code) => validMenuCodes.has(code)))
   }
 
   const toggleMenuAccess = (menuCode: string) => {
+    const menu = accessMatrix?.menus.find((item) => item.code === menuCode)
+    if (!menu || !canAccessRoute(selectedRoleCode, menu.path)) return
+
     setSelectedMenuCodes((current) =>
       current.includes(menuCode)
         ? current.filter((code) => code !== menuCode)
@@ -117,7 +126,9 @@ export default function UsersPage() {
     if (!selectedRoleCode) return
     setIsSavingAccess(true)
     try {
-      const result = await accessControlService.updateRoleMenus(selectedRoleCode, selectedMenuCodes)
+      const validMenuCodes = getValidMenuCodesForRole(selectedRoleCode)
+      const menuCodes = selectedMenuCodes.filter((code) => validMenuCodes.has(code))
+      const result = await accessControlService.updateRoleMenus(selectedRoleCode, menuCodes)
       setMessageType(result.success ? "success" : "error")
       setMessage(result.message)
       if (result.success) {
@@ -889,7 +900,7 @@ export default function UsersPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-foreground">Menu yang Diizinkan</h2>
-                  <p className="text-xs text-muted-foreground">Centang menu yang boleh tampil dan diakses oleh role terpilih.</p>
+                  <p className="text-xs text-muted-foreground">Centang menu yang boleh tampil dan diakses oleh role terpilih. Menu di luar cakupan role dinonaktifkan.</p>
                 </div>
                 <Button
                   type="button"
@@ -904,23 +915,32 @@ export default function UsersPage() {
               </div>
 
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {(accessMatrix?.menus || []).map((menu) => (
-                  <label
-                    key={menu.code}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm hover:bg-muted/50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedMenuCodes.includes(menu.code)}
-                      onChange={() => toggleMenuAccess(menu.code)}
-                      className="mt-1"
-                    />
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-foreground">{menu.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{menu.path}</span>
-                    </span>
-                  </label>
-                ))}
+                {sortedAccessMenus.map((menu) => {
+                  const isValidForRole = canAccessRoute(selectedRoleCode, menu.path)
+
+                  return (
+                    <label
+                      key={menu.code}
+                      className={`flex items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm ${
+                        isValidForRole ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed opacity-55"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isValidForRole && selectedMenuCodes.includes(menu.code)}
+                        onChange={() => toggleMenuAccess(menu.code)}
+                        disabled={!isValidForRole}
+                        className="mt-1"
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-foreground">{menu.label}</span>
+                        {!isValidForRole && (
+                          <span className="block text-xs text-muted-foreground">Tidak tersedia untuk role ini</span>
+                        )}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
 
               {accessMatrix && accessMatrix.menus.length === 0 && (

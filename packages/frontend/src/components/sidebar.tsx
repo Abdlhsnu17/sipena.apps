@@ -59,6 +59,7 @@ type SidebarLink = {
 
 const featureIconColor = "text-teal-600"
 const SIDEBAR_NAV_SCROLL_KEY = "sipena-sidebar-nav-scroll-top"
+const sortSidebarLinksByLabel = (links: SidebarLink[]) => [...links].sort((a, b) => a.label.localeCompare(b.label, "id"))
 
 const isVisibleElement = (element: HTMLElement) => {
   if (typeof window === "undefined") return false
@@ -567,13 +568,11 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         : isRegularUser
           ? userLinks
           : staffLinks
-  const allowedPathOrder = allowedMenus
-    ? new Map(allowedMenus.map((menu, index) => [menu.path, index]))
+  const allowedPaths = allowedMenus
+    ? new Set(allowedMenus.map((menu) => menu.path))
     : null
-  const visibleLinks = allowedPathOrder
-    ? fullAccessLinks
-        .filter((link) => allowedPathOrder.has(link.href))
-        .sort((a, b) => (allowedPathOrder.get(a.href) ?? 0) - (allowedPathOrder.get(b.href) ?? 0))
+  const visibleLinks = allowedPaths
+    ? sortSidebarLinksByLabel(fullAccessLinks.filter((link) => allowedPaths.has(link.href)))
     : links
 
   const saveSidebarScrollTop = useCallback((scrollTop: number) => {
