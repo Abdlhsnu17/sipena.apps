@@ -29,11 +29,19 @@ export const canManageBorrowing = (role: string | null | undefined): boolean => 
 
 export const canCompleteUsage = (
   actorRole: string | null | undefined,
-  operatorRole: string | null | undefined
+  actorId?: number | string | null,
+  operatorUserId?: number | string | null,
+  createdBy?: number | string | null
 ): boolean => {
-  if (hasAnyRole(actorRole, ['admin', 'leader', 'staff_pj', 'staff pj'])) return true;
-  if (!actorRole || !operatorRole) return false;
-  return normalizeRole(actorRole) === normalizeRole(operatorRole);
+  if (hasAnyRole(actorRole, ['admin', 'leader'])) return true;
+
+  const normalizedActorId = Number(actorId);
+  if (!Number.isFinite(normalizedActorId) || normalizedActorId <= 0) return false;
+
+  return [operatorUserId, createdBy].some((value) => {
+    const normalizedValue = Number(value);
+    return Number.isFinite(normalizedValue) && normalizedValue > 0 && normalizedValue === normalizedActorId;
+  });
 };
 
 export const canManageOverdueEmergencyUsage = (

@@ -12,6 +12,7 @@ import {
     UpdateMaintenanceDTO
 } from '../models';
 import { formatCostLabel, formatDateTimeForMySQL, generateMaintenanceCode } from '../utils/helpers';
+import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import * as MaintenanceHistoryService from './maintenance_history.service';
 
@@ -533,8 +534,12 @@ export class MaintenanceService {
   }
 
   async getAll(filters: MaintenanceFilters): Promise<PaginatedResponse<Maintenance>> {
-    const { page, limit, status, view, assetId, assetType, type } = filters;
+    const { page, limit, status, view, assetId, assetType, type, actorUserId, actorRole } = filters;
     const offset = (page - 1) * limit;
+    const scopedActorId = Number(actorUserId);
+    const shouldScopeToActor = Number.isFinite(scopedActorId)
+      && scopedActorId > 0
+      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     let query = `
       SELECT m.*,
@@ -586,6 +591,12 @@ export class MaintenanceService {
       query += ' AND m.type = ?';
       countQuery += ' AND type = ?';
       params.push(type);
+    }
+
+    if (shouldScopeToActor) {
+      query += ' AND (m.created_by = ? OR m.completed_by = ?)';
+      countQuery += ' AND (created_by = ? OR completed_by = ?)';
+      params.push(scopedActorId, scopedActorId);
     }
 
     const countParams = [...params];

@@ -131,4 +131,6 @@ export interface BorrowingFilters {
   userId?: string;
   assetId?: string;
   assetType?: AssetType;
+  actorUserId?: number | string | null;
+  actorRole?: string | null;
 }

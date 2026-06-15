@@ -94,4 +94,6 @@ export interface MaintenanceFilters {
   assetId?: string;
   assetType?: AssetType;
   type?: string;
+  actorUserId?: number | string | null;
+  actorRole?: string | null;
 }

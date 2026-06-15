@@ -10,17 +10,29 @@ import {
     UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
-import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
+import { canCompleteUsage, canManageOverdueEmergencyUsage, hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
   borrowing_id?: number | null;
+  asset_id?: number | null;
+  asset_type?: AssetType | null;
+  asset_detail_id?: string | null;
+  asset_detail_name?: string | null;
+  asset_detail_code?: string | null;
   asset_name?: string | null;
   asset_code?: string | null;
   asset_location?: string | null;
+  room_name?: string | null;
+  operator_user_id?: number | null;
   operator_name?: string | null;
   operator_nip?: string | null;
   operator_role?: string | null;
+  usage_context?: AssetUsageLog['usageContext'] | null;
+  usage_count?: number | null;
+  condition_before?: string | null;
+  condition_after?: string | null;
+  created_by?: number | null;
   created_by_name?: string | null;
 }
 
@@ -89,12 +101,24 @@ const generateUsageNumber = (value?: string | Date | null): string => {
 const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => ({
   ...row,
   borrowingId: row.borrowing_id ?? row.borrowingId,
+  assetId: row.asset_id ?? row.assetId,
+  assetType: row.asset_type ?? row.assetType,
+  assetDetailId: row.asset_detail_id ?? row.assetDetailId,
+  assetDetailName: row.asset_detail_name ?? row.assetDetailName,
+  assetDetailCode: row.asset_detail_code ?? row.assetDetailCode,
   assetName: row.asset_name || row.assetName,
   assetCode: row.asset_code || row.assetCode,
   assetLocation: row.asset_location || row.assetLocation,
+  roomName: row.room_name ?? row.roomName,
+  operatorUserId: row.operator_user_id ?? row.operatorUserId,
   operatorName: row.operator_name || row.operatorName,
   operatorNip: row.operator_nip || row.operatorNip,
   operatorRole: row.operator_role || row.operatorRole,
+  usageContext: row.usage_context ?? row.usageContext,
+  usageCount: row.usage_count ?? row.usageCount,
+  conditionBefore: row.condition_before ?? row.conditionBefore,
+  conditionAfter: row.condition_after ?? row.conditionAfter,
+  createdBy: row.created_by ?? row.createdBy,
   createdByName: row.created_by_name || row.createdByName,
   startedAt: toLocalIsoDateTime(row.startedAt ?? (row as any).started_at) as any,
   endedAt: toLocalIsoDateTime(row.endedAt ?? (row as any).ended_at) as any,
@@ -741,8 +765,12 @@ export class AssetUsageService {
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
     await this.syncActiveBorrowingUsageLogs();
 
-    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
+    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo, actorUserId, actorRole } = filters;
     const offset = (page - 1) * limit;
+    const scopedActorId = Number(actorUserId);
+    const shouldScopeToActor = Number.isFinite(scopedActorId)
+      && scopedActorId > 0
+      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     let query = `
       SELECT l.*,
@@ -797,6 +825,12 @@ export class AssetUsageService {
       query += ' AND l.started_at <= ?';
       countQuery += ' AND started_at <= ?';
       params.push(formatDateTimeForMySQL(`${dateTo} 23:59:59`));
+    }
+
+    if (shouldScopeToActor) {
+      query += ' AND (l.operator_user_id = ? OR l.created_by = ?)';
+      countQuery += ' AND (operator_user_id = ? OR created_by = ?)';
+      params.push(scopedActorId, scopedActorId);
     }
 
     const countParams = [...params];
@@ -919,11 +953,10 @@ export class AssetUsageService {
     const isCompleting = data.endedAt !== undefined && data.endedAt !== null && !existingLog.data.endedAt;
     const hasActorContext = data.actorId !== undefined || data.actorRole !== undefined;
     if (isCompleting && hasActorContext) {
-      const operatorRole = existingLog.data.operatorRole;
-      if (!canCompleteUsage(data.actorRole, operatorRole)) {
+      if (!canCompleteUsage(data.actorRole, data.actorId, existingLog.data.operatorUserId, existingLog.data.createdBy)) {
         return {
           success: false,
-          message: `Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, staff PJ, atau pengguna dengan role yang sama dengan operator pemakaian (${operatorRole || '-'}).`
+          message: 'Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik riwayat pemakaian.'
         };
       }
     }

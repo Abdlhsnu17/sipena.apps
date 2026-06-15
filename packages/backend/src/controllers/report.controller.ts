@@ -89,7 +89,10 @@ export class ReportController {
    */
   getDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await this.reportService.getDashboardStats();
+      const result = await this.reportService.getDashboardStats({
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role
+      });
       res.json(result);
     } catch (error) {
       console.error('Get dashboard error:', error);
@@ -104,9 +107,12 @@ export class ReportController {
    * Get due date notifications
    * GET /api/reports/notifications
    */
-  getNotifications = async (_req: Request, res: Response): Promise<void> => {
+  getNotifications = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = await this.reportService.getDueNotifications();
+      const data = await this.reportService.getDueNotifications({
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role
+      });
       res.json({
         success: true,
         message: 'Due notifications retrieved successfully',

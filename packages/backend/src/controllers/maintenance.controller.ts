@@ -48,7 +48,9 @@ export class MaintenanceController {
         status: status as string,
         assetId: assetId as string,
         assetType: normalizeAssetType(assetType),
-        type: type as string
+        type: type as string,
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role
       });
 
       res.json(result);

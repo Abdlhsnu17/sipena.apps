@@ -49,7 +49,9 @@ export class BorrowingController {
         status: status as string,
         userId: userId as string,
         assetId: assetId as string,
-        assetType: normalizeAssetType(assetType)
+        assetType: normalizeAssetType(assetType),
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role
       });
 
       res.json(result);

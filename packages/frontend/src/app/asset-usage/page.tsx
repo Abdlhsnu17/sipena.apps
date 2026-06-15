@@ -336,12 +336,15 @@ const deriveUsageContextFromProfile = (
 
 const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
-const canCompleteUsage = (actorRole: string | undefined, operatorRole: string | undefined): boolean => {
-  if (!actorRole) return false;
-  const role = actorRole.toLowerCase().replace(/[\s-]+/g, "_");
-  if (["admin", "leader", "staff_pj"].includes(role)) return true;
-  if (!operatorRole) return false;
-  return role === operatorRole.toLowerCase().replace(/[\s-]+/g, "_");
+const canCompleteUsage = (actor: User | null, log: AssetUsageLog): boolean => {
+  if (!actor) return false;
+  const role = actor.role.toLowerCase().replace(/[\s-]+/g, "_");
+  if (role === "admin" || role === "leader") return true;
+
+  const actorId = Number(actor.id);
+  if (!Number.isFinite(actorId) || actorId <= 0) return false;
+
+  return [log.operatorUserId, log.createdBy].some((value) => Number(value) === actorId);
 };
 
 const dispatchInventoryRefresh = () => {
@@ -1381,7 +1384,7 @@ export default function AssetUsagePage() {
                             </label>
                             <div className="flex flex-wrap items-center justify-end gap-2">
                               {!log.endedAt && (() => {
-                                const allowed = canCompleteUsage(currentUser?.role, log.operatorRole);
+                                const allowed = canCompleteUsage(currentUser, log);
                                 return allowed ? (
                                   <Button
                                     size="sm"
@@ -1393,7 +1396,7 @@ export default function AssetUsagePage() {
                                 ) : (
                                   <span
                                     className="inline-flex h-6 items-center rounded-full border border-slate-200 bg-slate-100 px-3 text-[12px] font-medium text-slate-400"
-                                    title="Hanya admin, leader, staff PJ, atau role yang sama dengan operator yang dapat menyelesaikan pemakaian ini"
+                                    title="Hanya admin, leader, atau pengguna pemilik riwayat yang dapat menyelesaikan pemakaian ini"
                                   >
                                     Selesaikan
                                   </span>

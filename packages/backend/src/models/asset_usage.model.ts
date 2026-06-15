@@ -77,4 +77,6 @@ export interface AssetUsageFilters {
   usageContext?: string;
   dateFrom?: string;
   dateTo?: string;
+  actorUserId?: number | string | null;
+  actorRole?: string | null;
 }

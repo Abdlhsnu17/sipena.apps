@@ -42,7 +42,9 @@ export class AssetUsageController {
         roomName: roomName as string,
         usageContext: usageContext as string,
         dateFrom: dateFrom as string,
-        dateTo: dateTo as string
+        dateTo: dateTo as string,
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role
       });
 
       res.json(result);

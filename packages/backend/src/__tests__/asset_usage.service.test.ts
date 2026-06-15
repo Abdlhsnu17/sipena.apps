@@ -17,6 +17,88 @@ describe('AssetUsageService usage completion status sync', () => {
     service = new AssetUsageService();
   });
 
+  it('rejects usage completion by staff PJ when they do not own the usage log', async () => {
+    jest.spyOn(service, 'getById').mockResolvedValue({
+      success: true,
+      message: 'Asset usage log retrieved successfully',
+      data: {
+        id: 7,
+        assetId: 12,
+        assetType: 'medical',
+        roomName: 'Ruangan Anggrek',
+        operatorUserId: 5,
+        usageContext: 'procedure',
+        startedAt: new Date('2026-05-23T09:00:00'),
+        usageCount: 1,
+        createdBy: 5,
+      },
+    });
+
+    const result = await service.update('7', {
+      actorId: 9,
+      actorRole: 'staff_pj',
+      endedAt: '2026-05-23 10:00:00',
+      conditionAfter: 'Baik',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik riwayat pemakaian.');
+    expect(mockedQuery).not.toHaveBeenCalled();
+  });
+
+  it('allows the usage owner to complete their own usage log', async () => {
+    const activeLog = {
+      id: 7,
+      assetId: 12,
+      assetType: 'medical' as const,
+      roomName: 'Ruangan Anggrek',
+      operatorUserId: 5,
+      usageContext: 'procedure' as const,
+      startedAt: new Date('2026-05-23T09:00:00'),
+      endedAt: undefined,
+      usageCount: 1,
+      createdBy: 5,
+    };
+    const completedLog = {
+      ...activeLog,
+      endedAt: new Date('2026-05-23T10:00:00'),
+      conditionAfter: 'Baik',
+    };
+
+    jest.spyOn(service, 'getById')
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Asset usage log retrieved successfully',
+        data: activeLog,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Asset usage log retrieved successfully',
+        data: completedLog,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Asset usage log retrieved successfully',
+        data: completedLog,
+      });
+    jest.spyOn(service as any, 'syncAssetStateAfterUsage').mockResolvedValue(undefined);
+    jest.spyOn(service as any, 'syncBorrowingReturnAfterUsageComplete').mockResolvedValue(undefined);
+    mockedQuery.mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    const result = await service.update('7', {
+      actorId: 5,
+      actorRole: 'staff',
+      endedAt: '2026-05-23 10:00:00',
+      conditionAfter: 'Baik',
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockedQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE asset_usage_logs SET'),
+      expect.arrayContaining(['2026-05-23 10:00:00', 'Baik', '7'])
+    );
+  });
+
   it('sets a completed medical detail usage back to Aktif', async () => {
     mockedQuery.mockResolvedValue([[{ count: 0 }]]);
     const assetService = (service as any).assetService;

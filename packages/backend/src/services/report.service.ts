@@ -760,7 +760,7 @@ export class ReportService {
     }
   }
 
-  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+  async getDashboardStats(filters: Pick<ReportFilters, 'actorUserId' | 'actorRole'> = {}): Promise<ApiResponse<DashboardStats>> {
     const hasBorrowingSanctionColumn = await this.hasBorrowingSanctionColumn();
 
     const [assetsStats] = await pool.query<StatsRow[]>(`
@@ -830,7 +830,7 @@ export class ReportService {
       GROUP BY status
       ORDER BY total DESC
     `);
-    const dueNotifications = await this.getDueNotifications();
+    const dueNotifications = await this.getDueNotifications(filters);
 
     const assets = assetsStats[0];
     const borrowings = borrowingStats[0];
@@ -863,8 +863,13 @@ export class ReportService {
     };
   }
 
-  async getDueNotifications(): Promise<DueNotification[]> {
-    const [borrowingRows] = await pool.query<DueBorrowingRow[]>(`
+  async getDueNotifications(filters: Pick<ReportFilters, 'actorUserId' | 'actorRole'> = {}): Promise<DueNotification[]> {
+    const actorUserId = toPositiveNumber(filters.actorUserId);
+    const shouldScopeToActor = Boolean(actorUserId) && !hasAnyRole(filters.actorRole, ['admin', 'leader']);
+    const borrowingParams: Array<number | string> = [];
+    const maintenanceParams: Array<number | string> = [];
+
+    let borrowingQuery = `
       SELECT b.id,
              b.borrowing_code,
              b.due_date,
@@ -879,11 +884,21 @@ export class ReportService {
       WHERE b.due_date IS NOT NULL
         AND b.status IN ('approved', 'borrowed', 'overdue')
         AND DATEDIFF(DATE(b.due_date), CURDATE()) <= 3
+    `;
+
+    if (shouldScopeToActor && actorUserId) {
+      borrowingQuery += ' AND b.user_id = ?';
+      borrowingParams.push(actorUserId);
+    }
+
+    borrowingQuery += `
       ORDER BY days_remaining ASC, b.due_date ASC
       LIMIT 8
-    `);
+    `;
 
-    const [maintenanceRows] = await pool.query<DueMaintenanceRow[]>(`
+    const [borrowingRows] = await pool.query<DueBorrowingRow[]>(borrowingQuery, borrowingParams);
+
+    let maintenanceQuery = `
       SELECT m.id,
              m.maintenance_code,
              m.scheduled_date,
@@ -897,9 +912,19 @@ export class ReportService {
       WHERE m.scheduled_date IS NOT NULL
         AND m.status NOT IN ('validated', 'cancelled')
         AND DATEDIFF(DATE(m.scheduled_date), CURDATE()) BETWEEN 0 AND 7
+    `;
+
+    if (shouldScopeToActor && actorUserId) {
+      maintenanceQuery += ' AND (m.created_by = ? OR m.completed_by = ?)';
+      maintenanceParams.push(actorUserId, actorUserId);
+    }
+
+    maintenanceQuery += `
       ORDER BY days_remaining ASC, m.scheduled_date ASC
       LIMIT 8
-    `);
+    `;
+
+    const [maintenanceRows] = await pool.query<DueMaintenanceRow[]>(maintenanceQuery, maintenanceParams);
 
     const borrowingNotifications = borrowingRows.map<DueNotification>((row) => {
       const daysRemaining = Number(row.days_remaining) || 0;
