@@ -472,6 +472,26 @@ export default function UsersPage() {
     return "Full Access"
   }
 
+  const getAccessBadgeClass = (role?: string, staffAccessType?: StaffAccessType) => {
+    const normalizedRole = normalizeUserRole(role)
+    if (normalizedRole === "admin" || normalizedRole === "leader") {
+      return "bg-teal-50 text-teal-700 border border-teal-200"
+    }
+    if (normalizedRole === "teknisi") {
+      return "bg-amber-50 text-amber-700 border border-amber-200"
+    }
+    if (normalizedRole === "user") {
+      return "bg-blue-50 text-blue-700 border border-blue-200"
+    }
+    if (staffAccessType === "medis") {
+      return "bg-rose-50 text-rose-700 border border-rose-200"
+    }
+    if (staffAccessType === "non-medis") {
+      return "bg-orange-50 text-orange-700 border border-orange-200"
+    }
+    return "bg-indigo-50 text-indigo-700 border border-indigo-200"
+  }
+
   const getAccessDescriptionByRole = (role?: string, staffAccessType?: StaffAccessType) => {
     const normalizedRole = normalizeUserRole(role)
 
@@ -943,116 +963,114 @@ export default function UsersPage() {
         {/* Users Management Table */}
         {activeTab === "users" && (
         <div className="bg-white/90 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
-            <div className="border-b border-border/70 bg-slate-50/70 px-4 py-3">
-              <p className="text-xs text-muted-foreground">
-                Keterangan akses: <span className="font-medium text-foreground">Full Access</span> (Admin/Leader), <span className="font-medium text-foreground">Self Service</span> (Pengguna), <span className="font-medium text-foreground">Dashboard & Pemeliharaan</span> (Teknisi), dan Staff mengikuti cakupan inventaris.
-              </p>
-            </div>
+          <div className="border-b border-border/70 bg-slate-50/80 px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1">
+            <span className="text-xs text-muted-foreground">Keterangan akses:</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="inline-block w-2 h-2 rounded-full bg-teal-400" />Full Access (Admin/Leader)</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="inline-block w-2 h-2 rounded-full bg-blue-400" />Self Service (Pengguna)</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="inline-block w-2 h-2 rounded-full bg-amber-400" />Dashboard &amp; Pemeliharaan (Teknisi)</span>
+            <span className="inline-flex items-center gap-1 text-xs"><span className="inline-block w-2 h-2 rounded-full bg-indigo-400" />Cakupan Inventaris (Staff)</span>
+          </div>
           <div className="mobile-table-scroll">
-            <table className="w-full text-sm">
-            <thead className="bg-muted border-b border-border">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-foreground">NIP</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Nama</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Akses</th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">Terdaftar</th>
-                <th className="px-4 py-3 text-center font-medium text-foreground">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 text-foreground font-mono text-xs">{user.nip}</td>
-                  <td className="px-4 py-3 text-foreground">{user.name}</td>
-                  <td className="px-4 py-3 text-foreground">{user.email}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeClass(user.role)}`}
-                    >
-                      {getRoleLabel(user.role)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1">
-                      <span className={`w-fit rounded-full px-2 py-1 text-xs font-medium ${getAccountStatusBadgeClass(user.accountStatus)}`}>
-                        {getAccountStatusLabel(user.accountStatus)}
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-100/80 border-b border-border/70">
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">NIP</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Nama</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Email</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Role</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Status</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Akses</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Terdaftar</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-slate-600 tracking-wide uppercase text-[10px]">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-b border-border/50 hover:bg-slate-50/70 transition-colors">
+                    <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 max-w-30 truncate" title={user.nip}>{user.nip}</td>
+                    <td className="px-3 py-2.5 font-medium text-foreground whitespace-nowrap">{user.name}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{user.email}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${getRoleBadgeClass(user.role)}`}>
+                        {getRoleLabel(user.role)}
                       </span>
-                      {user.mustChangePassword && (
-                        <span className="w-fit rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
-                          Wajib ganti sandi
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${getAccountStatusBadgeClass(user.accountStatus)}`}>
+                          {getAccountStatusLabel(user.accountStatus)}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
+                        {user.mustChangePassword && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[10px] font-medium text-amber-600" title="Wajib ganti sandi saat login">
+                            ⚠ Ganti sandi
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
                       <span
-                        className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${getAccessBadgeClass(user.role, user.staffAccessType)}`}
                         title={getAccessDescriptionByRole(user.role, user.staffAccessType)}
                       >
                         {getAccessLabelByRole(user.role, user.staffAccessType)}
                       </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {user.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString("id-ID")
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex justify-center gap-1">
-                      {canViewUsers && (!isLeader || normalizeUserRole(user.role) !== "admin") && (
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-teal-600"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canViewUsers && String(user.id) !== String(currentUser?.id) && (!isLeader || !["admin", "leader"].includes(normalizeUserRole(user.role))) && (
-                        <button
-                          onClick={() => openResetPassword(user)}
-                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-amber-600"
-                          title="Reset password"
-                        >
-                          <KeyRound className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canDeleteUsers && user.id !== currentUser?.id && (
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-red-600"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {isLeader && String(user.id) !== String(currentUser?.id) && !["admin", "leader"].includes(normalizeUserRole(user.role)) && (
-                        <button
-                          onClick={() => handleRequestDelete(user)}
-                          className="p-1.5 hover:bg-muted rounded-lg transition-colors text-red-600"
-                          title="Ajukan hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {users.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground text-sm">Tidak ada pengguna terdaftar</p>
+                    </td>
+                    <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString("id-ID") : "-"}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <div className="flex justify-center gap-0.5">
+                        {canViewUsers && (!isLeader || normalizeUserRole(user.role) !== "admin") && (
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors text-teal-600"
+                            title="Edit"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canViewUsers && String(user.id) !== String(currentUser?.id) && (!isLeader || !["admin", "leader"].includes(normalizeUserRole(user.role))) && (
+                          <button
+                            onClick={() => openResetPassword(user)}
+                            className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors text-amber-500"
+                            title="Reset password"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDeleteUsers && user.id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {isLeader && String(user.id) !== String(currentUser?.id) && !["admin", "leader"].includes(normalizeUserRole(user.role)) && (
+                          <button
+                            onClick={() => handleRequestDelete(user)}
+                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-red-500"
+                            title="Ajukan hapus"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
+          {users.length === 0 && (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground text-sm">Tidak ada pengguna terdaftar</p>
+            </div>
+          )}
+        </div>
         )}
-      </div>
-      )}
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">
