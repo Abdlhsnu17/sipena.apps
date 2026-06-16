@@ -48,6 +48,7 @@ const statusMapping: Record<string, string> = {
   'disposed': 'disposed',
   'Dalam Perbaikan': 'maintenance',
   'maintenance': 'maintenance',
+  'Dipinjam': 'borrowed',
   'Sedang Digunakan': 'borrowed',
   'Dalam Penggunaan': 'borrowed',
   'in_use': 'borrowed',

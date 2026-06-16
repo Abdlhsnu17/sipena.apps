@@ -297,9 +297,13 @@ export function InventoryPicker<T>({
                           const a = asset as any
                           const availability = a?.availability
                           const statusLabel = (a?.statusLabel || a?.status || a?.assetStatus || '')
-                          const isInUse = String(statusLabel).toLowerCase().includes('digunakan') || availability === 'borrowed' || String(a?.assetStatus || '').toLowerCase() === 'borrowed'
-                          return isInUse ? (
-                            <div className="text-xs text-rose-600">Sedang Digunakan</div>
+                          const normalizedStatus = String(statusLabel).toLowerCase()
+                          const normalizedAssetStatus = String(a?.assetStatus || '').toLowerCase()
+                          const isBorrowed = normalizedStatus.includes('dipinjam') || availability === 'borrowed' || normalizedAssetStatus === 'borrowed'
+                          const isInUse = normalizedStatus.includes('digunakan') || availability === 'in_use'
+                          const statusText = isBorrowed ? 'Dipinjam' : isInUse ? 'Sedang Digunakan' : ''
+                          return statusText ? (
+                            <div className="text-xs text-rose-600">{statusText}</div>
                           ) : null
                         })()
                       )}

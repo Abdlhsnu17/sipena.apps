@@ -58,7 +58,7 @@ const normalizeCondition = (v?: string) =>
 
 const statusLabelMap: Record<string, string> = {
   available: 'Aktif',
-  borrowed: 'Sedang Digunakan',
+  borrowed: 'Dipinjam',
   maintenance: 'Dalam Perbaikan',
   disposed: 'Non-Aktif',
 };
