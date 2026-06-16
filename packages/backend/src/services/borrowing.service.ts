@@ -1201,6 +1201,23 @@ export class BorrowingService {
       ]
     );
 
+    try {
+      if (!detailId || isAssetFallbackDetail) {
+        await this.assetService.updateStatus(
+          String(data.assetId),
+          'borrowed',
+          assetType
+        );
+      }
+
+      await this.syncAssetDetailBorrowingState(data.assetId, assetType, {
+        detailId: detailId || null,
+        detailCode: data.assetDetailCode || null
+      });
+    } catch (syncError) {
+      console.error('Create borrowing asset sync error:', syncError);
+    }
+
 	    // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)
 	    return await this.getById(String(result.insertId));
 	  }
@@ -1402,6 +1419,15 @@ export class BorrowingService {
       'UPDATE borrowing_records SET status = ?, rejected_by = ?, rejected_at = NOW(), rejection_reason = ?, updated_at = NOW() WHERE id = ?',
       ['rejected', rejectedBy, reason, id]
     );
+
+    try {
+      await this.syncAssetMasterAfterValidatedReturn(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
+        borrowingId: id,
+        assetDetailId: borrowing.data.assetDetailId || null
+      });
+    } catch (syncError) {
+      console.error('Reject borrowing asset master sync error:', syncError);
+    }
 
     await this.syncAssetDetailBorrowingState(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
       detailId: borrowing.data.assetDetailId || null,
@@ -1797,7 +1823,7 @@ export class BorrowingService {
     const isAssetFallbackDetail = this.isAssetFallbackDetailId(assetDetailId, assetId, assetType);
 
     const shouldReleaseAsset =
-      ['approved', 'borrowed', 'overdue'].includes(borrowing.status) &&
+      ['pending', 'approved', 'borrowed', 'overdue'].includes(borrowing.status) &&
       (!assetDetailId || isAssetFallbackDetail);
 
     if (shouldReleaseAsset) {

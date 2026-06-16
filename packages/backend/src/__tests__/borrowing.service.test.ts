@@ -191,7 +191,7 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(mockedQuery).toHaveBeenCalledTimes(4);
   });
 
-  it('creates a new borrowing as pending until it is approved', async () => {
+  it('creates a new borrowing as pending and immediately locks the inventory item', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])
       .mockResolvedValueOnce([{}, []])
@@ -209,7 +209,13 @@ describe('BorrowingService borrowing lock rules', () => {
         specifications: { details: [] },
       },
     });
-    const assetUpdateStatusSpy = jest.spyOn((service as any).assetService, 'updateStatus');
+    const assetUpdateStatusSpy = jest.spyOn((service as any).assetService, 'updateStatus').mockResolvedValue({
+      success: true,
+      data: {
+        id: 12,
+        status: 'borrowed',
+      },
+    });
     const ensureUsageLogSpy = jest.spyOn(service as any, 'ensureUsageLogForBorrowing');
     jest.spyOn(service, 'getById').mockResolvedValueOnce({
       success: true,
@@ -238,7 +244,7 @@ describe('BorrowingService borrowing lock rules', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.status).toBe('pending');
-    expect(assetUpdateStatusSpy).not.toHaveBeenCalled();
+    expect(assetUpdateStatusSpy).toHaveBeenCalledWith('12', 'borrowed', 'medical');
     expect(ensureUsageLogSpy).not.toHaveBeenCalled();
 
     const insertCall = mockedQuery.mock.calls.find(([query]) => String(query).includes('INSERT INTO borrowing_records'));
