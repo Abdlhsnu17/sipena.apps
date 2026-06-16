@@ -294,22 +294,26 @@ export class BorrowingController {
       const actorId = getActorUserId(req);
       if (actorId && result.data) {
         const borrowingCode = getBorrowingCode(result.data)
-        await recordUserActivity({
-          userId: actorId,
-          feature: 'peminjaman_alat',
-          action: 'approve',
-          description: `Menyetujui peminjaman ${borrowingCode ?? `#${result.data.id}`}`,
-          metadata: {
-            transactionId: borrowingCode ?? result.data.id,
-            transaction_id: borrowingCode ?? result.data.id,
-            borrowingCode: borrowingCode ?? undefined,
-            borrowing_code: borrowingCode ?? undefined,
-            borrowingId: result.data.id,
-            assetCode: result.data.assetCode,
-            assetName: result.data.assetName,
-            status: result.data.status,
-          },
-        });
+        try {
+          await recordUserActivity({
+            userId: actorId,
+            feature: 'peminjaman_alat',
+            action: 'approve',
+            description: `Menyetujui peminjaman ${borrowingCode ?? `#${result.data.id}`}`,
+            metadata: {
+              transactionId: borrowingCode ?? result.data.id,
+              transaction_id: borrowingCode ?? result.data.id,
+              borrowingCode: borrowingCode ?? undefined,
+              borrowing_code: borrowingCode ?? undefined,
+              borrowingId: result.data.id,
+              assetCode: result.data.assetCode,
+              assetName: result.data.assetName,
+              status: result.data.status,
+            },
+          });
+        } catch (activityError) {
+          console.error('Record borrowing approval activity error:', activityError);
+        }
       }
 
       res.json(result);
@@ -350,23 +354,27 @@ export class BorrowingController {
       const actorId = getActorUserId(req);
       if (actorId && result.data) {
         const borrowingCode = getBorrowingCode(result.data)
-        await recordUserActivity({
-          userId: actorId,
-          feature: 'peminjaman_alat',
-          action: 'reject',
-          description: `Menolak peminjaman ${borrowingCode ?? `#${result.data.id}`}`,
-          metadata: {
-            transactionId: borrowingCode ?? result.data.id,
-            transaction_id: borrowingCode ?? result.data.id,
-            borrowingCode: borrowingCode ?? undefined,
-            borrowing_code: borrowingCode ?? undefined,
-            borrowingId: result.data.id,
-            assetCode: result.data.assetCode,
-            assetName: result.data.assetName,
-            status: result.data.status,
-            reason,
-          },
-        });
+        try {
+          await recordUserActivity({
+            userId: actorId,
+            feature: 'peminjaman_alat',
+            action: 'reject',
+            description: `Menolak peminjaman ${borrowingCode ?? `#${result.data.id}`}`,
+            metadata: {
+              transactionId: borrowingCode ?? result.data.id,
+              transaction_id: borrowingCode ?? result.data.id,
+              borrowingCode: borrowingCode ?? undefined,
+              borrowing_code: borrowingCode ?? undefined,
+              borrowingId: result.data.id,
+              assetCode: result.data.assetCode,
+              assetName: result.data.assetName,
+              status: result.data.status,
+              reason,
+            },
+          });
+        } catch (activityError) {
+          console.error('Record borrowing rejection activity error:', activityError);
+        }
       }
 
       res.json(result);
