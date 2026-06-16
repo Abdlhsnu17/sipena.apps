@@ -1481,11 +1481,21 @@ export class BorrowingService {
       && Number.isFinite(borrowerId)
       && actorId > 0
       && actorId === borrowerId;
+    const staffPjAccessError = this.validateStaffPjSameInstallation(
+      borrowingRow,
+      data.actorRole,
+      data.actorWorkUnit,
+      'mengembalikan'
+    );
+    if (staffPjAccessError) {
+      return { success: false, message: staffPjAccessError };
+    }
+    const isSameInstallationStaffPj = hasAnyRole(data.actorRole, ['staff_pj', 'staff pj']);
 
-    if (!isManager && !isBorrower) {
+    if (!isManager && !isBorrower && !isSameInstallationStaffPj) {
       return {
         success: false,
-        message: 'Pengembalian hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik peminjaman.'
+        message: 'Pengembalian hanya dapat dilakukan oleh admin, leader, Staff PJ satu instalasi, atau pengguna pemilik peminjaman.'
       };
     }
 
