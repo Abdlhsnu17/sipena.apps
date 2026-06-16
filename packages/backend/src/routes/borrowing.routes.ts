@@ -7,6 +7,7 @@ const router = Router();
 
 const BORROWING_STATUSES = ['pending', 'approved', 'rejected', 'borrowed', 'returned', 'overdue'];
 const BORROWING_ACCESS_ROLES = ['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user'];
+const BORROWING_APPROVAL_ROLES = ['admin', 'leader'];
 const BORROWING_PURPOSE_TYPES = ['inside_hospital', 'outside_hospital'];
 const BORROWING_DURATION_UNITS = ['day', 'month', 'year'];
 
@@ -102,7 +103,7 @@ router.patch(
 router.patch(
   '/:id/approve',
   authMiddleware,
-  requireRole(BORROWING_ACCESS_ROLES),
+  requireRole(BORROWING_APPROVAL_ROLES),
   [param('id').isInt({ min: 1 })],
   borrowingController.approve
 );
@@ -110,7 +111,7 @@ router.patch(
 router.patch(
   '/:id/reject',
   authMiddleware,
-  requireRole(['admin', 'leader', 'staff', 'user']),
+  requireRole(BORROWING_APPROVAL_ROLES),
   [
     param('id').isInt({ min: 1 }),
     body('reason').trim().notEmpty()

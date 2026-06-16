@@ -848,12 +848,8 @@ export class BorrowingService {
   async getAll(filters: BorrowingFilters): Promise<PaginatedResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
 
-    const { page, limit, status, userId, assetId, assetType, actorUserId, actorRole } = filters;
+    const { page, limit, status, userId, assetId, assetType } = filters;
     const offset = (page - 1) * limit;
-    const scopedActorId = Number(actorUserId);
-    const shouldScopeToActor = Number.isFinite(scopedActorId)
-      && scopedActorId > 0
-      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     // Perbaikan QUERY: Menggunakan logika JOIN yang lebih ketat terhadap asset_type
     // dan mengambil data dari tabel yang sesuai (medical vs non-medical)
@@ -895,13 +891,6 @@ export class BorrowingService {
       countQuery += ' AND user_id = ?';
       params.push(userId);
       countParams.push(userId);
-    }
-
-    if (shouldScopeToActor) {
-      query += ' AND (b.user_id = ? OR b.returned_by = ?)';
-      countQuery += ' AND (user_id = ? OR returned_by = ?)';
-      params.push(scopedActorId, scopedActorId);
-      countParams.push(scopedActorId, scopedActorId);
     }
 
     if (assetId) {
@@ -1481,18 +1470,23 @@ export class BorrowingService {
     const assetDetailId = borrowingRow.assetDetailId ?? borrowingRow.asset_detail_id ?? null;
     const assetDetailCode = borrowingRow.assetDetailCode ?? borrowingRow.asset_detail_code ?? null;
 
-    const staffPjAccessError = this.validateStaffPjSameInstallation(
-      borrowingRow,
-      data.actorRole,
-      data.actorWorkUnit,
-      'mengembalikan'
-    );
-    if (staffPjAccessError) {
-      return { success: false, message: staffPjAccessError };
-    }
-
     if (borrowingStatus !== 'approved' && borrowingStatus !== 'borrowed' && borrowingStatus !== 'overdue') {
       return { success: false, message: 'Only approved/borrowed/overdue items can be returned' };
+    }
+
+    const actorId = Number(data.returnedBy);
+    const borrowerId = Number(borrowingRow.userId ?? borrowingRow.user_id);
+    const isManager = hasAnyRole(data.actorRole, ['admin', 'leader']);
+    const isBorrower = Number.isFinite(actorId)
+      && Number.isFinite(borrowerId)
+      && actorId > 0
+      && actorId === borrowerId;
+
+    if (!isManager && !isBorrower) {
+      return {
+        success: false,
+        message: 'Pengembalian hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik peminjaman.'
+      };
     }
 
     const overdueInfo = this.getOverdueBorrowingInfo(borrowingRow.dueDate ?? borrowingRow.due_date, new Date());

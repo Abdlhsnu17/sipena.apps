@@ -217,7 +217,7 @@ const isAssetFallbackDetailId = (
 }
 
 const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt">) =>
-  ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
+  ["pending", "approved", "rejected", "borrowed", "overdue"].includes(borrowing.status) ||
   (borrowing.status === "returned" && !borrowing.returnValidatedAt)
 
 const resolveOwnerWorkUnitForAsset = (asset?: BorrowableAsset | null) =>
@@ -443,6 +443,10 @@ export default function BorrowingPage() {
   const [formData, setFormData] = useState(() => getDefaultFormData())
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingBorrowing, setEditingBorrowing] = useState<ApiBorrowing | null>(null)
+  const [pendingRejectBorrowing, setPendingRejectBorrowing] = useState<ApiBorrowing | null>(null)
+  const [rejectReason, setRejectReason] = useState("")
+  const [approvalSubmittingId, setApprovalSubmittingId] = useState<number | null>(null)
+  const [isRejectSubmitting, setIsRejectSubmitting] = useState(false)
   const [pendingDeleteBorrowing, setPendingDeleteBorrowing] = useState<ApiBorrowing | null>(null)
   const [pendingArchiveBorrowingRequest, setPendingArchiveBorrowingRequest] = useState<ApiBorrowing | null>(null)
   const [deleteReason, setDeleteReason] = useState("")
@@ -987,6 +991,129 @@ export default function BorrowingPage() {
   const handleRequestDeleteBorrowing = (borrowing: ApiBorrowing) => {
     setPendingArchiveBorrowingRequest(borrowing)
     setDeleteReason("")
+  }
+
+  const handleApproveBorrowing = async (borrowing: ApiBorrowing) => {
+    if (!hasFullAccess) {
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin atau Leader yang dapat menyetujui peminjaman.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (borrowing.status !== "pending") return
+
+    const isConfirmed = await confirm({
+      title: "Setujui peminjaman?",
+      description: `Peminjaman ${borrowing.assetDetailName || borrowing.assetName || borrowing.borrowingCode || `#${borrowing.id}`} akan disetujui.`,
+      confirmText: "Setujui",
+    })
+    if (!isConfirmed) return
+
+    setApprovalSubmittingId(borrowing.id)
+    try {
+      const result = await borrowingService.approve(borrowing.id)
+      if (!result.success) {
+        toast({
+          title: "Persetujuan gagal",
+          description: result.message || "Gagal menyetujui peminjaman.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      await Promise.all([
+        loadBorrowings(),
+        loadAssets(),
+        loadActiveMaintenanceLocks(),
+      ])
+
+      toast({
+        title: "Peminjaman disetujui",
+        description: "Status peminjaman sudah diperbarui.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Persetujuan gagal",
+        description: error.message || "Gagal menyetujui peminjaman.",
+        variant: "destructive",
+      })
+    } finally {
+      setApprovalSubmittingId(null)
+    }
+  }
+
+  const openRejectBorrowingDialog = (borrowing: ApiBorrowing) => {
+    if (!hasFullAccess) {
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin atau Leader yang dapat menolak peminjaman.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (borrowing.status !== "pending") return
+    setPendingRejectBorrowing(borrowing)
+    setRejectReason("")
+  }
+
+  const handleRejectDialogClose = () => {
+    if (isRejectSubmitting) return
+    setPendingRejectBorrowing(null)
+    setRejectReason("")
+  }
+
+  const confirmRejectBorrowing = async () => {
+    if (!pendingRejectBorrowing) return
+
+    const reason = rejectReason.trim()
+    if (!reason) {
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penolakan sebelum menolak peminjaman.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsRejectSubmitting(true)
+    setApprovalSubmittingId(pendingRejectBorrowing.id)
+    try {
+      const result = await borrowingService.reject(pendingRejectBorrowing.id, reason)
+      if (!result.success) {
+        toast({
+          title: "Penolakan gagal",
+          description: result.message || "Gagal menolak peminjaman.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      await Promise.all([
+        loadBorrowings(),
+        loadAssets(),
+        loadActiveMaintenanceLocks(),
+      ])
+
+      setPendingRejectBorrowing(null)
+      setRejectReason("")
+      toast({
+        title: "Peminjaman ditolak",
+        description: "Status peminjaman sudah diperbarui.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Penolakan gagal",
+        description: error.message || "Gagal menolak peminjaman.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRejectSubmitting(false)
+      setApprovalSubmittingId(null)
+    }
   }
 
   const confirmRequestDeleteBorrowing = async () => {
@@ -2364,10 +2491,15 @@ export default function BorrowingPage() {
                                     <span className="text-[10px] font-semibold uppercase text-muted-foreground">Batas Pengembalian</span>
                                     <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
                                   </div>
-                                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                              <div className="flex flex-col items-start gap-1 sm:items-end">
                                     {getStatusBadge(b.status)}
                                     {getBorrowingRestrictionBadge(b.status)}
                                   </div>
+                                  {b.status === "rejected" && b.rejectionReason ? (
+                                    <p className="max-w-xs text-left text-[11px] text-red-700 sm:text-right">
+                                      Alasan: {b.rejectionReason}
+                                    </p>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>
@@ -2444,6 +2576,30 @@ export default function BorrowingPage() {
                               ) : null}
                               {hasFullAccess ? (
                                 <div className="flex flex-wrap gap-1">
+                                  {b.status === "pending" && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 w-9 rounded-lg p-1.5 text-green-700 hover:bg-green-50"
+                                        onClick={() => void handleApproveBorrowing(b)}
+                                        title="Setujui peminjaman"
+                                        disabled={approvalSubmittingId === b.id}
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                        onClick={() => openRejectBorrowingDialog(b)}
+                                        title="Tolak peminjaman"
+                                        disabled={approvalSubmittingId === b.id}
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
                                   {['pending', 'approved', 'borrowed', 'overdue'].includes(b.status) && (
                                     <Button
                                       variant="ghost"
@@ -2814,6 +2970,42 @@ export default function BorrowingPage() {
           </Button>
         </div>
       )}
+      <Dialog open={Boolean(pendingRejectBorrowing)} onOpenChange={(nextOpen) => !nextOpen && handleRejectDialogClose()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tolak peminjaman?</DialogTitle>
+            <DialogDescription>
+              Isi alasan penolakan untuk peminjaman {pendingRejectBorrowing?.assetDetailName || pendingRejectBorrowing?.assetName || "ini"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700" htmlFor="reject-reason">
+              Alasan penolakan
+            </label>
+            <Textarea
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              placeholder="Contoh: jadwal penggunaan bentrok atau inventaris belum tersedia"
+              disabled={isRejectSubmitting}
+              className="min-h-24"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleRejectDialogClose} disabled={isRejectSubmitting}>
+              Batal
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
+              onClick={() => void confirmRejectBorrowing()}
+              disabled={isRejectSubmitting || !rejectReason.trim()}
+            >
+              {isRejectSubmitting ? "Menolak..." : "Tolak"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <DeleteReasonDialog
         open={Boolean(pendingDeleteBorrowing)}
         title="Arsipkan data peminjaman?"

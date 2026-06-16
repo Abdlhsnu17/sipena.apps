@@ -10,7 +10,7 @@ import {
     UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
-import { canCompleteUsage, canManageOverdueEmergencyUsage, hasAnyRole } from '../utils/role';
+import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
 import { AssetService } from './asset.service';
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
@@ -765,12 +765,8 @@ export class AssetUsageService {
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
     await this.syncActiveBorrowingUsageLogs();
 
-    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo, actorUserId, actorRole } = filters;
+    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
     const offset = (page - 1) * limit;
-    const scopedActorId = Number(actorUserId);
-    const shouldScopeToActor = Number.isFinite(scopedActorId)
-      && scopedActorId > 0
-      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     let query = `
       SELECT l.*,
@@ -825,12 +821,6 @@ export class AssetUsageService {
       query += ' AND l.started_at <= ?';
       countQuery += ' AND started_at <= ?';
       params.push(formatDateTimeForMySQL(`${dateTo} 23:59:59`));
-    }
-
-    if (shouldScopeToActor) {
-      query += ' AND (l.operator_user_id = ? OR l.created_by = ?)';
-      countQuery += ' AND (operator_user_id = ? OR created_by = ?)';
-      params.push(scopedActorId, scopedActorId);
     }
 
     const countParams = [...params];

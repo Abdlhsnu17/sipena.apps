@@ -409,7 +409,7 @@ export class BorrowingController {
         const message = result.message || '';
         const status = message.includes('tidak ditemukan') || message.includes('not found')
           ? 404
-          : message.includes('Staff PJ')
+          : message.includes('Staff PJ') || message.includes('hanya dapat dilakukan')
             ? 403
             : 400;
         res.status(status).json(result);
