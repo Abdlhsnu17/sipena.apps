@@ -199,23 +199,7 @@ describe('BorrowingService borrowing lock rules', () => {
       .mockResolvedValueOnce([[{ count: 0 }], []])
       .mockResolvedValueOnce([[], []])
       .mockResolvedValueOnce([[], []])
-      .mockResolvedValueOnce([{ insertId: 31 }, []])
-      .mockResolvedValueOnce([
-        [
-          {
-            id: 31,
-            borrowing_code: 'PMJ-20260616-001',
-            asset_id: 12,
-            asset_type: 'medical',
-            user_id: 5,
-            status: 'pending',
-            borrow_date: '2026-06-16 09:00:00',
-            due_date: '2026-06-17 09:00:00',
-            purpose: 'Operasional unit',
-          },
-        ],
-        [],
-      ]);
+      .mockResolvedValueOnce([{ insertId: 31 }, []]);
 
     jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
       success: true,
@@ -227,6 +211,21 @@ describe('BorrowingService borrowing lock rules', () => {
     });
     const assetUpdateStatusSpy = jest.spyOn((service as any).assetService, 'updateStatus');
     const ensureUsageLogSpy = jest.spyOn(service as any, 'ensureUsageLogForBorrowing');
+    jest.spyOn(service, 'getById').mockResolvedValueOnce({
+      success: true,
+      message: 'Borrowing retrieved successfully',
+      data: {
+        id: 31,
+        borrowingCode: 'PMJ-20260616-001',
+        assetId: 12,
+        assetType: 'medical',
+        userId: 5,
+        status: 'pending',
+        borrowDate: new Date(2026, 5, 16, 9, 0, 0),
+        dueDate: new Date(2026, 5, 17, 9, 0, 0),
+        purpose: 'Operasional unit',
+      } as any,
+    });
 
     const result = await service.create({
       assetId: 12,
