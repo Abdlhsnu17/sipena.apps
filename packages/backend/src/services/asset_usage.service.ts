@@ -922,7 +922,7 @@ export class AssetUsageService {
         conditionAfter: data.conditionAfter,
         endedAt: data.endedAt
       });
-    } else {
+    } else if (!data.borrowingId) {
       // mark the detail/master as in-use so UI shows "Sedang Digunakan"
       await this.markAssetDetailInUse(data.assetId, data.assetType || 'medical', {
         detailId: data.assetDetailId,
