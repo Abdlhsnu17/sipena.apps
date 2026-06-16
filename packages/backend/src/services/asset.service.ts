@@ -76,6 +76,9 @@ interface AssetRow extends RowDataPacket, Asset {}
 interface CountRow extends RowDataPacket {
   count: number;
 }
+interface BorrowingLockRow extends RowDataPacket {
+  count: number;
+}
 interface TableExistsRow extends RowDataPacket {
   table_exists: number;
 }
@@ -165,6 +168,33 @@ export class AssetService {
     return (rows[0]?.count || 0) > 0;
   }
 
+  private async hasActiveBorrowingForDetail(assetId: number, assetType: string, detail: Record<string, any>): Promise<boolean> {
+    const candidates = this.buildDetailCandidates(detail);
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const allCandidates = Array.from(new Set([...candidates, ...fallbackIds]));
+    const candidatePlaceholders = allCandidates.map(() => '?').join(', ');
+
+    const [rows] = await pool.query<BorrowingLockRow[]>(
+      `SELECT COUNT(*) as count
+       FROM borrowing_records
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND deleted_at IS NULL
+         AND (
+           status IN ('pending', 'approved', 'borrowed', 'overdue')
+           OR (status = 'returned' AND return_validated_at IS NULL)
+         )
+         AND (
+           asset_detail_id IS NULL
+           ${allCandidates.length > 0 ? `OR asset_detail_id IN (${candidatePlaceholders}) OR asset_detail_code IN (${candidatePlaceholders})` : ''}
+         )`,
+      [assetId, normalizedAssetType, ...allCandidates, ...allCandidates]
+    );
+
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private async reconcileStaleUsageDetailStatuses(rows: AssetRow[], assetType?: string): Promise<void> {
     const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
     const table = getAssetTable(normalizedAssetType);
@@ -187,6 +217,14 @@ export class AssetService {
         const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail);
         if (hasActiveUsage) {
           updatedDetails.push(rawDetail);
+          continue;
+        }
+
+        const hasActiveBorrowing = await this.hasActiveBorrowingForDetail(Number(row.id), normalizedAssetType, detail);
+        if (hasActiveBorrowing) {
+          detail.status = 'Dipinjam';
+          hasChanges = true;
+          updatedDetails.push(detail);
           continue;
         }
 
@@ -282,6 +320,8 @@ export class AssetService {
     if (rows.length === 0) {
       return { success: false, message: 'Asset not found' };
     }
+
+    await this.reconcileStaleUsageDetailStatuses(rows, type);
 
     return {
       success: true,
