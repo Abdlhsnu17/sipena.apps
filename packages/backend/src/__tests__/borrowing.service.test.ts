@@ -247,6 +247,70 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(String(insertCall?.[0])).not.toContain("'borrowed'");
   });
 
+  it('approves a pending borrowing even when asset status synchronization fails', async () => {
+    jest.spyOn(service, 'getById')
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 32,
+          assetId: 12,
+          assetType: 'medical',
+          userId: 5,
+          status: 'pending',
+          borrowDate: new Date(2026, 5, 16, 9, 0, 0),
+          dueDate: new Date(2026, 5, 17, 9, 0, 0),
+          purpose: 'Operasional unit',
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 32,
+          assetId: 12,
+          assetType: 'medical',
+          userId: 5,
+          status: 'approved',
+          borrowDate: new Date(2026, 5, 16, 9, 0, 0),
+          dueDate: new Date(2026, 5, 17, 9, 0, 0),
+          purpose: 'Operasional unit',
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 32,
+          assetId: 12,
+          assetType: 'medical',
+          userId: 5,
+          status: 'approved',
+          borrowDate: new Date(2026, 5, 16, 9, 0, 0),
+          dueDate: new Date(2026, 5, 17, 9, 0, 0),
+          purpose: 'Operasional unit',
+        } as any,
+      });
+
+    jest.spyOn((service as any).assetService, 'updateStatus').mockRejectedValueOnce(new Error('asset sync failed'));
+    jest.spyOn(service as any, 'ensureUsageLogForBorrowing').mockResolvedValue(undefined);
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockedQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+
+    const result = await service.approve('32', 99);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.status).toBe('approved');
+
+    const updateCall = mockedQuery.mock.calls.find(
+      ([query]) => String(query).includes('UPDATE borrowing_records SET status = ?')
+    );
+    expect(updateCall).toBeDefined();
+    expect((updateCall as [string, any[]])[1]).toEqual(['approved', 99, '32']);
+    expect(consoleSpy).toHaveBeenCalledWith('Approve borrowing asset sync error:', expect.any(Error));
+    consoleSpy.mockRestore();
+  });
+
   it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])

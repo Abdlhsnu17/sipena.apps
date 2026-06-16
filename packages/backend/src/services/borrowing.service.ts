@@ -1259,24 +1259,28 @@ export class BorrowingService {
       borrowing.data?.assetType
     );
     
-    // Update status aset (pastikan mengirim assetType yang benar ke AssetService)
-    if (!borrowing.data?.assetDetailId || isAssetFallbackDetail) {
-      await this.assetService.updateStatus(
-        String(borrowing.data.assetId),
-        'borrowed',
-        borrowing.data.assetType || 'medical' 
-      );
-    }
-
     await pool.query(
       'UPDATE borrowing_records SET status = ?, approved_by = ?, approved_at = NOW(), updated_at = NOW() WHERE id = ?',
       ['approved', approvedBy, id]
     );
 
-    await this.syncAssetDetailBorrowingState(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
-      detailId: borrowing.data.assetDetailId || null,
-      detailCode: borrowing.data.assetDetailCode || null
-    });
+    try {
+      // Update status aset (pastikan mengirim assetType yang benar ke AssetService)
+      if (!borrowing.data?.assetDetailId || isAssetFallbackDetail) {
+        await this.assetService.updateStatus(
+          String(borrowing.data.assetId),
+          'borrowed',
+          borrowing.data.assetType || 'medical'
+        );
+      }
+
+      await this.syncAssetDetailBorrowingState(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
+        detailId: borrowing.data.assetDetailId || null,
+        detailCode: borrowing.data.assetDetailCode || null
+      });
+    } catch (syncError) {
+      console.error('Approve borrowing asset sync error:', syncError);
+    }
 
     // Create asset usage log on approve if the borrowing should be considered started.
     // Existing active usage is reused to avoid duplicate rows.
