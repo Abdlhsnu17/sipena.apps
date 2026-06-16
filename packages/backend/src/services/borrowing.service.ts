@@ -1175,7 +1175,7 @@ export class BorrowingService {
          status,
          created_at
        )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrowed', NOW())`,
+	      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
       [
         borrowingCode,
         data.assetId,
@@ -1201,42 +1201,9 @@ export class BorrowingService {
       ]
     );
 
-    if (!detailId || isAssetFallbackDetail) {
-      await this.assetService.updateStatus(
-        String(data.assetId),
-        'borrowed',
-        assetType
-      );
-    }
-
-    try {
-      await this.ensureUsageLogForBorrowing({
-        borrowingId: result.insertId,
-        assetId: Number(data.assetId),
-        assetType,
-        assetDetailId: detailId || null,
-        assetDetailName: data.assetDetailName || null,
-        assetDetailCode: data.assetDetailCode || null,
-        assetLocation: asset.data?.location || null,
-        roomName: data.destinationRoom || asset.data?.location || '',
-        operatorUserId: data.userId,
-        startedAt: borrowDateParsed,
-        usageCount: quantity,
-        notes: data.notes || null,
-        createdBy: data.userId
-      });
-    } catch (err) {
-      console.error('Create usage log after borrowing failed:', err);
-    }
-
-    // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)
-    await this.syncAssetDetailBorrowingState(data.assetId, assetType, {
-      detailId: detailId || null,
-      detailCode: data.assetDetailCode || null
-    });
-
-    return await this.getById(String(result.insertId));
-  }
+	    // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)
+	    return await this.getById(String(result.insertId));
+	  }
 
   private getAssetDetails(specifications?: unknown): any[] {
     if (!specifications) return [];

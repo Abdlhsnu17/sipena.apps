@@ -191,6 +191,63 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(mockedQuery).toHaveBeenCalledTimes(4);
   });
 
+  it('creates a new borrowing as pending until it is approved', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([[{ count: 0 }], []])
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([{ insertId: 31 }, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 31,
+            borrowing_code: 'PMJ-20260616-001',
+            asset_id: 12,
+            asset_type: 'medical',
+            user_id: 5,
+            status: 'pending',
+            borrow_date: '2026-06-16 09:00:00',
+            due_date: '2026-06-17 09:00:00',
+            purpose: 'Operasional unit',
+          },
+        ],
+        [],
+      ]);
+
+    jest.spyOn((service as any).assetService, 'getById').mockResolvedValue({
+      success: true,
+      data: {
+        id: 12,
+        status: 'available',
+        specifications: { details: [] },
+      },
+    });
+    const assetUpdateStatusSpy = jest.spyOn((service as any).assetService, 'updateStatus');
+    const ensureUsageLogSpy = jest.spyOn(service as any, 'ensureUsageLogForBorrowing');
+
+    const result = await service.create({
+      assetId: 12,
+      assetType: 'medical',
+      userId: 5,
+      borrowDate: new Date(2026, 5, 16, 9, 0, 0),
+      dueDate: new Date(2026, 5, 17, 9, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.status).toBe('pending');
+    expect(assetUpdateStatusSpy).not.toHaveBeenCalled();
+    expect(ensureUsageLogSpy).not.toHaveBeenCalled();
+
+    const insertCall = mockedQuery.mock.calls.find(([query]) => String(query).includes('INSERT INTO borrowing_records'));
+    expect(insertCall).toBeDefined();
+    expect(String(insertCall?.[0])).toContain("'pending'");
+    expect(String(insertCall?.[0])).not.toContain("'borrowed'");
+  });
+
   it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])
