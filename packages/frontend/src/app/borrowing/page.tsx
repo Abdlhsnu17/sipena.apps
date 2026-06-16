@@ -568,6 +568,7 @@ export default function BorrowingPage() {
   }, [formData.dueDate, showForm])
 
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
+  const canValidateBorrowing = hasFullAccess || isStaffPjRole(currentUser?.role)
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
   const canRequestDeleteBorrowing = currentUser?.role === "leader"
   const currentUserId = Number(currentUser?.id)
@@ -994,10 +995,10 @@ export default function BorrowingPage() {
   }
 
   const handleApproveBorrowing = async (borrowing: ApiBorrowing) => {
-    if (!hasFullAccess) {
+    if (!canValidateBorrowing) {
       toast({
         title: "Akses ditolak",
-        description: "Hanya Admin atau Leader yang dapat menyetujui peminjaman.",
+        description: "Hanya Admin, Leader, atau Staff PJ yang dapat menyetujui peminjaman.",
         variant: "destructive",
       })
       return
@@ -1046,10 +1047,10 @@ export default function BorrowingPage() {
   }
 
   const openRejectBorrowingDialog = (borrowing: ApiBorrowing) => {
-    if (!hasFullAccess) {
+    if (!canValidateBorrowing) {
       toast({
         title: "Akses ditolak",
-        description: "Hanya Admin atau Leader yang dapat menolak peminjaman.",
+        description: "Hanya Admin, Leader, atau Staff PJ yang dapat menolak peminjaman.",
         variant: "destructive",
       })
       return
@@ -2574,9 +2575,9 @@ export default function BorrowingPage() {
                                   Perpanjang
                                 </Button>
                               ) : null}
-                              {hasFullAccess ? (
+                              {canValidateBorrowing ? (
                                 <div className="flex flex-wrap gap-1">
-                                  {b.status === "pending" && (
+                                  {canValidateBorrowing && b.status === "pending" && (
                                     <>
                                       <Button
                                         variant="ghost"
@@ -2600,7 +2601,7 @@ export default function BorrowingPage() {
                                       </Button>
                                     </>
                                   )}
-                                  {['pending', 'approved', 'borrowed', 'overdue'].includes(b.status) && (
+                                  {hasFullAccess && ['pending', 'approved', 'borrowed', 'overdue'].includes(b.status) && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -2633,7 +2634,7 @@ export default function BorrowingPage() {
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   )}
-                                  {b.status === "returned" && !b.returnValidatedBy && (
+                                  {canValidateBorrowing && b.status === "returned" && !b.returnValidatedBy && (
                                     <Button
                                       variant="outline"
                                       size="sm"

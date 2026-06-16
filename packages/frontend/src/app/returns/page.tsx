@@ -15,7 +15,7 @@ import {
     type AssetSourceKey,
 } from "@/utils/api-mappers";
 import { formatDayTimeLabel } from "@/utils/format";
-import { isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role";
+import { isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 
 import {
     Dialog,
@@ -502,16 +502,37 @@ export default function ReturnsPage() {
     return matchesSearch && matchesSource
   })
 
-  const canValidateReturns = isAdminOrLeaderRole(currentUser?.role)
+  const canManageReturnRecords = isAdminOrLeaderRole(currentUser?.role)
+  const canValidateReturns = canManageReturnRecords || isStaffPjRole(currentUser?.role)
   const canDeleteReturns = isAdminRole(currentUser?.role)
   const canRequestDeleteReturns = currentUser?.role === "leader"
 
+  const normalizeWorkUnit = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() || ""
+
   const getReturnAccessMessage = (borrowing: ApiBorrowing) => {
     const isBorrower = currentUser && String(borrowing.userId) === String(currentUser.id)
-    if (isBorrower || isAdminOrLeaderRole(currentUser?.role)) {
+    if (isBorrower || canManageReturnRecords) {
       return ""
     }
-    return "Pengembalian hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik peminjaman."
+    if (isStaffPjRole(currentUser?.role)) {
+      const actorWorkUnit = normalizeWorkUnit(currentUser?.workUnit)
+      if (!actorWorkUnit) {
+        return "Staff PJ wajib mengisi Unit Kerja / Instalasi di pengaturan akun sebelum mengembalikan peminjaman."
+      }
+
+      const borrowerWorkUnit = normalizeWorkUnit(borrowing.borrowerWorkUnit || borrowing.borrowerCurrentWorkUnit)
+      if (!borrowerWorkUnit) {
+        return "Instalasi peminjam belum terisi, sehingga Staff PJ belum dapat mengembalikan peminjaman ini."
+      }
+
+      if (actorWorkUnit !== borrowerWorkUnit) {
+        return "Staff PJ hanya dapat mengembalikan peminjaman dari instalasi yang sama."
+      }
+
+      return ""
+    }
+
+    return "Pengembalian hanya dapat dilakukan oleh admin, leader, Staff PJ satu instalasi, atau pengguna pemilik peminjaman."
   }
 
   const filteredReturnedBorrowings = returnedBorrowings.filter((b) => {
@@ -1767,7 +1788,7 @@ export default function ReturnsPage() {
                               Pilih kartu
                             </label>
                             <div className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-slate-600">
-                              {canValidateReturns ? (
+                              {canManageReturnRecords ? (
                                 <div className="flex flex-wrap items-center justify-end gap-1">
                                   <Button
                                     variant="ghost"
@@ -1802,9 +1823,9 @@ export default function ReturnsPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[13px] text-muted-foreground">Aksi terbatas</span>
+                                !canValidateReturns ? <span className="text-[13px] text-muted-foreground">Aksi terbatas</span> : null
                               )}
-                              {b.status === "returned" &&
+                              {canValidateReturns && b.status === "returned" &&
                                 (b.returnValidatedAt ? (
                                   <Button
                                     variant="outline"
