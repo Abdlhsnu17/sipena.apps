@@ -41,7 +41,7 @@ export const deriveAssetCondition = (details: Array<{ condition?: string }>): As
 export const deriveAssetStatus = (details: Array<{ status?: string }>): AssetStatus => {
   const statuses = details.map((detail) => detail.status)
   if (statuses.includes("Dalam Perbaikan")) return "maintenance"
-  if (statuses.includes("Non-Aktif")) return "disposed"
+  if (statuses.includes("Nonaktif") || statuses.includes("Non-Aktif")) return "disposed"
   if (statuses.includes("Dipinjam") || statuses.includes("Sedang Digunakan") || statuses.includes("Dalam Penggunaan")) return "borrowed"
   return "available"
 }

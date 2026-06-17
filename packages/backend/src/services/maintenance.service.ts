@@ -295,8 +295,8 @@ export class MaintenanceService {
         return rawDetail;
       }
 
-      if (detail.status !== 'Aktif') {
-        detail.status = 'Aktif';
+      if (detail.status !== 'Tersedia') {
+        detail.status = 'Tersedia';
         hasChanges = true;
       }
 

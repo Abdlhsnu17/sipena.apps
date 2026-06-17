@@ -10,7 +10,13 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
-type StatusType = "Aktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
+type StatusType = "Tersedia" | "Aktif" | "Nonaktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
+
+const normalizeAssetStatusLabel = (status?: string | null): StatusType => {
+  if (status === "Aktif") return "Tersedia"
+  if (status === "Non-Aktif") return "Nonaktif"
+  return (status as StatusType) || "Tersedia"
+}
 
 function toDateInputValue(value?: string | null) {
   if (!value) return ""
@@ -34,7 +40,7 @@ const createInitialFormData = (defaultTypeValue: MedicalAsset["type"]) => ({
   lastRepair: "",
   nextMaintenance: "",
   condition: "Baik" as ConditionType,
-  status: "Aktif" as StatusType,
+  status: "Tersedia" as StatusType,
   notes: "",
   usagePurpose: normalizeUsagePurpose(inferMedicalUsagePurpose("", defaultTypeValue), MEDICAL_USAGE_OPTIONS),
 })
@@ -101,7 +107,7 @@ export default function MedicalAssetForm({
         lastRepair: toDateInputValue(asset.lastRepair),
         nextMaintenance: toDateInputValue(asset.nextMaintenance),
         condition: (asset.condition as ConditionType) ?? "Baik",
-        status: (asset.status as StatusType) ?? "Aktif",
+        status: normalizeAssetStatusLabel(asset.status),
         notes: asset.notes ?? "",
         usagePurpose: normalizeUsagePurpose(
           asset.usagePurpose ?? inferMedicalUsagePurpose(asset.inventoryName, resolvedTypeCategory),
@@ -433,8 +439,8 @@ export default function MedicalAssetForm({
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
               >
-                <option>Aktif</option>
-                <option>Non-Aktif</option>
+                <option>Tersedia</option>
+                <option>Nonaktif</option>
                 <option>Dalam Perbaikan</option>
                 <option>Sedang Digunakan</option>
                 <option>Dipinjam</option>

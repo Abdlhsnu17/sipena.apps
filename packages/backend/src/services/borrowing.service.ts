@@ -817,12 +817,12 @@ export class BorrowingService {
       } else if (isBorrowed) {
         nextStatus = 'Dipinjam';
       } else if (isDamagedReturn) {
-        nextStatus = 'Non-Aktif';
+        nextStatus = 'Nonaktif';
         nextCondition = 'Rusak';
       } else if (hasReturnCondition) {
-        nextStatus = 'Aktif';
+        nextStatus = 'Tersedia';
       } else if (this.isStaleBorrowedDetailStatus(detail.status) || this.isStaleMaintenanceDetailStatus(detail.status)) {
-        nextStatus = 'Aktif';
+        nextStatus = 'Tersedia';
       }
 
       const statusChanged = nextStatus && detail.status !== nextStatus;

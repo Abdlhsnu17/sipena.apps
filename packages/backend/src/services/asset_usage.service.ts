@@ -551,7 +551,7 @@ export class AssetUsageService {
         if (!isTarget) return rawDetail;
         matchedDetail = true;
 
-        const nextStatus = damagedUsage ? 'Dalam Perbaikan' : 'Aktif';
+        const nextStatus = damagedUsage ? 'Dalam Perbaikan' : 'Tersedia';
         const nextCondition = damagedUsage ? 'Rusak' : (normalizedDetailCondition || detail.condition || 'Baik');
 
         if (detail.status !== nextStatus) {

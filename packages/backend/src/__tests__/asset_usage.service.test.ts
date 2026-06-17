@@ -99,7 +99,7 @@ describe('AssetUsageService usage completion status sync', () => {
     );
   });
 
-  it('sets a completed medical detail usage back to Aktif', async () => {
+  it('sets a completed medical detail usage back to Tersedia', async () => {
     mockedQuery.mockResolvedValue([[{ count: 0 }]]);
     const assetService = (service as any).assetService;
     jest.spyOn(assetService, 'getById').mockResolvedValue({
@@ -135,7 +135,7 @@ describe('AssetUsageService usage completion status sync', () => {
             {
               id: 'detail-1',
               name: 'Infusion Pump Unit 1',
-              status: 'Aktif',
+              status: 'Tersedia',
               condition: 'Baik',
             },
           ],
@@ -250,7 +250,7 @@ describe('AssetUsageService usage completion status sync', () => {
               id: 'different-detail',
               inventoryName: 'Oxygen Flowmeter & Humidifier',
               assetCode: 'MED-ANGH-OXY',
-              status: 'Aktif',
+              status: 'Tersedia',
               condition: 'Baik',
             },
           ],

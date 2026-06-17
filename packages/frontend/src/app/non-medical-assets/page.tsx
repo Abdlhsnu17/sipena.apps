@@ -778,7 +778,7 @@ export default function NonMedicalAssetsPage() {
                                     <Badge
                                       variant="outline"
                                       className={`text-xs border ${
-                                        asset.status === "Aktif"
+                                        asset.status === "Tersedia" || asset.status === "Aktif"
                                           ? "bg-emerald-100 border-emerald-300 text-emerald-800"
                                           : asset.status === "Dalam Perbaikan"
                                             ? "bg-amber-100 border-amber-300 text-amber-900"

@@ -100,7 +100,7 @@ const isRequestedDetail = (detail: Record<string, any>, request: AssetDisposalRe
 };
 
 const deriveAggregateStatus = (details: Record<string, any>[]): string => {
-  const activeDetails = details.filter((detail) => detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
+  const activeDetails = details.filter((detail) => detail.status !== 'Nonaktif' && detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
   if (activeDetails.length === 0) return 'disposed';
   if (activeDetails.some((detail) => detail.status === 'Dalam Perbaikan' || detail.status === 'maintenance')) return 'maintenance';
   if (activeDetails.some((detail) => detail.status === 'Sedang Digunakan' || detail.status === 'Dalam Penggunaan' || detail.status === 'borrowed')) return 'borrowed';
@@ -108,7 +108,7 @@ const deriveAggregateStatus = (details: Record<string, any>[]): string => {
 };
 
 const deriveAggregateCondition = (details: Record<string, any>[]): string => {
-  const activeDetails = details.filter((detail) => detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
+  const activeDetails = details.filter((detail) => detail.status !== 'Nonaktif' && detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
   if (activeDetails.length === 0) return 'damaged';
   if (activeDetails.some((detail) => detail.condition === 'Rusak' || detail.condition === 'damaged')) return 'damaged';
   if (activeDetails.some((detail) => detail.condition === 'Cukup' || detail.condition === 'fair')) return 'fair';
@@ -237,7 +237,7 @@ export class AssetDisposalService {
           detailMatched = true;
           return {
             ...rawDetail,
-            status: 'Non-Aktif',
+            status: 'Nonaktif',
             condition: rawDetail.condition ?? 'Rusak',
           };
         });

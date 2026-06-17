@@ -35,6 +35,8 @@ const statusMap: Record<string, string> = {
   borrowed: 'borrowed',
   pemeliharaan: 'maintenance',
   maintenance: 'maintenance',
+  'nonaktif': 'disposed',
+  'non-aktif': 'disposed',
   dihapus: 'disposed',
   disposed: 'disposed',
 };
@@ -57,10 +59,10 @@ const normalizeCondition = (v?: string) =>
   conditionMap[(v ?? '').toLowerCase().trim()] ?? 'good';
 
 const statusLabelMap: Record<string, string> = {
-  available: 'Aktif',
+  available: 'Tersedia',
   borrowed: 'Dipinjam',
   maintenance: 'Dalam Perbaikan',
-  disposed: 'Non-Aktif',
+  disposed: 'Nonaktif',
 };
 
 const conditionLabelMap: Record<string, string> = {
@@ -91,7 +93,7 @@ const buildMedicalSpecifications = (row: ImportRow, code: string, status: string
       serialNumber: row.serialNumber || '',
       purchaseDate: normalizeDate(row.purchaseDate) || '',
       condition: conditionLabelMap[condition] || 'Baik',
-      status: statusLabelMap[status] || 'Aktif',
+      status: statusLabelMap[status] || 'Tersedia',
       notes: '',
       usagePurpose: row.usagePurpose || 'Operasional Bersama',
       roomId: row.location || '',

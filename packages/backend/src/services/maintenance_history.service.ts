@@ -309,7 +309,7 @@ const syncAssetDetailStatus = async (
 
   const nextDetailStatus = ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus)
     ? 'Dalam Perbaikan'
-    : 'Aktif';
+    : 'Tersedia';
 
   let hasChanges = false;
   const updatedDetails = details.map((rawDetail: any) => {

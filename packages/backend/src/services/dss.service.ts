@@ -368,7 +368,7 @@ export class DssService {
         const detailName = String(detail.inventoryName || detail.name || asset.name);
         const serialNumber = detail.serialNumber ? String(detail.serialNumber) : null;
         const conditionLabel = String(detail.condition || asset.condition || 'Baik');
-        const statusLabel = String(detail.status || asset.status || 'Aktif');
+        const statusLabel = String(detail.status || asset.status || 'Tersedia');
         const purchaseDate = normalizeDate(detail.purchaseDate || asset.purchase_date);
         const lastMaintenance = normalizeDate(detail.lastMaintenance);
         const lastRepair = normalizeDate(detail.lastRepair);

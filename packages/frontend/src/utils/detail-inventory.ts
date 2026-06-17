@@ -15,7 +15,12 @@ const normalizeAvailability = (status?: string): DetailAvailability => {
     return "in_use"
   }
   if (normalized.includes("dipinjam") || normalized.includes("borrowed")) return "borrowed"
-  if (normalized.includes("non-aktif") || normalized.includes("non aktif") || normalized.includes("disposed")) {
+  if (
+    normalized.includes("nonaktif") ||
+    normalized.includes("non-aktif") ||
+    normalized.includes("non aktif") ||
+    normalized.includes("disposed")
+  ) {
     return "disposed"
   }
   return "available"
@@ -175,13 +180,13 @@ export const getDetailInventoryStatusLabel = (item: Pick<DetailInventoryItem, "s
     case "maintenance":
       return "Dalam Perbaikan"
     case "disposed":
-      return "Non-Aktif"
+      return "Nonaktif"
     case "borrowed":
       return "Dipinjam"
     case "in_use":
       return "Sedang Digunakan"
     case "available":
     default:
-      return "Aktif"
+      return "Tersedia"
   }
 }

@@ -42,8 +42,10 @@ function resolveNonMedicalColumn(key: string): string | undefined {
 }
 const statusMapping: Record<string, string> = {
   'Aktif': 'available',
+  'Tersedia': 'available',
   'available': 'available',
   'Non-Aktif': 'disposed',
+  'Nonaktif': 'disposed',
   'inactive': 'disposed',
   'disposed': 'disposed',
   'Dalam Perbaikan': 'maintenance',
@@ -228,7 +230,7 @@ export class AssetService {
           continue;
         }
 
-        detail.status = detail.condition === 'Rusak' ? 'Dalam Perbaikan' : 'Aktif';
+        detail.status = detail.condition === 'Rusak' ? 'Dalam Perbaikan' : 'Tersedia';
         hasChanges = true;
         updatedDetails.push(detail);
       }

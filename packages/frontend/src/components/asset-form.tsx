@@ -29,8 +29,14 @@ const initialFormData: AssetFormValues = {
   purchaseDate: "",
   serialNumber: "",
   condition: "Baik",
-  status: "Aktif",
+  status: "Tersedia",
   notes: "",
+}
+
+const normalizeStatusLabel = (status?: string) => {
+  if (status === "Aktif") return "Tersedia"
+  if (status === "Tidak Aktif" || status === "Non-Aktif") return "Nonaktif"
+  return status
 }
 
 export default function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
@@ -41,6 +47,7 @@ export default function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
       setFormData((prev) => ({
         ...prev,
         ...asset,
+        status: normalizeStatusLabel(asset.status) ?? prev.status,
       }))
     } else {
       setFormData(initialFormData)
@@ -159,8 +166,8 @@ export default function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
               >
-                <option>Aktif</option>
-                <option>Tidak Aktif</option>
+                <option>Tersedia</option>
+                <option>Nonaktif</option>
                 <option>Pemeliharaan</option>
               </select>
             </div>
