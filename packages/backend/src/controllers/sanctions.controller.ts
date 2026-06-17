@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { param, body, query, validationResult } from 'express-validator';
 import sanctionsService from '../services/sanctions.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:sanctions');
+
+const getAuthenticatedUserId = (req: Request): number | null => {
+  const userId = Number(req.user?.id);
+  return Number.isFinite(userId) && userId > 0 ? userId : null;
+};
 
 class SanctionsController {
   getAll = async (req: Request, res: Response): Promise<void> => {
@@ -17,7 +25,7 @@ class SanctionsController {
       const result = await sanctionsService.getAll({ status: status as any, userId, page, limit });
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Get sanctions error:', error);
+      logger.error('Get sanctions error', { error });
       res.status(500).json({ success: false, message: 'Gagal mengambil data sanksi' });
     }
   };
@@ -27,7 +35,7 @@ class SanctionsController {
       const result = await sanctionsService.getStats();
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Get sanctions stats error:', error);
+      logger.error('Get sanctions stats error', { error });
       res.status(500).json({ success: false, message: 'Gagal mengambil statistik sanksi' });
     }
   };
@@ -40,12 +48,16 @@ class SanctionsController {
     }
     try {
       const borrowingId = Number(req.params.id);
-      const resolvedByUserId = (req as any).user?.id;
+      const resolvedByUserId = getAuthenticatedUserId(req);
+      if (!resolvedByUserId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
       const { notes } = req.body;
       const result = await sanctionsService.resolve(borrowingId, resolvedByUserId, notes);
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Resolve sanction error:', error);
+      logger.error('Resolve sanction error', { error });
       res.status(500).json({ success: false, message: 'Gagal menyelesaikan sanksi' });
     }
   };
@@ -58,12 +70,16 @@ class SanctionsController {
     }
     try {
       const borrowingId = Number(req.params.id);
-      const resolvedByUserId = (req as any).user?.id;
+      const resolvedByUserId = getAuthenticatedUserId(req);
+      if (!resolvedByUserId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
       const { reason } = req.body;
       const result = await sanctionsService.waive(borrowingId, resolvedByUserId, reason);
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Waive sanction error:', error);
+      logger.error('Waive sanction error', { error });
       res.status(500).json({ success: false, message: 'Gagal membebaskan sanksi' });
     }
   };

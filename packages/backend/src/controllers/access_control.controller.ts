@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import accessControlService from '../services/access_control.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:access-control');
 
 export class AccessControlController {
   getMatrix = async (_req: Request, res: Response): Promise<void> => {
@@ -7,7 +10,7 @@ export class AccessControlController {
       const result = await accessControlService.getMatrix();
       res.json(result);
     } catch (error) {
-      console.error('Get access control matrix error:', error);
+      logger.error('Get access control matrix error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -17,7 +20,7 @@ export class AccessControlController {
       const result = await accessControlService.getRoleMenus(req.user?.role || 'user');
       res.json(result);
     } catch (error) {
-      console.error('Get role menus error:', error);
+      logger.error('Get role menus error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -34,7 +37,7 @@ export class AccessControlController {
 
       res.json(result);
     } catch (error) {
-      console.error('Update role menus error:', error);
+      logger.error('Update role menus error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };

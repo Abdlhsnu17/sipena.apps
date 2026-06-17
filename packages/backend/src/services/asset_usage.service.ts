@@ -10,8 +10,11 @@ import {
     UpdateAssetUsageLogDTO
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
+import { createScopedLogger } from '../utils/logger';
 import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
 import { AssetService } from './asset.service';
+
+const logger = createScopedLogger('service:asset-usage');
 
 interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
   borrowing_id?: number | null;
@@ -957,7 +960,7 @@ export class AssetUsageService {
         try {
           await this.syncBorrowingReturnAfterUsageComplete(updatedLog.data);
         } catch (error) {
-          console.warn('Failed to sync borrowing return after usage completion:', error);
+          logger.warn('Failed to sync borrowing return after usage completion', { error });
         }
       }
     }

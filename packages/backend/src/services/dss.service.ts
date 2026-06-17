@@ -1,5 +1,8 @@
 import { RowDataPacket } from 'mysql2';
 import pool from '../config/database';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('service:dss');
 
 type AssetType = 'medical' | 'non_medical';
 type CriterionType = 'benefit' | 'cost';
@@ -415,7 +418,7 @@ export class DssService {
       const ahpComputed = options.pairwiseMatrix ? calculateAhpWeights(options.pairwiseMatrix) : null;
       const useAhp = ahpComputed && ahpComputed.consistency && ahpComputed.consistency.isConsistent;
       if (ahpComputed && !useAhp) {
-        console.warn('DSS: provided AHP pairwise matrix is inconsistent (CR > 0.1) - falling back to provided/default weights');
+        logger.warn('Provided AHP pairwise matrix is inconsistent (CR > 0.1); falling back to provided/default weights');
       }
       const weights = normalizeWeights(useAhp ? ahpComputed!.weights : (options.weights || DEFAULT_WEIGHTS));
       const criteria = DEFAULT_CRITERIA.map((criterion) => ({ ...criterion, weight: weights[criterion.id] || 0 }));
@@ -427,7 +430,7 @@ export class DssService {
       const alternatives = this.buildAlternatives(assets, usageCounts, maintenanceCounts);
 
       if (!Array.isArray(alternatives) || alternatives.length === 0) {
-        console.warn('DSS: no alternatives found for ranking (empty dataset)');
+        logger.warn('No alternatives found for ranking (empty dataset)');
         return {
           criteria,
           consistency: ahpComputed?.consistency || null,
@@ -498,7 +501,7 @@ export class DssService {
         rankings,
       };
     } catch (err) {
-      console.error('DSS: error ranking assets', err instanceof Error ? err.message : err);
+      logger.error('Error ranking assets', { error: err });
       throw err;
     }
   }

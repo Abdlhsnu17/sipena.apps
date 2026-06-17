@@ -1,7 +1,10 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { ApiResponse, CreateUserActivityDTO, UserActivity } from '../models';
+import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
+
+const logger = createScopedLogger('service:user-activity');
 
 interface UserActivityRow extends RowDataPacket {
   id: number;
@@ -415,7 +418,7 @@ export const recordUserActivity = async (payload: CreateUserActivityDTO): Promis
   try {
     await userActivityService.create(payload);
   } catch (error) {
-    console.error('Failed to record user activity:', error);
+    logger.error('Failed to record user activity', { error });
   }
 };
 

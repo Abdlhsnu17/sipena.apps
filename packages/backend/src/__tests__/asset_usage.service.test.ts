@@ -303,8 +303,9 @@ describe('AssetUsageService usage completion status sync', () => {
       .mockResolvedValueOnce([[completedLog]]);
 
     jest.spyOn(service as any, 'syncAssetStateAfterUsage').mockResolvedValue(undefined);
-    jest.spyOn(service as any, 'syncBorrowingReturnAfterUsageComplete').mockRejectedValue(new Error('sync failed'));
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const syncBorrowingReturnSpy = jest
+      .spyOn(service as any, 'syncBorrowingReturnAfterUsageComplete')
+      .mockRejectedValue(new Error('sync failed'));
 
     const result = await service.update('7', {
       endedAt: '2026-05-23 10:00:00',
@@ -314,12 +315,10 @@ describe('AssetUsageService usage completion status sync', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.endedAt).toBe('2026-05-23T10:00:00');
-    expect(warnSpy).toHaveBeenCalledWith(
-      'Failed to sync borrowing return after usage completion:',
-      expect.any(Error)
-    );
-
-    warnSpy.mockRestore();
+    expect(syncBorrowingReturnSpy).toHaveBeenCalledWith(expect.objectContaining({
+      id: 7,
+      endedAt: '2026-05-23T10:00:00',
+    }));
   });
 
   it('skips sub-room validation for usage logs generated from borrowing', async () => {

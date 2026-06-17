@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import disposalService from '../services/asset_disposal.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:asset-disposal');
+
+const getAuthenticatedUserId = (req: Request): number | null => {
+  const userId = Number(req.user?.id);
+  return Number.isFinite(userId) && userId > 0 ? userId : null;
+};
 
 class AssetDisposalController {
   getAll = async (req: Request, res: Response): Promise<void> => {
@@ -18,7 +26,7 @@ class AssetDisposalController {
       });
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Get disposal requests error:', error);
+      logger.error('Get disposal requests error', { error });
       res.status(500).json({ success: false, message: 'Gagal mengambil data permintaan penghapusan' });
     }
   };
@@ -33,7 +41,7 @@ class AssetDisposalController {
       const result = await disposalService.getById(Number(req.params.id));
       res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
-      console.error('Get disposal request error:', error);
+      logger.error('Get disposal request error', { error });
       res.status(500).json({ success: false, message: 'Gagal mengambil data permintaan penghapusan' });
     }
   };
@@ -45,13 +53,19 @@ class AssetDisposalController {
       return;
     }
     try {
+      const requestedBy = getAuthenticatedUserId(req);
+      if (!requestedBy) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
       const result = await disposalService.create({
         ...req.body,
-        requestedBy: (req as any).user?.id,
+        requestedBy,
       });
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
-      console.error('Create disposal request error:', error);
+      logger.error('Create disposal request error', { error });
       res.status(500).json({ success: false, message: 'Gagal membuat permintaan penghapusan' });
     }
   };
@@ -63,13 +77,19 @@ class AssetDisposalController {
       return;
     }
     try {
+      const reviewedBy = getAuthenticatedUserId(req);
+      if (!reviewedBy) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
       const result = await disposalService.approve(Number(req.params.id), {
-        reviewedBy: (req as any).user?.id,
+        reviewedBy,
         reviewNotes: req.body.reviewNotes,
       });
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Approve disposal request error:', error);
+      logger.error('Approve disposal request error', { error });
       res.status(500).json({ success: false, message: 'Gagal menyetujui permintaan penghapusan' });
     }
   };
@@ -81,13 +101,19 @@ class AssetDisposalController {
       return;
     }
     try {
+      const reviewedBy = getAuthenticatedUserId(req);
+      if (!reviewedBy) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
       const result = await disposalService.reject(Number(req.params.id), {
-        reviewedBy: (req as any).user?.id,
+        reviewedBy,
         reviewNotes: req.body.reviewNotes,
       });
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Reject disposal request error:', error);
+      logger.error('Reject disposal request error', { error });
       res.status(500).json({ success: false, message: 'Gagal menolak permintaan penghapusan' });
     }
   };
@@ -102,7 +128,7 @@ class AssetDisposalController {
       const result = await disposalService.delete(Number(req.params.id));
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Delete disposal request error:', error);
+      logger.error('Delete disposal request error', { error });
       res.status(500).json({ success: false, message: 'Gagal membatalkan permintaan penghapusan' });
     }
   };
