@@ -26,6 +26,12 @@ import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles,
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+const getInventoryStatusLabel = (status?: string) => {
+  if (status === "Aktif") return "Tersedia"
+  if (status === "Non-Aktif") return "Nonaktif"
+  return status || "Tersedia"
+}
+
 export default function MedicalAssetsPage() {
   const router = useRouter()
   const { confirm } = useConfirm()
@@ -717,7 +723,9 @@ export default function MedicalAssetsPage() {
                         <p className="text-muted-foreground text-center py-4 text-sm">Belum ada detail inventaris</p>
                       ) : (
                         <div className="grid gap-3 md:grid-cols-2 auto-rows-fr">
-                          {assetsToDisplay.map((asset) => (
+                          {assetsToDisplay.map((asset) => {
+                            const statusLabel = getInventoryStatusLabel(asset.status)
+                            return (
                             <div
                               key={asset.id}
                               className="border border-border rounded-lg p-3 hover:bg-muted/50 h-full flex flex-col justify-between gap-4"
@@ -732,18 +740,18 @@ export default function MedicalAssetsPage() {
                                     <Badge
                                       variant="outline"
                                       className={`text-xs border ${
-                                        asset.status === "Tersedia" || asset.status === "Aktif"
+                                        statusLabel === "Tersedia"
                                           ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                                          : asset.status === "Dalam Perbaikan"
+                                          : statusLabel === "Dalam Perbaikan"
                                             ? "bg-amber-100 border-amber-300 text-amber-900"
-                                            : asset.status === "Dipinjam"
+                                            : statusLabel === "Dipinjam"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"
-                                            : asset.status === "Sedang Digunakan"
+                                            : statusLabel === "Sedang Digunakan"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"
                                               : "bg-rose-100 border-rose-300 text-rose-800"
                                       }`}
                                     >
-                                      {asset.status}
+                                      {statusLabel}
                                     </Badge>
                                     <Badge
                                       variant="outline"
@@ -861,7 +869,8 @@ export default function MedicalAssetsPage() {
                                 )}
                               </div>
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </CardContent>

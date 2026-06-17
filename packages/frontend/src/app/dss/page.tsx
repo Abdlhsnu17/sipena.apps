@@ -66,6 +66,15 @@ const assetTypeLabel = (value: DssAssetType | DssAssetRanking["assetType"]) => {
   return "Semua"
 }
 
+const inventoryStatusLabel = (status?: string | null) => {
+  if (status === "Aktif" || status === "available") return "Tersedia"
+  if (status === "Non-Aktif" || status === "Nonaktif" || status === "disposed") return "Nonaktif"
+  if (status === "borrowed") return "Dipinjam"
+  if (status === "in_use") return "Sedang Digunakan"
+  if (status === "maintenance") return "Dalam Perbaikan"
+  return status || "Tersedia"
+}
+
 const recommendationClassName = (recommendation: string) => {
   const normalized = recommendation.toLowerCase()
   if (normalized.includes("tinggi")) return "border-red-200 bg-red-50 text-red-700"
@@ -146,6 +155,7 @@ const buildClientFallbackRanking = async (
   }))
 
   const alternatives = detailItems.map((item) => {
+    const statusLabel = inventoryStatusLabel(item.statusLabel || item.availability)
     const criteriaScores: Record<string, number> = {
       condition: conditionScore(item.conditionLabel || item.condition),
       age: ageScore((item as typeof item & { purchaseDate?: string }).purchaseDate),
@@ -153,7 +163,7 @@ const buildClientFallbackRanking = async (
       usageFrequency: 0,
       maintenanceHistory: item.lastMaintenance || item.lastRepair ? 1 : 0,
       functionalUrgency: functionalUrgencyScore(item.detailName, item.detailType, item.assetCategory),
-      statusRisk: statusRiskScore(item.statusLabel || item.availability),
+      statusRisk: statusRiskScore(statusLabel),
     }
 
     return {
@@ -169,7 +179,7 @@ const buildClientFallbackRanking = async (
       serialNumber: item.serialNumber,
       detailType: item.detailType,
       conditionLabel: item.conditionLabel || item.condition,
-      statusLabel: item.statusLabel || item.availability,
+      statusLabel,
       purchaseDate: undefined,
       lastMaintenance: item.lastMaintenance,
       lastRepair: item.lastRepair,
@@ -570,27 +580,30 @@ export default function DssPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 bg-white">
-                    {paginatedRankings.map((item) => (
-                      <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50">
-                        <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{item.rank}</td>
-                        <td className="px-3 py-2.5 align-top">
-                          <div className="font-semibold text-slate-950">{item.detailName}</div>
-                          <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.serialNumber || "-"}</div>
-                        </td>
-                        <td className="px-3 py-2.5 align-top text-slate-700">{item.assetLocation || "-"}</td>
-                        <td className="px-3 py-2.5 align-top">
-                          <Badge variant="outline">{assetTypeLabel(item.assetType)}</Badge>
-                        </td>
-                        <td className="px-3 py-2.5 align-top text-slate-700">{item.conditionLabel}</td>
-                        <td className="px-3 py-2.5 align-top text-slate-700">{item.statusLabel}</td>
-                        <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{formatScore(item.preferenceScore)}</td>
-                        <td className="px-3 py-2.5 align-top">
-                          <Badge variant="outline" className={recommendationClassName(item.recommendation)}>
-                            {item.recommendation}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {paginatedRankings.map((item) => {
+                      const statusLabel = inventoryStatusLabel(item.statusLabel)
+                      return (
+                        <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50">
+                          <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{item.rank}</td>
+                          <td className="px-3 py-2.5 align-top">
+                            <div className="font-semibold text-slate-950">{item.detailName}</div>
+                            <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.serialNumber || "-"}</div>
+                          </td>
+                          <td className="px-3 py-2.5 align-top text-slate-700">{item.assetLocation || "-"}</td>
+                          <td className="px-3 py-2.5 align-top">
+                            <Badge variant="outline">{assetTypeLabel(item.assetType)}</Badge>
+                          </td>
+                          <td className="px-3 py-2.5 align-top text-slate-700">{item.conditionLabel}</td>
+                          <td className="px-3 py-2.5 align-top text-slate-700">{statusLabel}</td>
+                          <td className="px-3 py-2.5 align-top font-semibold text-slate-950">{formatScore(item.preferenceScore)}</td>
+                          <td className="px-3 py-2.5 align-top">
+                            <Badge variant="outline" className={recommendationClassName(item.recommendation)}>
+                              {item.recommendation}
+                            </Badge>
+                          </td>
+                        </tr>
+                      )
+                    })}
                     {filteredRankings.length === 0 && (
                       <tr>
                         <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">

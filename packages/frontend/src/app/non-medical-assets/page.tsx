@@ -32,6 +32,12 @@ const normalizeNonMedicalDetailId = (
   index: number,
 ) => String(detail.id || detail.assetCode || detail.serialNumber || `${roomId}-detail-${index + 1}`)
 
+const getInventoryStatusLabel = (status?: string) => {
+  if (status === "Aktif") return "Tersedia"
+  if (status === "Non-Aktif") return "Nonaktif"
+  return status || "Tersedia"
+}
+
 export default function NonMedicalAssetsPage() {
   const router = useRouter()
   const { confirm } = useConfirm()
@@ -763,6 +769,7 @@ export default function NonMedicalAssetsPage() {
                         <div className="grid gap-3 md:grid-cols-2 auto-rows-fr">
                           {assetsToDisplay.map((asset, assetIndex) => {
                             const assetKey = asset.id ?? `${room.id}-${assetIndex}`
+                            const statusLabel = getInventoryStatusLabel(asset.status)
                             return (
                               <div
                                 key={assetKey}
@@ -778,18 +785,18 @@ export default function NonMedicalAssetsPage() {
                                     <Badge
                                       variant="outline"
                                       className={`text-xs border ${
-                                        asset.status === "Tersedia" || asset.status === "Aktif"
+                                        statusLabel === "Tersedia"
                                           ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                                          : asset.status === "Dalam Perbaikan"
+                                          : statusLabel === "Dalam Perbaikan"
                                             ? "bg-amber-100 border-amber-300 text-amber-900"
-                                            : asset.status === "Dipinjam"
+                                            : statusLabel === "Dipinjam"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"
-                                            : asset.status === "Sedang Digunakan"
+                                            : statusLabel === "Sedang Digunakan"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"
                                               : "bg-rose-100 border-rose-300 text-rose-800"
                                       }`}
                                     >
-                                      {asset.status}
+                                      {statusLabel}
                                     </Badge>
                                     <Badge
                                       variant="outline"
