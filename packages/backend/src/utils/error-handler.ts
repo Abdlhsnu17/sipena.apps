@@ -3,6 +3,10 @@
  * Provides consistent error logging and response handling across services
  */
 
+import { createScopedLogger } from './logger';
+
+const baseLogger = createScopedLogger('service-error');
+
 export enum ErrorLevel {
   DEBUG = 'debug',
   INFO = 'info',
@@ -38,17 +42,17 @@ export class ServiceLogger {
 
     switch (level) {
       case ErrorLevel.DEBUG:
-        console.debug(logMessage);
+        baseLogger.debug(logMessage);
         break;
       case ErrorLevel.INFO:
-        console.info(logMessage);
+        baseLogger.info(logMessage);
         break;
       case ErrorLevel.WARN:
-        console.warn(logMessage);
+        baseLogger.warn(logMessage);
         break;
       case ErrorLevel.ERROR:
       case ErrorLevel.CRITICAL:
-        console.error(logMessage);
+        baseLogger.error(logMessage);
         break;
     }
   }

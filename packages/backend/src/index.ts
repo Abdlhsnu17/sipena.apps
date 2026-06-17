@@ -28,6 +28,7 @@ import {
     withSchemaLock
 } from './utils/schema';
 import { getProfileUploadsDir } from './utils/storage-paths';
+import { createScopedLogger } from './utils/logger';
 
 // Routes
 import assetRoutes from './routes/asset.routes';
@@ -50,6 +51,7 @@ import userActivityRoutes from './routes/user_activity.routes';
 // Load environment variables
 loadEnvironment();
 applyDevelopmentEnvDefaults();
+const logger = createScopedLogger('server');
 
 // Validate required environment variables
 const validateEnvironment = () => {
@@ -108,14 +110,13 @@ const validateEnvironment = () => {
   }
 
   if (missing.length > 0) {
-    console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-    console.error('Please ensure all variables are set in your .env file');
+    logger.error('Missing required environment variables', { missing });
+    logger.error('Please ensure all variables are set in your .env file');
     process.exit(1);
   }
 
   if (invalid.length > 0) {
-    console.error('❌ Invalid production environment configuration:');
-    invalid.forEach((message) => console.error(`- ${message}`));
+    logger.error('Invalid production environment configuration', { invalid });
     process.exit(1);
   }
 };
@@ -256,9 +257,9 @@ app.use('/api/dss', authMiddleware, dssRoutes);
 // Set ALLOW_DSS_DEBUG=true in your local env to enable this route.
 if (!isProduction && process.env.ALLOW_DSS_DEBUG === 'true') {
   app.use('/api/dss-debug', dssRoutes);
-  console.log('⚠️ DSS debug routes mounted at /api/dss-debug (dev only)');
+  logger.warn('DSS debug routes mounted at /api/dss-debug (dev only)');
 } else if (!isProduction && process.env.ALLOW_DSS_DEBUG !== 'true') {
-  console.log('ℹ️ DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
+  logger.info('DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
 }
 app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
 app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
@@ -294,29 +295,31 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
     const server = app.listen(port);
 
     server.on('listening', () => {
-      console.log(`🚀 Server running on port ${port}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-      console.log(`🌐 API URL: http://localhost:${port}`);
+      logger.info('Server started', {
+        port,
+        environment: process.env.NODE_ENV || 'development',
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        apiUrl: `http://localhost:${port}`,
+      });
     });
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err && err.code === 'EADDRINUSE') {
-        console.error(`⚠️ Port ${port} is already in use.`);
+        logger.warn('Port is already in use', { port });
         server.close?.();
         if (attempt < maxAttempts) {
           const nextPort = port + 1;
-          console.log(`ℹ️ Trying next port ${nextPort} (attempt ${attempt + 1}/${maxAttempts})`);
+          logger.info('Trying next port', { nextPort, attempt: attempt + 1, maxAttempts });
           // small delay before retrying
           setTimeout(() => tryListen(nextPort), 200);
           return;
         }
-        console.error('❌ All port attempts failed. Please free the port or set PORT to another value.');
+        logger.error('All port attempts failed. Please free the port or set PORT to another value.');
         process.exit(1);
       }
 
       // For other errors, rethrow to surface the problem
-      console.error('❌ HTTP server error:', err);
+      logger.error('HTTP server error', { error: err });
       process.exit(1);
     });
   };
@@ -332,7 +335,7 @@ const initializeInfrastructure = async (): Promise<void> => {
     try {
       await connectDatabase();
       infrastructureStatus.database = 'up';
-      console.log('✅ Database connected successfully');
+      logger.info('Database connected successfully');
 
       await withSchemaLock(async () => {
         await ensureCoreSchemaInitialized();
@@ -356,23 +359,24 @@ const initializeInfrastructure = async (): Promise<void> => {
       const redisConnected = await connectRedis();
       if (redisConnected) {
         infrastructureStatus.redis = 'up';
-        console.log('✅ Redis connected successfully');
+        logger.info('Redis connected successfully');
       } else {
         if (isProduction) {
           infrastructureStatus.redis = 'down';
           throw new Error('Redis wajib aktif di production');
         }
         infrastructureStatus.redis = 'optional-down';
-        console.log('⚠️ Redis not available - continuing without Redis');
+        logger.warn('Redis not available - continuing without Redis');
       }
 
-      console.log('✅ Startup initialization complete');
+      logger.info('Startup initialization complete');
       return;
     } catch (error) {
-      console.error(
-        `❌ Startup initialization attempt ${attempt}/${STARTUP_RETRY_ATTEMPTS} failed:`,
-        error
-      );
+      logger.error('Startup initialization attempt failed', {
+        attempt,
+        maxAttempts: STARTUP_RETRY_ATTEMPTS,
+        error,
+      });
       infrastructureStatus.database = 'down';
       infrastructureStatus.schema = 'down';
 
@@ -382,11 +386,11 @@ const initializeInfrastructure = async (): Promise<void> => {
       }
 
       if (isProduction) {
-        console.error('❌ Startup initialization failed in production. Exiting.');
+        logger.error('Startup initialization failed in production. Exiting.');
         process.exit(1);
       }
 
-      console.error('⚠️ Continuing to serve while startup initialization remains unavailable.');
+      logger.warn('Continuing to serve while startup initialization remains unavailable.');
       return;
     }
   }
@@ -396,27 +400,27 @@ void initializeInfrastructure();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: Error | any, promise: Promise<any>) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  if (reason instanceof Error) {
-    console.error('Stack:', reason.stack);
-  }
+  logger.error('Unhandled promise rejection', {
+    promise,
+    reason,
+    stack: reason instanceof Error ? reason.stack : undefined,
+  });
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
+  logger.error('Uncaught exception', { error, stack: error.stack });
   process.exit(1);
 });
 

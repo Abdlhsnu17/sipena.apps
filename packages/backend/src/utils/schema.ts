@@ -2,6 +2,9 @@ import fs from 'fs';
 import mysql, { RowDataPacket } from 'mysql2/promise';
 import path from 'path';
 import pool from '../config/database';
+import { createScopedLogger } from './logger';
+
+const logger = createScopedLogger('schema');
 
 let ensuredNonMedicalSpecificationsColumn = false;
 let ensuredNonMedicalConditionColumn = false;
@@ -89,9 +92,9 @@ export async function ensureCoreSchemaInitialized(): Promise<void> {
   });
 
   try {
-    console.log(`🛠️ Initializing empty database from schema file: ${schemaPath}`);
+    logger.info('Initializing empty database from schema file', { schemaPath });
     await connection.query(sql);
-    console.log('✅ Core database schema initialized');
+    logger.info('Core database schema initialized');
   } finally {
     await connection.end();
   }

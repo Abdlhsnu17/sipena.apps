@@ -1,8 +1,10 @@
 import { createClient, RedisClientType } from 'redis';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './env';
+import { createScopedLogger } from '../utils/logger';
 
 loadEnvironment();
 applyDevelopmentEnvDefaults();
+const logger = createScopedLogger('config:redis');
 
 const redisClient: RedisClientType = createClient({
   socket: {
@@ -17,9 +19,9 @@ export const connectRedis = async (): Promise<boolean> => {
     await redisClient.connect();
     return true;
   } catch (error) {
-    console.error('⚠️ Redis connection failed:', error);
+    logger.warn('Redis connection failed', { error });
     if ((process.env.NODE_ENV || 'development') !== 'production') {
-      console.log('⚠️ Continuing without Redis - some features may be limited');
+      logger.info('Continuing without Redis - some features may be limited');
     }
     // Don't throw error - allow app to continue without Redis
     return false;
@@ -29,9 +31,9 @@ export const connectRedis = async (): Promise<boolean> => {
 export const disconnectRedis = async (): Promise<void> => {
   try {
     await redisClient.disconnect();
-    console.log('✅ Redis disconnected');
+    logger.info('Redis disconnected');
   } catch (error) {
-    console.error('❌ Redis disconnection failed:', error);
+    logger.error('Redis disconnection failed', { error });
   }
 };
 

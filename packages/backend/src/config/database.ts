@@ -1,8 +1,10 @@
 import mysql from 'mysql2/promise';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './env';
+import { createScopedLogger } from '../utils/logger';
 
 loadEnvironment();
 applyDevelopmentEnvDefaults();
+const logger = createScopedLogger('config:database');
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
   const parsedValue = Number.parseInt(value || '', 10);
@@ -37,7 +39,7 @@ export const connectDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     connection.release();
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    logger.error('Database connection failed', { error });
     throw error;
   }
 };
@@ -45,9 +47,9 @@ export const connectDatabase = async (): Promise<void> => {
 export const disconnectDatabase = async (): Promise<void> => {
   try {
     await pool.end();
-    console.log('✅ Database disconnected');
+    logger.info('Database disconnected');
   } catch (error) {
-    console.error('❌ Database disconnection failed:', error);
+    logger.error('Database disconnection failed', { error });
   }
 };
 

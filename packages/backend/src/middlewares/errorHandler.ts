@@ -1,4 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('middleware:error');
 
 interface ErrorResponse {
   success: false;
@@ -14,7 +17,7 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  console.error('Error:', {
+  logger.error('Unhandled request error', {
     requestId: req.requestId,
     method: req.method,
     path: req.originalUrl,

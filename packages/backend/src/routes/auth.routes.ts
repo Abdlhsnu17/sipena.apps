@@ -4,9 +4,11 @@ import multer from 'multer';
 import path from 'path';
 import authController from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { createScopedLogger } from '../utils/logger';
 import { getProfileUploadsDir } from '../utils/storage-paths';
 
 const router = Router();
+const logger = createScopedLogger('routes:auth');
 const profileUploadDir = getProfileUploadsDir();
 const ALLOWED_PROFILE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const ALLOWED_PROFILE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -98,7 +100,7 @@ router.patch(
   (req, res, next) => {
     profileUpload.single('photo')(req, res, (err) => {
       if (err) {
-        console.error('[Multer Error]', err);
+        logger.warn('Profile photo upload rejected', { error: err });
         return res.status(400).json({
           success: false,
           message: err.message || 'File upload failed'

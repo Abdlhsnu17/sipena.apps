@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { createScopedLogger } from '../utils/logger';
 
 let hasLoadedEnv = false;
 let hasWarnedAboutDevJwtSecret = false;
+const logger = createScopedLogger('config:env');
 const DB_PASSWORD_PLACEHOLDERS = new Set([
   'your_secure_password_here',
   'changeme',
@@ -64,7 +66,7 @@ export const applyDevelopmentEnvDefaults = (): void => {
   process.env.JWT_SECRET ||= DEVELOPMENT_JWT_SECRET;
 
   if (process.env.JWT_SECRET === DEVELOPMENT_JWT_SECRET && !hasWarnedAboutDevJwtSecret) {
-    console.warn('⚠️ Menggunakan JWT secret development default. Jangan gunakan nilai ini di production.');
+    logger.warn('Menggunakan JWT secret development default. Jangan gunakan nilai ini di production.');
     hasWarnedAboutDevJwtSecret = true;
   }
 };
