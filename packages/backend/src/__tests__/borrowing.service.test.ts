@@ -317,6 +317,60 @@ describe('BorrowingService borrowing lock rules', () => {
     consoleSpy.mockRestore();
   });
 
+  it('releases a pending detail borrowing when rejected from snake_case database rows', async () => {
+    jest.spyOn(service, 'getById')
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 44,
+          asset_id: 12,
+          asset_type: 'non_medical',
+          asset_detail_id: 'NMD-ANGPTH-AHU',
+          asset_detail_code: 'NMD-ANGPTH-AHU',
+          user_id: 5,
+          status: 'pending',
+          borrow_date: new Date(2026, 5, 16, 9, 0, 0),
+          due_date: new Date(2026, 5, 17, 9, 0, 0),
+          purpose: 'Operasional unit',
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'Borrowing retrieved successfully',
+        data: {
+          id: 44,
+          asset_id: 12,
+          asset_type: 'non_medical',
+          asset_detail_id: 'NMD-ANGPTH-AHU',
+          asset_detail_code: 'NMD-ANGPTH-AHU',
+          user_id: 5,
+          status: 'rejected',
+          rejection_reason: 'Jadwal bentrok',
+          borrow_date: new Date(2026, 5, 16, 9, 0, 0),
+          due_date: new Date(2026, 5, 17, 9, 0, 0),
+          purpose: 'Operasional unit',
+        } as any,
+      });
+
+    const syncMasterSpy = jest.spyOn(service as any, 'syncAssetMasterAfterValidatedReturn').mockResolvedValue(undefined);
+    const syncDetailSpy = jest.spyOn(service as any, 'syncAssetDetailBorrowingState').mockResolvedValue(undefined);
+    mockedQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+
+    const result = await service.reject('44', 99, 'Jadwal bentrok');
+
+    expect(result.success).toBe(true);
+    expect(result.data?.status).toBe('rejected');
+    expect(syncMasterSpy).toHaveBeenCalledWith(12, 'non_medical', {
+      borrowingId: '44',
+      assetDetailId: 'NMD-ANGPTH-AHU',
+    });
+    expect(syncDetailSpy).toHaveBeenCalledWith(12, 'non_medical', {
+      detailId: 'NMD-ANGPTH-AHU',
+      detailCode: 'NMD-ANGPTH-AHU',
+    });
+  });
+
   it('restores an overdue borrowing to borrowed after due date is extended to the future', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])

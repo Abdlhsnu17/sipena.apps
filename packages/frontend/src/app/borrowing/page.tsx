@@ -1729,7 +1729,7 @@ export default function BorrowingPage() {
   const activeBorrowingAssetLocks = new Set<string>()
   const activeBorrowingDetailLocks = new Set<string>()
 
-  visibleBorrowings.forEach((borrowing) => {
+  activeBorrowings.forEach((borrowing) => {
     const assetType = borrowing.assetType === "non_medical" ? "non_medical" : "medical"
     const baseLockKey = `${assetType}|${borrowing.assetId}`
     const detailId = normalizeDetailIdentifier(borrowing.assetDetailId)

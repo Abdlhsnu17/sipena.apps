@@ -505,6 +505,21 @@ export class BorrowingService {
     return normalizedStatus === 'returned' && !returnValidatedAt;
   }
 
+  private getBorrowingAssetContext(borrowing: any): {
+    assetId: number;
+    assetType: string;
+    assetDetailId: string | null;
+    assetDetailCode: string | null;
+  } {
+    const assetId = Number(borrowing?.assetId ?? borrowing?.asset_id);
+    return {
+      assetId,
+      assetType: borrowing?.assetType ?? borrowing?.asset_type ?? 'medical',
+      assetDetailId: borrowing?.assetDetailId ?? borrowing?.asset_detail_id ?? null,
+      assetDetailCode: borrowing?.assetDetailCode ?? borrowing?.asset_detail_code ?? null,
+    };
+  }
+
   private getBorrowingLockWhereClause(statusColumn: string, returnValidatedColumn: string): string {
     return `(${statusColumn} IN ('pending', 'approved', 'borrowed', 'overdue') OR (${statusColumn} = 'returned' AND ${returnValidatedColumn} IS NULL))`;
   }
@@ -1266,10 +1281,15 @@ export class BorrowingService {
       return { success: false, message: 'Only pending borrowings can be approved' };
     }
 
+    const assetContext = this.getBorrowingAssetContext(borrowing.data);
+    if (!Number.isFinite(assetContext.assetId) || assetContext.assetId <= 0) {
+      return { success: false, message: 'Data aset peminjaman tidak valid' };
+    }
+
     const isAssetFallbackDetail = this.isAssetFallbackDetailId(
-      borrowing.data?.assetDetailId,
-      borrowing.data?.assetId,
-      borrowing.data?.assetType
+      assetContext.assetDetailId,
+      assetContext.assetId,
+      assetContext.assetType
     );
     
     await pool.query(
@@ -1279,17 +1299,17 @@ export class BorrowingService {
 
     try {
       // Update status aset (pastikan mengirim assetType yang benar ke AssetService)
-      if (!borrowing.data?.assetDetailId || isAssetFallbackDetail) {
+      if (!assetContext.assetDetailId || isAssetFallbackDetail) {
         await this.assetService.updateStatus(
-          String(borrowing.data.assetId),
+          String(assetContext.assetId),
           'borrowed',
-          borrowing.data.assetType || 'medical'
+          assetContext.assetType
         );
       }
 
-      await this.syncAssetDetailBorrowingState(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
-        detailId: borrowing.data.assetDetailId || null,
-        detailCode: borrowing.data.assetDetailCode || null
+      await this.syncAssetDetailBorrowingState(assetContext.assetId, assetContext.assetType, {
+        detailId: assetContext.assetDetailId,
+        detailCode: assetContext.assetDetailCode
       });
     } catch (syncError) {
       console.error('Approve borrowing asset sync error:', syncError);
@@ -1298,17 +1318,15 @@ export class BorrowingService {
     // Create asset usage log on approve if the borrowing should be considered started.
     // Existing active usage is reused to avoid duplicate rows.
     try {
-      const assetId = Number(borrowing.data.assetId);
-      const assetType = borrowing.data.assetType || 'medical';
       const startedAt = normalizeDateInput(borrowing.data.borrowDate) || new Date();
 
       await this.ensureUsageLogForBorrowing({
         borrowingId: borrowing.data.id,
-        assetId,
-        assetType,
-        assetDetailId: borrowing.data.assetDetailId || null,
+        assetId: assetContext.assetId,
+        assetType: assetContext.assetType,
+        assetDetailId: assetContext.assetDetailId,
         assetDetailName: borrowing.data.assetDetailName || null,
-        assetDetailCode: borrowing.data.assetDetailCode || null,
+        assetDetailCode: assetContext.assetDetailCode,
         assetLocation: borrowing.data.assetLocation || '',
         roomName: borrowing.data.destinationRoom || '',
         operatorUserId: borrowing.data.userId,
@@ -1411,23 +1429,28 @@ export class BorrowingService {
       return { success: false, message: 'Only pending borrowings can be rejected' };
     }
 
+    const assetContext = this.getBorrowingAssetContext(borrowing.data);
+    if (!Number.isFinite(assetContext.assetId) || assetContext.assetId <= 0) {
+      return { success: false, message: 'Data aset peminjaman tidak valid' };
+    }
+
     await pool.query(
       'UPDATE borrowing_records SET status = ?, rejected_by = ?, rejected_at = NOW(), rejection_reason = ?, updated_at = NOW() WHERE id = ?',
       ['rejected', rejectedBy, reason, id]
     );
 
     try {
-      await this.syncAssetMasterAfterValidatedReturn(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
+      await this.syncAssetMasterAfterValidatedReturn(assetContext.assetId, assetContext.assetType, {
         borrowingId: id,
-        assetDetailId: borrowing.data.assetDetailId || null
+        assetDetailId: assetContext.assetDetailId
       });
     } catch (syncError) {
       console.error('Reject borrowing asset master sync error:', syncError);
     }
 
-    await this.syncAssetDetailBorrowingState(borrowing.data.assetId, borrowing.data.assetType || 'medical', {
-      detailId: borrowing.data.assetDetailId || null,
-      detailCode: borrowing.data.assetDetailCode || null
+    await this.syncAssetDetailBorrowingState(assetContext.assetId, assetContext.assetType, {
+      detailId: assetContext.assetDetailId,
+      detailCode: assetContext.assetDetailCode
     });
 
     // Send rejection email (fire-and-forget)

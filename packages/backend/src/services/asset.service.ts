@@ -83,7 +83,7 @@ interface TableExistsRow extends RowDataPacket {
   table_exists: number;
 }
 
-const IN_USE_DETAIL_STATUSES = new Set(['Sedang Digunakan', 'Dalam Penggunaan']);
+const RECONCILABLE_DETAIL_STATUSES = new Set(['Dipinjam', 'borrowed', 'Sedang Digunakan', 'Dalam Penggunaan']);
 
 export class AssetService {
   private async tableExists(connection: any, tableName: string): Promise<boolean> {
@@ -209,7 +209,7 @@ export class AssetService {
 
       for (const rawDetail of details) {
         const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
-        if (!detail || typeof detail !== 'object' || !IN_USE_DETAIL_STATUSES.has(detail.status)) {
+        if (!detail || typeof detail !== 'object' || !RECONCILABLE_DETAIL_STATUSES.has(detail.status)) {
           updatedDetails.push(rawDetail);
           continue;
         }
