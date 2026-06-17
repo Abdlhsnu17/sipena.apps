@@ -376,36 +376,6 @@ export class AssetUsageService {
     return normalized.includes('rusak') || normalized.includes('damaged') || normalized.includes('broken');
   }
 
-  private async hasActiveUsageForBorrowing(assetId: number, assetType: AssetType, detailId?: string | null): Promise<boolean> {
-    const normalizedAssetType = this.normalizeAssetType(assetType);
-    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
-    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
-
-    if (!normalizedDetailId || isFallbackDetail) {
-      const [rows] = await pool.query<CountRow[]>(
-        `SELECT COUNT(*) as count
-         FROM asset_usage_logs
-         WHERE asset_id = ?
-           AND COALESCE(asset_type, 'medical') = ?
-           AND ended_at IS NULL`,
-        [assetId, normalizedAssetType]
-      );
-      return (rows[0]?.count || 0) > 0;
-    }
-
-    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
-    const [rows] = await pool.query<CountRow[]>(
-      `SELECT COUNT(*) as count
-       FROM asset_usage_logs
-       WHERE asset_id = ?
-         AND COALESCE(asset_type, 'medical') = ?
-         AND ended_at IS NULL
-         AND (asset_detail_id = ? OR asset_detail_id IS NULL OR asset_detail_id IN (?, ?))`,
-      [assetId, normalizedAssetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
-    );
-    return (rows[0]?.count || 0) > 0;
-  }
-
   private async hasActiveUsageForAssetDetail(
     assetId: number,
     assetType: AssetType,
@@ -507,10 +477,6 @@ export class AssetUsageService {
       const detailId = this.normalizeDetailIdentifier(row.asset_detail_id);
 
       if (await this.hasUsageForBorrowingId(row.id)) {
-        continue;
-      }
-
-      if (await this.hasActiveUsageForBorrowing(assetId, assetType, detailId || null)) {
         continue;
       }
 

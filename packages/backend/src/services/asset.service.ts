@@ -214,17 +214,17 @@ export class AssetService {
           continue;
         }
 
-        const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail);
-        if (hasActiveUsage) {
-          updatedDetails.push(rawDetail);
-          continue;
-        }
-
         const hasActiveBorrowing = await this.hasActiveBorrowingForDetail(Number(row.id), normalizedAssetType, detail);
         if (hasActiveBorrowing) {
           detail.status = 'Dipinjam';
           hasChanges = true;
           updatedDetails.push(detail);
+          continue;
+        }
+
+        const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail);
+        if (hasActiveUsage) {
+          updatedDetails.push(rawDetail);
           continue;
         }
 

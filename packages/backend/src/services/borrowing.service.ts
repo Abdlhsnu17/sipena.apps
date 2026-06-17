@@ -250,10 +250,6 @@ export class BorrowingService {
       if (existingUsageRows.length > 0) return;
     }
 
-    if (await this.hasActiveUsage(assetId, assetType, detailId || null)) {
-      return;
-    }
-
     const startedAt = normalizeDateInput(data.startedAt as any) || new Date();
     const roomName = normalizeOptionalText(data.roomName) || normalizeOptionalText(data.assetLocation) || '-';
     const actorId = Number(data.createdBy || data.operatorUserId || 0);
