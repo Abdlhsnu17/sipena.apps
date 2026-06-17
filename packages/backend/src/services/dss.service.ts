@@ -88,13 +88,13 @@ interface MaintenanceCountRow extends CountRow {
 }
 
 const DEFAULT_CRITERIA: Array<Omit<DssCriterion, 'weight'>> = [
-  { id: 'condition', name: 'Kondisi Aset', type: 'cost' },
-  { id: 'age', name: 'Usia Aset', type: 'cost' },
-  { id: 'maintenanceDue', name: 'Kedekatan Jadwal Maintenance', type: 'cost' },
+  { id: 'condition', name: 'Kondisi Aset', type: 'benefit' },
+  { id: 'age', name: 'Usia Aset', type: 'benefit' },
+  { id: 'maintenanceDue', name: 'Kedekatan Jadwal Maintenance', type: 'benefit' },
   { id: 'usageFrequency', name: 'Frekuensi Pemakaian', type: 'benefit' },
-  { id: 'maintenanceHistory', name: 'Riwayat Maintenance', type: 'cost' },
+  { id: 'maintenanceHistory', name: 'Riwayat Maintenance', type: 'benefit' },
   { id: 'functionalUrgency', name: 'Urgensi Fungsi', type: 'benefit' },
-  { id: 'statusRisk', name: 'Risiko Status', type: 'cost' },
+  { id: 'statusRisk', name: 'Risiko Status', type: 'benefit' },
 ];
 
 const DEFAULT_WEIGHTS: Record<string, number> = {

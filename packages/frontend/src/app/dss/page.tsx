@@ -26,13 +26,13 @@ const DEFAULT_WEIGHTS: Record<string, number> = {
 }
 
 const DEFAULT_CRITERIA: DssRankingResult["criteria"] = [
-  { id: "condition", name: "Kondisi Aset", type: "cost", weight: 0 },
-  { id: "age", name: "Usia Aset", type: "cost", weight: 0 },
-  { id: "maintenanceDue", name: "Kedekatan Jadwal Maintenance", type: "cost", weight: 0 },
+  { id: "condition", name: "Kondisi Aset", type: "benefit", weight: 0 },
+  { id: "age", name: "Usia Aset", type: "benefit", weight: 0 },
+  { id: "maintenanceDue", name: "Kedekatan Jadwal Maintenance", type: "benefit", weight: 0 },
   { id: "usageFrequency", name: "Frekuensi Pemakaian", type: "benefit", weight: 0 },
-  { id: "maintenanceHistory", name: "Riwayat Maintenance", type: "cost", weight: 0 },
+  { id: "maintenanceHistory", name: "Riwayat Maintenance", type: "benefit", weight: 0 },
   { id: "functionalUrgency", name: "Urgensi Fungsi", type: "benefit", weight: 0 },
-  { id: "statusRisk", name: "Risiko Status", type: "cost", weight: 0 },
+  { id: "statusRisk", name: "Risiko Status", type: "benefit", weight: 0 },
 ]
 
 const criteriaHelp: Record<string, string> = {

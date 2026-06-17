@@ -55,6 +55,9 @@ describe('DssService.rankAssets', () => {
       expect(Number.isFinite(r.negativeDistance)).toBe(true);
       Object.values(r.weightedScores).forEach((v) => expect(Number.isFinite(v)).toBe(true));
     }
+
+    expect(result.rankings[0].assetCode).toBe('T-2');
+    expect(result.rankings[0].criteriaScores.condition).toBeGreaterThan(result.rankings[1].criteriaScores.condition);
   });
 
   test('falls back to default weights when provided weights sum to zero', async () => {
