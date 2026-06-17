@@ -1312,13 +1312,13 @@ export default function AssetUsagePage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleStatusChange(log, "completed")}
-                                    className="h-8 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
+                                    className="h-7 rounded-full bg-teal-600 px-2.5 text-[11px] font-semibold text-white hover:bg-teal-700"
                                   >
                                     Selesaikan
                                   </Button>
                                 ) : (
                                   <span
-                                    className="inline-flex h-8 items-center rounded-full border border-slate-200 bg-slate-100 px-3 text-[12px] font-medium text-slate-400"
+                                    className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 text-[11px] font-medium text-slate-400"
                                     title="Hanya admin, leader, atau pengguna pemilik riwayat yang dapat menyelesaikan pemakaian ini"
                                   >
                                     Selesaikan
@@ -1328,7 +1328,7 @@ export default function AssetUsagePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                                className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => openEditDialog(log)}
                                 aria-label="Edit log penggunaan"
                                 title="Edit"
@@ -1340,7 +1340,7 @@ export default function AssetUsagePage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                                     aria-label="Unduh penggunaan"
                                     title="Unduh penggunaan"
                                   >
@@ -1358,7 +1358,7 @@ export default function AssetUsagePage() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                               {canDeleteAssetUsage && (
-                                <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
@@ -1377,10 +1377,10 @@ export default function AssetUsagePage() {
                               timeValue={formatDayTimeLabel(log.startedAt) || "-"}
                               statusBadges={(
                                 <>
-                                  <Badge className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-medium text-slate-700 hover:bg-slate-100">
+                                  <Badge className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 sm:text-[12px]">
                                     Jumlah {log.usageCount}
                                   </Badge>
-                                  <Badge className={log.endedAt ? "rounded-full bg-emerald-100 px-3 py-1.5 text-[13px] font-medium text-emerald-800 hover:bg-emerald-100" : "rounded-full bg-amber-100 px-3 py-1.5 text-[13px] font-medium text-amber-800 hover:bg-amber-100"}>
+                                  <Badge className={log.endedAt ? "rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 sm:text-[12px]" : "rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 sm:text-[12px]"}>
                                     {getUsageStatusLabel(log)}
                                   </Badge>
                                 </>

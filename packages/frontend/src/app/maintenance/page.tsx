@@ -1614,7 +1614,7 @@ export default function MaintenancePage() {
                           <select
                             value={m.status}
                             onChange={(e) => handleStatusSelection(m.id, e.target.value)}
-                            className="h-10 rounded-lg border border-border bg-slate-50 px-3 text-[14px]"
+                            className="h-8 rounded-lg border border-border bg-slate-50 px-2.5 text-[12px]"
                           >
                             {getSelectableStatuses(m.status).map((status) => (
                               <option key={`${m.id}-${status}`} value={status}>
@@ -1630,7 +1630,7 @@ export default function MaintenancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                                className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => handleEditMaintenance(m)}
                               >
                                 <Edit2 className="h-4 w-4" />
@@ -1639,7 +1639,7 @@ export default function MaintenancePage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                  className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                   onClick={() => handleDeleteMaintenance(m.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -1647,7 +1647,7 @@ export default function MaintenancePage() {
                               )}
                             </>
                           ) : (
-                            <span className="text-[14px] text-muted-foreground">-</span>
+                            <span className="text-[12px] text-muted-foreground">-</span>
                           )}
                         </div>
 
@@ -1656,7 +1656,7 @@ export default function MaintenancePage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                              className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                             >
                               <Download className="h-4 w-4" />
                               Unduh
@@ -1686,12 +1686,12 @@ export default function MaintenancePage() {
                         timeLabel="Jadwal Pemeliharaan"
                         timeValue={scheduledLabel}
                         badges={(
-                          <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
+                          <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                             {inventoryTypeLabel}
                           </Badge>
                         )}
                         statusBadges={(
-                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-3 py-1.5 text-[13px] font-medium">
+                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
                             {maintenanceStatusLabel(m.status)}
                           </Badge>
                         )}

@@ -1340,7 +1340,7 @@ export default function ReturnsPage() {
                                     size="sm"
                                     onClick={() => handleOpenReturn(b)}
                                     title="Kembalikan peminjaman"
-                                    className="h-8 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
+                                    className="h-7 rounded-full bg-teal-600 px-2.5 text-[11px] font-semibold text-white hover:bg-teal-700"
                                   >
                                     Kembalikan
                                   </Button>
@@ -1351,7 +1351,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
                                     <Download className="h-4 w-4" />
                                     Unduh
@@ -1675,7 +1675,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                                    className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                     onClick={() => openReturnEditDialog(b)}
                                     title="Edit pengembalian"
                                   >
@@ -1685,7 +1685,7 @@ export default function ReturnsPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleDeleteReturn(b)}
                                       title="Hapus"
                                     >
@@ -1696,7 +1696,7 @@ export default function ReturnsPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleRequestDeleteReturn(b)}
                                       title="Ajukan hapus"
                                     >
@@ -1705,14 +1705,14 @@ export default function ReturnsPage() {
                                   )}
                                 </div>
                               ) : (
-                                !canValidateReturns ? <span className="text-[14px] text-muted-foreground">Aksi terbatas</span> : null
+                                !canValidateReturns ? <span className="text-[12px] text-muted-foreground">Aksi terbatas</span> : null
                               )}
                               {canValidateReturns && b.status === "returned" &&
                                 (b.returnValidatedAt ? (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 rounded-full border-border/60 px-3 text-[12px] text-muted-foreground"
+                                    className="h-7 rounded-full border-border/60 px-2.5 text-[11px] text-muted-foreground"
                                     disabled
                                   >
                                     Tervalidasi
@@ -1721,7 +1721,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 rounded-full border-green-600 px-3 text-[12px] text-green-700 hover:bg-green-50"
+                                    className="h-7 rounded-full border-green-600 px-2.5 text-[11px] text-green-700 hover:bg-green-50"
                                     onClick={() => handleValidateReturn(b.id)}
                                     disabled={validatingReturnId === b.id}
                                   >
@@ -1733,7 +1733,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
                                     <Download className="h-4 w-4" />
                                     Unduh
@@ -1763,10 +1763,10 @@ export default function ReturnsPage() {
                               timeValue={returnDateLabel}
                               badges={(
                                 <>
-                                  <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                                     {assetTypeLabel}
                                   </Badge>
-                                  <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                                     {b.destinationRoom || roomNameLabel}
                                   </Badge>
                                 </>
@@ -1775,7 +1775,7 @@ export default function ReturnsPage() {
                                 <>
                                   {getStatusBadge(b.status)}
                                   {showDamagedNotice && (
-                                    <Badge className="rounded-full border border-red-200 bg-red-100 px-3 py-1.5 text-[13px] font-medium text-red-800">
+                                    <Badge className="rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-[11px] font-medium text-red-800 sm:text-[12px]">
                                       Alat rusak
                                     </Badge>
                                   )}

@@ -221,7 +221,7 @@ const isAssetFallbackDetailId = (
 }
 
 const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt">) =>
-  ["pending", "approved", "rejected", "borrowed", "overdue"].includes(borrowing.status) ||
+  ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
   (borrowing.status === "returned" && !borrowing.returnValidatedAt)
 
 const resolveOwnerWorkUnitForAsset = (asset?: BorrowableAsset | null) =>
@@ -2472,7 +2472,7 @@ export default function BorrowingPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 rounded-full border-amber-500 px-3 text-[12px] text-amber-700 hover:bg-amber-50"
+                                  className="h-7 rounded-full border-amber-500 px-2.5 text-[11px] text-amber-700 hover:bg-amber-50"
                                   disabled={!canExtendBorrowing}
                                   onClick={() => openExtendDialog(b)}
                                   title={canExtendBorrowing ? "Perpanjang waktu peminjaman" : extensionBlockedMessage}
@@ -2481,13 +2481,13 @@ export default function BorrowingPage() {
                                 </Button>
                               ) : null}
                               {canValidateBorrowing ? (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5">
                                   {canValidateBorrowing && b.status === "pending" && (
                                     <>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-9 w-9 rounded-lg p-1.5 text-green-700 hover:bg-green-50"
+                                        className="h-8 w-8 rounded-lg p-1.5 text-green-700 hover:bg-green-50"
                                         onClick={() => void handleApproveBorrowing(b)}
                                         title="Setujui peminjaman"
                                         disabled={approvalSubmittingId === b.id}
@@ -2497,7 +2497,7 @@ export default function BorrowingPage() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                        className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                         onClick={() => openRejectBorrowingDialog(b)}
                                         title="Tolak peminjaman"
                                         disabled={approvalSubmittingId === b.id}
@@ -2510,7 +2510,7 @@ export default function BorrowingPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                                      className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                       onClick={() => openEditDialog(b)}
                                       title={['borrowed', 'overdue'].includes(b.status) ? "Perbarui batas waktu" : "Edit"}
                                     >
@@ -2521,7 +2521,7 @@ export default function BorrowingPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleDeleteBorrowing(b)}
                                       title="Hapus"
                                     >
@@ -2532,7 +2532,7 @@ export default function BorrowingPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                                      className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleRequestDeleteBorrowing(b)}
                                       title="Ajukan hapus"
                                     >
@@ -2543,7 +2543,7 @@ export default function BorrowingPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 rounded-full border-green-600 px-3 text-[12px] text-green-700 hover:bg-green-50"
+                                      className="h-7 rounded-full border-green-600 px-2.5 text-[11px] text-green-700 hover:bg-green-50"
                                       onClick={() => handleValidateReturn(b)}
                                       title="Validasi Pengembalian"
                                     >
@@ -2552,14 +2552,14 @@ export default function BorrowingPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[14px] text-muted-foreground">-</span>
+                                <span className="text-[12px] text-muted-foreground">-</span>
                               )}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
                                     <Download className="h-4 w-4" />
                                     Unduh
