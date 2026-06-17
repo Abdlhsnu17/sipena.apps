@@ -1630,19 +1630,19 @@ export default function MaintenancePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => handleEditMaintenance(m)}
                               >
-                                <Edit2 className="h-5 w-5" />
+                                <Edit2 className="h-4 w-4" />
                               </Button>
                               {canDeleteMaintenance && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                  className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                   onClick={() => handleDeleteMaintenance(m.id)}
                                 >
-                                  <Trash2 className="h-5 w-5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
                             </>
@@ -1656,9 +1656,9 @@ export default function MaintenancePage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                              className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
                             >
-                              <Download className="h-6 w-6" />
+                              <Download className="h-4 w-4" />
                               Unduh
                             </Button>
                           </DropdownMenuTrigger>
@@ -1686,12 +1686,12 @@ export default function MaintenancePage() {
                         timeLabel="Jadwal Pemeliharaan"
                         timeValue={scheduledLabel}
                         badges={(
-                          <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                          <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
                             {inventoryTypeLabel}
                           </Badge>
                         )}
                         statusBadges={(
-                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-5 py-2 text-[16px] font-medium">
+                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-3 py-1.5 text-[13px] font-medium">
                             {maintenanceStatusLabel(m.status)}
                           </Badge>
                         )}

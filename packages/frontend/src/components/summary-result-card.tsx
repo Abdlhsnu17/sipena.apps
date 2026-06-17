@@ -32,25 +32,25 @@ export function SummaryResultCard({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
-        <div className="flex min-w-0 items-center gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-blue-800">
-            <Package className="h-6 w-6" />
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-blue-800">
+            <Package className="h-5 w-5" />
           </span>
-          <h3 className="truncate text-[18px] font-bold leading-tight text-slate-800 sm:text-[22px]">{title}</h3>
+          <h3 className="truncate text-[16px] font-bold leading-tight text-slate-800 sm:text-[18px]">{title}</h3>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-10 w-10 shrink-0 rounded-lg p-0 text-slate-800 hover:bg-slate-100"
+          className="h-9 w-9 shrink-0 rounded-lg p-0 text-slate-800 hover:bg-slate-100"
           onClick={onToggle}
           aria-label={toggleLabel}
         >
-          {isExpanded ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
+          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
         </Button>
       </div>
       {children}
-      <div className="border-t border-slate-200 bg-white px-5 py-4 sm:px-7">{footer}</div>
+      <div className="border-t border-slate-200 bg-white px-4 py-3 sm:px-6">{footer}</div>
     </div>
   )
 }
@@ -85,29 +85,29 @@ export function SummaryResultBody({
   statusBadges,
 }: SummaryResultBodyProps) {
   return (
-    <div className="grid gap-6 bg-white px-5 py-5 sm:px-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.46fr)] lg:gap-8">
+    <div className="grid gap-5 bg-white px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:gap-6">
       <div className="min-w-0">
-        <p className="truncate text-[22px] font-bold leading-tight text-slate-950 sm:text-[26px]">{assetName}</p>
-        <p className="mt-2 text-[17px] font-medium leading-tight text-slate-600 sm:text-[19px]">{assetCode}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-[15px] font-medium text-slate-600">
-            <Tag className="h-4 w-4 shrink-0" />
+        <p className="truncate text-[17px] font-bold leading-tight text-slate-950 sm:text-[19px]">{assetName}</p>
+        <p className="mt-1.5 text-[14px] font-medium leading-tight text-slate-600 sm:text-[15px]">{assetCode}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[13px] font-medium text-slate-600">
+            <Tag className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">No ID: {noId}</span>
           </span>
           {badges}
         </div>
-        <div className="mt-5 space-y-3 text-[16px] leading-snug text-slate-700 sm:text-[17px]">
+        <div className="mt-4 space-y-2.5 text-[13px] leading-snug text-slate-700 sm:text-[14px]">
           {personValue ? (
-            <div className="flex min-w-0 items-start gap-3">
-              <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+            <div className="flex min-w-0 items-start gap-2.5">
+              <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
               <p className="min-w-0">
                 {personLabel}: <span className="font-medium text-blue-800">{personValue}</span>
               </p>
             </div>
           ) : null}
           {unitValue ? (
-            <div className="flex min-w-0 items-start gap-3">
-              <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+            <div className="flex min-w-0 items-start gap-2.5">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
               <p className="min-w-0">
                 {unitLabel}: <span className="font-medium text-blue-800">{unitValue}</span>
                 {unitExtra ? <span className="text-slate-700"> &bull; {unitExtra}</span> : null}
@@ -116,12 +116,12 @@ export function SummaryResultBody({
           ) : null}
         </div>
       </div>
-      <div className="flex flex-col items-start justify-center gap-5 border-t border-slate-200 pt-5 lg:items-end lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 lg:text-right">
+      <div className="flex flex-col items-start justify-center gap-4 border-t border-slate-200 pt-4 lg:items-end lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
         <div>
-          <p className="text-[14px] font-semibold uppercase leading-tight text-slate-500">{timeLabel}</p>
-          <p className="mt-5 text-[22px] font-bold leading-tight text-slate-950 sm:text-[25px]">{timeValue}</p>
+          <p className="text-[12px] font-semibold uppercase leading-tight text-slate-500">{timeLabel}</p>
+          <p className="mt-3 text-[17px] font-bold leading-tight text-slate-950 sm:text-[19px]">{timeValue}</p>
         </div>
-        {statusBadges ? <div className="flex flex-wrap items-center gap-3 lg:justify-end">{statusBadges}</div> : null}
+        {statusBadges ? <div className="flex flex-wrap items-center gap-2 lg:justify-end">{statusBadges}</div> : null}
       </div>
     </div>
   )
@@ -141,18 +141,18 @@ export function SummaryResultFooter({
   children,
 }: SummaryResultFooterProps) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <label className="flex items-center gap-4 text-[16px] font-medium text-slate-800">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <label className="flex items-center gap-3 text-[14px] font-medium text-slate-800">
         <input
           type="checkbox"
           checked={selected}
           onChange={onSelectedChange}
-          className="h-7 w-7 rounded-md border border-slate-300 bg-white text-slate-700"
+          className="h-5 w-5 rounded-md border border-slate-300 bg-white text-slate-700"
           aria-label={selectionLabel}
         />
         Pilih kartu
       </label>
-      <div className="flex flex-wrap items-center justify-end gap-3 text-[16px] text-slate-700">{children}</div>
+      <div className="flex flex-wrap items-center justify-end gap-2 text-[14px] text-slate-700">{children}</div>
     </div>
   )
 }

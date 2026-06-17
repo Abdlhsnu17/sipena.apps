@@ -2472,7 +2472,7 @@ export default function BorrowingPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-9 rounded-full border-amber-500 px-4 text-[14px] text-amber-700 hover:bg-amber-50"
+                                  className="h-8 rounded-full border-amber-500 px-3 text-[12px] text-amber-700 hover:bg-amber-50"
                                   disabled={!canExtendBorrowing}
                                   onClick={() => openExtendDialog(b)}
                                   title={canExtendBorrowing ? "Perpanjang waktu peminjaman" : extensionBlockedMessage}
@@ -2487,22 +2487,22 @@ export default function BorrowingPage() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-11 w-11 rounded-lg p-2 text-green-700 hover:bg-green-50"
+                                        className="h-9 w-9 rounded-lg p-1.5 text-green-700 hover:bg-green-50"
                                         onClick={() => void handleApproveBorrowing(b)}
                                         title="Setujui peminjaman"
                                         disabled={approvalSubmittingId === b.id}
                                       >
-                                        <CheckCircle className="h-5 w-5" />
+                                        <CheckCircle className="h-4 w-4" />
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                        className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                         onClick={() => openRejectBorrowingDialog(b)}
                                         title="Tolak peminjaman"
                                         disabled={approvalSubmittingId === b.id}
                                       >
-                                        <X className="h-5 w-5" />
+                                        <X className="h-4 w-4" />
                                       </Button>
                                     </>
                                   )}
@@ -2510,40 +2510,40 @@ export default function BorrowingPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                       onClick={() => openEditDialog(b)}
                                       title={['borrowed', 'overdue'].includes(b.status) ? "Perbarui batas waktu" : "Edit"}
                                     >
-                                      <Pencil className="h-5 w-5" />
+                                      <Pencil className="h-4 w-4" />
                                     </Button>
                                   )}
                                   {canDeleteBorrowing && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleDeleteBorrowing(b)}
                                       title="Hapus"
                                     >
-                                      <Trash2 className="h-5 w-5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   )}
                                   {canRequestDeleteBorrowing && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleRequestDeleteBorrowing(b)}
                                       title="Ajukan hapus"
                                     >
-                                      <Trash2 className="h-5 w-5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   )}
                                   {canValidateBorrowing && b.status === "returned" && !b.returnValidatedBy && (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-9 rounded-full border-green-600 px-4 text-[14px] text-green-700 hover:bg-green-50"
+                                      className="h-8 rounded-full border-green-600 px-3 text-[12px] text-green-700 hover:bg-green-50"
                                       onClick={() => handleValidateReturn(b)}
                                       title="Validasi Pengembalian"
                                     >
@@ -2559,9 +2559,9 @@ export default function BorrowingPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
-                                    <Download className="h-6 w-6" />
+                                    <Download className="h-4 w-4" />
                                     Unduh
                                   </Button>
                                 </DropdownMenuTrigger>

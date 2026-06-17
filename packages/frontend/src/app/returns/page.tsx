@@ -1340,7 +1340,7 @@ export default function ReturnsPage() {
                                     size="sm"
                                     onClick={() => handleOpenReturn(b)}
                                     title="Kembalikan peminjaman"
-                                    className="h-9 rounded-full bg-teal-600 px-4 text-[14px] font-semibold text-white hover:bg-teal-700"
+                                    className="h-8 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
                                   >
                                     Kembalikan
                                   </Button>
@@ -1351,9 +1351,9 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
-                                    <Download className="h-6 w-6" />
+                                    <Download className="h-4 w-4" />
                                     Unduh
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -1675,32 +1675,32 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                    className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                                     onClick={() => openReturnEditDialog(b)}
                                     title="Edit pengembalian"
                                   >
-                                    <Pencil className="h-5 w-5" />
+                                    <Pencil className="h-4 w-4" />
                                   </Button>
                                   {canDeleteReturns && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleDeleteReturn(b)}
                                       title="Hapus"
                                     >
-                                      <Trash2 className="h-5 w-5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   )}
                                   {canRequestDeleteReturns && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                                       onClick={() => handleRequestDeleteReturn(b)}
                                       title="Ajukan hapus"
                                     >
-                                      <Trash2 className="h-5 w-5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   )}
                                 </div>
@@ -1712,7 +1712,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 rounded-full border-border/60 px-4 text-[14px] text-muted-foreground"
+                                    className="h-8 rounded-full border-border/60 px-3 text-[12px] text-muted-foreground"
                                     disabled
                                   >
                                     Tervalidasi
@@ -1721,7 +1721,7 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 rounded-full border-green-600 px-4 text-[14px] text-green-700 hover:bg-green-50"
+                                    className="h-8 rounded-full border-green-600 px-3 text-[12px] text-green-700 hover:bg-green-50"
                                     onClick={() => handleValidateReturn(b.id)}
                                     disabled={validatingReturnId === b.id}
                                   >
@@ -1733,9 +1733,9 @@ export default function ReturnsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                    className="h-9 gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
                                   >
-                                    <Download className="h-6 w-6" />
+                                    <Download className="h-4 w-4" />
                                     Unduh
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -1763,10 +1763,10 @@ export default function ReturnsPage() {
                               timeValue={returnDateLabel}
                               badges={(
                                 <>
-                                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                                  <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
                                     {assetTypeLabel}
                                   </Badge>
-                                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                                  <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[12px]">
                                     {b.destinationRoom || roomNameLabel}
                                   </Badge>
                                 </>
@@ -1775,7 +1775,7 @@ export default function ReturnsPage() {
                                 <>
                                   {getStatusBadge(b.status)}
                                   {showDamagedNotice && (
-                                    <Badge className="rounded-full border border-red-200 bg-red-100 px-5 py-2 text-[16px] font-medium text-red-800">
+                                    <Badge className="rounded-full border border-red-200 bg-red-100 px-3 py-1.5 text-[13px] font-medium text-red-800">
                                       Alat rusak
                                     </Badge>
                                   )}
