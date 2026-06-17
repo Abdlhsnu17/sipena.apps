@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
 import deletionRequestService from "@/services/deletion-request.service";
@@ -1320,51 +1321,71 @@ export default function ReturnsPage() {
                       const activeSections = buildReturnNarrativeSections(activeSelectedReturnColumns)(b)
 
                       return (
-                        <div
+                        <SummaryResultCard
                           key={`active-return-${b.id}`}
-                          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                          title="Informasi Dasar Inventaris"
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleActiveCardCollapse(b.id)}
+                          toggleLabel={isExpanded ? "Sembunyikan detail pengembalian" : "Tampilkan detail pengembalian"}
+                          footer={(
+                            <SummaryResultFooter
+                              selected={selectedActiveReturnIds.has(b.id)}
+                              onSelectedChange={() => toggleActiveReturnSelection(b.id)}
+                              selectionLabel={`Pilih pengembalian aktif ${assetName}`}
+                            >
+                              {(() => {
+                                const accessMessage = getReturnAccessMessage(b)
+                                return !accessMessage ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenReturn(b)}
+                                    title="Kembalikan peminjaman"
+                                    className="h-9 rounded-full bg-teal-600 px-4 text-[14px] font-semibold text-white hover:bg-teal-700"
+                                  >
+                                    Kembalikan
+                                  </Button>
+                                ) : null
+                              })()}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Download className="h-6 w-6" />
+                                    Unduh
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>
+                                    PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian", activeSelectedReturnColumns)}>
+                                    Word
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </SummaryResultFooter>
+                          )}
                         >
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>Informasi Dasar Inventaris</span>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
-                                onClick={() => toggleActiveCardCollapse(b.id)}
-                              >
-                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </div>
                           {!isExpanded && (
-                          <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">{assetName}</p>
-                                <p className="text-[12px] font-medium text-slate-700">{codeLabel}</p>
-                                <div className="mt-1.5 space-y-1.5">
-                                  <p className="text-[11px] text-muted-foreground">No ID: {returnNoId}</p>
-                                  <p className="text-[11px] text-muted-foreground">
-                                    Identitas Karyawan: <span className="font-medium text-slate-700">{b.userName || "-"} / {b.userNip || "-"}</span>
-                                  </p>
-                                  <p className="text-[11px] text-muted-foreground">
-                                    Unit kerja: <span className="font-medium text-slate-700">{b.borrowerWorkUnit || "-"}</span> • {formatBorrowingPurposeType(b.purposeType)}
-                                  </p>
-                                </div>
-                              </div>
-                                <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Batas Pengembalian</span>
-                                    <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
-                                  </div>
-                                <div className="flex flex-col items-start gap-1 sm:items-end">
+                            <SummaryResultBody
+                              assetName={assetName}
+                              assetCode={codeLabel}
+                              noId={returnNoId}
+                              personValue={`${b.userName || "-"} / ${b.userNip || "-"}`}
+                              unitValue={b.borrowerWorkUnit || "-"}
+                              unitExtra={formatBorrowingPurposeType(b.purposeType)}
+                              timeLabel="Batas Pengembalian"
+                              timeValue={dueDateLabel}
+                              statusBadges={(
+                                <>
                                   {getStatusBadge(b.status)}
                                   {getBorrowingRestrictionBadge(b.status)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                                </>
+                              )}
+                            />
                           )}
                           {isExpanded && (
                           <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
@@ -1407,54 +1428,7 @@ export default function ReturnsPage() {
                             )}
                           </div>
                         )}
-                            <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                              <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedActiveReturnIds.has(b.id)}
-                                  onChange={() => toggleActiveReturnSelection(b.id)}
-                                  className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                  aria-label={`Pilih pengembalian aktif ${assetName}`}
-                                />
-                                Pilih kartu
-                              </label>
-                              <div className="flex flex-wrap items-center justify-end gap-2">
-                                {(() => {
-                                  const accessMessage = getReturnAccessMessage(b)
-                                  return !accessMessage ? (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleOpenReturn(b)}
-                                      title="Kembalikan peminjaman"
-                                      className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
-                                    >
-                                      Kembalikan
-                                    </Button>
-                                  ) : null
-                                })()}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                                    >
-                                      <Download className="h-3.5 w-3.5" />
-                                      Unduh
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-40">
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>
-                                      PDF
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian", activeSelectedReturnColumns)}>
-                                      Word
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
-                        </div>
+                        </SummaryResultCard>
                       )
                     })}
                   </div>
@@ -1684,63 +1658,130 @@ export default function ReturnsPage() {
                     const showDamagedNotice =
                       b.status === "returned" && isDamagedReturnCondition(b.returnCondition)
                     return (
-                        <div
+                        <SummaryResultCard
                           key={`history-card-${b.id}`}
-                          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                          title="Informasi Dasar Inventaris"
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleHistoryCardCollapse(b.id)}
+                          toggleLabel={isExpanded ? "Sembunyikan detail riwayat pengembalian" : "Tampilkan detail riwayat pengembalian"}
+                          footer={(
+                            <SummaryResultFooter
+                              selected={selectedHistoryReturnIds.has(b.id)}
+                              onSelectedChange={() => toggleHistoryReturnSelection(b.id)}
+                              selectionLabel={`Pilih riwayat pengembalian ${assetName}`}
+                            >
+                              {canManageReturnRecords ? (
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                    onClick={() => openReturnEditDialog(b)}
+                                    title="Edit pengembalian"
+                                  >
+                                    <Pencil className="h-5 w-5" />
+                                  </Button>
+                                  {canDeleteReturns && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleDeleteReturn(b)}
+                                      title="Hapus"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                  )}
+                                  {canRequestDeleteReturns && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                      onClick={() => handleRequestDeleteReturn(b)}
+                                      title="Ajukan hapus"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                !canValidateReturns ? <span className="text-[14px] text-muted-foreground">Aksi terbatas</span> : null
+                              )}
+                              {canValidateReturns && b.status === "returned" &&
+                                (b.returnValidatedAt ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-full border-border/60 px-4 text-[14px] text-muted-foreground"
+                                    disabled
+                                  >
+                                    Tervalidasi
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-full border-green-600 px-4 text-[14px] text-green-700 hover:bg-green-50"
+                                    onClick={() => handleValidateReturn(b.id)}
+                                    disabled={validatingReturnId === b.id}
+                                  >
+                                    {validatingReturnId === b.id ? "Memvalidasi..." : "Validasi"}
+                                  </Button>
+                                ))}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Download className="h-6 w-6" />
+                                    Unduh
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
+                                    PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
+                                    Word
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </SummaryResultFooter>
+                          )}
                         >
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>Informasi Dasar Inventaris</span>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
-                                onClick={() => toggleHistoryCardCollapse(b.id)}
-                              >
-                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </div>
                           {!isExpanded && (
-                            <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{assetName}</p>
-                                  <p className="text-[12px] font-medium text-slate-700">{codeLabel}</p>
-                                  <div className="mt-1.5 space-y-1.5">
-                                    <p className="text-[11px] text-muted-foreground">No ID: {returnNoId}</p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Identitas Karyawan: <span className="font-medium text-slate-700">{borrowerName} / {b.userNip || "-"}</span>
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Unit kerja: <span className="font-medium text-slate-700">{b.borrowerWorkUnit || "-"}</span> • {formatBorrowingPurposeType(b.purposeType)}
-                                    </p>
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {assetTypeLabel}
+                            <SummaryResultBody
+                              assetName={assetName}
+                              assetCode={codeLabel}
+                              noId={returnNoId}
+                              personValue={`${borrowerName} / ${b.userNip || "-"}`}
+                              unitValue={b.borrowerWorkUnit || "-"}
+                              unitExtra={formatBorrowingPurposeType(b.purposeType)}
+                              timeLabel="Waktu Kembali"
+                              timeValue={returnDateLabel}
+                              badges={(
+                                <>
+                                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                                    {assetTypeLabel}
+                                  </Badge>
+                                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                                    {b.destinationRoom || roomNameLabel}
+                                  </Badge>
+                                </>
+                              )}
+                              statusBadges={(
+                                <>
+                                  {getStatusBadge(b.status)}
+                                  {showDamagedNotice && (
+                                    <Badge className="rounded-full border border-red-200 bg-red-100 px-5 py-2 text-[16px] font-medium text-red-800">
+                                      Alat rusak
                                     </Badge>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {b.destinationRoom || roomNameLabel}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu Kembali</span>
-                                    <span className="text-[13px] font-semibold text-foreground">{returnDateLabel}</span>
-                                  </div>
-                                  <div className="flex flex-col items-start gap-1 sm:items-end">
-                                    {getStatusBadge(b.status)}
-                                    {showDamagedNotice && (
-                                      <Badge className="border border-red-200 bg-red-100 text-red-800">
-                                        Alat rusak
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                                  )}
+                                </>
+                              )}
+                            />
                           )}
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
@@ -1774,99 +1815,7 @@ export default function ReturnsPage() {
                               )}
                             </div>
                           )}
-                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                            <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                              <input
-                                type="checkbox"
-                                checked={selectedHistoryReturnIds.has(b.id)}
-                                onChange={() => toggleHistoryReturnSelection(b.id)}
-                                className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                aria-label={`Pilih riwayat pengembalian ${assetName}`}
-                              />
-                              Pilih kartu
-                            </label>
-                            <div className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-slate-600">
-                              {canManageReturnRecords ? (
-                                <div className="flex flex-wrap items-center justify-end gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
-                                    onClick={() => openReturnEditDialog(b)}
-                                    title="Edit pengembalian"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  {canDeleteReturns && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                                      onClick={() => handleDeleteReturn(b)}
-                                      title="Hapus"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                  {canRequestDeleteReturns && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                                      onClick={() => handleRequestDeleteReturn(b)}
-                                      title="Ajukan hapus"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ) : (
-                                !canValidateReturns ? <span className="text-[13px] text-muted-foreground">Aksi terbatas</span> : null
-                              )}
-                              {canValidateReturns && b.status === "returned" &&
-                                (b.returnValidatedAt ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 border-border/60 text-[13px] text-muted-foreground"
-                                    disabled
-                                  >
-                                    Tervalidasi
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 border-green-600 text-[14px] text-green-700 hover:bg-green-50"
-                                    onClick={() => handleValidateReturn(b.id)}
-                                    disabled={validatingReturnId === b.id}
-                                  >
-                                    {validatingReturnId === b.id ? "Memvalidasi..." : "Validasi"}
-                                  </Button>
-                                ))}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
-                                    PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
-                                    Word
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
+                        </SummaryResultCard>
                     )
                   })}
                   </div>

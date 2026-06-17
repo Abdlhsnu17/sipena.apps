@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 
 import MaintenanceForm from "@/components/maintenance-form";
 import MaintenanceHistoryList from "@/components/maintenance-history-list";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1597,62 +1598,104 @@ export default function MaintenancePage() {
                 const isExpanded = expandedMaintenanceIds.has(m.id)
 
                 return (
-                  <div
+                  <SummaryResultCard
                     key={String(m.id)}
-                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    title="Informasi Dasar Alat"
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleCardCollapse(m.id)}
+                    toggleLabel={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
+                    footer={(
+                      <SummaryResultFooter
+                        selected={selectedMaintenanceIds.has(m.id)}
+                        onSelectedChange={() => toggleMaintenanceSelection(m.id)}
+                        selectionLabel={`Pilih jadwal pemeliharaan ${inventoryName}`}
+                      >
+                        {canManageAdvancedStatuses && getSelectableStatuses(m.status).length > 1 ? (
+                          <select
+                            value={m.status}
+                            onChange={(e) => handleStatusSelection(m.id, e.target.value)}
+                            className="h-10 rounded-lg border border-border bg-slate-50 px-3 text-[14px]"
+                          >
+                            {getSelectableStatuses(m.status).map((status) => (
+                              <option key={`${m.id}-${status}`} value={status}>
+                                {maintenanceStatusLabel(status)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+
+                        <div className="flex items-center gap-2">
+                          {canEditMaintenance ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => handleEditMaintenance(m)}
+                              >
+                                <Edit2 className="h-5 w-5" />
+                              </Button>
+                              {canDeleteMaintenance && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50"
+                                  onClick={() => handleDeleteMaintenance(m.id)}
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[14px] text-muted-foreground">-</span>
+                          )}
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              <Download className="h-6 w-6" />
+                              Unduh
+                            </Button>
+                          </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>
+                              PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("word", m)}>
+                              Word
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </SummaryResultFooter>
+                    )}
                   >
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                      <span>Informasi Dasar Alat</span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
-                          onClick={() => toggleCardCollapse(m.id)}
-                          aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </div>
 
                     {!isExpanded && (
-                      <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{inventoryName}</p>
-                            <p className="text-[12px] font-medium text-slate-700">{codeLabel}</p>
-                            <div className="mt-1.5 space-y-1.5">
-                              <p className="text-[11px] text-muted-foreground">No ID: {maintenanceNoId}</p>
-                              <p className="text-[11px] text-muted-foreground">
-                                Identitas Karyawan: <span className="font-medium text-slate-700">{m.requesterName || "-"} / {m.requesterNip || "-"}</span>
-                              </p>
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-1">
-                              <Badge variant="outline" className="text-[10px]">
-                                {inventoryTypeLabel}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px]">
-                                {maintenanceTypeLabel(m.type)}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px]">
-                                {roomNameLabel}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-semibold uppercase text-muted-foreground">Jadwal Pemeliharaan</span>
-                              <span className="text-[13px] font-semibold text-foreground">{scheduledLabel}</span>
-                            </div>
-                            <div>
-                              <Badge variant={getStatusColor(m.status)} className="text-[12px]">
-                                {maintenanceStatusLabel(m.status)}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        </div>
+                      <SummaryResultBody
+                        assetName={inventoryName}
+                        assetCode={codeLabel}
+                        noId={maintenanceNoId}
+                        personValue={`${m.requesterName || "-"} / ${m.requesterNip || "-"}`}
+                        unitValue={roomNameLabel}
+                        unitExtra={maintenanceTypeLabel(m.type)}
+                        timeLabel="Jadwal Pemeliharaan"
+                        timeValue={scheduledLabel}
+                        badges={(
+                          <Badge variant="outline" className="rounded-full px-3 py-1 text-[13px]">
+                            {inventoryTypeLabel}
+                          </Badge>
+                        )}
+                        statusBadges={(
+                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-5 py-2 text-[16px] font-medium">
+                            {maintenanceStatusLabel(m.status)}
+                          </Badge>
+                        )}
+                      />
                     )}
                     {isExpanded && (
                       <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
@@ -1694,83 +1737,7 @@ export default function MaintenancePage() {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                      <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={selectedMaintenanceIds.has(m.id)}
-                          onChange={() => toggleMaintenanceSelection(m.id)}
-                          className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                          aria-label={`Pilih jadwal pemeliharaan ${inventoryName}`}
-                        />
-                        Pilih kartu
-                      </label>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {canManageAdvancedStatuses && getSelectableStatuses(m.status).length > 1 ? (
-                          <select
-                            value={m.status}
-                            onChange={(e) => handleStatusSelection(m.id, e.target.value)}
-                            className="px-3 py-1.5 rounded-lg border border-border bg-slate-50 text-[14px]"
-                          >
-                            {getSelectableStatuses(m.status).map((status) => (
-                              <option key={`${m.id}-${status}`} value={status}>
-                                {maintenanceStatusLabel(status)}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
-
-                        <div className="flex items-center gap-1">
-                          {canEditMaintenance ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 rounded-lg p-0"
-                                onClick={() => handleEditMaintenance(m)}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                              {canDeleteMaintenance && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                    className="h-8 w-8 rounded-lg p-0 text-red-600 hover:bg-red-50"
-                                  onClick={() => handleDeleteMaintenance(m.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-[13px] text-muted-foreground">-</span>
-                          )}
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              Unduh
-                            </Button>
-                          </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>
-                              PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("word", m)}>
-                              Word
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
+                  </SummaryResultCard>
                   )
                 })}
               </div>

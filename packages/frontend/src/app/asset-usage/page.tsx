@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import InventoryPicker from "@/components/inventory-picker";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
@@ -1293,50 +1294,98 @@ export default function AssetUsagePage() {
                       const rightSections = detailSections.slice(2);
 
                       return (
-                        <div key={log.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>Informasi Dasar Inventaris</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
-                              onClick={() => toggleUsageHistoryCard(log.id)}
-                              aria-label={isExpanded ? "Sembunyikan detail pemakaian" : "Tampilkan detail pemakaian"}
+                        <SummaryResultCard
+                          key={log.id}
+                          title="Informasi Dasar Inventaris"
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleUsageHistoryCard(log.id)}
+                          toggleLabel={isExpanded ? "Sembunyikan detail pemakaian" : "Tampilkan detail pemakaian"}
+                          footer={(
+                            <SummaryResultFooter
+                              selected={selectedUsageIds.includes(log.id)}
+                              onSelectedChange={() => toggleUsageSelection(log.id)}
+                              selectionLabel={`Pilih riwayat penggunaan ${log.assetDetailName || log.assetName || "-"}`}
                             >
-                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            </Button>
-                          </div>
-
+                              {!log.endedAt && (() => {
+                                const allowed = canCompleteUsage(currentUser, log);
+                                return allowed ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleStatusChange(log, "completed")}
+                                    className="h-9 rounded-full bg-teal-600 px-4 text-[14px] font-semibold text-white hover:bg-teal-700"
+                                  >
+                                    Selesaikan
+                                  </Button>
+                                ) : (
+                                  <span
+                                    className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-slate-100 px-4 text-[14px] font-medium text-slate-400"
+                                    title="Hanya admin, leader, atau pengguna pemilik riwayat yang dapat menyelesaikan pemakaian ini"
+                                  >
+                                    Selesaikan
+                                  </span>
+                                );
+                              })()}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-11 w-11 rounded-lg p-2 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => openEditDialog(log)}
+                                aria-label="Edit log penggunaan"
+                                title="Edit"
+                              >
+                                <Pencil className="h-6 w-6" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-11 gap-2 rounded-lg px-3 text-[16px] font-medium text-slate-700 hover:bg-slate-50"
+                                    aria-label="Unduh penggunaan"
+                                    title="Unduh penggunaan"
+                                  >
+                                    <Download className="h-6 w-6" />
+                                    Unduh
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
+                                    PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("word", log)}>
+                                    Word
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              {canDeleteAssetUsage && (
+                                <Button variant="ghost" size="sm" className="h-11 w-11 rounded-lg p-2 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
+                              )}
+                            </SummaryResultFooter>
+                          )}
+                        >
                           {!isExpanded && (
-                            <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[13px] font-semibold text-slate-900">{log.assetDetailName || log.assetName || "-"}</p>
-                                  <p className="text-[12px] font-medium text-slate-700">{log.assetDetailCode || log.assetCode || "-"}</p>
-                                  <div className="mt-1.5 space-y-1.5">
-                                    <p className="text-[11px] text-muted-foreground">No ID: {getUsageNoId(log)}</p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Identitas Karyawan: <span className="font-medium text-slate-700">{userLabel} / {log.operatorNip || "-"}</span>
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Unit kerja: <span className="font-medium text-slate-700">{roomDisplay.primary}</span> • {usageContextLabels[log.usageContext] || log.usageContext || "-"}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu Mulai</span>
-                                    <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(log.startedAt) || "-"}</span>
-                                  </div>
-                                  <div className="flex flex-col items-start gap-1 sm:items-end">
-                                    <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Jumlah {log.usageCount}</Badge>
-                                    <Badge className={log.endedAt ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}>
-                                      {getUsageStatusLabel(log)}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                            <SummaryResultBody
+                              assetName={log.assetDetailName || log.assetName || "-"}
+                              assetCode={log.assetDetailCode || log.assetCode || "-"}
+                              noId={getUsageNoId(log)}
+                              personValue={`${userLabel} / ${log.operatorNip || "-"}`}
+                              unitValue={roomDisplay.primary}
+                              unitExtra={usageContextLabels[log.usageContext] || log.usageContext || "-"}
+                              timeLabel="Waktu Mulai"
+                              timeValue={formatDayTimeLabel(log.startedAt) || "-"}
+                              statusBadges={(
+                                <>
+                                  <Badge className="rounded-full bg-slate-100 px-5 py-2 text-[16px] font-medium text-slate-700 hover:bg-slate-100">
+                                    Jumlah {log.usageCount}
+                                  </Badge>
+                                  <Badge className={log.endedAt ? "rounded-full bg-emerald-100 px-5 py-2 text-[16px] font-medium text-emerald-800 hover:bg-emerald-100" : "rounded-full bg-amber-100 px-5 py-2 text-[16px] font-medium text-amber-800 hover:bg-amber-100"}>
+                                    {getUsageStatusLabel(log)}
+                                  </Badge>
+                                </>
+                              )}
+                            />
                           )}
 
                           {isExpanded && (
@@ -1371,77 +1420,7 @@ export default function AssetUsagePage() {
                             </div>
                           )}
 
-                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                            <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                              <input
-                                type="checkbox"
-                                checked={selectedUsageIds.includes(log.id)}
-                                onChange={() => toggleUsageSelection(log.id)}
-                                className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                aria-label={`Pilih riwayat penggunaan ${log.assetDetailName || log.assetName || "-"}`}
-                              />
-                              Pilih kartu
-                            </label>
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              {!log.endedAt && (() => {
-                                const allowed = canCompleteUsage(currentUser, log);
-                                return allowed ? (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleStatusChange(log, "completed")}
-                                    className="h-6 rounded-full bg-teal-600 px-3 text-[12px] font-semibold text-white hover:bg-teal-700"
-                                  >
-                                    Selesaikan
-                                  </Button>
-                                ) : (
-                                  <span
-                                    className="inline-flex h-6 items-center rounded-full border border-slate-200 bg-slate-100 px-3 text-[12px] font-medium text-slate-400"
-                                    title="Hanya admin, leader, atau pengguna pemilik riwayat yang dapat menyelesaikan pemakaian ini"
-                                  >
-                                    Selesaikan
-                                  </span>
-                                );
-                              })()}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
-                                onClick={() => openEditDialog(log)}
-                                aria-label="Edit log penggunaan"
-                                title="Edit"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                                    aria-label="Unduh penggunaan"
-                                    title="Unduh penggunaan"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
-                                    PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("word", log)}>
-                                    Word
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              {canDeleteAssetUsage && (
-                                <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        </SummaryResultCard>
                       );
                     })
                   )}

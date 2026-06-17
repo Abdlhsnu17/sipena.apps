@@ -119,6 +119,44 @@ describe('BorrowingService borrowing lock rules', () => {
     expect(assetGetByIdSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects a new borrowing when the user has a pending request past its due date', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{ count: 4 }], []])
+      .mockResolvedValueOnce([{}, []])
+      .mockResolvedValueOnce([
+        [
+          {
+            id: 19,
+            borrowing_code: 'PMJ-20260612-002',
+            asset_name: 'Patient Monitor',
+            due_date: new Date(2026, 5, 12, 12, 0, 0),
+            status: 'pending',
+          },
+        ],
+        [],
+      ]);
+
+    const assetGetByIdSpy = jest.spyOn((service as any).assetService, 'getById');
+
+    const result = await service.create({
+      assetId: 14,
+      assetType: 'medical',
+      userId: 5,
+      borrowDate: new Date(2026, 5, 13, 8, 0, 0),
+      dueDate: new Date(2026, 5, 14, 8, 0, 0),
+      purpose: 'Operasional unit',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Peminjaman baru ditolak');
+    expect(result.message).toContain('melewati batas waktu');
+    expect(result.message).toContain('Patient Monitor');
+    expect(assetGetByIdSpy).not.toHaveBeenCalled();
+
+    const blockingQuery = mockedQuery.mock.calls[2]?.[0];
+    expect(String(blockingQuery)).toContain("b.status IN ('pending', 'approved', 'borrowed', 'overdue')");
+  });
+
   it('rejects borrowing when the asset still has an active usage log', async () => {
     mockedQuery
       .mockResolvedValueOnce([[{ count: 4 }], []])
