@@ -79,6 +79,9 @@ type BorrowingExportColumn = TableExportColumn<ApiBorrowing> & {
   defaultSelected?: boolean
 }
 
+const INVENTORY_REFRESH_EVENT = "inventory-refresh"
+const BORROWING_REFRESH_SOURCE = "borrowing-page"
+
 const BORROWING_ROWS_PER_PAGE = 2
 
 const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
@@ -399,7 +402,7 @@ export default function BorrowingPage() {
       try {
         const result = await borrowingService.validateReturn(borrowing.id)
         if (result.success) {
-          await loadBorrowings()
+          await refreshOperationalDataAndNotify()
           toast({
             title: "Pengembalian berhasil divalidasi",
             description: "Data pengembalian sudah diperbarui.",
@@ -738,6 +741,24 @@ export default function BorrowingPage() {
     }
   }
 
+  const dispatchInventoryRefresh = () => {
+    window.dispatchEvent(new CustomEvent(INVENTORY_REFRESH_EVENT, { detail: { source: BORROWING_REFRESH_SOURCE } }))
+  }
+
+  const refreshOperationalData = async () => {
+    await Promise.all([
+      loadAssets(),
+      loadBorrowings(),
+      loadActiveUsageLocks(),
+      loadActiveMaintenanceLocks(),
+    ])
+  }
+
+  const refreshOperationalDataAndNotify = async () => {
+    await refreshOperationalData()
+    dispatchInventoryRefresh()
+  }
+
   useEffect(() => {
     if (currentUser) {
       // Load data only once when component mounts
@@ -762,17 +783,13 @@ export default function BorrowingPage() {
   }, [currentUser])
 
   useEffect(() => {
-    const handleInventoryRefresh = () => {
-      void Promise.all([
-        loadAssets(),
-        loadBorrowings(),
-        loadActiveUsageLocks(),
-        loadActiveMaintenanceLocks(),
-      ])
+    const handleInventoryRefresh = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail?.source === BORROWING_REFRESH_SOURCE) return
+      void refreshOperationalData()
     }
 
-    window.addEventListener("inventory-refresh", handleInventoryRefresh)
-    return () => window.removeEventListener("inventory-refresh", handleInventoryRefresh)
+    window.addEventListener(INVENTORY_REFRESH_EVENT, handleInventoryRefresh)
+    return () => window.removeEventListener(INVENTORY_REFRESH_EVENT, handleInventoryRefresh)
   }, [])
 
   const detailLookup = useMemo(() => {
@@ -903,9 +920,7 @@ export default function BorrowingPage() {
         }
       }
 
-      await loadBorrowings()
-      await loadAssets()
-      await loadActiveMaintenanceLocks()
+      await refreshOperationalDataAndNotify()
 
       const successMessage =
         successLabels.length === 1
@@ -979,9 +994,7 @@ export default function BorrowingPage() {
       }
       setPendingDeleteBorrowing(null)
       setDeleteReason("")
-      await loadBorrowings()
-      await loadAssets()
-      await loadActiveMaintenanceLocks()
+      await refreshOperationalDataAndNotify()
     } catch (error: any) {
       alert(error.message || "Gagal menghapus peminjaman")
     } finally {
@@ -1025,11 +1038,7 @@ export default function BorrowingPage() {
         return
       }
 
-      await Promise.all([
-        loadBorrowings(),
-        loadAssets(),
-        loadActiveMaintenanceLocks(),
-      ])
+      await refreshOperationalDataAndNotify()
 
       toast({
         title: "Peminjaman disetujui",
@@ -1093,11 +1102,7 @@ export default function BorrowingPage() {
         return
       }
 
-      await Promise.all([
-        loadBorrowings(),
-        loadAssets(),
-        loadActiveMaintenanceLocks(),
-      ])
+      await refreshOperationalDataAndNotify()
 
       setPendingRejectBorrowing(null)
       setRejectReason("")
@@ -1225,7 +1230,7 @@ export default function BorrowingPage() {
         alert(result.message || "Gagal menyimpan perubahan")
         return
       }
-      await loadBorrowings()
+      await refreshOperationalDataAndNotify()
       handleEditDialogClose()
     } catch (error: any) {
       alert(error.message || "Gagal menyimpan perubahan")
@@ -1300,11 +1305,7 @@ export default function BorrowingPage() {
         return
       }
 
-      await Promise.all([
-        loadBorrowings(),
-        loadAssets(),
-        loadActiveMaintenanceLocks(),
-      ])
+      await refreshOperationalDataAndNotify()
 
       handleExtendDialogClose()
       toast({
