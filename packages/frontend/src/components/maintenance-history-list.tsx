@@ -518,36 +518,30 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         defaultSelected: true,
       },
       {
-        key: "peminjam",
-        label: "Nama Pengirim",
-        getValue: (history) => history.requesterName || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "nip",
-        label: "NIP Pengirim",
-        getValue: (history) => history.requesterNip || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "tanggalPinjam",
-        label: "Jadwal Pemeliharaan",
-        getValue: (history) => formatDayTimeLabel(history.scheduledDate, { showWeekday: false }),
-        defaultSelected: true,
-      },
-      {
-        key: "tanggalKembali",
-        label: "Waktu Selesai",
-        getValue: (history) => formatDayTimeLabel(history.completedDate, { showWeekday: false }),
-        defaultSelected: true,
-      },
-      {
-        key: "ruangan",
+        key: "ruanganAlat",
         label: "Nama Ruangan Inventaris",
         getValue: (history) => {
           const detail = findDetailInfo(history);
           return detail?.roomName || detail?.assetLocation || history.assetLocation || "-";
         },
+        defaultSelected: true,
+      },
+      {
+        key: "pengirim",
+        label: "Nama Pengirim",
+        getValue: (history) => history.requesterName || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "nipPengirim",
+        label: "NIP Pengirim",
+        getValue: (history) => history.requesterNip || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "jadwalPemeliharaan",
+        label: "Jadwal Pemeliharaan",
+        getValue: (history) => formatDayTimeLabel(history.scheduledDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
@@ -560,6 +554,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         key: "teknisi",
         label: "Teknisi Pelaksana",
         getValue: (history) => history.technician || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "waktuSelesai",
+        label: "Waktu Selesai",
+        getValue: (history) => formatDayTimeLabel(history.completedDate, { showWeekday: false }),
         defaultSelected: true,
       },
       {
@@ -596,12 +596,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         key: "waktuValidasi",
         label: "Waktu Validasi",
         getValue: (history) => formatDayTimeLabel(history.validatedAt, { showWeekday: false }),
-        defaultSelected: true,
-      },
-      {
-        key: "catatan",
-        label: "Ringkasan Catatan",
-        getValue: (history) => history.notes || history.description || "-",
         defaultSelected: true,
       },
       {
@@ -755,21 +749,18 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         ? meta.assetCode
         : undefined;
     const assetRoom =
-      columnSet.has("ruangan")
+      columnSet.has("ruanganAlat")
         ? meta.assetRoom
         : undefined;
     const status =
       columnSet.has("status") ? maintenanceStatusLabel(history.status) : undefined;
-    const requesterName = columnSet.has("peminjam") ? history.requesterName || "-" : undefined;
-    const requesterNip = columnSet.has("nip") ? history.requesterNip || "-" : undefined;
-    const scheduledDate = columnSet.has("tanggalPinjam")
+    const requesterName = columnSet.has("pengirim") ? history.requesterName || "-" : undefined;
+    const requesterNip = columnSet.has("nipPengirim") ? history.requesterNip || "-" : undefined;
+    const scheduledDate = columnSet.has("jadwalPemeliharaan")
       ? formatDayTimeLabel(history.scheduledDate, { showWeekday: false })
       : undefined;
-    const completionDate = columnSet.has("tanggalKembali")
+    const completionDate = columnSet.has("waktuSelesai")
       ? meta.completionDateLabel
-      : undefined;
-    const notes = columnSet.has("catatan")
-      ? history.notes?.trim() || history.description?.trim() || "-"
       : undefined;
     const brandModel = columnSet.has("merek")
       ? meta.brandModel
@@ -813,7 +804,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       technician,
       completionDate,
       cost,
-      notes: afterNotes ?? notes,
+      notes: afterNotes,
       registrationNotes,
       status,
       validator,

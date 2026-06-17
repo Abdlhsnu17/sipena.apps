@@ -539,7 +539,7 @@ export class MaintenanceService {
     const scopedActorId = Number(actorUserId);
     const shouldScopeToActor = Number.isFinite(scopedActorId)
       && scopedActorId > 0
-      && !hasAnyRole(actorRole, ['admin', 'leader']);
+      && !hasAnyRole(actorRole, ['admin', 'leader', 'teknisi']);
 
     let query = `
       SELECT m.*,

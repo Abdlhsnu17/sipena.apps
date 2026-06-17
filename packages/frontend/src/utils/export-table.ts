@@ -752,6 +752,7 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
 
 const buildMaintenanceHistorySections = (entry: MaintenanceHistoryExportEntry): DocumentSection[] => {
   const identities: SectionLine[] = []
+  appendLine(identities, 'No ID', entry.noId)
   appendLine(identities, 'Jenis Inventaris', entry.inventoryType)
   appendLine(identities, 'Tipe Layanan', entry.maintenanceType)
   appendLine(identities, 'Nama Alat', entry.assetName)
