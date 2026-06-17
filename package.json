@@ -13,6 +13,12 @@
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
     "build": "npm run build:backend && npm run build:frontend",
+    "lint": "npm run lint --workspace=inventory-backend && npm run lint --workspace=inventory-frontend",
+    "test": "npm test --workspace=inventory-backend",
+    "test:e2e": "npm run test:e2e --workspace=inventory-frontend",
+    "test:e2e:install": "npm run test:e2e:install --workspace=inventory-frontend",
+    "type-check": "npm run type-check --workspace=inventory-frontend",
+    "verify": "npm run lint && npm run build && npm test --workspace=inventory-backend && npm run type-check",
     "start": "sh scripts/start-production.sh",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",

@@ -43,11 +43,9 @@ import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
     appendLine,
     ExportFormat,
-    exportFormularReport,
     exportNarrativeReport,
     SectionBuilder,
     type DocumentSection,
-    type FormularData,
     type SectionLine,
     type TableExportColumn,
 } from "@/utils/export-table";

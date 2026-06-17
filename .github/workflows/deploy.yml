@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.18.0'
+          node-version: '20.19.0'
           cache: npm
 
       - name: Install dependencies
@@ -39,6 +39,12 @@ jobs:
 
       - name: Frontend build
         run: npm run build --workspace=inventory-frontend
+
+      - name: Install Playwright browser
+        run: npm run test:e2e:install --workspace=inventory-frontend
+
+      - name: Frontend E2E
+        run: npm run test:e2e --workspace=inventory-frontend
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
