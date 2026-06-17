@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { importAssetsFromBuffer, generateImportTemplate } from '../services/asset_import.service';
 import { AssetService } from '../services/asset.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:asset');
 
 export class AssetController {
   private assetService: AssetService;
@@ -36,7 +39,7 @@ export class AssetController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get assets error:', error);
+      logger.error('Get assets error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -61,7 +64,7 @@ export class AssetController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get asset error:', error);
+      logger.error('Get asset error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -88,7 +91,7 @@ export class AssetController {
       const result = await this.assetService.create(req.body);
       res.status(201).json(result);
     } catch (error) {
-      console.error('Create asset error:', error);
+      logger.error('Create asset error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -123,7 +126,7 @@ export class AssetController {
 
       res.json(result);
     } catch (error) {
-      console.error('Update asset error:', error);
+      logger.error('Update asset error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -148,7 +151,7 @@ export class AssetController {
 
       res.json(result);
     } catch (error) {
-      console.error('Delete asset error:', error);
+      logger.error('Delete asset error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -165,7 +168,7 @@ export class AssetController {
       const result = await this.assetService.resetInventory();
       res.json(result);
     } catch (error) {
-      console.error('Reset inventory error:', error);
+      logger.error('Reset inventory error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -181,7 +184,7 @@ export class AssetController {
       }
 
       const assetType = (req.query.type as string) === 'non_medical' ? 'non_medical' : 'medical';
-      const createdBy = (req as any).user?.id ?? 0;
+      const createdBy = Number(req.user?.id) || 0;
 
       const result = await importAssetsFromBuffer(req.file.buffer, assetType, createdBy);
 
@@ -190,9 +193,12 @@ export class AssetController {
         message: `Import selesai: ${result.success} berhasil, ${result.failed} gagal`,
         data: result,
       });
-    } catch (error: any) {
-      console.error('Import assets error:', error);
-      res.status(400).json({ success: false, message: error?.message ?? 'Gagal mengimpor aset' });
+    } catch (error) {
+      logger.error('Import assets error', { error });
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Gagal mengimpor aset',
+      });
     }
   };
 
@@ -205,7 +211,7 @@ export class AssetController {
       await wb.xlsx.write(res);
       res.end();
     } catch (error) {
-      console.error('Download template error:', error);
+      logger.error('Download template error', { error });
       res.status(500).json({ success: false, message: 'Gagal mengunduh template' });
     }
   };

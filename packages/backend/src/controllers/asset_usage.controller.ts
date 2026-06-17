@@ -3,6 +3,9 @@ import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { AssetUsageService } from '../services/asset_usage.service';
 import { recordUserActivity } from '../services/user_activity.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:asset-usage');
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -49,7 +52,7 @@ export class AssetUsageController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get asset usage logs error:', error);
+      logger.error('Get asset usage logs error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -63,7 +66,7 @@ export class AssetUsageController {
       }
       res.json(result);
     } catch (error) {
-      console.error('Get asset usage log error:', error);
+      logger.error('Get asset usage log error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -103,7 +106,7 @@ export class AssetUsageController {
 
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
-      console.error('Create asset usage log error:', error);
+      logger.error('Create asset usage log error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -124,7 +127,7 @@ export class AssetUsageController {
       });
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('Update asset usage log error:', error);
+      logger.error('Update asset usage log error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
@@ -134,7 +137,7 @@ export class AssetUsageController {
       const result = await this.assetUsageService.delete(req.params.id);
       res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
-      console.error('Delete asset usage log error:', error);
+      logger.error('Delete asset usage log error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };

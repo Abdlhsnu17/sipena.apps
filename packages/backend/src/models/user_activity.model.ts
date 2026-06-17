@@ -6,6 +6,8 @@ export type UserActivityFeature =
   | 'pengembalian_alat'
   | 'pencarian';
 
+export type ActivityMetadata = Record<string, unknown>;
+
 export interface UserActivity {
   id: number;
   userId: number;
@@ -14,7 +16,7 @@ export interface UserActivity {
   feature: UserActivityFeature | string;
   action: string;
   description: string;
-  metadata?: Record<string, any> | null;
+  metadata?: ActivityMetadata | null;
   createdAt: Date | string;
 }
 
@@ -23,5 +25,5 @@ export interface CreateUserActivityDTO {
   feature: UserActivityFeature | string;
   action: string;
   description: string;
-  metadata?: Record<string, any> | null;
+  metadata?: ActivityMetadata | null;
 }

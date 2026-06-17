@@ -44,6 +44,9 @@ jobs:
         run: npm run test:e2e:install --workspace=inventory-frontend
 
       - name: Frontend E2E
+        env:
+          E2E_NIP: ${{ secrets.E2E_NIP }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: npm run test:e2e --workspace=inventory-frontend
 
       - name: Deploy to VPS

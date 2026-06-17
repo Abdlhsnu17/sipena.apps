@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import dssService from '../services/dss.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:dss');
 
 export class DssController {
   getRanking = async (req: Request, res: Response): Promise<void> => {
@@ -17,7 +20,7 @@ export class DssController {
         data: result,
       });
     } catch (error) {
-      console.error('DSS ranking error:', error);
+      logger.error('DSS ranking error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -74,7 +77,7 @@ export class DssController {
       const result = await dssService.rankAssets({ assetType: 'all', limit: 50 });
       res.json({ success: true, message: 'Debug DSS ranking generated', data: result });
     } catch (error) {
-      console.error('DSS debug error:', error);
+      logger.error('DSS debug error', { error });
       res.status(500).json({ success: false, message: 'Debug DSS failed' });
     }
   };

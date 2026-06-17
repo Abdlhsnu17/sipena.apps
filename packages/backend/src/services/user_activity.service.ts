@@ -1,6 +1,6 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
-import { ApiResponse, CreateUserActivityDTO, UserActivity } from '../models';
+import { ActivityMetadata, ApiResponse, CreateUserActivityDTO, UserActivity } from '../models';
 import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 
@@ -28,6 +28,10 @@ interface MaintenanceRecordInfoRow extends RowDataPacket {
   maintenance_code: string | null;
   asset_name: string | null;
   asset_code: string | null;
+}
+
+interface TotalRow extends RowDataPacket {
+  total: number;
 }
 
 interface ActivityRecordInfo {
@@ -60,13 +64,22 @@ const toNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
+const normalizeDateFilter = (value: string | null | undefined): string | null => {
+  const normalized = value?.trim();
+  return normalized && /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+};
+
 const CODE_PATTERN = /\b([A-Z0-9]+(?:-[A-Z0-9]+)+)\b/;
 
-const parseMetadata = (value: string | null): Record<string, any> | null => {
+const isActivityMetadata = (value: unknown): value is ActivityMetadata => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
+const parseMetadata = (value: string | null): ActivityMetadata | null => {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    const parsed: unknown = JSON.parse(value);
+    return isActivityMetadata(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -81,7 +94,7 @@ const extractCode = (value: unknown): string | null => {
   return matched?.[1] ?? null;
 };
 
-const getNumericMetadataValue = (metadata: Record<string, any> | null | undefined, keys: string[]): number | null => {
+const getNumericMetadataValue = (metadata: ActivityMetadata | null | undefined, keys: string[]): number | null => {
   if (!metadata) return null;
   for (const key of keys) {
     const numericValue = toNumber(metadata[key]);
@@ -90,7 +103,7 @@ const getNumericMetadataValue = (metadata: Record<string, any> | null | undefine
   return null;
 };
 
-const getExplicitMetadataCode = (metadata: Record<string, any> | null | undefined): string | null => {
+const getExplicitMetadataCode = (metadata: ActivityMetadata | null | undefined): string | null => {
   if (!metadata) return null;
 
   const codeKeys = [
@@ -116,7 +129,7 @@ const getExplicitMetadataCode = (metadata: Record<string, any> | null | undefine
 
 const getDescriptionCode = (description: string): string | null => extractCode(description);
 
-const getTextMetadataValue = (metadata: Record<string, any> | null | undefined, keys: string[]): string | null => {
+const getTextMetadataValue = (metadata: ActivityMetadata | null | undefined, keys: string[]): string | null => {
   if (!metadata) return null;
   for (const key of keys) {
     const value = metadata[key];
@@ -259,7 +272,7 @@ const enrichActivityMetadata = async (activity: UserActivity): Promise<UserActiv
 
   if (!resolvedCode && !resolvedItemName && !resolvedItemCode) return activity;
 
-  const enrichedMetadata: Record<string, any> = {
+  const enrichedMetadata: ActivityMetadata = {
     ...metadata,
   };
 
@@ -359,6 +372,8 @@ export class UserActivityService {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.max(1, Math.min(Number(filters.limit) || 20, 100));
     const offset = (page - 1) * limit;
+    const startDate = normalizeDateFilter(filters.startDate);
+    const endDate = normalizeDateFilter(filters.endDate);
     const where = [`NOT (ual.feature = 'pencarian' AND ual.action = 'search')`];
     const params: Array<string | number> = [];
 
@@ -367,19 +382,19 @@ export class UserActivityService {
       params.push(scopedUserId);
     }
 
-    if (filters.startDate) {
+    if (startDate) {
       where.push('DATE(ual.created_at) >= ?');
-      params.push(filters.startDate);
+      params.push(startDate);
     }
 
-    if (filters.endDate) {
+    if (endDate) {
       where.push('DATE(ual.created_at) <= ?');
-      params.push(filters.endDate);
+      params.push(endDate);
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    const [countRows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    const [countRows] = await pool.query<TotalRow[]>(
       `SELECT COUNT(*) AS total
        FROM user_activity_logs ual
        ${whereClause}`,
