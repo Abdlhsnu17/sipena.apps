@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -55,6 +56,10 @@ export default function DisposalPage() {
   const [search, setSearch] = useState("")
   const [isDisposalListMinimized, setIsDisposalListMinimized] = useState(false)
   const [isDataRequestsMinimized, setIsDataRequestsMinimized] = useState(false)
+  const [selectedDisposalIds, setSelectedDisposalIds] = useState<Set<number>>(() => new Set())
+  const [selectedDataRequestIds, setSelectedDataRequestIds] = useState<Set<number>>(() => new Set())
+  const [expandedDisposalIds, setExpandedDisposalIds] = useState<Set<number>>(() => new Set())
+  const [expandedDataRequestIds, setExpandedDataRequestIds] = useState<Set<number>>(() => new Set())
 
   const [reviewDialog, setReviewDialog] = useState<{
     open: boolean
@@ -142,6 +147,54 @@ export default function DisposalPage() {
   const openDataReview = (record: DeletionRequest, mode: "approve" | "reject") => {
     setDataReviewNotes("")
     setDataReviewDialog({ open: true, record, mode })
+  }
+
+  const toggleDisposalSelection = (id: number) => {
+    setSelectedDisposalIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleDataRequestSelection = (id: number) => {
+    setSelectedDataRequestIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleDisposalExpansion = (id: number) => {
+    setExpandedDisposalIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleDataRequestExpansion = (id: number) => {
+    setExpandedDataRequestIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }
 
   const handleReview = async () => {
@@ -277,89 +330,146 @@ export default function DisposalPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filtered.map((record) => (
-                  <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    {/* Header bar */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[13px] font-semibold text-slate-700">
-                          {record.requesterName}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">NIP: {record.requesterNip}</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1 shrink-0">
-                        <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
-                        <Badge variant="outline" className="text-[11px]">
-                          {assetTypeLabel[record.assetType] ?? record.assetType}
-                        </Badge>
-                      </div>
-                    </div>
+                {filtered.map((record) => {
+                  const isExpanded = expandedDisposalIds.has(record.id)
+                  const createdAtLabel = record.createdAt ? formatDayTimeLabel(record.createdAt) : "-"
+                  const reviewedAtLabel = record.reviewedAt ? formatDayTimeLabel(record.reviewedAt) : "-"
+                  const assetName = record.assetDetailName ?? `Aset #${record.assetId}`
+                  const assetCode = record.assetDetailCode ?? assetTypeLabel[record.assetType] ?? record.assetType
+                  const requestNo = record.requestCode ?? `DSP-${record.id}`
 
-                    {/* Main content */}
-                    <div className="space-y-2.5 bg-white px-3 py-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
-                            {record.assetDetailName ?? `Aset #${record.assetId}`}
-                          </p>
-                          {record.assetDetailCode && (
-                            <p className="text-[12px] font-medium text-slate-700">{record.assetDetailCode}</p>
+                  return (
+                    <SummaryResultCard
+                      key={record.id}
+                      title="Informasi Dasar Penghapusan Aset"
+                      isExpanded={isExpanded}
+                      onToggle={() => toggleDisposalExpansion(record.id)}
+                      toggleLabel={isExpanded ? "Sembunyikan detail penghapusan aset" : "Tampilkan detail penghapusan aset"}
+                      footer={(
+                        <SummaryResultFooter
+                          selected={selectedDisposalIds.has(record.id)}
+                          onSelectedChange={() => toggleDisposalSelection(record.id)}
+                          selectionLabel={`Pilih penghapusan ${assetName}`}
+                        >
+                          {record.status === "pending" && user?.role === "admin" ? (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => openReview(record, "approve")}
+                                className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                              >
+                                <CheckCircle className="mr-1 h-3.5 w-3.5" /> Setujui
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openReview(record, "reject")}
+                                className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                              >
+                                <XCircle className="mr-1 h-3.5 w-3.5" /> Tolak
+                              </Button>
+                            </>
+                          ) : (
+                            <Badge variant={statusVariant[record.status]} className="text-[12px]">
+                              {statusLabel[record.status]}
+                            </Badge>
                           )}
-                          <div className="mt-1.5 space-y-1">
-                            {record.requestCode && (
-                              <p className="text-[11px] text-muted-foreground">
-                                No Permintaan: <span className="font-mono font-medium text-slate-700">{record.requestCode}</span>
-                              </p>
-                            )}
-                            <p className="text-[11px] text-muted-foreground">
-                              Alasan: <span className="font-medium text-slate-700">{record.reason}</span>
-                            </p>
-                            {record.conditionNotes && (
-                              <p className="text-[11px] text-muted-foreground italic">{record.conditionNotes}</p>
-                            )}
-                            {record.reviewedAt && (
-                              <p className="text-[11px] text-muted-foreground">
-                                Ditinjau oleh {record.reviewerName ?? "admin"} pada {formatDayTimeLabel(record.reviewedAt)}
-                                {record.reviewNotes && ` — ${record.reviewNotes}`}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {record.createdAt && (
-                          <div className="flex flex-col items-start gap-0.5 sm:items-end sm:text-right shrink-0">
-                            <span className="text-[10px] font-semibold uppercase text-muted-foreground">Diajukan</span>
-                            <span className="text-[13px] font-semibold text-foreground">
-                              {formatDayTimeLabel(record.createdAt)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                        </SummaryResultFooter>
+                      )}
+                    >
+                      {!isExpanded && (
+                        <SummaryResultBody
+                          assetName={assetName}
+                          assetCode={assetCode}
+                          noId={requestNo}
+                          personLabel="Pengaju"
+                          personValue={`${record.requesterName || "-"} / ${record.requesterNip || "-"}`}
+                          unitLabel="Alasan"
+                          unitValue={record.reason || "-"}
+                          unitExtra={record.conditionNotes}
+                          timeLabel="Diajukan"
+                          timeValue={createdAtLabel}
+                          badges={(
+                            <Badge variant="outline" className="text-[10px]">
+                              {assetTypeLabel[record.assetType] ?? record.assetType}
+                            </Badge>
+                          )}
+                          statusBadges={(
+                            <Badge variant={statusVariant[record.status]} className="text-[12px]">
+                              {statusLabel[record.status]}
+                            </Badge>
+                          )}
+                        />
+                      )}
 
-                    {/* Footer action buttons */}
-                    {record.status === "pending" && user?.role === "admin" && (
-                      <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => openReview(record, "approve")}
-                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" /> Setujui
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openReview(record, "reject")}
-                            className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1" /> Tolak
-                          </Button>
+                      {isExpanded && (
+                        <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                          <div className="columns-1 gap-3 lg:columns-2">
+                            <div className="mb-3 break-inside-avoid space-y-2">
+                              <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                Informasi Aset
+                              </div>
+                              <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">No Permintaan</span>
+                                  <span className="font-medium text-slate-900">{requestNo}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Nama Aset</span>
+                                  <span className="font-medium text-slate-900">{assetName}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Kode Aset</span>
+                                  <span className="font-medium text-slate-900">{record.assetDetailCode || "-"}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Jenis Aset</span>
+                                  <span className="font-medium text-slate-900">{assetTypeLabel[record.assetType] ?? record.assetType}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mb-3 break-inside-avoid space-y-2">
+                              <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                                Detail Pengajuan
+                              </div>
+                              <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Pengaju</span>
+                                  <span className="font-medium text-slate-900">{record.requesterName || "-"} / {record.requesterNip || "-"}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Tanggal Pengajuan</span>
+                                  <span className="font-medium text-slate-900">{createdAtLabel}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Status</span>
+                                  <span className="font-medium text-slate-900">{statusLabel[record.status]}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Alasan</span>
+                                  <span className="font-medium text-slate-900">{record.reason || "-"}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                  <span className="font-medium text-slate-600">Catatan Kondisi</span>
+                                  <span className="font-medium text-slate-900">{record.conditionNotes || "-"}</span>
+                                </div>
+                                {record.reviewedAt && (
+                                  <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                    <span className="font-medium text-slate-600">Ditinjau</span>
+                                    <span className="font-medium text-slate-900">
+                                      {record.reviewerName ?? "admin"} pada {reviewedAtLabel}
+                                      {record.reviewNotes ? ` - ${record.reviewNotes}` : ""}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </SummaryResultCard>
+                  )
+                })}
                 <p className="text-xs text-muted-foreground text-right">
                   {filtered.length} dari {total} data
                 </p>
@@ -407,61 +517,128 @@ export default function DisposalPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredDataRequests.map((record) => (
-              <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[13px] font-semibold text-slate-700">{record.requesterName}</span>
-                    <span className="text-[11px] text-muted-foreground">NIP: {record.requesterNip}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1 shrink-0">
-                    <Badge variant={statusVariant[record.status]}>{statusLabel[record.status]}</Badge>
-                    <Badge variant="outline" className="text-[11px]">
-                      {targetTypeLabel[record.targetType] ?? record.targetType}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="space-y-2.5 bg-white px-3 py-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-slate-900">{record.targetLabel ?? `Data #${record.targetId}`}</p>
-                      {record.requestCode && (
-                        <p className="text-[11px] text-muted-foreground">
-                          No Permintaan: <span className="font-mono font-medium text-slate-700">{record.requestCode}</span>
-                        </p>
+            {filteredDataRequests.map((record) => {
+              const isExpanded = expandedDataRequestIds.has(record.id)
+              const createdAtLabel = record.createdAt ? formatDayTimeLabel(record.createdAt) : "-"
+              const reviewedAtLabel = record.reviewedAt ? formatDayTimeLabel(record.reviewedAt) : "-"
+              const targetLabel = record.targetLabel ?? `Data #${record.targetId}`
+              const requestNo = record.requestCode ?? `ARS-${record.id}`
+              const targetType = targetTypeLabel[record.targetType] ?? record.targetType
+
+              return (
+                <SummaryResultCard
+                  key={record.id}
+                  title="Informasi Dasar Arsip Data"
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleDataRequestExpansion(record.id)}
+                  toggleLabel={isExpanded ? "Sembunyikan detail arsip data" : "Tampilkan detail arsip data"}
+                  footer={(
+                    <SummaryResultFooter
+                      selected={selectedDataRequestIds.has(record.id)}
+                      onSelectedChange={() => toggleDataRequestSelection(record.id)}
+                      selectionLabel={`Pilih arsip data ${targetLabel}`}
+                    >
+                      {record.status === "pending" && user?.role === "admin" ? (
+                        <>
+                          <Button size="sm" onClick={() => openDataReview(record, "approve")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
+                            <CheckCircle className="mr-1 h-3.5 w-3.5" /> Setujui
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openDataReview(record, "reject")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
+                            <XCircle className="mr-1 h-3.5 w-3.5" /> Tolak
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant={statusVariant[record.status]} className="text-[12px]">
+                          {statusLabel[record.status]}
+                        </Badge>
                       )}
-                      <p className="text-[11px] text-muted-foreground">
-                        Alasan: <span className="font-medium text-slate-700">{record.reason}</span>
-                      </p>
-                      {record.reviewedAt && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Ditinjau oleh {record.reviewerName ?? "admin"} pada {formatDayTimeLabel(record.reviewedAt)}
-                          {record.reviewNotes && ` — ${record.reviewNotes}`}
-                        </p>
+                    </SummaryResultFooter>
+                  )}
+                >
+                  {!isExpanded && (
+                    <SummaryResultBody
+                      assetName={targetLabel}
+                      assetCode={targetType}
+                      noId={requestNo}
+                      personLabel="Pengaju"
+                      personValue={`${record.requesterName || "-"} / ${record.requesterNip || "-"}`}
+                      unitLabel="Alasan"
+                      unitValue={record.reason || "-"}
+                      timeLabel="Diajukan"
+                      timeValue={createdAtLabel}
+                      badges={(
+                        <Badge variant="outline" className="text-[10px]">
+                          {targetType}
+                        </Badge>
                       )}
-                    </div>
-                    {record.createdAt && (
-                      <div className="flex shrink-0 flex-col items-start gap-0.5 sm:items-end sm:text-right">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">Diajukan</span>
-                        <span className="text-[13px] font-semibold text-foreground">{formatDayTimeLabel(record.createdAt)}</span>
+                      statusBadges={(
+                        <Badge variant={statusVariant[record.status]} className="text-[12px]">
+                          {statusLabel[record.status]}
+                        </Badge>
+                      )}
+                    />
+                  )}
+
+                  {isExpanded && (
+                    <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                      <div className="columns-1 gap-3 lg:columns-2">
+                        <div className="mb-3 break-inside-avoid space-y-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                            Informasi Data
+                          </div>
+                          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">No Permintaan</span>
+                              <span className="font-medium text-slate-900">{requestNo}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Target Data</span>
+                              <span className="font-medium text-slate-900">{targetLabel}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Jenis Data</span>
+                              <span className="font-medium text-slate-900">{targetType}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mb-3 break-inside-avoid space-y-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                            Detail Pengajuan
+                          </div>
+                          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Pengaju</span>
+                              <span className="font-medium text-slate-900">{record.requesterName || "-"} / {record.requesterNip || "-"}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Tanggal Pengajuan</span>
+                              <span className="font-medium text-slate-900">{createdAtLabel}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Status</span>
+                              <span className="font-medium text-slate-900">{statusLabel[record.status]}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                              <span className="font-medium text-slate-600">Alasan</span>
+                              <span className="font-medium text-slate-900">{record.reason || "-"}</span>
+                            </div>
+                            {record.reviewedAt && (
+                              <div className="grid grid-cols-1 gap-1 px-3 py-2 text-[12px] sm:grid-cols-[150px_1fr]">
+                                <span className="font-medium text-slate-600">Ditinjau</span>
+                                <span className="font-medium text-slate-900">
+                                  {record.reviewerName ?? "admin"} pada {reviewedAtLabel}
+                                  {record.reviewNotes ? ` - ${record.reviewNotes}` : ""}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-                {record.status === "pending" && user?.role === "admin" && (
-                  <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button size="sm" onClick={() => openDataReview(record, "approve")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
-                        <CheckCircle className="mr-1 h-3.5 w-3.5" /> Setujui
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openDataReview(record, "reject")} className="h-7 rounded-full px-3 text-[12px] font-semibold">
-                        <XCircle className="mr-1 h-3.5 w-3.5" /> Tolak
-                      </Button>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </SummaryResultCard>
+              )
+            })}
           </div>
         )}
       </section>

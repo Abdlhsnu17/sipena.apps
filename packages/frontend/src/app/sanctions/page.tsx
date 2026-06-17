@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -300,14 +301,16 @@ export default function SanctionsPage() {
                     </>
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
-                  onClick={handleSelectAllSanctions}
-                >
-                  {allSanctionsSelected ? "Batal pilih semua" : "Pilih semua"}
-                </Button>
+                <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    aria-label="Pilih semua sanksi"
+                    className="h-4 w-4 accent-blue-600"
+                    checked={allSanctionsSelected}
+                    onChange={handleSelectAllSanctions}
+                  />
+                  Pilih semua
+                </label>
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedSanctionRows.length
                     ? `${selectedSanctionRows.length} baris dipilih`
@@ -359,57 +362,69 @@ export default function SanctionsPage() {
                       const resolvedDateLabel = record.resolvedAt ? formatDayTimeLabel(record.resolvedAt, { showWeekday: true }) : "-"
 
                       return (
-                        <div key={record.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                            <span>Informasi Dasar Sanksi</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 w-9 rounded-lg p-1.5 text-slate-700 hover:bg-slate-200"
-                              onClick={() => toggleCardCollapse(record.id)}
-                              aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
+                        <SummaryResultCard
+                          key={record.id}
+                          title="Informasi Dasar Sanksi"
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleCardCollapse(record.id)}
+                          toggleLabel={isExpanded ? "Sembunyikan detail sanksi" : "Tampilkan detail sanksi"}
+                          footer={(
+                            <SummaryResultFooter
+                              selected={selectedSanctionIds.has(record.id)}
+                              onSelectedChange={() => toggleSanctionSelection(record.id)}
+                              selectionLabel={`Pilih sanksi ${record.assetName || record.borrowingCode || record.id}`}
                             >
-                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            </Button>
-                          </div>
-
+                              {record.sanctionStatus === "active" ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => openResolve(record, "resolve")}
+                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                                  >
+                                    <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                                    Selesaikan
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openResolve(record, "waive")}
+                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
+                                  >
+                                    <XCircle className="mr-1 h-3.5 w-3.5" />
+                                    Bebaskan
+                                  </Button>
+                                </>
+                              ) : (
+                                <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
+                                  {sanctionStatusLabel[record.sanctionStatus]}
+                                </Badge>
+                              )}
+                            </SummaryResultFooter>
+                          )}
+                        >
                           {!isExpanded && (
-                            <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                                    {record.assetName || "-"}
-                                  </p>
-                                  <p className="text-[12px] font-medium text-slate-700">{record.assetCode || "-"}</p>
-                                  <div className="mt-1.5 space-y-1.5">
-                                    <p className="text-[11px] text-muted-foreground">No ID: {record.borrowingCode || `SNK-${record.id}`}</p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Identitas Karyawan: <span className="font-medium text-slate-700">{record.userName || "-"} / {record.userNip || "-"}</span>
-                                    </p>
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                                    <Badge variant="outline" className="text-[10px]">
-                                      Peminjaman
-                                    </Badge>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      Terlambat {record.overdueDays} hari
-                                    </Badge>
-                                    <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[10px]">
-                                      {sanctionStatusLabel[record.sanctionStatus]}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end sm:text-right">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-semibold uppercase text-muted-foreground">Jatuh Tempo</span>
-                                    <span className="text-[13px] font-semibold text-foreground">{dueDateLabel}</span>
-                                  </div>
-                                  <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
-                                    {sanctionStatusLabel[record.sanctionStatus]}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
+                            <SummaryResultBody
+                              assetName={record.assetName || "-"}
+                              assetCode={record.assetCode || "-"}
+                              noId={record.borrowingCode || `SNK-${record.id}`}
+                              personValue={`${record.userName || "-"} / ${record.userNip || "-"}`}
+                              unitLabel="Status keterlambatan"
+                              unitValue={`Terlambat ${record.overdueDays} hari`}
+                              unitExtra="Peminjaman"
+                              timeLabel="Jatuh Tempo"
+                              timeValue={dueDateLabel}
+                              badges={(
+                                <Badge variant="outline" className="text-[10px]">
+                                  Peminjaman
+                                </Badge>
+                              )}
+                              statusBadges={(
+                                <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
+                                  {sanctionStatusLabel[record.sanctionStatus]}
+                                </Badge>
+                              )}
+                            />
                           )}
 
                           {isExpanded && (
@@ -475,47 +490,7 @@ export default function SanctionsPage() {
                             </div>
                           )}
 
-                          <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                            <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                              <input
-                                type="checkbox"
-                                checked={selectedSanctionIds.has(record.id)}
-                                onChange={() => toggleSanctionSelection(record.id)}
-                                className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                                aria-label={`Pilih sanksi ${record.assetName || record.borrowingCode || record.id}`}
-                              />
-                              Pilih kartu
-                            </label>
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              {record.sanctionStatus === "active" ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => openResolve(record, "resolve")}
-                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                                  >
-                                    <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                                    Selesaikan
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openResolve(record, "waive")}
-                                    className="h-7 rounded-full px-3 text-[12px] font-semibold"
-                                  >
-                                    <XCircle className="mr-1 h-3.5 w-3.5" />
-                                    Bebaskan
-                                  </Button>
-                                </>
-                              ) : (
-                                <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
-                                  {sanctionStatusLabel[record.sanctionStatus]}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        </SummaryResultCard>
                       )
                     })}
 

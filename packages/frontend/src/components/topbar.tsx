@@ -393,18 +393,18 @@ export default function Topbar() {
       </div>
       <div className="flex min-h-16 min-w-0 items-start justify-between gap-3 pl-16 pr-3 py-3 sm:items-center sm:gap-4 sm:pl-20 sm:pr-4 md:pl-4 lg:px-6 xl:px-8">
         <div className="min-w-0 flex-1">
-          <p className="min-w-0 truncate text-base font-bold sm:hidden">{formattedCompactDate}</p>
-          <p className="hidden min-w-0 truncate font-bold sm:block" style={{ fontSize: 18 }}>{formattedDate}</p>
+          <p className="min-w-0 truncate text-sm font-bold sm:hidden">{formattedCompactDate}</p>
+          <p className="hidden min-w-0 truncate text-[16px] font-bold sm:block">{formattedDate}</p>
         </div>
         <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:h-10 sm:w-10 md:h-11 md:w-11"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               aria-label="Menu notifikasi"
             >
-              <Bell className="size-5 sm:size-5 md:size-6" />
+              <Bell className="size-[18px]" />
               {notifications.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background bg-red-500 sm:h-3 sm:w-3" />
+                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background bg-red-500" />
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(62vh,30rem)] w-[min(calc(100vw-1rem),20rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-white text-slate-950 shadow-lg sm:w-84">
@@ -495,10 +495,10 @@ export default function Topbar() {
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-            <span className="font-mono tabular-nums text-base font-semibold tracking-[0.14em] text-foreground sm:text-lg sm:tracking-[0.18em]">
+            <span className="font-mono tabular-nums text-base font-semibold tracking-[0.1em] text-foreground sm:text-[18px] sm:tracking-[0.14em]">
               {formattedTime}
             </span>
-            <span className="text-xs text-muted-foreground sm:text-sm">WIB</span>
+            <span className="text-[11px] text-muted-foreground sm:text-xs">WIB</span>
           </div>
         </div>
       </div>
