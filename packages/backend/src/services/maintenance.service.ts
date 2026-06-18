@@ -37,6 +37,7 @@ interface CountRow extends RowDataPacket {
 export class MaintenanceService {
   private assetService: AssetService;
   private readonly activeStatuses = ['scheduled', 'in_progress', 'completed'];
+  private readonly detailActiveStatuses = ['requested', 'scheduled', 'in_progress', 'completed'];
   private readonly releasableStatuses = ['validated', 'cancelled'];
   private readonly listViewStatuses: Record<'active' | 'history', string[]> = {
     active: ['requested', 'scheduled', 'in_progress', 'completed'],
@@ -103,6 +104,11 @@ export class MaintenanceService {
   private isActiveMaintenanceStatus(status?: string | null): boolean {
     if (!status) return false;
     return this.activeStatuses.includes(status);
+  }
+
+  private isDetailActiveMaintenanceStatus(status?: string | null): boolean {
+    if (!status) return false;
+    return this.detailActiveStatuses.includes(status);
   }
 
   private isReleasableMaintenanceStatus(status?: string | null): boolean {
@@ -298,7 +304,7 @@ export class MaintenanceService {
 
       if (!isTarget) return rawDetail;
 
-      if (this.isActiveMaintenanceStatus(maintenanceStatus)) {
+      if (this.isDetailActiveMaintenanceStatus(maintenanceStatus)) {
         if (detail.status !== activeDetailStatus) {
           detail.status = activeDetailStatus;
           hasChanges = true;
@@ -977,8 +983,7 @@ export class MaintenanceService {
       (existingAssetId !== nextAssetId ||
         existingAssetType !== nextAssetType ||
         existingDetailId !== nextDetailId ||
-        existingDetailCode !== nextDetailCode ||
-        existingMaintenance.status !== nextStatus)
+        existingDetailCode !== nextDetailCode)
     ) {
       await this.syncAssetDetailMaintenance(existingAssetId, existingAssetType, 'cancelled', {
         detailId: existingDetailId,
