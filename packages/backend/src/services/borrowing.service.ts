@@ -1267,18 +1267,19 @@ export class BorrowingService {
     // Create asset usage log on approve if the borrowing should be considered started.
     // Existing active usage is reused to avoid duplicate rows.
     try {
-      const startedAt = normalizeDateInput(borrowing.data.borrowDate) || new Date();
+      const borrowingRow = borrowing.data as any;
+      const startedAt = normalizeDateInput(borrowingRow.borrowDate ?? borrowingRow.borrow_date) || new Date();
 
       await this.ensureUsageLogForBorrowing({
         borrowingId: borrowing.data.id,
         assetId: assetContext.assetId,
         assetType: assetContext.assetType,
         assetDetailId: assetContext.assetDetailId,
-        assetDetailName: borrowing.data.assetDetailName || null,
+        assetDetailName: borrowingRow.assetDetailName ?? borrowingRow.asset_detail_name ?? null,
         assetDetailCode: assetContext.assetDetailCode,
-        assetLocation: borrowing.data.assetLocation || '',
-        roomName: borrowing.data.destinationRoom || '',
-        operatorUserId: borrowing.data.userId ?? (borrowing.data as any).user_id ?? null,
+        assetLocation: borrowingRow.assetLocation ?? borrowingRow.asset_location ?? '',
+        roomName: borrowingRow.destinationRoom ?? borrowingRow.destination_room ?? '',
+        operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
         startedAt: startedAt,
         usageCount: borrowing.data.quantity || 1,
         notes: borrowing.data.notes || null,
@@ -1690,7 +1691,7 @@ export class BorrowingService {
         const assetType = borrowingRow.assetType ?? borrowingRow.asset_type ?? 'medical';
         const startedAt = data.borrowDate !== undefined
           ? normalizeDateInput(data.borrowDate) || new Date()
-          : normalizeDateInput(borrowingRow.borrowDate) || new Date();
+          : normalizeDateInput(borrowingRow.borrowDate ?? borrowingRow.borrow_date) || new Date();
 
         await this.ensureUsageLogForBorrowing({
           borrowingId: id,
@@ -1699,7 +1700,7 @@ export class BorrowingService {
           assetDetailId: borrowingRow.assetDetailId || borrowingRow.asset_detail_id || null,
           assetDetailName: borrowingRow.assetDetailName || borrowingRow.asset_detail_name || null,
           assetDetailCode: borrowingRow.assetDetailCode || borrowingRow.asset_detail_code || null,
-          assetLocation: borrowingRow.assetLocation || '',
+          assetLocation: borrowingRow.assetLocation || borrowingRow.asset_location || '',
           roomName: data.destinationRoom || borrowingRow.destinationRoom || borrowingRow.destination_room || '',
           operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
           startedAt: startedAt,

@@ -528,25 +528,29 @@ export default function Topbar() {
         // --- Laporan Tersedia ---
         if (validatedMaintenance.length > 0) {
           const validated = validatedMaintenance[0]
-          const sourceLabel = assetSourceLabel(deriveAssetSource(validated.assetType, validated.assetDetailCode || validated.assetCode))
-          const assetName = validated.assetDetailName || validated.assetName || "Aset pemeliharaan"
-          const assetCode = validated.assetDetailCode || validated.assetCode || "-"
-          nextNotifications.push({
-            id: "maintenance-report",
-            category: "maintenance",
-            type: "laporan_tersedia",
-            notifStatus: "success",
-            title: `${validatedMaintenance.length} laporan hasil layanan tersedia`,
-            subtitle: `${maintenanceStatusLabel(validated.status)} • ${formatDateId(validated.validatedAt || validated.completedDate || validated.scheduledDate)}`,
-            description: validated.notes || "Laporan hasil layanan dapat dilihat melalui modul pemeliharaan.",
-            href: "/reports",
-            assetName,
-            assetCode,
-            recordNoId: formatNoId("MNT", validated.id, validated.maintenanceCode),
-            identity: getIdentityLabel(validated.validatorName || validated.requesterName, validated.validatorNip || validated.requesterNip),
-            sourceLabel,
-            roomLabel: validated.assetLocation || "-",
-          })
+          const dismissKey = `maintenance-report:${validatedMaintenance.length}`
+          if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
+            const sourceLabel = assetSourceLabel(deriveAssetSource(validated.assetType, validated.assetDetailCode || validated.assetCode))
+            const assetName = validated.assetDetailName || validated.assetName || "Aset pemeliharaan"
+            const assetCode = validated.assetDetailCode || validated.assetCode || "-"
+            nextNotifications.push({
+              id: "maintenance-report",
+              category: "maintenance",
+              type: "laporan_tersedia",
+              notifStatus: "success",
+              title: `${validatedMaintenance.length} laporan hasil layanan tersedia`,
+              subtitle: `${maintenanceStatusLabel(validated.status)} • ${formatDateId(validated.validatedAt || validated.completedDate || validated.scheduledDate)}`,
+              description: validated.notes || "Laporan hasil layanan dapat dilihat melalui modul pemeliharaan.",
+              href: "/reports",
+              assetName,
+              assetCode,
+              recordNoId: formatNoId("MNT", validated.id, validated.maintenanceCode),
+              identity: getIdentityLabel(validated.validatorName || validated.requesterName, validated.validatorNip || validated.requesterNip),
+              sourceLabel,
+              roomLabel: validated.assetLocation || "-",
+              dismissKey,
+            })
+          }
         }
 
         // --- Layanan Ditolak/Dibatalkan ---
@@ -729,27 +733,31 @@ export default function Topbar() {
         // --- Laporan Tersedia dari pengembalian tervalidasi ---
         if (validatedReturns.length > 0) {
           const validatedReturn = validatedReturns[0]
-          const assetLabel = validatedReturn.assetDetailName || validatedReturn.assetName || "Aset pengembalian"
-          const assetCode = validatedReturn.assetDetailCode || validatedReturn.assetCode || "-"
-          const sourceLabel = assetSourceLabel(
-            deriveAssetSource(validatedReturn.assetType, validatedReturn.assetDetailCode || validatedReturn.assetCode),
-          )
-          nextNotifications.push({
-            id: "return-report",
-            category: "returns",
-            type: "laporan_tersedia",
-            notifStatus: "success",
-            title: `${validatedReturns.length} laporan pengembalian tersedia`,
-            subtitle: `Tervalidasi • ${formatDateId(validatedReturn.returnValidatedAt || validatedReturn.returnDate)}`,
-            description: validatedReturn.returnNotes || "Laporan hasil layanan dapat dilihat atau diunduh.",
-            href: "/reports",
-            assetName: assetLabel,
-            assetCode,
-            recordNoId: formatNoId("PGB", validatedReturn.id, validatedReturn.borrowingCode),
-            identity: getIdentityLabel(validatedReturn.userName, validatedReturn.userNip),
-            sourceLabel,
-            roomLabel: validatedReturn.assetLocation || validatedReturn.purpose || "-",
-          })
+          const dismissKey = `return-report:${validatedReturns.length}`
+          if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
+            const assetLabel = validatedReturn.assetDetailName || validatedReturn.assetName || "Aset pengembalian"
+            const assetCode = validatedReturn.assetDetailCode || validatedReturn.assetCode || "-"
+            const sourceLabel = assetSourceLabel(
+              deriveAssetSource(validatedReturn.assetType, validatedReturn.assetDetailCode || validatedReturn.assetCode),
+            )
+            nextNotifications.push({
+              id: "return-report",
+              category: "returns",
+              type: "laporan_tersedia",
+              notifStatus: "success",
+              title: `${validatedReturns.length} laporan pengembalian tersedia`,
+              subtitle: `Tervalidasi • ${formatDateId(validatedReturn.returnValidatedAt || validatedReturn.returnDate)}`,
+              description: validatedReturn.returnNotes || "Laporan hasil layanan dapat dilihat atau diunduh.",
+              href: "/reports",
+              assetName: assetLabel,
+              assetCode,
+              recordNoId: formatNoId("PGB", validatedReturn.id, validatedReturn.borrowingCode),
+              identity: getIdentityLabel(validatedReturn.userName, validatedReturn.userNip),
+              sourceLabel,
+              roomLabel: validatedReturn.assetLocation || validatedReturn.purpose || "-",
+              dismissKey,
+            })
+          }
         }
 
         // --- Status Berubah (penggunaan aktif) ---
