@@ -142,6 +142,11 @@ const mapSingleMaintenance = (response: SingleMaintenanceResponse): SingleMainte
   };
 };
 
+const emitNotificationsRefresh = () => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event('notifications-refresh'));
+};
+
 class MaintenanceService {
   async getAll(filters: MaintenanceFilters = {}): Promise<MaintenanceResponse> {
     const params = new URLSearchParams();
@@ -169,21 +174,29 @@ class MaintenanceService {
 
   async create(data: CreateMaintenanceData): Promise<SingleMaintenanceResponse> {
     const response = await apiService.post<SingleMaintenanceResponse>('/maintenance', data);
-    return mapSingleMaintenance(response);
+    const normalized = mapSingleMaintenance(response);
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async update(id: number | string, data: UpdateMaintenanceData): Promise<SingleMaintenanceResponse> {
     const response = await apiService.put<SingleMaintenanceResponse>(`/maintenance/${id}`, data);
-    return mapSingleMaintenance(response);
+    const normalized = mapSingleMaintenance(response);
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async complete(id: number | string, notes?: string, cost?: number, completedBy?: number): Promise<SingleMaintenanceResponse> {
     const response = await apiService.patch<SingleMaintenanceResponse>(`/maintenance/${id}/complete`, { notes, cost, completedBy });
-    return mapSingleMaintenance(response);
+    const normalized = mapSingleMaintenance(response);
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async delete(id: number | string, deleteReason?: string): Promise<{ success: boolean; message: string }> {
-    return apiService.delete(`/maintenance/${id}`, { deleteReason });
+    const response = await apiService.delete<{ success: boolean; message: string }>(`/maintenance/${id}`, { deleteReason });
+    if (response.success) emitNotificationsRefresh();
+    return response;
   }
 
   async getScheduledMaintenance(): Promise<MaintenanceResponse> {

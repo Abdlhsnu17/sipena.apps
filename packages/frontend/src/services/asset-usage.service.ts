@@ -112,6 +112,11 @@ const normalizeUsage = (usage: any): AssetUsageLog => ({
   updatedAt: usage.updatedAt ?? usage.updated_at,
 });
 
+const emitNotificationsRefresh = () => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("notifications-refresh"));
+};
+
 class AssetUsageService {
   async getAll(filters: AssetUsageFilters = {}): Promise<AssetUsageResponse> {
     const params = new URLSearchParams();
@@ -128,16 +133,22 @@ class AssetUsageService {
 
   async create(data: CreateAssetUsageData): Promise<SingleAssetUsageResponse> {
     const response = await apiService.post<SingleAssetUsageResponse>("/asset-usage", data);
-    return response.data ? { ...response, data: normalizeUsage(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeUsage(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async update(id: number | string, data: UpdateAssetUsageData): Promise<SingleAssetUsageResponse> {
     const response = await apiService.patch<SingleAssetUsageResponse>(`/asset-usage/${id}`, data);
-    return response.data ? { ...response, data: normalizeUsage(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeUsage(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async delete(id: number | string): Promise<{ success: boolean; message: string }> {
-    return apiService.delete(`/asset-usage/${id}`);
+    const response = await apiService.delete<{ success: boolean; message: string }>(`/asset-usage/${id}`);
+    if (response.success) emitNotificationsRefresh();
+    return response;
   }
 }
 

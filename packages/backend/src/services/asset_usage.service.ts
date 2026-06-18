@@ -591,33 +591,11 @@ export class AssetUsageService {
     await this.assetService.update(String(assetId), assetUpdate, normalizedAssetType);
   }
 
-  private buildBorrowingDetailWhere(assetId: number, assetType: AssetType, detailId?: string | null): { clause: string; params: any[] } {
-    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
-    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
-
-    if (!normalizedDetailId || isFallbackDetail) {
-      const fallbackIds = [`asset-${assetId}`, `asset-${assetType}-${assetId}`];
-      return {
-        clause: 'AND (asset_detail_id IS NULL OR asset_detail_id IN (?, ?))',
-        params: fallbackIds
-      };
-    }
-
-    return {
-      clause: 'AND asset_detail_id = ?',
-      params: [normalizedDetailId]
-    };
-  }
-
   private async syncBorrowingReturnAfterUsageComplete(log: AssetUsageLog): Promise<void> {
     const endedAt = formatDateTimeForMySQL(log.endedAt);
     if (!endedAt) return;
 
-    const assetId = Number(log.assetId);
-    const assetType = this.normalizeAssetType(log.assetType);
-    const detailWhere = this.buildBorrowingDetailWhere(assetId, assetType, log.assetDetailId);
     const operatorId = log.operatorUserId ? Number(log.operatorUserId) : null;
-    const operatorClause = operatorId ? 'AND user_id = ?' : '';
     const conditionAfter = this.normalizeUsageConditionLabel(log.conditionAfter || log.conditionBefore) || 'Baik';
     const explicitBorrowingId = Number(log.borrowingId || (log as any).borrowing_id || 0);
 
@@ -643,45 +621,11 @@ export class AssetUsageService {
       return;
     }
 
-    const [rows] = await pool.query<ActiveBorrowingRow[]>(
-      `SELECT id
-       FROM borrowing_records
-       WHERE asset_id = ?
-         AND COALESCE(asset_type, 'medical') = ?
-         AND status IN ('approved', 'borrowed', 'overdue')
-         ${detailWhere.clause}
-         ${operatorClause}
-       ORDER BY borrow_date DESC, created_at DESC
-       LIMIT 1`,
-      [
-        assetId,
-        assetType,
-        ...detailWhere.params,
-        ...(operatorId ? [operatorId] : [])
-      ]
-    );
-
-    const borrowingId = rows[0]?.id;
-    if (!borrowingId) return;
-
-    await pool.query(
-      `UPDATE borrowing_records
-       SET status = 'returned',
-           return_date = ?,
-           return_condition = ?,
-           return_notes = ?,
-           returned_by = COALESCE(returned_by, ?),
-           updated_at = NOW()
-       WHERE id = ?
-         AND status IN ('approved', 'borrowed', 'overdue')`,
-      [
-        endedAt,
-        conditionAfter,
-        log.notes || null,
-        operatorId,
-        borrowingId
-      ]
-    );
+    // A usage log with no borrowing_id was created directly in Pemakaian, not
+    // from a Peminjaman/Pengembalian flow. It must never auto-complete or
+    // auto-return an unrelated borrowing record just because it happens to
+    // match the same asset/detail/operator — that linkage is only valid when
+    // the usage log was generated from a borrowing in the first place.
   }
 
   private async markAssetDetailInUse(assetId: number, assetType: AssetType, options?: UsageSyncOptions): Promise<void> {

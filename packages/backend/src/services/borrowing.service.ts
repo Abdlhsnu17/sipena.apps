@@ -201,27 +201,6 @@ export class BorrowingService {
     return (rows[0]?.count || 0) > 0;
   }
 
-  private buildUsageDetailWhere(
-    assetId: number,
-    assetType: string,
-    detailId?: string | null
-  ): { clause: string; params: any[] } {
-    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
-    const isFallback = this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
-
-    if (!normalizedDetailId || isFallback) {
-      return {
-        clause: '',
-        params: []
-      };
-    }
-
-    return {
-      clause: 'AND asset_detail_id = ?',
-      params: [normalizedDetailId]
-    };
-  }
-
   private async ensureUsageLogForBorrowing(data: {
     borrowingId?: string | number | null;
     assetId: number;
@@ -297,60 +276,21 @@ export class BorrowingService {
     conditionAfter?: string | null;
     notes?: string | null;
   }): Promise<void> {
-    const assetId = Number(data.assetId);
-    const assetType = data.assetType || 'medical';
-    const detailWhere = this.buildUsageDetailWhere(assetId, assetType, data.assetDetailId);
-    const operatorId = data.operatorUserId ? Number(data.operatorUserId) : null;
-    const operatorClause = operatorId ? 'AND operator_user_id = ?' : '';
     const borrowingId = data.borrowingId ? Number(data.borrowingId) : null;
-    const params = [
-      assetId,
-      assetType,
-      ...detailWhere.params,
-      ...(operatorId ? [operatorId] : [])
-    ];
+    if (!borrowingId) return;
 
-    let rows: ActiveUsageRow[] = [];
-
-    if (borrowingId) {
-      [rows] = await pool.query<ActiveUsageRow[]>(
-        `SELECT id, ended_at
-         FROM asset_usage_logs
-         WHERE borrowing_id = ?
-         ORDER BY COALESCE(ended_at, started_at) DESC, created_at DESC
-         LIMIT 1`,
-        [borrowingId]
-      );
-    }
-
-    if (rows.length === 0) {
-      [rows] = await pool.query<ActiveUsageRow[]>(
+    // Only auto-complete the usage log that was generated for this specific
+    // borrowing (linked via borrowing_id). Usage logs created directly in
+    // Pemakaian are never linked to a borrowing_id, so they are intentionally
+    // left untouched here and must be completed manually by the user.
+    const [rows] = await pool.query<ActiveUsageRow[]>(
       `SELECT id, ended_at
        FROM asset_usage_logs
-       WHERE asset_id = ?
-         AND COALESCE(asset_type, 'medical') = ?
-         AND ended_at IS NULL
-         ${detailWhere.clause}
-         ${operatorClause}
-       ORDER BY started_at DESC, created_at DESC
+       WHERE borrowing_id = ?
+       ORDER BY COALESCE(ended_at, started_at) DESC, created_at DESC
        LIMIT 1`,
-        params
-      );
-    }
-
-    if (rows.length === 0) {
-      [rows] = await pool.query<ActiveUsageRow[]>(
-        `SELECT id, ended_at
-         FROM asset_usage_logs
-         WHERE asset_id = ?
-           AND COALESCE(asset_type, 'medical') = ?
-           ${detailWhere.clause}
-           ${operatorClause}
-         ORDER BY COALESCE(ended_at, started_at) DESC, created_at DESC
-         LIMIT 1`,
-        params
-      );
-    }
+      [borrowingId]
+    );
 
     const usageLog = rows[0];
     if (!usageLog?.id) return;

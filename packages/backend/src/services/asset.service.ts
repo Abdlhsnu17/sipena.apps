@@ -150,7 +150,12 @@ export class AssetService {
     );
   }
 
-  private async hasActiveUsageForDetail(assetId: number, assetType: string, detail: Record<string, any>): Promise<boolean> {
+  private async hasActiveUsageForDetail(
+    assetId: number,
+    assetType: string,
+    detail: Record<string, any>,
+    treatNullDetailAsMatch: boolean
+  ): Promise<boolean> {
     const candidates = this.buildDetailCandidates(detail);
     const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
     const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
@@ -164,7 +169,7 @@ export class AssetService {
          AND COALESCE(asset_type, 'medical') = ?
          AND ended_at IS NULL
          AND (
-           asset_detail_id IS NULL
+           ${treatNullDetailAsMatch ? 'asset_detail_id IS NULL' : '0'}
            ${allCandidates.length > 0 ? `OR asset_detail_id IN (${candidatePlaceholders}) OR asset_detail_code IN (${candidatePlaceholders})` : ''}
          )`,
       [assetId, normalizedAssetType, ...allCandidates, ...allCandidates]
@@ -173,7 +178,12 @@ export class AssetService {
     return (rows[0]?.count || 0) > 0;
   }
 
-  private async hasActiveBorrowingForDetail(assetId: number, assetType: string, detail: Record<string, any>): Promise<boolean> {
+  private async hasActiveBorrowingForDetail(
+    assetId: number,
+    assetType: string,
+    detail: Record<string, any>,
+    treatNullDetailAsMatch: boolean
+  ): Promise<boolean> {
     const candidates = this.buildDetailCandidates(detail);
     const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
     const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
@@ -191,7 +201,7 @@ export class AssetService {
            OR (status = 'returned' AND return_validated_at IS NULL)
          )
          AND (
-           asset_detail_id IS NULL
+           ${treatNullDetailAsMatch ? 'asset_detail_id IS NULL' : '0'}
            ${allCandidates.length > 0 ? `OR asset_detail_id IN (${candidatePlaceholders}) OR asset_detail_code IN (${candidatePlaceholders})` : ''}
          )`,
       [assetId, normalizedAssetType, ...allCandidates, ...allCandidates]
@@ -211,6 +221,10 @@ export class AssetService {
 
       let hasChanges = false;
       const updatedDetails = [];
+      // A usage/borrowing row with no asset_detail_id only unambiguously identifies
+      // "this asset's detail" when the asset has a single detail unit; otherwise it
+      // must not be treated as locking every sibling detail of a multi-unit asset.
+      const treatNullDetailAsMatch = details.length === 1;
 
       for (const rawDetail of details) {
         const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
@@ -219,7 +233,7 @@ export class AssetService {
           continue;
         }
 
-        const hasActiveBorrowing = await this.hasActiveBorrowingForDetail(Number(row.id), normalizedAssetType, detail);
+        const hasActiveBorrowing = await this.hasActiveBorrowingForDetail(Number(row.id), normalizedAssetType, detail, treatNullDetailAsMatch);
         if (hasActiveBorrowing) {
           detail.status = 'Dipinjam';
           hasChanges = true;
@@ -227,7 +241,7 @@ export class AssetService {
           continue;
         }
 
-        const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail);
+        const hasActiveUsage = await this.hasActiveUsageForDetail(Number(row.id), normalizedAssetType, detail, treatNullDetailAsMatch);
         if (hasActiveUsage) {
           updatedDetails.push(rawDetail);
           continue;

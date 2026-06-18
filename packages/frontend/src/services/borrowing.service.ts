@@ -143,6 +143,11 @@ const normalizeBorrowing = (borrowing: any): Borrowing => ({
   updatedAt: borrowing.updatedAt ?? borrowing.updated_at,
 });
 
+const emitNotificationsRefresh = () => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event('notifications-refresh'));
+};
+
 export interface CreateBorrowingData {
   assetId: number;
   assetType?: 'medical' | 'non_medical';
@@ -211,32 +216,44 @@ class BorrowingService {
 
   async create(data: CreateBorrowingData): Promise<SingleBorrowingResponse> {
     const response = await apiService.post<SingleBorrowingResponse>('/borrowing', data);
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async update(id: number | string, data: UpdateBorrowingData): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}`, data);
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async approve(id: number | string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/approve`, {});
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async reject(id: number | string, reason: string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/reject`, { reason });
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async return(id: number | string, condition: string, notes?: string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/return`, { condition, notes });
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async validateReturn(id: number | string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/validate-return`, {});
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async extend(id: number | string, newDueDate: string, extensionNotes?: string): Promise<SingleBorrowingResponse> {
@@ -244,7 +261,9 @@ class BorrowingService {
       newDueDate, 
       extensionNotes 
     });
-    return response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
+    if (normalized.success) emitNotificationsRefresh();
+    return normalized;
   }
 
   async getBlockingBorrowings(userId: number | string): Promise<BorrowingResponse> {
@@ -256,7 +275,9 @@ class BorrowingService {
   }
 
   async delete(id: number | string, deleteReason?: string): Promise<{ success: boolean; message: string }> {
-    return apiService.delete(`/borrowing/${id}`, { deleteReason });
+    const response = await apiService.delete<{ success: boolean; message: string }>(`/borrowing/${id}`, { deleteReason });
+    if (response.success) emitNotificationsRefresh();
+    return response;
   }
 
   async getMyBorrowings(filters: BorrowingFilters = {}): Promise<BorrowingResponse> {

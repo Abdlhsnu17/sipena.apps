@@ -62,14 +62,14 @@ type NotificationItem = {
 const notificationTypeLabel: Record<NotificationType, string> = {
   jadwal_layanan: "📅 Jadwal Layanan",
   jadwal_terlewat: "⏰ Jadwal Terlewat",
-  permintaan_baru: "🔧 Permintaan Baru",
+  permintaan_baru: "🔧 Permintaan Layanan Baru",
   teknisi_ditugaskan: "👨‍🔧 Penugasan",
   status_berubah: "🔄 Status Berubah",
   prioritas_tinggi: "⚠️ Prioritas Tinggi",
   layanan_selesai: "✅ Layanan Selesai",
-  laporan_tersedia: "📄 Laporan",
-  preventive_maintenance: "🛠️ Preventive",
-  ditolak_dibatalkan: "❌ Ditolak/Batal",
+  laporan_tersedia: "📄 Laporan Tersedia",
+  preventive_maintenance: "🛠️ Preventive Maintenance",
+  ditolak_dibatalkan: "❌ Ditolak/Dibatalkan",
 }
 
 const statusConfig: Record<NotificationStatus, { gradient: string; dot: string }> = {
@@ -81,7 +81,7 @@ const statusConfig: Record<NotificationStatus, { gradient: string; dot: string }
 }
 
 const NOTIFICATION_TYPES_BY_ROLE: Record<string, NotificationType[]> = {
-  admin:    ["jadwal_layanan", "jadwal_terlewat", "permintaan_baru", "status_berubah", "prioritas_tinggi", "layanan_selesai", "laporan_tersedia", "preventive_maintenance", "ditolak_dibatalkan"],
+  admin:    ["jadwal_layanan", "jadwal_terlewat", "permintaan_baru", "teknisi_ditugaskan", "status_berubah", "prioritas_tinggi", "layanan_selesai", "laporan_tersedia", "preventive_maintenance", "ditolak_dibatalkan"],
   leader:   ["jadwal_terlewat", "prioritas_tinggi", "layanan_selesai", "laporan_tersedia", "permintaan_baru"],
   staff_pj: ["jadwal_layanan", "jadwal_terlewat", "teknisi_ditugaskan", "status_berubah", "preventive_maintenance", "layanan_selesai"],
   staff:    ["permintaan_baru", "ditolak_dibatalkan", "status_berubah", "layanan_selesai"],
@@ -97,10 +97,30 @@ const categoryLabelByKey: Record<NotificationItem["category"], string> = {
   usage: "Penggunaan Alat",
 }
 
+const NOTIFICATION_FETCH_LIMIT = 1000
+const BORROWING_NOTIFICATION_STATUSES = ["pending", "approved", "rejected", "borrowed", "overdue", "returned"] as const
+const MAINTENANCE_NOTIFICATION_STATUSES = ["requested", "scheduled", "in_progress", "completed", "validated", "cancelled"] as const
+const PRIORITY_KEYWORDS = ["prioritas tinggi", "urgent", "darurat", "cito", "segera"]
+
 const getIdentityLabel = (name?: string, nip?: string) => {
   const safeName = name || "-"
   const safeNip = nip || "-"
   return `${safeName} / ${safeNip}`
+}
+
+const uniqueById = <T extends { id: number | string }>(items: T[]): T[] => {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = String(item.id)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const hasHighPrioritySignal = (...values: Array<string | null | undefined>): boolean => {
+  const text = values.filter(Boolean).join(" ").toLowerCase()
+  return PRIORITY_KEYWORDS.some((keyword) => text.includes(keyword))
 }
 
 export default function Topbar() {
@@ -227,9 +247,25 @@ export default function Topbar() {
         const shouldFetchUsage = userRole !== "teknisi"
 
         const [maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
-          shouldFetchMaintenance ? maintenanceService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
-          shouldFetchBorrowing ? borrowingService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
-          shouldFetchUsage ? assetUsageService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
+          shouldFetchMaintenance
+            ? Promise.all(
+                MAINTENANCE_NOTIFICATION_STATUSES.map((status) =>
+                  maintenanceService.getAll({ page: 1, limit: NOTIFICATION_FETCH_LIMIT, status }),
+                ),
+              ).then((responses) => ({
+                data: uniqueById(responses.flatMap((response) => response.data || [])),
+              }))
+            : Promise.resolve({ data: [] as any[] }),
+          shouldFetchBorrowing
+            ? Promise.all(
+                BORROWING_NOTIFICATION_STATUSES.map((status) =>
+                  borrowingService.getAll({ page: 1, limit: NOTIFICATION_FETCH_LIMIT, status }),
+                ),
+              ).then((responses) => ({
+                data: uniqueById(responses.flatMap((response) => response.data || [])),
+              }))
+            : Promise.resolve({ data: [] as any[] }),
+          shouldFetchUsage ? assetUsageService.getAll({ page: 1, limit: NOTIFICATION_FETCH_LIMIT }) : Promise.resolve({ data: [] as any[] }),
         ])
 
         if (!isMounted) return
@@ -247,14 +283,54 @@ export default function Topbar() {
         })
         const scheduledMaintenance = maintenanceResponse.data.filter((item) => item.status === "scheduled")
         const ongoingMaintenance = maintenanceResponse.data.filter((item) => item.status === "in_progress")
+        const requestedMaintenance = maintenanceResponse.data.filter((item) => item.status === "requested")
+        const assignedMaintenance = maintenanceResponse.data.filter((item) =>
+          ["scheduled", "in_progress"].includes(item.status) && Boolean(item.technician?.trim()),
+        )
+        const completedMaintenance = maintenanceResponse.data.filter((item) => item.status === "completed")
+        const validatedMaintenance = maintenanceResponse.data.filter((item) => item.status === "validated")
+        const cancelledMaintenance = maintenanceResponse.data.filter((item) => item.status === "cancelled")
+        const highPriorityMaintenance = maintenanceResponse.data.filter((item) =>
+          !["validated", "cancelled"].includes(item.status) &&
+          hasHighPrioritySignal(item.description, item.notes, item.cancellationReason, item.type),
+        )
         const pendingBorrowings = borrowingResponse.data.filter((item) => item.status === "pending")
+        const rejectedBorrowings = borrowingResponse.data.filter((item) => item.status === "rejected")
+        const approvedBorrowings = borrowingResponse.data.filter((item) => item.status === "approved")
         const unreturnedBorrowings = borrowingResponse.data.filter((item) =>
           ["approved", "borrowed", "overdue"].includes(item.status),
         )
         const pendingReturns = borrowingResponse.data.filter(
           (item) => item.status === "returned" && !item.returnValidatedAt,
         )
+        const validatedReturns = borrowingResponse.data.filter(
+          (item) => item.status === "returned" && Boolean(item.returnValidatedAt),
+        )
         const nextNotifications: NotificationItem[] = []
+
+        // --- Permintaan Layanan Baru (maintenance requested) ---
+        if (requestedMaintenance.length > 0) {
+          const item = requestedMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(item.assetType, item.assetDetailCode || item.assetCode))
+          const assetName = item.assetDetailName || item.assetName || "Aset pemeliharaan"
+          const assetCode = item.assetDetailCode || item.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-requested",
+            category: "maintenance",
+            type: "permintaan_baru",
+            notifStatus: "info",
+            title: `${requestedMaintenance.length} permintaan pemeliharaan baru`,
+            subtitle: `${maintenanceStatusLabel(item.status)} • ${formatDateId(item.scheduledDate)}`,
+            description: item.description || "Permintaan layanan menunggu verifikasi.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", item.id, item.maintenanceCode),
+            identity: getIdentityLabel(item.requesterName, item.requesterNip),
+            sourceLabel,
+            roomLabel: item.assetLocation || "-",
+          })
+        }
 
         // --- Jadwal Terlewat (overdue maintenance) ---
         if (overdueMaintenance.length > 0) {
@@ -327,6 +403,30 @@ export default function Topbar() {
           })
         }
 
+        // --- Teknisi Ditugaskan ---
+        if (assignedMaintenance.length > 0) {
+          const assigned = assignedMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(assigned.assetType, assigned.assetDetailCode || assigned.assetCode))
+          const assetName = assigned.assetDetailName || assigned.assetName || "Aset pemeliharaan"
+          const assetCode = assigned.assetDetailCode || assigned.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-assigned",
+            category: "maintenance",
+            type: "teknisi_ditugaskan",
+            notifStatus: "info",
+            title: `${assignedMaintenance.length} layanan memiliki penugasan teknisi`,
+            subtitle: `${assigned.technician} • ${formatDateId(assigned.scheduledDate)}`,
+            description: assigned.description || "Teknisi atau Staff PJ telah ditugaskan untuk layanan ini.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", assigned.id, assigned.maintenanceCode),
+            identity: getIdentityLabel(assigned.requesterName, assigned.requesterNip),
+            sourceLabel,
+            roomLabel: assigned.assetLocation || "-",
+          })
+        }
+
         // --- Status Berubah (maintenance in_progress) ---
         if (ongoingMaintenance.length > 0) {
           const active = ongoingMaintenance[0]
@@ -348,6 +448,102 @@ export default function Topbar() {
             identity: getIdentityLabel(active.requesterName, active.requesterNip),
             sourceLabel,
             roomLabel: active.assetLocation || "-",
+          })
+        }
+
+        // --- Prioritas Tinggi ---
+        if (highPriorityMaintenance.length > 0) {
+          const urgent = highPriorityMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(urgent.assetType, urgent.assetDetailCode || urgent.assetCode))
+          const assetName = urgent.assetDetailName || urgent.assetName || "Aset pemeliharaan"
+          const assetCode = urgent.assetDetailCode || urgent.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-high-priority",
+            category: "maintenance",
+            type: "prioritas_tinggi",
+            notifStatus: "urgent",
+            title: `${highPriorityMaintenance.length} layanan prioritas tinggi`,
+            subtitle: `${maintenanceStatusLabel(urgent.status)} • ${formatDateId(urgent.scheduledDate)}`,
+            description: urgent.description || "Layanan memiliki tingkat urgensi tinggi.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", urgent.id, urgent.maintenanceCode),
+            identity: getIdentityLabel(urgent.requesterName, urgent.requesterNip),
+            sourceLabel,
+            roomLabel: urgent.assetLocation || "-",
+          })
+        }
+
+        // --- Layanan Selesai ---
+        if (completedMaintenance.length > 0) {
+          const completed = completedMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(completed.assetType, completed.assetDetailCode || completed.assetCode))
+          const assetName = completed.assetDetailName || completed.assetName || "Aset pemeliharaan"
+          const assetCode = completed.assetDetailCode || completed.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-completed",
+            category: "maintenance",
+            type: "layanan_selesai",
+            notifStatus: "success",
+            title: `${completedMaintenance.length} layanan selesai dan menunggu validasi`,
+            subtitle: `${maintenanceStatusLabel(completed.status)} • ${formatDateId(completed.completedDate || completed.scheduledDate)}`,
+            description: completed.notes || completed.description || "Pekerjaan telah selesai dilaksanakan.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", completed.id, completed.maintenanceCode),
+            identity: getIdentityLabel(completed.validatorName || completed.requesterName, completed.validatorNip || completed.requesterNip),
+            sourceLabel,
+            roomLabel: completed.assetLocation || "-",
+          })
+        }
+
+        // --- Laporan Tersedia ---
+        if (validatedMaintenance.length > 0) {
+          const validated = validatedMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(validated.assetType, validated.assetDetailCode || validated.assetCode))
+          const assetName = validated.assetDetailName || validated.assetName || "Aset pemeliharaan"
+          const assetCode = validated.assetDetailCode || validated.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-report",
+            category: "maintenance",
+            type: "laporan_tersedia",
+            notifStatus: "success",
+            title: `${validatedMaintenance.length} laporan hasil layanan tersedia`,
+            subtitle: `${maintenanceStatusLabel(validated.status)} • ${formatDateId(validated.validatedAt || validated.completedDate || validated.scheduledDate)}`,
+            description: validated.notes || "Laporan hasil layanan dapat dilihat melalui modul pemeliharaan.",
+            href: "/reports",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", validated.id, validated.maintenanceCode),
+            identity: getIdentityLabel(validated.validatorName || validated.requesterName, validated.validatorNip || validated.requesterNip),
+            sourceLabel,
+            roomLabel: validated.assetLocation || "-",
+          })
+        }
+
+        // --- Layanan Ditolak/Dibatalkan ---
+        if (cancelledMaintenance.length > 0) {
+          const cancelled = cancelledMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(cancelled.assetType, cancelled.assetDetailCode || cancelled.assetCode))
+          const assetName = cancelled.assetDetailName || cancelled.assetName || "Aset pemeliharaan"
+          const assetCode = cancelled.assetDetailCode || cancelled.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-cancelled",
+            category: "maintenance",
+            type: "ditolak_dibatalkan",
+            notifStatus: "warning",
+            title: `${cancelledMaintenance.length} layanan ditolak atau dibatalkan`,
+            subtitle: `${maintenanceStatusLabel(cancelled.status)} • ${formatDateId(cancelled.updatedAt || cancelled.scheduledDate)}`,
+            description: cancelled.cancellationReason || cancelled.description || "Permintaan layanan tidak dilanjutkan.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("MNT", cancelled.id, cancelled.maintenanceCode),
+            identity: getIdentityLabel(cancelled.requesterName, cancelled.requesterNip),
+            sourceLabel,
+            roomLabel: cancelled.assetLocation || "-",
           })
         }
 
@@ -378,6 +574,58 @@ export default function Topbar() {
             identity: getIdentityLabel(earliestPending.userName, earliestPending.userNip),
             sourceLabel,
             roomLabel: earliestPending.assetLocation || earliestPending.purpose || "-",
+          })
+        }
+
+        // --- Permintaan disetujui menjadi Jadwal Layanan ---
+        if (approvedBorrowings.length > 0) {
+          const approved = approvedBorrowings[0]
+          const assetLabel = approved.assetDetailName || approved.assetName || "Aset peminjaman"
+          const assetCode = approved.assetDetailCode || approved.assetCode || "-"
+          const sourceLabel = assetSourceLabel(
+            deriveAssetSource(approved.assetType, approved.assetDetailCode || approved.assetCode),
+          )
+          nextNotifications.push({
+            id: "borrowing-approved",
+            category: "borrowing",
+            type: "jadwal_layanan",
+            notifStatus: "info",
+            title: `${approvedBorrowings.length} peminjaman telah disetujui`,
+            subtitle: `${borrowingStatusLabel(approved.status)} • ${approved.dueDate ? `Batas kembali: ${formatDateId(approved.dueDate)}` : "Batas kembali belum ditentukan"}`,
+            description: `${assetLabel} siap diproses sesuai jadwal layanan.`,
+            href: "/borrowing",
+            assetName: assetLabel,
+            assetCode,
+            recordNoId: formatNoId("PMJ", approved.id, approved.borrowingCode),
+            identity: getIdentityLabel(approved.userName, approved.userNip),
+            sourceLabel,
+            roomLabel: approved.assetLocation || approved.purpose || "-",
+          })
+        }
+
+        // --- Layanan Ditolak/Dibatalkan (borrowing rejected) ---
+        if (rejectedBorrowings.length > 0) {
+          const rejected = rejectedBorrowings[0]
+          const assetLabel = rejected.assetDetailName || rejected.assetName || "Aset peminjaman"
+          const assetCode = rejected.assetDetailCode || rejected.assetCode || "-"
+          const sourceLabel = assetSourceLabel(
+            deriveAssetSource(rejected.assetType, rejected.assetDetailCode || rejected.assetCode),
+          )
+          nextNotifications.push({
+            id: "borrowing-rejected",
+            category: "borrowing",
+            type: "ditolak_dibatalkan",
+            notifStatus: "warning",
+            title: `${rejectedBorrowings.length} permintaan peminjaman ditolak`,
+            subtitle: `${borrowingStatusLabel(rejected.status)} • ${formatDateId(rejected.rejectedAt || rejected.updatedAt || rejected.borrowDate)}`,
+            description: rejected.rejectionReason || "Permintaan peminjaman tidak disetujui.",
+            href: "/borrowing",
+            assetName: assetLabel,
+            assetCode,
+            recordNoId: formatNoId("PMJ", rejected.id, rejected.borrowingCode),
+            identity: getIdentityLabel(rejected.userName, rejected.userNip),
+            sourceLabel,
+            roomLabel: rejected.assetLocation || rejected.purpose || "-",
           })
         }
 
@@ -441,6 +689,32 @@ export default function Topbar() {
             identity: getIdentityLabel(focusBorrowing.userName, focusBorrowing.userNip),
             sourceLabel,
             roomLabel: focusBorrowing.assetLocation || focusBorrowing.purpose || "-",
+          })
+        }
+
+        // --- Laporan Tersedia dari pengembalian tervalidasi ---
+        if (validatedReturns.length > 0) {
+          const validatedReturn = validatedReturns[0]
+          const assetLabel = validatedReturn.assetDetailName || validatedReturn.assetName || "Aset pengembalian"
+          const assetCode = validatedReturn.assetDetailCode || validatedReturn.assetCode || "-"
+          const sourceLabel = assetSourceLabel(
+            deriveAssetSource(validatedReturn.assetType, validatedReturn.assetDetailCode || validatedReturn.assetCode),
+          )
+          nextNotifications.push({
+            id: "return-report",
+            category: "returns",
+            type: "laporan_tersedia",
+            notifStatus: "success",
+            title: `${validatedReturns.length} laporan pengembalian tersedia`,
+            subtitle: `Tervalidasi • ${formatDateId(validatedReturn.returnValidatedAt || validatedReturn.returnDate)}`,
+            description: validatedReturn.returnNotes || "Laporan hasil layanan dapat dilihat atau diunduh.",
+            href: "/reports",
+            assetName: assetLabel,
+            assetCode,
+            recordNoId: formatNoId("PGB", validatedReturn.id, validatedReturn.borrowingCode),
+            identity: getIdentityLabel(validatedReturn.userName, validatedReturn.userNip),
+            sourceLabel,
+            roomLabel: validatedReturn.assetLocation || validatedReturn.purpose || "-",
           })
         }
 
