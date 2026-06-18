@@ -223,6 +223,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Only profile photos remain directly reachable; report files must go through protected routes.
+// Profile photos are public assets loaded via <img>, so they must not be blocked by Helmet's
+// same-origin Cross-Origin-Resource-Policy when the frontend is served from a different origin.
+app.use('/uploads/profiles', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
 app.use('/uploads/profiles', express.static(getProfileUploadsDir()));
 
 const healthHandler = (req: express.Request, res: express.Response) => {

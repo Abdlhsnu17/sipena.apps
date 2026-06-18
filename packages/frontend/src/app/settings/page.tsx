@@ -175,8 +175,21 @@ export default function SettingsPage() {
     }
   }
 
+  const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024
+
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null
+
+    if (file && file.size > MAX_PHOTO_SIZE_BYTES) {
+      toast({
+        title: "Ukuran file terlalu besar",
+        description: "Pilih foto profil dengan ukuran maksimal 5MB.",
+        variant: "destructive",
+      })
+      event.target.value = ""
+      return
+    }
+
     if (localPhotoPreview) URL.revokeObjectURL(localPhotoPreview)
 
     if (file) {
@@ -253,9 +266,12 @@ export default function SettingsPage() {
       }
     } catch (error: any) {
       console.error('[Profile] Error during submit:', error)
+      const isPayloadTooLarge = error?.response?.status === 413
       toast({
         title: "Error",
-        description: error.message || "Gagal memperbarui profil",
+        description: isPayloadTooLarge
+          ? "Ukuran foto terlalu besar untuk diunggah. Pilih foto maksimal 5MB."
+          : error.message || "Gagal memperbarui profil",
         variant: "destructive",
       })
     } finally {
