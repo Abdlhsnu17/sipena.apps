@@ -25,7 +25,22 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { getAuthToken, isLocalAuthSession } from "@/services/auth-utils";
+import { getAuthToken, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
+import { normalizeUserRole } from "@/utils/role";
+
+type NotificationType =
+  | "jadwal_layanan"
+  | "jadwal_terlewat"
+  | "permintaan_baru"
+  | "teknisi_ditugaskan"
+  | "status_berubah"
+  | "prioritas_tinggi"
+  | "layanan_selesai"
+  | "laporan_tersedia"
+  | "preventive_maintenance"
+  | "ditolak_dibatalkan"
+
+type NotificationStatus = "info" | "success" | "reminder" | "warning" | "urgent"
 
 type NotificationItem = {
   id: string
@@ -34,12 +49,44 @@ type NotificationItem = {
   description?: string
   href?: string
   category: "schedule" | "maintenance" | "borrowing" | "returns" | "usage"
+  type: NotificationType
+  notifStatus: NotificationStatus
   assetName: string
   assetCode: string
   recordNoId: string
   identity: string
   sourceLabel: string
   roomLabel: string
+}
+
+const notificationTypeLabel: Record<NotificationType, string> = {
+  jadwal_layanan: "📅 Jadwal Layanan",
+  jadwal_terlewat: "⏰ Jadwal Terlewat",
+  permintaan_baru: "🔧 Permintaan Baru",
+  teknisi_ditugaskan: "👨‍🔧 Penugasan",
+  status_berubah: "🔄 Status Berubah",
+  prioritas_tinggi: "⚠️ Prioritas Tinggi",
+  layanan_selesai: "✅ Layanan Selesai",
+  laporan_tersedia: "📄 Laporan",
+  preventive_maintenance: "🛠️ Preventive",
+  ditolak_dibatalkan: "❌ Ditolak/Batal",
+}
+
+const statusConfig: Record<NotificationStatus, { gradient: string; dot: string }> = {
+  info:     { gradient: "from-blue-700 to-blue-500",     dot: "bg-blue-500" },
+  success:  { gradient: "from-green-700 to-green-500",   dot: "bg-green-500" },
+  reminder: { gradient: "from-amber-600 to-amber-400",   dot: "bg-amber-400" },
+  warning:  { gradient: "from-orange-600 to-orange-400", dot: "bg-orange-500" },
+  urgent:   { gradient: "from-red-700 to-red-500",       dot: "bg-red-500" },
+}
+
+const NOTIFICATION_TYPES_BY_ROLE: Record<string, NotificationType[]> = {
+  admin:    ["jadwal_layanan", "jadwal_terlewat", "permintaan_baru", "status_berubah", "prioritas_tinggi", "layanan_selesai", "laporan_tersedia", "preventive_maintenance", "ditolak_dibatalkan"],
+  leader:   ["jadwal_terlewat", "prioritas_tinggi", "layanan_selesai", "laporan_tersedia", "permintaan_baru"],
+  staff_pj: ["jadwal_layanan", "jadwal_terlewat", "teknisi_ditugaskan", "status_berubah", "preventive_maintenance", "layanan_selesai"],
+  staff:    ["permintaan_baru", "ditolak_dibatalkan", "status_berubah", "layanan_selesai"],
+  teknisi:  ["teknisi_ditugaskan", "jadwal_layanan", "jadwal_terlewat", "prioritas_tinggi", "status_berubah", "preventive_maintenance"],
+  user:     ["permintaan_baru", "jadwal_layanan", "status_berubah", "layanan_selesai", "laporan_tersedia", "ditolak_dibatalkan"],
 }
 
 const categoryLabelByKey: Record<NotificationItem["category"], string> = {
@@ -171,18 +218,36 @@ export default function Topbar() {
       setIsCheckingNotifications(true)
 
       try {
+        const currentUser = getCurrentUser()
+        const userRole = normalizeUserRole(currentUser?.role)
+        const allowedTypes = NOTIFICATION_TYPES_BY_ROLE[userRole] ?? NOTIFICATION_TYPES_BY_ROLE["user"]
+
+        const shouldFetchMaintenance = userRole !== "user"
+        const shouldFetchBorrowing = userRole !== "teknisi"
+        const shouldFetchUsage = userRole !== "teknisi"
+
         const [maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
-          maintenanceService.getAll({ page: 1, limit: 20 }),
-          borrowingService.getAll({ page: 1, limit: 20 }),
-          assetUsageService.getAll({ page: 1, limit: 20 }),
+          shouldFetchMaintenance ? maintenanceService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
+          shouldFetchBorrowing ? borrowingService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
+          shouldFetchUsage ? assetUsageService.getAll({ page: 1, limit: 20 }) : Promise.resolve({ data: [] as any[] }),
         ])
 
         if (!isMounted) return
 
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const overdueMaintenance = maintenanceResponse.data.filter((item) =>
+          item.status === "scheduled" && item.scheduledDate && new Date(item.scheduledDate) < today,
+        )
+        const upcomingMaintenance = maintenanceResponse.data.filter((item) => {
+          if (item.status !== "scheduled" || !item.scheduledDate) return false
+          const daysUntil = Math.ceil((new Date(item.scheduledDate).getTime() - today.getTime()) / 86400000)
+          return daysUntil >= 0 && daysUntil <= 7
+        })
         const scheduledMaintenance = maintenanceResponse.data.filter((item) => item.status === "scheduled")
         const ongoingMaintenance = maintenanceResponse.data.filter((item) => item.status === "in_progress")
         const pendingBorrowings = borrowingResponse.data.filter((item) => item.status === "pending")
-        // Track borrowings that are still out so the reminder disappears once status updates to anything except approved/borrowed/overdue.
         const unreturnedBorrowings = borrowingResponse.data.filter((item) =>
           ["approved", "borrowed", "overdue"].includes(item.status),
         )
@@ -191,7 +256,55 @@ export default function Topbar() {
         )
         const nextNotifications: NotificationItem[] = []
 
-        if (scheduledMaintenance.length > 0) {
+        // --- Jadwal Terlewat (overdue maintenance) ---
+        if (overdueMaintenance.length > 0) {
+          const item = overdueMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(item.assetType, item.assetDetailCode || item.assetCode))
+          const assetName = item.assetDetailName || item.assetName || "Aset pemeliharaan"
+          const assetCode = item.assetDetailCode || item.assetCode || "-"
+          nextNotifications.push({
+            id: "maintenance-overdue",
+            category: "schedule",
+            type: "jadwal_terlewat",
+            notifStatus: "warning",
+            title: `${overdueMaintenance.length} jadwal pemeliharaan terlambat`,
+            subtitle: `Terlambat • ${formatDateId(item.scheduledDate)}`,
+            description: item.description || "Segera tindak lanjuti jadwal yang melewati batas waktu.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("JDW", item.id, item.maintenanceCode),
+            identity: getIdentityLabel(item.requesterName, item.requesterNip),
+            sourceLabel,
+            roomLabel: item.assetLocation || "-",
+          })
+        }
+
+        // --- Preventive Maintenance (jadwal dalam 7 hari) ---
+        if (upcomingMaintenance.length > 0 && overdueMaintenance.length === 0) {
+          const upcoming = upcomingMaintenance[0]
+          const sourceLabel = assetSourceLabel(deriveAssetSource(upcoming.assetType, upcoming.assetDetailCode || upcoming.assetCode))
+          const assetName = upcoming.assetDetailName || upcoming.assetName || "Aset pemeliharaan"
+          const assetCode = upcoming.assetDetailCode || upcoming.assetCode || "-"
+          const daysUntil = Math.ceil((new Date(upcoming.scheduledDate).getTime() - today.getTime()) / 86400000)
+          nextNotifications.push({
+            id: "maintenance-upcoming",
+            category: "schedule",
+            type: "preventive_maintenance",
+            notifStatus: "reminder",
+            title: `${upcomingMaintenance.length} pemeliharaan jatuh tempo dalam ${daysUntil} hari`,
+            subtitle: `Pengingat • ${formatDateId(upcoming.scheduledDate)}`,
+            description: upcoming.description || "Persiapkan pelaksanaan pemeliharaan tepat waktu.",
+            href: "/maintenance",
+            assetName,
+            assetCode,
+            recordNoId: formatNoId("JDW", upcoming.id, upcoming.maintenanceCode),
+            identity: getIdentityLabel(upcoming.requesterName, upcoming.requesterNip),
+            sourceLabel,
+            roomLabel: upcoming.assetLocation || "-",
+          })
+        } else if (scheduledMaintenance.length > 0 && overdueMaintenance.length === 0) {
+          // --- Jadwal Layanan (scheduled normal) ---
           const upcoming = scheduledMaintenance[0]
           const sourceLabel = assetSourceLabel(deriveAssetSource(upcoming.assetType, upcoming.assetDetailCode || upcoming.assetCode))
           const assetName = upcoming.assetDetailName || upcoming.assetName || "Aset pemeliharaan"
@@ -199,9 +312,11 @@ export default function Topbar() {
           nextNotifications.push({
             id: "maintenance-schedule",
             category: "schedule",
-            title: `${scheduledMaintenance.length} pemelirahaan sarana menunggu proses`,
+            type: "jadwal_layanan",
+            notifStatus: "info",
+            title: `${scheduledMaintenance.length} pemeliharaan sarana menunggu proses`,
             subtitle: `Jadwal • ${formatDateId(upcoming.scheduledDate)}`,
-            description: upcoming.description || "Lihat pemelirahaan sarana untuk detail lengkap.",
+            description: upcoming.description || "Lihat pemeliharaan sarana untuk detail lengkap.",
             href: "/maintenance",
             assetName,
             assetCode,
@@ -211,6 +326,8 @@ export default function Topbar() {
             roomLabel: upcoming.assetLocation || "-",
           })
         }
+
+        // --- Status Berubah (maintenance in_progress) ---
         if (ongoingMaintenance.length > 0) {
           const active = ongoingMaintenance[0]
           const sourceLabel = assetSourceLabel(deriveAssetSource(active.assetType, active.assetDetailCode || active.assetCode))
@@ -219,7 +336,9 @@ export default function Topbar() {
           nextNotifications.push({
             id: "maintenance-active",
             category: "maintenance",
-            title: `${ongoingMaintenance.length} pemelirahaan sarana dalam proses`,
+            type: "status_berubah",
+            notifStatus: "info",
+            title: `${ongoingMaintenance.length} pemeliharaan sarana dalam proses`,
             subtitle: `${maintenanceStatusLabel(active.status)} • ${formatDateId(active.scheduledDate)}`,
             description: active.description || "Pastikan teknisi menyelesaikan kendala ini.",
             href: "/maintenance",
@@ -232,6 +351,7 @@ export default function Topbar() {
           })
         }
 
+        // --- Permintaan Baru (borrowing pending) ---
         if (pendingBorrowings.length > 0) {
           const earliestPending = pendingBorrowings[0]
           const assetLabel = earliestPending.assetDetailName || earliestPending.assetName || "Aset peminjaman"
@@ -243,13 +363,14 @@ export default function Topbar() {
           const borrowDateLabel = earliestPending.borrowDate
             ? `Tanggal pinjam: ${formatDateId(earliestPending.borrowDate)}`
             : "Tanggal pinjam belum dicatat"
-          const description = `${assetLabel} • ${earliestPending.purpose || borrower}`
           nextNotifications.push({
             id: "borrowing-pending",
             category: "borrowing",
+            type: "permintaan_baru",
+            notifStatus: "info",
             title: `${pendingBorrowings.length} peminjaman menunggu persetujuan`,
             subtitle: `${borrowingStatusLabel(earliestPending.status)} • ${borrowDateLabel}`,
-            description,
+            description: `${assetLabel} • ${earliestPending.purpose || borrower}`,
             href: "/borrowing",
             assetName: assetLabel,
             assetCode,
@@ -260,6 +381,7 @@ export default function Topbar() {
           })
         }
 
+        // --- Status Berubah (pengembalian) ---
         if (pendingReturns.length > 0) {
           const latestReturn = pendingReturns[0]
           const assetLabel = latestReturn.assetDetailName || latestReturn.assetName || "Aset pengembalian"
@@ -274,6 +396,8 @@ export default function Topbar() {
           nextNotifications.push({
             id: "returns",
             category: "returns",
+            type: "status_berubah",
+            notifStatus: "reminder",
             title: `${pendingReturns.length} pengembalian belum divalidasi`,
             subtitle: `Proses validasi • ${returnDateLabel}`,
             description: `${assetLabel} • ${borrower}`,
@@ -292,24 +416,24 @@ export default function Topbar() {
           const sourceLabel = assetSourceLabel(
             deriveAssetSource(focusBorrowing.assetType, focusBorrowing.assetDetailCode || focusBorrowing.assetCode),
           )
-          const borrower = focusBorrowing.userName || focusBorrowing.userNip || "Peminjam"
           const dueLabel = focusBorrowing.dueDate
             ? `Tgl kembali: ${formatDateId(focusBorrowing.dueDate)}`
             : "Jadwal kembali belum ditentukan"
+          const overdueCount = unreturnedBorrowings.filter((item) => item.status === "overdue").length
           const approvedCount = unreturnedBorrowings.filter((item) => item.status === "approved").length
           const borrowedCount = unreturnedBorrowings.filter((item) => item.status === "borrowed").length
-          const overdueCount = unreturnedBorrowings.filter((item) => item.status === "overdue").length
           const descriptionParts: string[] = []
           if (approvedCount) descriptionParts.push(`${approvedCount} menunggu pengambilan`)
           if (borrowedCount) descriptionParts.push(`${borrowedCount} sedang dipinjam`)
           if (overdueCount) descriptionParts.push(`${overdueCount} belum dikembalikan`)
-          const description = descriptionParts.length > 0 ? descriptionParts.join(" · ") : `${assetLabel} • ${borrower}`
           nextNotifications.push({
             id: "borrowing-unreturned",
             category: "returns",
+            type: overdueCount > 0 ? "jadwal_terlewat" : "status_berubah",
+            notifStatus: overdueCount > 0 ? "warning" : "reminder",
             title: `${unreturnedBorrowings.length} alat belum dikembalikan`,
             subtitle: `${borrowingStatusLabel(focusBorrowing.status)} • ${dueLabel}`,
-            description,
+            description: descriptionParts.length > 0 ? descriptionParts.join(" · ") : assetLabel,
             href: "/borrowing",
             assetName: assetLabel,
             assetCode,
@@ -320,6 +444,7 @@ export default function Topbar() {
           })
         }
 
+        // --- Status Berubah (penggunaan aktif) ---
         const activeUsages = (usageResponse.data || []).filter((item) => !item.endedAt)
         if (activeUsages.length > 0) {
           const latestUsage = activeUsages[0]
@@ -328,16 +453,17 @@ export default function Topbar() {
           const sourceLabel = assetSourceLabel(
             deriveAssetSource(latestUsage.assetType, latestUsage.assetDetailCode || latestUsage.assetCode),
           )
-          const operator = latestUsage.operatorName || latestUsage.operatorNip || latestUsage.createdByName || "Operator"
           const startedLabel = latestUsage.startedAt
             ? `Mulai: ${formatDateId(latestUsage.startedAt)}`
             : "Waktu mulai belum dicatat"
           nextNotifications.push({
             id: "asset-usage-active",
             category: "usage",
+            type: "status_berubah",
+            notifStatus: "info",
             title: `${activeUsages.length} alat sedang dalam penggunaan`,
             subtitle: `Penggunaan aktif • ${startedLabel}`,
-            description: `${assetLabel} • ${operator}`,
+            description: `${assetLabel} • ${latestUsage.operatorName || latestUsage.createdByName || "Operator"}`,
             href: "/asset-usage",
             assetName: assetLabel,
             assetCode,
@@ -348,7 +474,9 @@ export default function Topbar() {
           })
         }
 
-        setNotifications(nextNotifications)
+        // Filter notifikasi sesuai hak akses role
+        const filtered = nextNotifications.filter((n) => allowedTypes.includes(n.type))
+        setNotifications(filtered)
       } catch (error) {
         console.error("Gagal memuat notifikasi", error)
         if (isMounted) {
@@ -404,7 +532,12 @@ export default function Topbar() {
             >
               <Bell className="size-[18px]" />
               {notifications.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background bg-red-500" />
+                <span className={`absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background ${
+                  notifications.some((n) => n.notifStatus === "urgent") ? "bg-red-500" :
+                  notifications.some((n) => n.notifStatus === "warning") ? "bg-orange-500" :
+                  notifications.some((n) => n.notifStatus === "reminder") ? "bg-amber-400" :
+                  "bg-blue-500"
+                }`} />
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(62vh,30rem)] w-[min(calc(100vw-1rem),20rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-white text-slate-950 shadow-lg sm:w-84">
@@ -460,9 +593,9 @@ export default function Topbar() {
                       }
                     }}
                   >
-                    <div className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm transition hover:shadow-md">
-                      <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5" : "gap-2 px-3 py-2"} flex items-center justify-between bg-linear-to-r from-blue-700 to-blue-500 text-white`}>
-                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} font-semibold`}>Informasi Dasar Alat</span>
+                    <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm transition hover:shadow-md">
+                      <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5" : "gap-2 px-3 py-2"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
+                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} font-semibold`}>{notificationTypeLabel[notification.type]}</span>
                         <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-xs"} rounded-full border border-white/50 bg-white/15 py-0.5 font-medium`}>
                           {categoryLabelByKey[notification.category]}
                         </span>

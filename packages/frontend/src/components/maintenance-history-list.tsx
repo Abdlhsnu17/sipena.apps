@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
     Dialog,
     DialogContent,
@@ -34,7 +35,7 @@ import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
 import { canManageMaintenanceStatusRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Pencil, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 interface MaintenanceHistory {
@@ -1032,66 +1033,176 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
             const historyNoId = getHistoryNoId(h);
             const isExpanded = expandedHistoryIds.has(h.id);
             return (
-              <div
+              <SummaryResultCard
                 key={h.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                title="Informasi Dasar Alat"
+                isExpanded={isExpanded}
+                onToggle={() => toggleHistorySummary(h.id)}
+                toggleLabel={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
+                footer={(
+                  <SummaryResultFooter
+                    selected={selectedHistoryIds.has(h.id)}
+                    onSelectedChange={() => toggleHistorySelection(h.id)}
+                    selectionLabel={`Pilih riwayat pemeliharaan ${meta.assetName}`}
+                  >
+                    {canComplete && !["completed", "validated", "cancelled"].includes(h.status) && editId !== h.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg border-teal-600 px-2.5 text-[12px] text-teal-700 hover:bg-teal-50"
+                        onClick={() => openEdit(h)}
+                      >
+                        Selesai Perbaikan
+                      </Button>
+                    )}
+                    {canValidate && h.status === "completed" && !h.validatedBy && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg border-green-600 px-2.5 text-[12px] text-green-700 hover:bg-green-50"
+                        onClick={() => handleValidate(h.id)}
+                      >
+                        Validasi
+                      </Button>
+                    )}
+                    {canComplete && ["completed", "validated"].includes(h.status) && editId !== h.id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                        onClick={() => openEdit(h)}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                        onClick={() => openDeleteDialog(h)}
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canRequestDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                        onClick={() => openArchiveRequestDialog(h)}
+                        title="Ajukan hapus"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <Download className="h-4 w-4" />
+                          Unduh
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>
+                          PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportSingleHistory("word", h)}>
+                          Word
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {canComplete && editId === h.id && (
+                      <div className="grid w-full gap-2 pt-1 sm:grid-cols-2">
+                        <input
+                          type="text"
+                          placeholder="Catatan"
+                          value={completeForm.notes}
+                          onChange={(e) => setCompleteForm((f) => ({ ...f, notes: e.target.value }))}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground sm:col-span-2"
+                        />
+                        <input
+                          type="datetime-local"
+                          value={completeForm.completedDate}
+                          onChange={(e) => setCompleteForm((f) => ({ ...f, completedDate: e.target.value }))}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Teknisi"
+                          value={completeForm.technician}
+                          onChange={(e) => setCompleteForm((f) => ({ ...f, technician: e.target.value }))}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Biaya"
+                          value={completeForm.cost}
+                          onChange={(e) => setCompleteForm((f) => ({ ...f, cost: e.target.value }))}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground sm:col-span-2"
+                        />
+                        <div className="flex gap-2 sm:col-span-2">
+                          <Button
+                            size="sm"
+                            className="h-9 rounded-lg bg-teal-600 px-3 text-[13px] text-white hover:bg-teal-700"
+                            onClick={() => handleComplete(h.id)}
+                          >
+                            Simpan
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-lg border-red-200 px-3 text-[13px] text-red-600 hover:bg-red-50"
+                            onClick={() => setEditId(null)}
+                          >
+                            Batal
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </SummaryResultFooter>
+                )}
               >
-                <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-                  <span>Informasi Dasar Inventaris</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 w-9 rounded-lg p-1 text-slate-700 hover:bg-slate-200"
-                      onClick={() => toggleHistorySummary(h.id)}
-                      aria-label={isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
-                    >
-                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                    </Button>
-                  </div>
-                </div>
-
                 {!isExpanded && (
-                <div className="space-y-2.5 bg-white px-3 py-3 sm:px-3 sm:py-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-slate-900">{meta.assetName}</p>
-                      <p className="text-[12px] font-medium text-slate-700">{meta.assetCode}</p>
-                      <p className="text-[11px] text-muted-foreground">No ID: {historyNoId}</p>
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        Pemohon: <span className="font-medium text-slate-700">{h.requesterName || "-"} / {h.requesterNip || "-"}</span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Ruangan alat: <span className="font-medium text-slate-700">{meta.assetRoom}</span> • Teknisi: {h.technician || "-"}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-1">
-                        <Badge variant="outline" className="text-[10px]">
+                  <SummaryResultBody
+                    assetName={meta.assetName}
+                    assetCode={meta.assetCode}
+                    noId={historyNoId}
+                    personLabel="Pemohon"
+                    personValue={`${h.requesterName || "-"} / ${h.requesterNip || "-"}`}
+                    unitLabel="Ruangan alat"
+                    unitValue={meta.assetRoom}
+                    unitExtra={`Teknisi: ${h.technician || "-"}`}
+                    timeLabel="Waktu Selesai"
+                    timeValue={meta.completionDateLabel}
+                    badges={(
+                      <>
+                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                           {meta.inventoryBadgeLabel}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                           {maintenanceTypeLabel(h.type)}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                           Jadwal {meta.scheduledLabel}
                         </Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">Waktu Selesai</span>
-                        <span className="text-[13px] font-semibold text-foreground">{meta.completionDateLabel}</span>
-                      </div>
-                      <div>
-                        <Badge variant={getStatusColor(h.status)} className="text-[11px]">
-                          {maintenanceStatusLabel(h.status)}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                      </>
+                    )}
+                    statusBadges={(
+                      <Badge variant={getStatusColor(h.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
+                        {maintenanceStatusLabel(h.status)}
+                      </Badge>
+                    )}
+                  />
                 )}
                 {isExpanded && (
-                <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
+                  <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
                       <div className="columns-1 gap-3 lg:columns-2">
                       <div className="mb-3 break-inside-avoid space-y-2">
                         <SectionHeader label="Informasi Dasar Alat" />
@@ -1137,142 +1248,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                       </div>
                     </div>
                 )}
-                <div className="flex flex-col gap-1.5 border-t border-slate-200 px-3 pb-3 pt-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:pb-3">
-                      <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={selectedHistoryIds.has(h.id)}
-                          onChange={() => toggleHistorySelection(h.id)}
-                          className="h-4 w-4 rounded border border-slate-300 bg-white text-slate-700"
-                          aria-label={`Pilih riwayat pemeliharaan ${meta.assetName}`}
-                        />
-                        Pilih kartu
-                      </label>
-                      <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-600">
-                        {canComplete && !["completed", "validated", "cancelled"].includes(h.status) && editId !== h.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[11px] text-teal-700 border-teal-600 hover:bg-teal-50"
-                            onClick={() => openEdit(h)}
-                          >
-                            Selesai Perbaikan
-                          </Button>
-                        )}
-                        {canValidate && h.status === "completed" && !h.validatedBy && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 text-[11px] text-green-700 border-green-600 hover:bg-green-50"
-                            onClick={() => handleValidate(h.id)}
-                          >
-                            Validasi
-                          </Button>
-                        )}
-                        {canComplete && ["completed", "validated"].includes(h.status) && editId !== h.id && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
-                            onClick={() => openEdit(h)}
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                            onClick={() => openDeleteDialog(h)}
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {canRequestDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                            onClick={() => openArchiveRequestDialog(h)}
-                            title="Ajukan hapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 rounded-lg border-slate-200 px-2.5 text-[12px] text-slate-700"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              Unduh
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>
-                              PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => exportSingleHistory("word", h)}>
-                              Word
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    {canComplete && editId === h.id && (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <input
-                          type="text"
-                          placeholder="Catatan"
-                          value={completeForm.notes}
-                          onChange={(e) => setCompleteForm((f) => ({ ...f, notes: e.target.value }))}
-                          className="sm:col-span-2 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
-                        />
-                        <input
-                          type="datetime-local"
-                          value={completeForm.completedDate}
-                          onChange={(e) => setCompleteForm((f) => ({ ...f, completedDate: e.target.value }))}
-                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Teknisi"
-                          value={completeForm.technician}
-                          onChange={(e) => setCompleteForm((f) => ({ ...f, technician: e.target.value }))}
-                          className="rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Biaya"
-                          value={completeForm.cost}
-                          onChange={(e) => setCompleteForm((f) => ({ ...f, cost: e.target.value }))}
-                          className="sm:col-span-2 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground"
-                        />
-                        <div className="sm:col-span-2 flex gap-2">
-                          <Button
-                            size="sm"
-                            className="h-9 rounded-lg px-3 text-[13px] bg-teal-600 hover:bg-teal-700 text-white"
-                            onClick={() => handleComplete(h.id)}
-                          >
-                            Simpan
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 rounded-lg px-3 text-[13px] text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => setEditId(null)}
-                          >
-                            Batal
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              </SummaryResultCard>
             )
           })}
           </div>
