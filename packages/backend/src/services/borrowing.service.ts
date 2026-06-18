@@ -1278,7 +1278,7 @@ export class BorrowingService {
         assetDetailCode: assetContext.assetDetailCode,
         assetLocation: borrowing.data.assetLocation || '',
         roomName: borrowing.data.destinationRoom || '',
-        operatorUserId: borrowing.data.userId,
+        operatorUserId: borrowing.data.userId ?? (borrowing.data as any).user_id ?? null,
         startedAt: startedAt,
         usageCount: borrowing.data.quantity || 1,
         notes: borrowing.data.notes || null,

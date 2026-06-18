@@ -2,7 +2,7 @@
 
 import { Bell, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
@@ -57,6 +57,7 @@ type NotificationItem = {
   identity: string
   sourceLabel: string
   roomLabel: string
+  dismissKey?: string
 }
 
 const notificationTypeLabel: Record<NotificationType, string> = {
@@ -97,6 +98,7 @@ const categoryLabelByKey: Record<NotificationItem["category"], string> = {
   usage: "Penggunaan Alat",
 }
 
+const DISMISSED_NOTIFICATIONS_STORAGE_KEY = "dismissed-notifications"
 const NOTIFICATION_FETCH_LIMIT = 1000
 const BORROWING_NOTIFICATION_STATUSES = ["pending", "approved", "rejected", "borrowed", "overdue", "returned"] as const
 const MAINTENANCE_NOTIFICATION_STATUSES = ["requested", "scheduled", "in_progress", "completed", "validated", "cancelled"] as const
@@ -123,6 +125,19 @@ const hasHighPrioritySignal = (...values: Array<string | null | undefined>): boo
   return PRIORITY_KEYWORDS.some((keyword) => text.includes(keyword))
 }
 
+const loadDismissedNotificationKeys = (): Set<string> => {
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+const saveDismissedNotificationKeys = (keys: Set<string>) => {
+  window.localStorage.setItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(Array.from(keys)))
+}
+
 export default function Topbar() {
   const topbarAnnouncement =
     "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat."
@@ -131,13 +146,24 @@ export default function Topbar() {
   const router = useRouter()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isCheckingNotifications, setIsCheckingNotifications] = useState(true)
+  const dismissedNotificationKeysRef = useRef<Set<string>>(new Set())
   const [notificationQuery, setNotificationQuery] = useState("")
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const isCompactNotification = notificationDensity === "compact"
 
   useEffect(() => {
     setMounted(true)
+    dismissedNotificationKeysRef.current = loadDismissedNotificationKeys()
   }, [])
+
+  const dismissNotification = (notification: NotificationItem) => {
+    if (!notification.dismissKey) return
+    const next = new Set(dismissedNotificationKeysRef.current)
+    next.add(notification.dismissKey)
+    dismissedNotificationKeysRef.current = next
+    saveDismissedNotificationKeys(next)
+    setNotifications((prev) => prev.filter((item) => item.id !== notification.id))
+  }
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000)
@@ -526,25 +552,29 @@ export default function Topbar() {
         // --- Layanan Ditolak/Dibatalkan ---
         if (cancelledMaintenance.length > 0) {
           const cancelled = cancelledMaintenance[0]
-          const sourceLabel = assetSourceLabel(deriveAssetSource(cancelled.assetType, cancelled.assetDetailCode || cancelled.assetCode))
-          const assetName = cancelled.assetDetailName || cancelled.assetName || "Aset pemeliharaan"
-          const assetCode = cancelled.assetDetailCode || cancelled.assetCode || "-"
-          nextNotifications.push({
-            id: "maintenance-cancelled",
-            category: "maintenance",
-            type: "ditolak_dibatalkan",
-            notifStatus: "warning",
-            title: `${cancelledMaintenance.length} layanan ditolak atau dibatalkan`,
-            subtitle: `${maintenanceStatusLabel(cancelled.status)} • ${formatDateId(cancelled.updatedAt || cancelled.scheduledDate)}`,
-            description: cancelled.cancellationReason || cancelled.description || "Permintaan layanan tidak dilanjutkan.",
-            href: "/maintenance",
-            assetName,
-            assetCode,
-            recordNoId: formatNoId("MNT", cancelled.id, cancelled.maintenanceCode),
-            identity: getIdentityLabel(cancelled.requesterName, cancelled.requesterNip),
-            sourceLabel,
-            roomLabel: cancelled.assetLocation || "-",
-          })
+          const dismissKey = `maintenance-cancelled:${cancelledMaintenance.length}`
+          if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
+            const sourceLabel = assetSourceLabel(deriveAssetSource(cancelled.assetType, cancelled.assetDetailCode || cancelled.assetCode))
+            const assetName = cancelled.assetDetailName || cancelled.assetName || "Aset pemeliharaan"
+            const assetCode = cancelled.assetDetailCode || cancelled.assetCode || "-"
+            nextNotifications.push({
+              id: "maintenance-cancelled",
+              category: "maintenance",
+              type: "ditolak_dibatalkan",
+              notifStatus: "warning",
+              title: `${cancelledMaintenance.length} layanan ditolak atau dibatalkan`,
+              subtitle: `${maintenanceStatusLabel(cancelled.status)} • ${formatDateId(cancelled.updatedAt || cancelled.scheduledDate)}`,
+              description: cancelled.cancellationReason || cancelled.description || "Permintaan layanan tidak dilanjutkan.",
+              href: "/maintenance",
+              assetName,
+              assetCode,
+              recordNoId: formatNoId("MNT", cancelled.id, cancelled.maintenanceCode),
+              identity: getIdentityLabel(cancelled.requesterName, cancelled.requesterNip),
+              sourceLabel,
+              roomLabel: cancelled.assetLocation || "-",
+              dismissKey,
+            })
+          }
         }
 
         // --- Permintaan Baru (borrowing pending) ---
@@ -606,27 +636,31 @@ export default function Topbar() {
         // --- Layanan Ditolak/Dibatalkan (borrowing rejected) ---
         if (rejectedBorrowings.length > 0) {
           const rejected = rejectedBorrowings[0]
-          const assetLabel = rejected.assetDetailName || rejected.assetName || "Aset peminjaman"
-          const assetCode = rejected.assetDetailCode || rejected.assetCode || "-"
-          const sourceLabel = assetSourceLabel(
-            deriveAssetSource(rejected.assetType, rejected.assetDetailCode || rejected.assetCode),
-          )
-          nextNotifications.push({
-            id: "borrowing-rejected",
-            category: "borrowing",
-            type: "ditolak_dibatalkan",
-            notifStatus: "warning",
-            title: `${rejectedBorrowings.length} permintaan peminjaman ditolak`,
-            subtitle: `${borrowingStatusLabel(rejected.status)} • ${formatDateId(rejected.rejectedAt || rejected.updatedAt || rejected.borrowDate)}`,
-            description: rejected.rejectionReason || "Permintaan peminjaman tidak disetujui.",
-            href: "/borrowing",
-            assetName: assetLabel,
-            assetCode,
-            recordNoId: formatNoId("PMJ", rejected.id, rejected.borrowingCode),
-            identity: getIdentityLabel(rejected.userName, rejected.userNip),
-            sourceLabel,
-            roomLabel: rejected.assetLocation || rejected.purpose || "-",
-          })
+          const dismissKey = `borrowing-rejected:${rejectedBorrowings.length}`
+          if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
+            const assetLabel = rejected.assetDetailName || rejected.assetName || "Aset peminjaman"
+            const assetCode = rejected.assetDetailCode || rejected.assetCode || "-"
+            const sourceLabel = assetSourceLabel(
+              deriveAssetSource(rejected.assetType, rejected.assetDetailCode || rejected.assetCode),
+            )
+            nextNotifications.push({
+              id: "borrowing-rejected",
+              category: "borrowing",
+              type: "ditolak_dibatalkan",
+              notifStatus: "warning",
+              title: `${rejectedBorrowings.length} permintaan peminjaman ditolak`,
+              subtitle: `${borrowingStatusLabel(rejected.status)} • ${formatDateId(rejected.rejectedAt || rejected.updatedAt || rejected.borrowDate)}`,
+              description: rejected.rejectionReason || "Permintaan peminjaman tidak disetujui.",
+              href: "/borrowing",
+              assetName: assetLabel,
+              assetCode,
+              recordNoId: formatNoId("PMJ", rejected.id, rejected.borrowingCode),
+              identity: getIdentityLabel(rejected.userName, rejected.userNip),
+              sourceLabel,
+              roomLabel: rejected.assetLocation || rejected.purpose || "-",
+              dismissKey,
+            })
+          }
         }
 
         // --- Status Berubah (pengembalian) ---
@@ -804,7 +838,7 @@ export default function Topbar() {
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               aria-label="Menu notifikasi"
             >
-              <Bell className="size-[18px]" />
+              <Bell className="size-4.5" />
               {notifications.length > 0 && (
                 <span className={`absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background ${
                   notifications.some((n) => n.notifStatus === "urgent") ? "bg-red-500" :
@@ -862,6 +896,9 @@ export default function Topbar() {
                     className={`${isCompactNotification ? "mt-1" : "mt-1.5"} block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
                     onSelect={(event) => {
                       event.preventDefault()
+                      if (notification.type === "ditolak_dibatalkan") {
+                        dismissNotification(notification)
+                      }
                       if (notification.href) {
                         router.push(notification.href)
                       }
@@ -902,7 +939,7 @@ export default function Topbar() {
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-            <span className="font-mono tabular-nums text-base font-semibold tracking-[0.1em] text-foreground sm:text-[18px] sm:tracking-[0.14em]">
+            <span className="font-mono tabular-nums text-base font-semibold tracking-widest text-foreground sm:text-[18px] sm:tracking-[0.14em]">
               {formattedTime}
             </span>
             <span className="text-[11px] text-muted-foreground sm:text-xs">WIB</span>
