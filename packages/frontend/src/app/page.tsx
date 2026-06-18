@@ -193,45 +193,6 @@ export default function DashboardPage() {
     maintenanceAssets: 0,
   })
 
-  useEffect(() => {
-    const user = getCurrentUser()
-    if (!user) {
-      router.replace(buildLoginRedirectUrl())
-    } else {
-      setCurrentUser(user)
-    }
-  }, [router])
-
-  useEffect(() => {
-    if (!currentUser) return
-    loadStats()
-    const interval = setInterval(loadStats, 30000)
-    return () => clearInterval(interval)
-  }, [currentUser])
-
-  useEffect(() => {
-    if (!currentUser?.id || isLocalAuthSession()) {
-      setAllowedMenus(null)
-      return
-    }
-
-    let isMounted = true
-    accessControlService.getMyMenus()
-      .then((response) => {
-        if (isMounted && response.success) {
-          setAllowedMenus(response.data)
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load dashboard menu permissions:", error)
-        if (isMounted) setAllowedMenus(null)
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [currentUser?.id, currentUser?.role])
-
   const loadStats = async () => {
     const user = currentUser
     const isPrivilegedDashboard = ["admin", "leader"].includes(normalizeUserRole(user?.role))
@@ -353,6 +314,45 @@ export default function DashboardPage() {
       console.error("Failed to load dashboard stats:", error)
     }
   }
+
+  useEffect(() => {
+    const user = getCurrentUser()
+    if (!user) {
+      router.replace(buildLoginRedirectUrl())
+    } else {
+      setCurrentUser(user)
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (!currentUser) return
+    loadStats()
+    const interval = setInterval(loadStats, 30000)
+    return () => clearInterval(interval)
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser?.id || isLocalAuthSession()) {
+      setAllowedMenus(null)
+      return
+    }
+
+    let isMounted = true
+    accessControlService.getMyMenus()
+      .then((response) => {
+        if (isMounted && response.success) {
+          setAllowedMenus(response.data)
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load dashboard menu permissions:", error)
+        if (isMounted) setAllowedMenus(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentUser?.id, currentUser?.role])
 
   const statCardClass =
     "rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_40px_rgba(15,23,42,0.08)] dark:border-slate-800/70 dark:bg-slate-900/60"
