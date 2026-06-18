@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MEDICAL_ASSET_TYPE_OPTIONS } from "@/constants/medical-asset-types";
 import type { MedicalAsset } from "@/types/medical-assets-types";
+import { maintenanceDetailStatusLabels } from "@/utils/api-mappers";
 import { inferMedicalUsagePurpose, matchMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier";
 import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage";
 import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose";
@@ -10,7 +11,7 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type ConditionType = "Baik" | "Cukup" | "Rusak"
-type StatusType = "Tersedia" | "Aktif" | "Nonaktif" | "Non-Aktif" | "Dalam Perbaikan" | "Sedang Digunakan" | "Dipinjam"
+type StatusType = MedicalAsset["status"]
 
 const normalizeAssetStatusLabel = (status?: string | null): StatusType => {
   if (status === "Aktif") return "Tersedia"
@@ -441,7 +442,9 @@ export default function MedicalAssetForm({
               >
                 <option>Tersedia</option>
                 <option>Nonaktif</option>
-                <option>Dalam Perbaikan</option>
+                {maintenanceDetailStatusLabels.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
                 <option>Sedang Digunakan</option>
                 <option>Dipinjam</option>
               </select>

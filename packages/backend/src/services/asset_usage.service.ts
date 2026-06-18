@@ -11,7 +11,7 @@ import {
 } from '../models';
 import { formatDateTimeForMySQL } from '../utils/helpers';
 import { createScopedLogger } from '../utils/logger';
-import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
+import { canCompleteUsage, canManageOverdueEmergencyUsage, hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 
 const logger = createScopedLogger('service:asset-usage');
@@ -734,8 +734,12 @@ export class AssetUsageService {
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
     await this.syncActiveBorrowingUsageLogs();
 
-    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
+    const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo, actorUserId, actorRole } = filters;
     const offset = (page - 1) * limit;
+    const scopedActorId = Number(actorUserId);
+    const shouldScopeToActor = Number.isFinite(scopedActorId)
+      && scopedActorId > 0
+      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     let query = `
       SELECT l.*,
@@ -778,6 +782,12 @@ export class AssetUsageService {
       query += ' AND l.usage_context = ?';
       countQuery += ' AND usage_context = ?';
       params.push(usageContext);
+    }
+
+    if (shouldScopeToActor) {
+      query += ' AND (l.operator_user_id = ? OR l.created_by = ?)';
+      countQuery += ' AND (operator_user_id = ? OR created_by = ?)';
+      params.push(scopedActorId, scopedActorId);
     }
 
     if (dateFrom) {

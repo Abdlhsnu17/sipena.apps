@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService, type Asset } from "@/services/asset.service";
+import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
@@ -152,6 +153,7 @@ const quickActionLinks: QuickActionLink[] = [
 export default function DashboardPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [allowedMenus, setAllowedMenus] = useState<AccessMenu[] | null>(null)
 
   const collectRoomKeys = (assets: Asset[]): Set<string> => {
     const rooms = new Set<string>()
@@ -207,7 +209,34 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [currentUser])
 
+  useEffect(() => {
+    if (!currentUser?.id || isLocalAuthSession()) {
+      setAllowedMenus(null)
+      return
+    }
+
+    let isMounted = true
+    accessControlService.getMyMenus()
+      .then((response) => {
+        if (isMounted && response.success) {
+          setAllowedMenus(response.data)
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load dashboard menu permissions:", error)
+        if (isMounted) setAllowedMenus(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentUser?.id, currentUser?.role])
+
   const loadStats = async () => {
+    const user = currentUser
+    const isPrivilegedDashboard = ["admin", "leader"].includes(normalizeUserRole(user?.role))
+    const currentUserId = user?.id ? String(user.id) : undefined
+
     if (isLocalAuthSession()) {
       setStats({
         totalNonMedicalAssets: 0,
@@ -239,7 +268,11 @@ export default function DashboardPage() {
         assetService.getMedicalAssets({ page: 1, limit: 1000 }),
         assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
         maintenanceService.getAll({ page: 1, limit: 1000 }),
-        borrowingService.getAll({ page: 1, limit: 1000 }),
+        borrowingService.getAll({
+          page: 1,
+          limit: 1000,
+          ...(isPrivilegedDashboard || !currentUserId ? {} : { userId: currentUserId }),
+        }),
         assetUsageService.getAll({ page: 1, limit: 1000 }),
         reportService.getDashboard(),
       ])
@@ -298,11 +331,15 @@ export default function DashboardPage() {
         nonMedicalRoomCount: nonMedicalRoomSet.size,
         medicalRoomCount: medicalRoomSet.size,
         totalRoomCount,
-        overdueBorrowings: reportResponse.success ? reportResponse.data.overdueBorrowings : borrowingsData.filter((b) => b.status === "overdue").length,
-        pendingBorrowings: reportResponse.success ? reportResponse.data.pendingBorrowings : borrowingsData.filter((b) => b.status === "pending").length,
-        availableAssets: reportResponse.success ? reportResponse.data.availableAssets : 0,
-        borrowedAssets: reportResponse.success ? reportResponse.data.borrowedAssets : 0,
-        maintenanceAssets: reportResponse.success ? reportResponse.data.maintenanceAssets : 0,
+        overdueBorrowings: isPrivilegedDashboard && reportResponse.success
+          ? reportResponse.data.overdueBorrowings
+          : borrowingsData.filter((b) => b.status === "overdue").length,
+        pendingBorrowings: isPrivilegedDashboard && reportResponse.success
+          ? reportResponse.data.pendingBorrowings
+          : borrowingsData.filter((b) => b.status === "pending").length,
+        availableAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.availableAssets : 0,
+        borrowedAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.borrowedAssets : 0,
+        maintenanceAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.maintenanceAssets : 0,
       })
 
     } catch (error: any) {
@@ -322,13 +359,27 @@ export default function DashboardPage() {
 
   const quickActions = useMemo(() => {
     const normalizedRole = normalizeUserRole(currentUser?.role)
-    return quickActionLinks.filter((action) => canAccessRoute(normalizedRole, action.href))
-  }, [currentUser?.role])
+    const allowedPaths = allowedMenus
+      ? new Set(allowedMenus.map((menu) => menu.path))
+      : null
+
+    return quickActionLinks.filter((action) => {
+      if (allowedPaths) {
+        return allowedPaths.has(action.href)
+      }
+
+      return canAccessRoute(normalizedRole, action.href)
+    })
+  }, [allowedMenus, currentUser?.role])
 
 
 
   const handleQuickActionClick = (action: QuickActionLink) => {
-    if (canAccessRoute(currentUser?.role, action.href)) {
+    const isAllowedByDatabase = allowedMenus
+      ? allowedMenus.some((menu) => menu.path === action.href)
+      : canAccessRoute(currentUser?.role, action.href)
+
+    if (isAllowedByDatabase) {
       router.push(action.href)
     }
   }

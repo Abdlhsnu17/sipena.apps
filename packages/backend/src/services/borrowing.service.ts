@@ -859,8 +859,12 @@ export class BorrowingService {
   async getAll(filters: BorrowingFilters): Promise<PaginatedResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
 
-    const { page, limit, status, userId, assetId, assetType } = filters;
+    const { page, limit, status, userId, assetId, assetType, actorUserId, actorRole } = filters;
     const offset = (page - 1) * limit;
+    const scopedActorId = Number(actorUserId);
+    const shouldScopeToActor = Number.isFinite(scopedActorId)
+      && scopedActorId > 0
+      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     // Perbaikan QUERY: Menggunakan logika JOIN yang lebih ketat terhadap asset_type
     // dan mengambil data dari tabel yang sesuai (medical vs non-medical)
@@ -897,7 +901,12 @@ export class BorrowingService {
       countParams.push(status);
     }
 
-    if (userId) {
+    if (shouldScopeToActor) {
+      query += ' AND b.user_id = ?';
+      countQuery += ' AND user_id = ?';
+      params.push(scopedActorId);
+      countParams.push(scopedActorId);
+    } else if (userId) {
       query += ' AND b.user_id = ?';
       countQuery += ' AND user_id = ?';
       params.push(userId);

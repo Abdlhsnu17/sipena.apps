@@ -48,6 +48,20 @@ interface MaintenanceAssetContext {
 const ACTIVE_MAINTENANCE_STATUSES: MaintenanceStatus[] = ['scheduled', 'in_progress', 'completed'];
 const RELEASABLE_MAINTENANCE_STATUSES: MaintenanceStatus[] = ['validated', 'cancelled'];
 
+const getActiveMaintenanceDetailStatus = (maintenanceType?: string | null): string => {
+  switch (maintenanceType) {
+    case 'preventive':
+      return 'Dalam Pemeliharaan';
+    case 'calibration':
+      return 'Dalam Kalibrasi';
+    case 'inspection':
+      return 'Dalam Inspeksi';
+    case 'corrective':
+    default:
+      return 'Dalam Perbaikan';
+  }
+};
+
 const SELECT_WITH_USERS = `
   SELECT
     mh.*,
@@ -289,7 +303,7 @@ const syncAssetDetailStatus = async (
   }
 
   const [maintenanceRows] = await pool.query<RowDataPacket[]>(
-    `SELECT asset_detail_id, asset_detail_code
+    `SELECT asset_detail_id, asset_detail_code, type
      FROM maintenance_records
      WHERE id = ?
      LIMIT 1`,
@@ -298,6 +312,7 @@ const syncAssetDetailStatus = async (
 
   const detailId = normalizeDetailIdentifier(maintenanceRows[0]?.asset_detail_id);
   const detailCode = normalizeDetailIdentifier(maintenanceRows[0]?.asset_detail_code);
+  const maintenanceType = maintenanceRows[0]?.type as MaintenanceType | undefined;
   const shouldMatchSpecificDetail = Boolean(detailId || detailCode);
 
   const assetResponse = await assetService.getById(String(context.assetId), context.assetType);
@@ -308,7 +323,7 @@ const syncAssetDetailStatus = async (
   if (details.length === 0) return;
 
   const nextDetailStatus = ACTIVE_MAINTENANCE_STATUSES.includes(maintenanceStatus)
-    ? 'Dalam Perbaikan'
+    ? getActiveMaintenanceDetailStatus(maintenanceType)
     : 'Tersedia';
 
   let hasChanges = false;

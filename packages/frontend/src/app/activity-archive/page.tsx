@@ -11,6 +11,7 @@ import { Archive, ChevronLeft, ChevronRight, Clock3, RotateCcw } from "lucide-re
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVITY_CODE_PATTERN = /\b([A-Z0-9]+(?:-[A-Z0-9]+)+)\b/
+const ACTIVITY_ARCHIVE_ROWS_PER_PAGE = 15
 
 const normalizeActivityValue = (value?: string | null) =>
   String(value ?? "")
@@ -143,7 +144,7 @@ export default function ActivityArchivePage() {
     setLoading(true)
     setErrorMessage("")
     try {
-      const params: Record<string, string | number> = { page, limit: 20 }
+      const params: Record<string, string | number> = { page, limit: ACTIVITY_ARCHIVE_ROWS_PER_PAGE }
       if (selectedUserId) params.userId = selectedUserId
       if (startDate) params.startDate = startDate
       if (endDate) params.endDate = endDate
@@ -315,7 +316,14 @@ export default function ActivityArchivePage() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-190 text-left text-sm">
+          <table className="min-w-[1120px] table-fixed text-left text-sm">
+            <colgroup>
+              <col className="w-[220px]" />
+              <col className="w-[240px]" />
+              <col className="w-[180px]" />
+              <col className="w-[260px]" />
+              <col className="w-[360px]" />
+            </colgroup>
             <thead className="bg-slate-50 text-xs uppercase tracking-normal text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Waktu</th>

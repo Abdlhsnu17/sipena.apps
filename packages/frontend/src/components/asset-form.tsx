@@ -3,6 +3,7 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { maintenanceDetailStatusLabels } from "@/utils/api-mappers"
 import { X } from "lucide-react"
 
 type AssetFormValues = {
@@ -168,7 +169,9 @@ export default function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
               >
                 <option>Tersedia</option>
                 <option>Nonaktif</option>
-                <option>Pemeliharaan</option>
+                {maintenanceDetailStatusLabels.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
               </select>
             </div>
 

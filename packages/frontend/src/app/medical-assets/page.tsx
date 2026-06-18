@@ -12,7 +12,7 @@ import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import type { MedicalAsset, MedicalRoom } from "@/types/medical-assets-types";
-import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
+import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails, isMaintenanceDetailStatus } from "@/utils/api-mappers";
 import { MEDICAL_USAGE_OPTIONS } from "@/utils/medical-asset-usage";
 import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
@@ -742,7 +742,7 @@ export default function MedicalAssetsPage() {
                                       className={`text-xs border ${
                                         statusLabel === "Tersedia"
                                           ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                                          : statusLabel === "Dalam Perbaikan"
+                                          : isMaintenanceDetailStatus(statusLabel)
                                             ? "bg-amber-100 border-amber-300 text-amber-900"
                                             : statusLabel === "Dipinjam"
                                               ? "bg-sky-100 border-sky-300 text-sky-800"

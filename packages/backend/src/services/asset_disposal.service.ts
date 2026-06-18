@@ -102,7 +102,13 @@ const isRequestedDetail = (detail: Record<string, any>, request: AssetDisposalRe
 const deriveAggregateStatus = (details: Record<string, any>[]): string => {
   const activeDetails = details.filter((detail) => detail.status !== 'Nonaktif' && detail.status !== 'Non-Aktif' && detail.status !== 'disposed');
   if (activeDetails.length === 0) return 'disposed';
-  if (activeDetails.some((detail) => detail.status === 'Dalam Perbaikan' || detail.status === 'maintenance')) return 'maintenance';
+  if (activeDetails.some((detail) => (
+    detail.status === 'Dalam Pemeliharaan' ||
+    detail.status === 'Dalam Perbaikan' ||
+    detail.status === 'Dalam Kalibrasi' ||
+    detail.status === 'Dalam Inspeksi' ||
+    detail.status === 'maintenance'
+  ))) return 'maintenance';
   if (activeDetails.some((detail) => detail.status === 'Sedang Digunakan' || detail.status === 'Dalam Penggunaan' || detail.status === 'borrowed')) return 'borrowed';
   return 'available';
 };

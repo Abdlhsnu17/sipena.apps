@@ -209,6 +209,20 @@ export class MaintenanceService {
     return this.maintenanceIntervals[maintenanceType] || 1;
   }
 
+  private getActiveMaintenanceDetailStatus(maintenanceType?: string | null): string {
+    switch (maintenanceType) {
+      case 'preventive':
+        return 'Dalam Pemeliharaan';
+      case 'calibration':
+        return 'Dalam Kalibrasi';
+      case 'inspection':
+        return 'Dalam Inspeksi';
+      case 'corrective':
+      default:
+        return 'Dalam Perbaikan';
+    }
+  }
+
   private matchesAssetDetail(
     detail: Record<string, any>,
     detailId?: string | null,
@@ -266,6 +280,7 @@ export class MaintenanceService {
     const completionDateSource = options?.completedAt || options?.scheduledAt || new Date();
     const completedDateOnly = this.formatDateOnly(completionDateSource);
     const isCorrectiveMaintenance = options?.maintenanceType === 'corrective';
+    const activeDetailStatus = this.getActiveMaintenanceDetailStatus(options?.maintenanceType);
     
     // Calculate next maintenance date based on maintenance type interval
     const maintenanceInterval = this.getMaintenanceInterval(options?.maintenanceType);
@@ -284,8 +299,8 @@ export class MaintenanceService {
       if (!isTarget) return rawDetail;
 
       if (this.isActiveMaintenanceStatus(maintenanceStatus)) {
-        if (detail.status !== 'Dalam Perbaikan') {
-          detail.status = 'Dalam Perbaikan';
+        if (detail.status !== activeDetailStatus) {
+          detail.status = activeDetailStatus;
           hasChanges = true;
         }
         return detail;
@@ -539,7 +554,7 @@ export class MaintenanceService {
     const scopedActorId = Number(actorUserId);
     const shouldScopeToActor = Number.isFinite(scopedActorId)
       && scopedActorId > 0
-      && !hasAnyRole(actorRole, ['admin', 'leader', 'teknisi']);
+      && !hasAnyRole(actorRole, ['admin', 'leader']);
 
     let query = `
       SELECT m.*,

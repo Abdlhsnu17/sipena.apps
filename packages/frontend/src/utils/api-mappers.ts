@@ -31,6 +31,16 @@ export const buildSpecifications = <T = any>(details: T[], extra: Record<string,
   details,
 })
 
+export const maintenanceDetailStatusLabels = [
+  "Dalam Pemeliharaan",
+  "Dalam Perbaikan",
+  "Dalam Kalibrasi",
+  "Dalam Inspeksi",
+] as const
+
+export const isMaintenanceDetailStatus = (status?: string | null) =>
+  Boolean(status && maintenanceDetailStatusLabels.includes(status as (typeof maintenanceDetailStatusLabels)[number]))
+
 export const deriveAssetCondition = (details: Array<{ condition?: string }>): AssetCondition => {
   const conditions = details.map((detail) => detail.condition)
   if (conditions.includes("Rusak")) return "damaged"
@@ -40,7 +50,7 @@ export const deriveAssetCondition = (details: Array<{ condition?: string }>): As
 
 export const deriveAssetStatus = (details: Array<{ status?: string }>): AssetStatus => {
   const statuses = details.map((detail) => detail.status)
-  if (statuses.includes("Dalam Perbaikan")) return "maintenance"
+  if (statuses.some((status) => isMaintenanceDetailStatus(status) || status === "maintenance")) return "maintenance"
   if (statuses.includes("Nonaktif") || statuses.includes("Non-Aktif")) return "disposed"
   if (statuses.includes("Dipinjam") || statuses.includes("Sedang Digunakan") || statuses.includes("Dalam Penggunaan")) return "borrowed"
   return "available"

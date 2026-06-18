@@ -115,6 +115,40 @@ describe('MaintenanceService.getAll view filter', () => {
     ]);
   });
 
+  it('does not scope staff PJ maintenance list to records they created or completed', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[], []])
+      .mockResolvedValueOnce([[{ count: 0 }], []]);
+
+    await service.getAll({
+      page: 1,
+      limit: 10,
+      view: 'active',
+      actorUserId: 17,
+      actorRole: 'staff_pj',
+    });
+
+    const [listQuery, listParams] = mockedQuery.mock.calls[0];
+    const [countQuery, countParams] = mockedQuery.mock.calls[1];
+
+    expect(String(listQuery)).not.toContain('m.created_by = ? OR m.completed_by = ?');
+    expect(String(countQuery)).not.toContain('created_by = ? OR completed_by = ?');
+    expect(listParams).toEqual([
+      'requested',
+      'scheduled',
+      'in_progress',
+      'completed',
+      10,
+      0,
+    ]);
+    expect(countParams).toEqual([
+      'requested',
+      'scheduled',
+      'in_progress',
+      'completed',
+    ]);
+  });
+
   it('still scopes non-privileged maintenance list to records they created or completed', async () => {
     mockedQuery
       .mockResolvedValueOnce([[], []])

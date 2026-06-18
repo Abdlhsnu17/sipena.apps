@@ -1786,7 +1786,7 @@ export default function BorrowingPage() {
 
   const getEffectiveAvailabilityLabel = (asset: BorrowableAsset) => {
     const effectiveAvailability = getEffectiveAvailability(asset)
-    if (effectiveAvailability === "maintenance") return "Dalam Perbaikan"
+    if (effectiveAvailability === "maintenance") return asset.statusLabel || "Dalam Perbaikan"
     if (effectiveAvailability === "in_use") return "Sedang Digunakan"
     if (effectiveAvailability === "borrowed") return "Dipinjam"
     if (effectiveAvailability === "disposed") return "Nonaktif"
