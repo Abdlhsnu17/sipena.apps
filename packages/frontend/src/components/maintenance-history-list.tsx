@@ -110,6 +110,74 @@ const InfoRow = ({ label, children }: InfoRowProps) => (
   </div>
 );
 
+const NOTES_KEYWORD_RULES: { words: string[]; category: "red" | "amber" | "emerald"; textClass: string; markerClass: string }[] = [
+  { words: ["rusak", "tidak normal", "tidak berfungsi", "perlu ganti", "error"], category: "red", textClass: "text-red-600 font-semibold", markerClass: "marker:text-red-600" },
+  { words: ["cukup", "perlu perhatian", "perlu pengecekan"], category: "amber", textClass: "text-amber-600 font-semibold", markerClass: "marker:text-amber-600" },
+  { words: ["baik", "normal", "sesuai", "aman"], category: "emerald", textClass: "text-emerald-600 font-semibold", markerClass: "marker:text-emerald-600" },
+];
+
+const NOTES_KEYWORD_REGEX = new RegExp(
+  `\\b(${NOTES_KEYWORD_RULES.flatMap((rule) => rule.words)
+    .sort((a, b) => b.length - a.length)
+    .map((word) => word.replace(/\s+/g, "\\s+"))
+    .join("|")})\\b`,
+  "gi",
+);
+
+const getKeywordRule = (word: string) => {
+  const normalized = word.toLowerCase().replace(/\s+/g, " ");
+  return NOTES_KEYWORD_RULES.find((rule) => rule.words.includes(normalized));
+};
+
+const renderHighlightedText = (text: string): React.ReactNode => {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  NOTES_KEYWORD_REGEX.lastIndex = 0;
+  while ((match = NOTES_KEYWORD_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const rule = getKeywordRule(match[0]);
+    parts.push(
+      <span key={`hl-${key++}`} className={rule?.textClass}>
+        {match[0]}
+      </span>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+};
+
+const renderNotesContent = (text: string | undefined): React.ReactNode => {
+  const trimmed = text?.trim();
+  if (!trimmed) return "Tidak ada catatan";
+
+  const lines = trimmed.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return renderHighlightedText(trimmed);
+  }
+
+  return (
+    <ul className="list-disc space-y-1 pl-4 marker:text-slate-400">
+      {lines.map((line, index) => {
+        const rule = NOTES_KEYWORD_RULES.find((candidate) =>
+          candidate.words.some((word) => line.toLowerCase().includes(word)),
+        );
+        return (
+          <li key={index} className={rule?.markerClass}>
+            {renderHighlightedText(line)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
+
 type HistoryExportColumn = {
   key: string;
   label: string;
@@ -1228,7 +1296,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           <InfoRow label="Teknisi Pelaksana">{h.technician || "-"}</InfoRow>
                           <InfoRow label="Waktu Selesai">{meta.completionDateLabel}</InfoRow>
                           <InfoRow label="Biaya Pemeliharaan">{meta.costLabel}</InfoRow>
-                          <InfoRow label="Catatan (After)">{meta.afterNotes}</InfoRow>
+                          <InfoRow label="Catatan (After)">{renderNotesContent(meta.afterNotes)}</InfoRow>
                           {h.status === "cancelled" && (
                             <InfoRow label="Alasan Pembatalan">{h.cancellationReason || "-"}</InfoRow>
                           )}
