@@ -2587,6 +2587,16 @@ export default function BorrowingPage() {
                               unitExtra={formatBorrowingPurposeType(b.purposeType)}
                               timeLabel="Batas Pengembalian"
                               timeValue={dueDateLabel}
+                              badges={(
+                                <>
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                    {inventoryTypeLabel}
+                                  </Badge>
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                    {roomNameLabel}
+                                  </Badge>
+                                </>
+                              )}
                               statusBadges={(
                                 <>
                                   {getStatusBadge(b.status)}

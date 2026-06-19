@@ -1379,6 +1379,16 @@ export default function ReturnsPage() {
                               unitExtra={formatBorrowingPurposeType(b.purposeType)}
                               timeLabel="Batas Pengembalian"
                               timeValue={dueDateLabel}
+                              badges={(
+                                <>
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                    {assetTypeLabel}
+                                  </Badge>
+                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                    {b.destinationRoom || roomLabel}
+                                  </Badge>
+                                </>
+                              )}
                               statusBadges={(
                                 <>
                                   {getStatusBadge(b.status)}

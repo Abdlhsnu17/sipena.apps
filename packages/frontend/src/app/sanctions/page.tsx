@@ -374,7 +374,7 @@ export default function SanctionsPage() {
                               onSelectedChange={() => toggleSanctionSelection(record.id)}
                               selectionLabel={`Pilih sanksi ${record.assetName || record.borrowingCode || record.id}`}
                             >
-                              {record.sanctionStatus === "active" ? (
+                              {record.sanctionStatus === "active" && (
                                 <>
                                   <Button
                                     size="sm"
@@ -395,10 +395,6 @@ export default function SanctionsPage() {
                                     Bebaskan
                                   </Button>
                                 </>
-                              ) : (
-                                <Badge variant={sanctionStatusVariant[record.sanctionStatus]} className="text-[12px]">
-                                  {sanctionStatusLabel[record.sanctionStatus]}
-                                </Badge>
                               )}
                             </SummaryResultFooter>
                           )}
