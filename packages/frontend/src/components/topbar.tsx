@@ -104,6 +104,11 @@ const BORROWING_NOTIFICATION_STATUSES = ["pending", "approved", "rejected", "bor
 const MAINTENANCE_NOTIFICATION_STATUSES = ["requested", "scheduled", "in_progress", "completed", "validated", "cancelled"] as const
 const PRIORITY_KEYWORDS = ["prioritas tinggi", "urgent", "darurat", "cito", "segera"]
 
+const buildDismissKey = (bucket: string, items: Array<{ id: number | string }>): string => {
+  const ids = items.map((item) => String(item.id)).sort()
+  return `${bucket}:${ids.join(",")}`
+}
+
 const getIdentityLabel = (name?: string, nip?: string) => {
   const safeName = name || "-"
   const safeNip = nip || "-"
@@ -528,7 +533,7 @@ export default function Topbar() {
         // --- Laporan Tersedia ---
         if (validatedMaintenance.length > 0) {
           const validated = validatedMaintenance[0]
-          const dismissKey = `maintenance-report:${validatedMaintenance.length}`
+          const dismissKey = buildDismissKey("maintenance-report", validatedMaintenance)
           if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
             const sourceLabel = assetSourceLabel(deriveAssetSource(validated.assetType, validated.assetDetailCode || validated.assetCode))
             const assetName = validated.assetDetailName || validated.assetName || "Aset pemeliharaan"
@@ -556,7 +561,7 @@ export default function Topbar() {
         // --- Layanan Ditolak/Dibatalkan ---
         if (cancelledMaintenance.length > 0) {
           const cancelled = cancelledMaintenance[0]
-          const dismissKey = `maintenance-cancelled:${cancelledMaintenance.length}`
+          const dismissKey = buildDismissKey("maintenance-cancelled", cancelledMaintenance)
           if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
             const sourceLabel = assetSourceLabel(deriveAssetSource(cancelled.assetType, cancelled.assetDetailCode || cancelled.assetCode))
             const assetName = cancelled.assetDetailName || cancelled.assetName || "Aset pemeliharaan"
@@ -640,7 +645,7 @@ export default function Topbar() {
         // --- Layanan Ditolak/Dibatalkan (borrowing rejected) ---
         if (rejectedBorrowings.length > 0) {
           const rejected = rejectedBorrowings[0]
-          const dismissKey = `borrowing-rejected:${rejectedBorrowings.length}`
+          const dismissKey = buildDismissKey("borrowing-rejected", rejectedBorrowings)
           if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
             const assetLabel = rejected.assetDetailName || rejected.assetName || "Aset peminjaman"
             const assetCode = rejected.assetDetailCode || rejected.assetCode || "-"
@@ -733,7 +738,7 @@ export default function Topbar() {
         // --- Laporan Tersedia dari pengembalian tervalidasi ---
         if (validatedReturns.length > 0) {
           const validatedReturn = validatedReturns[0]
-          const dismissKey = `return-report:${validatedReturns.length}`
+          const dismissKey = buildDismissKey("return-report", validatedReturns)
           if (!dismissedNotificationKeysRef.current.has(dismissKey)) {
             const assetLabel = validatedReturn.assetDetailName || validatedReturn.assetName || "Aset pengembalian"
             const assetCode = validatedReturn.assetDetailCode || validatedReturn.assetCode || "-"
@@ -904,9 +909,6 @@ export default function Topbar() {
                     className={`${isCompactNotification ? "mt-1" : "mt-1.5"} block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
                     onSelect={(event) => {
                       event.preventDefault()
-                      if (notification.type === "ditolak_dibatalkan") {
-                        dismissNotification(notification)
-                      }
                       if (notification.href) {
                         router.push(notification.href)
                       }
@@ -915,8 +917,24 @@ export default function Topbar() {
                     <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm transition hover:shadow-md">
                       <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5" : "gap-2 px-3 py-2"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
                         <span className={`${isCompactNotification ? "text-xs" : "text-sm"} font-semibold`}>{notificationTypeLabel[notification.type]}</span>
-                        <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-xs"} rounded-full border border-white/50 bg-white/15 py-0.5 font-medium`}>
-                          {categoryLabelByKey[notification.category]}
+                        <span className="flex items-center gap-1.5">
+                          <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-xs"} rounded-full border border-white/50 bg-white/15 py-0.5 font-medium`}>
+                            {categoryLabelByKey[notification.category]}
+                          </span>
+                          {notification.dismissKey ? (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                dismissNotification(notification)
+                              }}
+                              className="flex h-5 w-5 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
+                              aria-label="Tutup pemberitahuan"
+                            >
+                              ×
+                            </button>
+                          ) : null}
                         </span>
                       </div>
                       <div className={`${isCompactNotification ? "space-y-0 px-2.5 py-2" : "space-y-0.5 px-3 py-2.5"} text-slate-900`}>
