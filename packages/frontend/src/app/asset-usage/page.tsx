@@ -15,7 +15,7 @@ import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Pencil, Search, Tag, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -870,6 +870,20 @@ export default function AssetUsagePage() {
 
   const getUsageStatusLabel = (log: AssetUsageLog) => (log.endedAt ? "Selesai" : "Sedang Digunakan");
 
+  const getUsageConditionBadgeClass = (condition: string) => {
+    const normalized = condition.toLowerCase();
+    if (normalized.includes("rusak")) {
+      return "rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-medium text-red-800 hover:bg-red-100 sm:text-[12px]";
+    }
+    if (normalized.includes("perbaikan") || normalized.includes("perlu")) {
+      return "rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 sm:text-[12px]";
+    }
+    if (normalized.includes("baik")) {
+      return "rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 sm:text-[12px]";
+    }
+    return "rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 sm:text-[12px]";
+  };
+
   const getUsageDetailSections = (
     log: AssetUsageLog,
     visibleColumns: UsageExportColumnKey[] = selectedUsageColumns,
@@ -1365,27 +1379,49 @@ export default function AssetUsagePage() {
                             </SummaryResultFooter>
                           )}
                         >
-                          {!isExpanded && (
-                            <SummaryResultBody
-                              assetName={log.assetDetailName || log.assetName || "-"}
-                              assetCode={log.assetDetailCode || log.assetCode || "-"}
-                              noId={getUsageNoId(log)}
-                              personValue={`${userLabel} / ${log.operatorNip || "-"}`}
-                              unitValue={roomDisplay.primary}
-                              unitExtra={usageContextLabels[log.usageContext] || log.usageContext || "-"}
-                              timeLabel="Waktu Mulai"
-                              timeValue={formatDayTimeLabel(log.startedAt) || "-"}
-                              statusBadges={(
-                                <>
-                                  <Badge className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 sm:text-[12px]">
-                                    Jumlah {log.usageCount}
-                                  </Badge>
-                                  <Badge className={log.endedAt ? "rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 sm:text-[12px]" : "rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 sm:text-[12px]"}>
-                                    {getUsageStatusLabel(log)}
-                                  </Badge>
-                                </>
-                              )}
-                            />
+                          {!isExpanded && (() => {
+                            const conditionLabel = getUsageConditionLabel(log);
+                            return (
+                              <SummaryResultBody
+                                assetName={log.assetDetailName || log.assetName || "-"}
+                                assetCode={log.assetDetailCode || log.assetCode || "-"}
+                                noId={getUsageNoId(log)}
+                                personValue={`${userLabel} / ${log.operatorNip || "-"}`}
+                                unitValue={roomDisplay.primary}
+                                unitExtra={usageContextLabels[log.usageContext] || log.usageContext || "-"}
+                                timeLabel={log.endedAt ? "Waktu Selesai" : "Waktu Mulai"}
+                                timeValue={(log.endedAt ? formatDayTimeLabel(log.endedAt) : formatDayTimeLabel(log.startedAt)) || "-"}
+                                badges={(
+                                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 sm:text-[12px]">
+                                    <Tag className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">Lokasi alat: {roomDisplay.secondary || log.assetLocation || "-"}</span>
+                                  </span>
+                                )}
+                                statusBadges={(
+                                  <>
+                                    <Badge className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 sm:text-[12px]">
+                                      Jumlah {log.usageCount}
+                                    </Badge>
+                                    {conditionLabel !== "-" && (
+                                      <Badge className={getUsageConditionBadgeClass(conditionLabel)}>
+                                        Kondisi: {conditionLabel}
+                                      </Badge>
+                                    )}
+                                    <Badge className={log.endedAt ? "rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 sm:text-[12px]" : "rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 sm:text-[12px]"}>
+                                      {getUsageStatusLabel(log)}
+                                    </Badge>
+                                  </>
+                                )}
+                              />
+                            );
+                          })()}
+                          {!isExpanded && log.notes?.trim() && (
+                            <div className="border-t border-slate-200 bg-white px-3 pb-3 sm:px-4">
+                              <p className="text-[11px] leading-snug text-slate-700 sm:text-[12px]">
+                                <span className="font-semibold text-slate-600">Catatan: </span>
+                                {log.notes.trim()}
+                              </p>
+                            </div>
                           )}
 
                           {isExpanded && (

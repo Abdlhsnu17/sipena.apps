@@ -1189,9 +1189,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
                           {maintenanceTypeLabel(h.type)}
                         </Badge>
-                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
-                          Jadwal {meta.scheduledLabel}
-                        </Badge>
                       </>
                     )}
                     statusBadges={(
