@@ -11,6 +11,7 @@ import {
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
+    locationBadgeClass,
     maintenanceStatusLabel,
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
@@ -96,6 +97,12 @@ const categoryLabelByKey: Record<NotificationItem["category"], string> = {
   borrowing: "Peminjaman",
   returns: "Pengembalian",
   usage: "Penggunaan Alat",
+}
+
+const sourceLabelBadgeClass = (sourceLabel: string): string => {
+  if (sourceLabel === "Medis") return "border-blue-200 bg-blue-50 text-blue-700"
+  if (sourceLabel === "Non-Medis") return "border-purple-200 bg-purple-50 text-purple-700"
+  return "border-slate-300 bg-slate-50 text-slate-800"
 }
 
 const DISMISSED_NOTIFICATIONS_STORAGE_KEY = "dismissed-notifications"
@@ -944,10 +951,10 @@ export default function Topbar() {
                         <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 wrap-break-word text-slate-700`}>Identitas: {notification.identity}</p>
                         <div className={`${isCompactNotification ? "pt-1" : "pt-1.5"}`}>
                           <div className="flex flex-wrap gap-1.5">
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
                               {notification.sourceLabel}
                             </span>
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border border-slate-300 bg-slate-50 text-slate-800`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border ${locationBadgeClass}`}>
                               {notification.roomLabel}
                             </span>
                           </div>

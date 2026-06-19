@@ -10,9 +10,11 @@ import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/bor
 import deletionRequestService from "@/services/deletion-request.service";
 import type { User } from "@/types/auth-types";
 import {
+    assetSourceBadgeClass,
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
+    locationBadgeClass,
     type AssetSourceKey,
 } from "@/utils/api-mappers";
 import { formatDayTimeLabel } from "@/utils/format";
@@ -1131,6 +1133,9 @@ export default function ReturnsPage() {
     if (status === "rejected") {
       return <Badge variant="destructive">Ditolak</Badge>
     }
+    if (status === "approved" || status === "borrowed") {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Dipinjam</Badge>
+    }
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
 
@@ -1313,9 +1318,8 @@ export default function ReturnsPage() {
                       const codeLabel = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                       const roomLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
                       const returnNoId = getReturnNoId(b)
-                      const assetTypeLabel = assetSourceLabel(
-                        deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode),
-                      )
+                      const assetSource = deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode)
+                      const assetTypeLabel = assetSourceLabel(assetSource)
                       const dueDateLabel = b.dueDate ? formatDayTimeLabel(b.dueDate) : "Belum dijadwalkan"
                       const isExpanded = expandedActiveReturnIds.has(b.id)
                       const activeSections = buildReturnNarrativeSections(activeSelectedReturnColumns)(b)
@@ -1381,10 +1385,10 @@ export default function ReturnsPage() {
                               timeValue={dueDateLabel}
                               badges={(
                                 <>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${assetSourceBadgeClass(assetSource)}`}>
                                     {assetTypeLabel}
                                   </Badge>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${locationBadgeClass}`}>
                                     {b.destinationRoom || roomLabel}
                                   </Badge>
                                 </>
@@ -1400,10 +1404,10 @@ export default function ReturnsPage() {
                           {isExpanded && (
                           <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
                             <div className="flex flex-wrap items-center gap-1">
-                              <Badge variant="outline" className="text-[11px]">
+                              <Badge className={`border text-[11px] ${assetSourceBadgeClass(assetSource)}`}>
                                 {assetTypeLabel}
                               </Badge>
-                              <Badge variant="outline" className="text-[11px]">
+                              <Badge className={`border text-[11px] ${locationBadgeClass}`}>
                                 {b.destinationRoom || roomLabel}
                               </Badge>
                               {getBorrowingRestrictionBadge(b.status)}
@@ -1658,9 +1662,8 @@ export default function ReturnsPage() {
                       detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
                     const codeLabel = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                     const roomNameLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
-                    const assetTypeLabel = assetSourceLabel(
-                      deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode),
-                    )
+                    const assetSource = deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode)
+                    const assetTypeLabel = assetSourceLabel(assetSource)
                     const returnNoId = getReturnNoId(b)
                     const borrowerName = b.userName || "-"
                     const returnDateLabel = b.returnDate ? formatDayTimeLabel(b.returnDate) : "Belum dikembalikan"
@@ -1773,10 +1776,10 @@ export default function ReturnsPage() {
                               timeValue={returnDateLabel}
                               badges={(
                                 <>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${assetSourceBadgeClass(assetSource)}`}>
                                     {assetTypeLabel}
                                   </Badge>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${locationBadgeClass}`}>
                                     {b.destinationRoom || roomNameLabel}
                                   </Badge>
                                 </>

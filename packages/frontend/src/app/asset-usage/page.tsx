@@ -10,6 +10,7 @@ import { borrowingService, type Borrowing } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
+import { locationBadgeClass } from "@/utils/api-mappers";
 import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
@@ -1392,7 +1393,7 @@ export default function AssetUsagePage() {
                                 timeLabel={log.endedAt ? "Waktu Selesai" : "Waktu Mulai"}
                                 timeValue={(log.endedAt ? formatDayTimeLabel(log.endedAt) : formatDayTimeLabel(log.startedAt)) || "-"}
                                 badges={(
-                                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 sm:text-[12px]">
+                                  <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium sm:text-[12px] ${locationBadgeClass}`}>
                                     <Tag className="h-3 w-3 shrink-0" />
                                     <span className="truncate">Lokasi alat: {roomDisplay.secondary || log.assetLocation || "-"}</span>
                                   </span>

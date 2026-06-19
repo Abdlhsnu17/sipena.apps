@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { cn } from "@/utils";
-import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel, type AssetSourceKey } from "@/utils/api-mappers";
+import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeBadgeClass, maintenanceTypeLabel, type AssetSourceKey } from "@/utils/api-mappers";
 import { ExportFormat, exportMaintenanceHistory, type MaintenanceHistoryExportEntry } from "@/utils/export-table";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
@@ -1251,10 +1251,10 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                     timeValue={meta.completionDateLabel}
                     badges={(
                       <>
-                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                        <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${assetSourceBadgeClass(meta.assetSource)}`}>
                           {meta.inventoryBadgeLabel}
                         </Badge>
-                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                        <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${maintenanceTypeBadgeClass(h.type)}`}>
                           {maintenanceTypeLabel(h.type)}
                         </Badge>
                       </>

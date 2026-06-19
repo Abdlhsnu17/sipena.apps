@@ -57,7 +57,7 @@ import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService, type Maintenance } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
-import { assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers";
+import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, maintenanceStatusLabel, maintenanceTypeLabel } from "@/utils/api-mappers";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
@@ -1686,7 +1686,7 @@ export default function MaintenancePage() {
                         timeLabel="Jadwal Pemeliharaan"
                         timeValue={scheduledLabel}
                         badges={(
-                          <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                          <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${assetSourceBadgeClass(inventoryTypeSource)}`}>
                             {inventoryTypeLabel}
                           </Badge>
                         )}

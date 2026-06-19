@@ -103,6 +103,27 @@ export const assetSourceLabel = (source: AssetSourceKey): string => {
   }
 }
 
+/**
+ * Kelas warna badge kategori aset agar konsisten di seluruh halaman
+ * (peminjaman, pengembalian, pemeliharaan, dsb).
+ */
+export const assetSourceBadgeClass = (source: AssetSourceKey): string => {
+  switch (source) {
+    case "medis":
+      return "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50"
+    case "non_medis":
+      return "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-50"
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50"
+  }
+}
+
+/**
+ * Kelas warna badge lokasi/ruangan agar konsisten dan terbedakan dari badge kategori.
+ */
+export const locationBadgeClass =
+  "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50"
+
 export const maintenanceStatusLabel = (status: string): string => {
   switch (status) {
     case "requested":
@@ -134,5 +155,21 @@ export const maintenanceTypeLabel = (type: string): string => {
       return "Inspeksi"
     default:
       return type
+  }
+}
+
+/** Kelas warna badge tipe layanan pemeliharaan agar konsisten dengan badge kategori/lokasi. */
+export const maintenanceTypeBadgeClass = (type: string): string => {
+  switch (type) {
+    case "preventive":
+      return "border-green-200 bg-green-50 text-green-700 hover:bg-green-50"
+    case "corrective":
+      return "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-50"
+    case "calibration":
+      return "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-50"
+    case "inspection":
+      return "border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-50"
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50"
   }
 }

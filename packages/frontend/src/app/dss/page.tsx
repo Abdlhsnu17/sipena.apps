@@ -10,6 +10,7 @@ import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingResult } from "@/services/dss.service";
 import { cn } from "@/utils";
+import { locationBadgeClass } from "@/utils/api-mappers";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
   Activity,
@@ -663,7 +664,6 @@ export default function DssPage() {
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {paginatedRankings.map((item) => {
                       const statusLabel = inventoryStatusLabel(item.statusLabel)
-                      const rankBadge = rankMeta(item.rank)
                       const jenis = jenisMeta(item.assetType)
                       const condition = conditionMeta(item.conditionLabel)
                       const status = statusMeta(statusLabel)
@@ -671,25 +671,19 @@ export default function DssPage() {
                       return (
                         <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50">
                           <td className="px-3 py-2.5 align-top">
-                            {rankBadge ? (
-                              <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full", rankBadge.className)}>
-                                <rankBadge.icon className="h-4 w-4" />
-                              </span>
-                            ) : (
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 font-semibold text-slate-600">
-                                {item.rank}
-                              </span>
-                            )}
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 font-semibold text-slate-600">
+                              {item.rank}
+                            </span>
                           </td>
                           <td className="px-3 py-2.5 align-top">
                             <div className="font-semibold text-slate-950">{item.detailName}</div>
                             <div className="mt-1 text-xs text-slate-500">{item.detailCode} · {item.serialNumber || "-"}</div>
                           </td>
                           <td className="px-3 py-2.5 align-top text-slate-700">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            <Badge className={cn("gap-1", locationBadgeClass)}>
+                              <MapPin className="h-3.5 w-3.5" />
                               {item.assetLocation || "-"}
-                            </div>
+                            </Badge>
                           </td>
                           <td className="px-3 py-2.5 align-top">
                             <Badge variant="outline" className={cn("gap-1", jenis.className)}>

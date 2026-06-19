@@ -19,9 +19,11 @@ import { maintenanceService } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import {
+    assetSourceBadgeClass,
     assetSourceLabel,
     borrowingStatusLabel,
     deriveAssetSource,
+    locationBadgeClass,
     type AssetSourceKey,
 } from "@/utils/api-mappers";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
@@ -1337,6 +1339,9 @@ export default function BorrowingPage() {
     if (status === "rejected") {
       return <Badge variant="destructive">Ditolak</Badge>
     }
+    if (status === "approved" || status === "borrowed") {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Dipinjam</Badge>
+    }
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
 
@@ -2443,9 +2448,8 @@ export default function BorrowingPage() {
                         detailInfo?.detailInventoryName || detailInfo?.detailName || b.assetDetailName || b.assetName || "-"
                       const assetCode = detailInfo?.detailCode || b.assetDetailCode || b.assetCode || "-"
                       const roomNameLabel = detailInfo?.roomName || detailInfo?.assetLocation || b.assetLocation || "-"
-                      const inventoryTypeLabel = assetSourceLabel(
-                        deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode),
-                      )
+                      const assetSource = deriveAssetSource(b.assetType, b.assetDetailCode || b.assetCode)
+                      const inventoryTypeLabel = assetSourceLabel(assetSource)
                       const borrowingNoId = getBorrowingNoId(b)
                       const dueDateLabel = b.dueDate
                         ? formatDayTimeLabel(b.dueDate, { showWeekday: false })
@@ -2589,10 +2593,10 @@ export default function BorrowingPage() {
                               timeValue={dueDateLabel}
                               badges={(
                                 <>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${assetSourceBadgeClass(assetSource)}`}>
                                     {inventoryTypeLabel}
                                   </Badge>
-                                  <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className={`rounded-full border px-2 py-0.5 text-[11px] ${locationBadgeClass}`}>
                                     {roomNameLabel}
                                   </Badge>
                                 </>
@@ -2613,10 +2617,10 @@ export default function BorrowingPage() {
                           {isExpanded && (
                             <div className="space-y-3 bg-white px-3 py-3 sm:px-3 sm:py-3">
                               <div className="flex flex-wrap items-center gap-1">
-                                <Badge variant="outline" className="text-[11px]">
+                                <Badge className={`border text-[11px] ${assetSourceBadgeClass(assetSource)}`}>
                                   {inventoryTypeLabel}
                                 </Badge>
-                                <Badge variant="outline" className="text-[11px]">
+                                <Badge className={`border text-[11px] ${locationBadgeClass}`}>
                                   {b.destinationRoom || roomNameLabel}
                                 </Badge>
                                 {getBorrowingRestrictionBadge(b.status)}
