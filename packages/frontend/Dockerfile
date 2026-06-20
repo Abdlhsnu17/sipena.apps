@@ -5,15 +5,19 @@ WORKDIR /app
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/frontend/package.json packages/frontend/package.json
 
-RUN npm install
+RUN npm install -g npm@11.7.0
+RUN npm ci
 
+COPY tsconfig.json tsconfig.json
 COPY packages/frontend packages/frontend
 
 RUN npm run build --workspace=inventory-frontend
+
+ENV NODE_ENV=production
 
 WORKDIR /app/packages/frontend
 

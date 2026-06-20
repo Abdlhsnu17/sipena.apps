@@ -9,9 +9,9 @@ This folder stores the local schema seed for SIPENA. Database migrations are sto
 
 The canonical seed schema for `sipena_db_local` lives in `packages/database/seeds/schema.sql`. To use it with a local MySQL + phpMyAdmin stack:
 
-1. From the repo root run `docker compose -f packages/backend/docker-compose.yml up mysql phpmyadmin`.
-   * The compose file will start MySQL (`sipena_db_local`) and phpMyAdmin on `localhost:8081`. The default credentials are `root` / `root`.
-   * If you plan to connect the backend to this container, make sure `packages/backend/.env` sets `DB_PASSWORD=root` (the file defaults to an empty password for a local install).
+1. From the repo root run `docker compose up -d mysql phpmyadmin`.
+   * The compose file will start MySQL (`sipena_db_local`) and phpMyAdmin on `localhost:8081`. The default credentials are `root` / `root_changeme`.
+   * If you plan to connect the backend to this container, make sure your backend env uses `DB_HOST=localhost`, `DB_USER=sipena_app`, and `DB_PASSWORD=changeme`.
 2. Open `http://localhost:8081`, log in as `root` and import `packages/database/seeds/schema.sql` into the `sipena_db_local` database.
 3. Run migration scripts from `packages/database/migrations` after pulling backend changes that add new columns.
 

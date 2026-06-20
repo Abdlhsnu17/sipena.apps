@@ -4,50 +4,42 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_changeme}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-sipena_db_local}
-      MYSQL_USER: ${MYSQL_USER:-sipena_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
-      APP_DB_NAME: ${DB_NAME:-sipena_db_local}
-      APP_DB_USER: ${DB_USER:-sipena_app}
-      APP_DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      MYSQL_DATABASE: ${DB_NAME:-sipena_db_local}
+      MYSQL_USER: ${DB_USER:-sipena_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-changeme}
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./packages/database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test:
-        - CMD-SHELL
-        - mysqladmin ping -h 127.0.0.1 -uroot -p"$${MYSQL_ROOT_PASSWORD}" --silent
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
+      - "${REDIS_HOST_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test:
-        - CMD
-        - redis-cli
-        - ping
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
     restart: unless-stopped
     environment:
-      PMA_HOST: ${PMA_HOST:-mysql}
-      PMA_PORT: ${PMA_PORT:-3306}
-      PMA_USER: ${PMA_USER:-root}
-      PMA_PASSWORD: ${PMA_PASSWORD:-root_changeme}
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_changeme}
     ports:
       - "${PHPMYADMIN_HOST_PORT:-8081}:80"
     depends_on:
@@ -56,7 +48,7 @@ services:
 
   backend:
     build:
-      context: ../..
+      context: .
       dockerfile: packages/backend/Dockerfile
     restart: unless-stopped
     environment:
@@ -67,41 +59,37 @@ services:
       GENERAL_RATE_LIMIT_MAX: ${GENERAL_RATE_LIMIT_MAX:-1000}
       LOGIN_RATE_LIMIT_MAX: ${LOGIN_RATE_LIMIT_MAX:-20}
       UPLOADS_ROOT: ${UPLOADS_ROOT:-/app/packages/backend/uploads}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-sipena_db_local}
+      DB_USER: ${DB_USER:-sipena_app}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
       DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
       DB_QUEUE_LIMIT: ${DB_QUEUE_LIMIT:-0}
       DB_CONNECT_TIMEOUT_MS: ${DB_CONNECT_TIMEOUT_MS:-10000}
       DB_IDLE_TIMEOUT_MS: ${DB_IDLE_TIMEOUT_MS:-60000}
       DB_KEEP_ALIVE_INITIAL_DELAY_MS: ${DB_KEEP_ALIVE_INITIAL_DELAY_MS:-0}
-      ALLOW_IN_MEMORY_PASSWORD_RESET_STORE: ${ALLOW_IN_MEMORY_PASSWORD_RESET_STORE:-false}
-      DB_HOST: ${DB_HOST:-mysql}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME:-sipena_db_local}
-      DB_USER: ${DB_USER:-sipena_app}
-      DB_PASSWORD: ${DB_PASSWORD:-changeme}
-      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_before_production}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-sipena-local-dev-jwt-secret-change-in-production}
+      ALLOW_IN_MEMORY_PASSWORD_RESET_STORE: ${ALLOW_IN_MEMORY_PASSWORD_RESET_STORE:-true}
+      DB_AUTO_INIT_FROM_SCHEMA: ${DB_AUTO_INIT_FROM_SCHEMA:-true}
       OTP_BRAND_NAME: ${OTP_BRAND_NAME:-SiPeNa}
       WHATSAPP_OTP_WEBHOOK_URL: ${WHATSAPP_OTP_WEBHOOK_URL:-}
       WHATSAPP_OTP_WEBHOOK_TOKEN: ${WHATSAPP_OTP_WEBHOOK_TOKEN:-}
       SMS_OTP_WEBHOOK_URL: ${SMS_OTP_WEBHOOK_URL:-}
       SMS_OTP_WEBHOOK_TOKEN: ${SMS_OTP_WEBHOOK_TOKEN:-}
-      DB_AUTO_INIT_FROM_SCHEMA: "true"
     ports:
       - "${BACKEND_HOST_PORT:-4000}:4000"
     volumes:
       - backend_uploads:/app/packages/backend/uploads
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://127.0.0.1:4000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 40s
+      start_period: 45s
     depends_on:
       mysql:
         condition: service_healthy
@@ -110,25 +98,21 @@ services:
 
   frontend:
     build:
-      context: ../..
+      context: .
       dockerfile: packages/frontend/Dockerfile
     restart: unless-stopped
     environment:
-      NODE_ENV: ${FRONTEND_NODE_ENV:-production}
+      NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
       API_PROXY_TARGET: ${API_PROXY_TARGET:-http://backend:4000}
     ports:
       - "${FRONTEND_HOST_PORT:-3000}:3000"
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 30s
+      start_period: 45s
     depends_on:
       backend:
         condition: service_healthy

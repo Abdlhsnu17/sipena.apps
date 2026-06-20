@@ -11,6 +11,7 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/frontend/package.json packages/frontend/package.json
 
+RUN npm install -g npm@11.7.0
 RUN npm ci
 
 COPY packages/backend packages/backend
