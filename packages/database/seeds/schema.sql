@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -419,6 +419,73 @@ CREATE TABLE `return_records` (
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `deletion_requests`
+--
+
+CREATE TABLE `deletion_requests` (
+  `id` int(11) NOT NULL,
+  `request_code` varchar(50) DEFAULT NULL,
+  `target_type` varchar(50) NOT NULL,
+  `target_id` int(11) NOT NULL,
+  `target_label` varchar(255) DEFAULT NULL,
+  `reason` text NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `requested_by` int(11) NOT NULL,
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `review_notes` text DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `menus`
+--
+
+CREATE TABLE `menus` (
+  `id` int(11) NOT NULL,
+  `code` varchar(80) NOT NULL,
+  `label` varchar(120) NOT NULL,
+  `path` varchar(160) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `role_menu_permissions`
+--
+
+CREATE TABLE `role_menu_permissions` (
+  `role_id` int(11) NOT NULL,
+  `menu_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Struktur dari tabel `users`
 --
 
@@ -514,7 +581,10 @@ ALTER TABLE `borrowing_records`
   ADD KEY `idx_borrowing_approved_by` (`approved_by`),
   ADD KEY `idx_borrowing_rejected_by` (`rejected_by`),
   ADD KEY `idx_borrowing_return_validated_by` (`return_validated_by`),
-  ADD KEY `idx_borrowing_returned_by` (`returned_by`);
+  ADD KEY `idx_borrowing_returned_by` (`returned_by`),
+  ADD KEY `idx_borrowing_sanction_status` (`sanction_status`),
+  ADD KEY `idx_user_overdue_status` (`user_id`,`status`,`sanction_status`),
+  ADD KEY `idx_user_extension_status` (`user_id`,`sanction_status`,`is_extension_blocked`);
 
 --
 -- Indeks untuk tabel `asset_usage_logs`
@@ -588,6 +658,38 @@ ALTER TABLE `return_records`
   ADD KEY `idx_return_borrowing` (`borrowing_id`),
   ADD KEY `idx_return_returned_by` (`returned_by`),
   ADD KEY `idx_return_received_by` (`received_by`);
+
+--
+-- Indeks untuk tabel `deletion_requests`
+--
+ALTER TABLE `deletion_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_deletion_requests_status` (`status`),
+  ADD KEY `idx_deletion_requests_target` (`target_type`,`target_id`),
+  ADD KEY `idx_deletion_requests_requested_by` (`requested_by`),
+  ADD KEY `idx_deletion_requests_reviewed_by` (`reviewed_by`);
+
+--
+-- Indeks untuk tabel `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_roles_code` (`code`);
+
+--
+-- Indeks untuk tabel `menus`
+--
+ALTER TABLE `menus`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_menus_code` (`code`),
+  ADD UNIQUE KEY `uq_menus_path` (`path`);
+
+--
+-- Indeks untuk tabel `role_menu_permissions`
+--
+ALTER TABLE `role_menu_permissions`
+  ADD PRIMARY KEY (`role_id`,`menu_id`),
+  ADD KEY `idx_role_menu_permissions_menu` (`menu_id`);
 
 --
 -- Indeks untuk tabel `users`
@@ -668,6 +770,24 @@ ALTER TABLE `return_records`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT untuk tabel `deletion_requests`
+--
+ALTER TABLE `deletion_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `menus`
+--
+ALTER TABLE `menus`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT untuk tabel `users`
 --
 ALTER TABLE `users`
@@ -741,6 +861,20 @@ ALTER TABLE `return_records`
   ADD CONSTRAINT `fk_return_borrowing` FOREIGN KEY (`borrowing_id`) REFERENCES `borrowing_records` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_return_received_by` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_return_returned_by` FOREIGN KEY (`returned_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `deletion_requests`
+--
+ALTER TABLE `deletion_requests`
+  ADD CONSTRAINT `fk_deletion_requests_requested_by` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_deletion_requests_reviewed_by` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `role_menu_permissions`
+--
+ALTER TABLE `role_menu_permissions`
+  ADD CONSTRAINT `fk_role_menu_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_role_menu_permissions_menu` FOREIGN KEY (`menu_id`) REFERENCES `menus` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
