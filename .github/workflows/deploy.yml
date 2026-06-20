@@ -82,10 +82,14 @@ jobs:
 
               attempt=1
               while [ "$attempt" -le "$max_attempts" ]; do
-                health_status="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}running{{end}}' "$service_name" 2>/dev/null || true)"
+                container_id="$(docker compose ps -q "$service_name" 2>/dev/null || true)"
 
-                if [ "$health_status" = "healthy" ] || [ "$health_status" = "running" ]; then
-                  return 0
+                if [ -n "$container_id" ]; then
+                  health_status="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id" 2>/dev/null || true)"
+
+                  if [ "$health_status" = "healthy" ] || [ "$health_status" = "running" ]; then
+                    return 0
+                  fi
                 fi
 
                 sleep 2
@@ -101,13 +105,11 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            cd packages/backend
-
             docker compose up -d --force-recreate mysql
             docker compose up -d redis phpmyadmin
 
-            wait_for_healthy backend-mysql-1
-            wait_for_healthy backend-redis-1
+            wait_for_healthy mysql
+            wait_for_healthy redis
 
             docker compose exec -T mysql sh -eu -c '
               escape_sql_string() {
@@ -118,9 +120,9 @@ jobs:
                 printf "%s" "$1" | sed "s/\`/\`\`/g"
               }
 
-              db_name="${APP_DB_NAME:-sipena_db_local}"
-              db_user="${APP_DB_USER:-sipena_app}"
-              db_password="${APP_DB_PASSWORD:-changeme}"
+              db_name="${DB_NAME:-${APP_DB_NAME:-${MYSQL_DATABASE:-sipena_db_local}}}"
+              db_user="${DB_USER:-${APP_DB_USER:-${MYSQL_USER:-sipena_app}}}"
+              db_password="${DB_PASSWORD:-${APP_DB_PASSWORD:-${MYSQL_PASSWORD:-changeme}}}"
               escaped_db_name="$(escape_sql_identifier "$db_name")"
               escaped_db_user="$(escape_sql_string "$db_user")"
               escaped_db_password="$(escape_sql_string "$db_password")"
@@ -153,9 +155,9 @@ jobs:
             mkdir -p backups
             backup_file="backups/pre-migration-$(date +%Y%m%d%H%M%S).sql"
             if docker compose exec -T mysql sh -eu -c '
-              db_name="${APP_DB_NAME:-sipena_db_local}"
-              db_user="${APP_DB_USER:-sipena_app}"
-              db_password="${APP_DB_PASSWORD:-changeme}"
+              db_name="${DB_NAME:-${APP_DB_NAME:-${MYSQL_DATABASE:-sipena_db_local}}}"
+              db_user="${DB_USER:-${APP_DB_USER:-${MYSQL_USER:-sipena_app}}}"
+              db_password="${DB_PASSWORD:-${APP_DB_PASSWORD:-${MYSQL_PASSWORD:-changeme}}}"
               MYSQL_PWD="$db_password" mysqldump --protocol=TCP -h127.0.0.1 -u"$db_user" --single-transaction --routines --triggers "$db_name"
             ' > "$backup_file"; then
               gzip -f "$backup_file"
@@ -184,7 +186,7 @@ jobs:
               exit 1
             fi
 
-            wait_for_healthy backend-backend-1
-            wait_for_healthy backend-frontend-1
+            wait_for_healthy backend
+            wait_for_healthy frontend
 
             docker ps
