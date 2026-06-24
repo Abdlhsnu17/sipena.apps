@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -110,6 +110,9 @@ CREATE TABLE `borrowing_records` (
   `sanction_status` varchar(20) NOT NULL DEFAULT 'none',
   `sanction_notes` text DEFAULT NULL,
   `sanction_applied_at` datetime DEFAULT NULL,
+  `resolved_at` datetime DEFAULT NULL,
+  `resolved_by_user_id` int(11) DEFAULT NULL,
+  `resolved_notes` text DEFAULT NULL,
   `extension_count` int(11) NOT NULL DEFAULT 0,
   `last_extended_date` datetime DEFAULT NULL,
   `extension_notes` text DEFAULT NULL,
@@ -166,7 +169,11 @@ CREATE TABLE `asset_usage_logs` (
   `notes` text DEFAULT NULL,
   `created_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted_by` int(11) DEFAULT NULL,
+  `delete_reason` text DEFAULT NULL,
+  `source_type` varchar(20) NOT NULL DEFAULT 'manual'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -351,6 +358,33 @@ CREATE TABLE `deletion_requests` (
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `asset_disposal_requests`
+--
+
+CREATE TABLE `asset_disposal_requests` (
+  `id` int(11) NOT NULL,
+  `request_code` varchar(50) DEFAULT NULL,
+  `asset_id` int(11) NOT NULL,
+  `asset_type` varchar(20) NOT NULL,
+  `asset_detail_id` varchar(100) DEFAULT NULL,
+  `asset_detail_name` varchar(255) DEFAULT NULL,
+  `asset_detail_code` varchar(100) DEFAULT NULL,
+  `reason` text NOT NULL,
+  `condition_notes` text DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `requested_by` int(11) NOT NULL,
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `review_notes` text DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Struktur dari tabel `roles`
 --
 
@@ -466,7 +500,8 @@ ALTER TABLE `borrowing_records`
   ADD KEY `idx_borrowing_returned_by` (`returned_by`),
   ADD KEY `idx_borrowing_sanction_status` (`sanction_status`),
   ADD KEY `idx_user_overdue_status` (`user_id`,`status`,`sanction_status`),
-  ADD KEY `idx_user_extension_status` (`user_id`,`sanction_status`,`is_extension_blocked`);
+  ADD KEY `idx_user_extension_status` (`user_id`,`sanction_status`,`is_extension_blocked`),
+  ADD KEY `idx_borrowing_resolved_by_user_id` (`resolved_by_user_id`);
 
 --
 -- Indeks untuk tabel `asset_usage_logs`
@@ -478,7 +513,8 @@ ALTER TABLE `asset_usage_logs`
   ADD KEY `idx_asset_usage_asset` (`asset_type`,`asset_id`,`asset_detail_id`),
   ADD KEY `idx_asset_usage_room_started` (`room_name`,`started_at`),
   ADD KEY `idx_asset_usage_operator` (`operator_user_id`),
-  ADD KEY `idx_asset_usage_created_by` (`created_by`);
+  ADD KEY `idx_asset_usage_created_by` (`created_by`),
+  ADD KEY `idx_asset_usage_deleted_at` (`deleted_at`);
 
 --
 -- Indeks untuk tabel `jadwal_pemeliharaan`
@@ -550,6 +586,16 @@ ALTER TABLE `deletion_requests`
   ADD KEY `idx_deletion_requests_target` (`target_type`,`target_id`),
   ADD KEY `idx_deletion_requests_requested_by` (`requested_by`),
   ADD KEY `idx_deletion_requests_reviewed_by` (`reviewed_by`);
+
+--
+-- Indeks untuk tabel `asset_disposal_requests`
+--
+ALTER TABLE `asset_disposal_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_asset_disposal_requests_status` (`status`),
+  ADD KEY `idx_asset_disposal_requests_asset` (`asset_type`,`asset_id`),
+  ADD KEY `idx_asset_disposal_requests_requested_by` (`requested_by`),
+  ADD KEY `idx_asset_disposal_requests_reviewed_by` (`reviewed_by`);
 
 --
 -- Indeks untuk tabel `roles`
@@ -655,6 +701,12 @@ ALTER TABLE `return_records`
 -- AUTO_INCREMENT untuk tabel `deletion_requests`
 --
 ALTER TABLE `deletion_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `asset_disposal_requests`
+--
+ALTER TABLE `asset_disposal_requests`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
