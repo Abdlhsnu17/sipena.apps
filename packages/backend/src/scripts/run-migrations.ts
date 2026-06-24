@@ -1,0 +1,80 @@
+import fs from 'fs/promises';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
+import path from 'path';
+import { applyDevelopmentEnvDefaults, loadEnvironment } from '../config/env';
+
+loadEnvironment();
+applyDevelopmentEnvDefaults();
+
+const migrationsDir = path.resolve(__dirname, '../../../database/migrations');
+
+const getConnection = () =>
+  mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    port: Number.parseInt(process.env.DB_PORT || '3306', 10),
+    database: process.env.DB_NAME || 'sipena_db_local',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || undefined,
+    multipleStatements: true,
+  });
+
+const run = async (): Promise<void> => {
+  const connection = await getConnection();
+
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        id INT NOT NULL AUTO_INCREMENT,
+        filename VARCHAR(255) NOT NULL,
+        checksum VARCHAR(64) NOT NULL,
+        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uniq_schema_migrations_filename (filename)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    const files = (await fs.readdir(migrationsDir))
+      .filter((file) => file.endsWith('.sql'))
+      .sort((a, b) => a.localeCompare(b));
+
+    for (const filename of files) {
+      const [existingRows] = await connection.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM schema_migrations WHERE filename = ? LIMIT 1',
+        [filename],
+      );
+
+      if (existingRows.length > 0) {
+        console.log(`skip ${filename}`);
+        continue;
+      }
+
+      const filePath = path.join(migrationsDir, filename);
+      const sql = await fs.readFile(filePath, 'utf8');
+      const checksum = crypto.createHash('sha256').update(sql).digest('hex');
+
+      console.log(`apply ${filename}`);
+      await connection.beginTransaction();
+      try {
+        await connection.query(sql);
+        await connection.query(
+          'INSERT INTO schema_migrations (filename, checksum) VALUES (?, ?)',
+          [filename, checksum],
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    }
+
+    console.log('database migrations complete');
+  } finally {
+    await connection.end();
+  }
+};
+
+run().catch((error) => {
+  console.error('database migration failed:', error);
+  process.exit(1);
+});

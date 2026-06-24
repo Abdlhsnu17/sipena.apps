@@ -1,0 +1,55 @@
+{
+  "name": "sipena",
+  "version": "2.5.0",
+  "packageManager": "npm@11.7.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=11.7.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=inventory-frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "lint": "npm run lint --workspace=inventory-backend && npm run lint --workspace=inventory-frontend",
+    "type-check": "npm run type-check --workspace=inventory-frontend",
+    "verify": "npm run lint && npm run build && npm run type-check",
+    "start": "sh scripts/start-production.sh",
+    "dev:backend": "npm run dev --workspace=inventory-backend",
+    "build:backend": "npm run build --workspace=inventory-backend",
+    "build:frontend": "npm run build --workspace=inventory-frontend",
+    "migrate:user-security-columns": "npm run migrate:user-security-columns --workspace=inventory-backend",
+    "start:backend": "npm run start --workspace=inventory-backend",
+    "start:frontend": "npm run start --workspace=inventory-frontend -- --hostname 0.0.0.0 --port ${PORT:-3000}",
+    "dev:all": "npm run dev --workspaces"
+  },
+  "overrides": {
+    "@types/node": "20.19.27",
+    "typescript": "5.9.3",
+    "postcss": "8.5.10",
+    "uuid": "11.1.1",
+    "next@16.2.6": {
+      "postcss": "8.5.10"
+    },
+    "exceljs@4.1.1": {
+      "uuid": "11.1.1"
+    },
+    "minimatch": "^3.1.5",
+    "test-exclude": {
+      "minimatch": "^3.1.5"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "20.19.27",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@types/sequelize": "^4.28.20",
+    "axios": "^1.13.2",
+    "eslint": "^9.0.0",
+    "sequelize": "^6.37.7",
+    "sequelize-typescript": "^2.1.6"
+  }
+}
