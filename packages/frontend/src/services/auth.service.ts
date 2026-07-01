@@ -306,26 +306,20 @@ class AuthService {
       password
     };
 
-    // Try backend first
+    // Try backend first. Login should not wait for a separate health preflight:
+    // the login request itself is the source of truth, and proxy failures are handled below.
     try {
-      const backendAvailable = await isBackendAvailable();
-      
-      if (backendAvailable) {
-        const response = await apiService.post<AuthResponse>('/auth/login', normalizedCredentials);
-        
-        if (response.success && response.data?.token) {
-          persistAuthSession(response.data.user, response.data.token, credentials.rememberMe);
-          this.useLocalStorage = false;
-        }
-        
-        return {
-          ...response,
-          message: response.success ? LOGIN_SUCCESS_MESSAGE : response.message
-        };
+      const response = await apiService.post<AuthResponse>('/auth/login', normalizedCredentials);
+
+      if (response.success && response.data?.token) {
+        persistAuthSession(response.data.user, response.data.token, credentials.rememberMe);
+        this.useLocalStorage = false;
       }
-      if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: LOGIN_SERVER_ISSUE_MESSAGE };
-      }
+
+      return {
+        ...response,
+        message: response.success ? LOGIN_SUCCESS_MESSAGE : response.message
+      };
     } catch (error: any) {
       if (!ENABLE_LOCAL_FALLBACK) {
         return { success: false, message: normalizeLoginError(error) };
