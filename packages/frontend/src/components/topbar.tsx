@@ -16,6 +16,7 @@ import {
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
+import { serverTimeService } from "@/services/server-time.service";
 
 import {
     DropdownMenu,
@@ -155,6 +156,7 @@ export default function Topbar() {
     "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat. Terima Kasih"
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => new Date())
+  const serverTimeOffsetMsRef = useRef(0)
   const router = useRouter()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [isCheckingNotifications, setIsCheckingNotifications] = useState(true)
@@ -178,8 +180,44 @@ export default function Topbar() {
   }
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(id)
+    let isMounted = true
+
+    const getSyncedNow = () => new Date(Date.now() + serverTimeOffsetMsRef.current)
+
+    const syncServerTime = async () => {
+      const requestStartedAt = Date.now()
+
+      try {
+        const serverTime = await serverTimeService.getCurrentTime()
+        const requestFinishedAt = Date.now()
+        const serverUnixMs = Date.parse(serverTime.now)
+
+        if (!Number.isFinite(serverUnixMs)) {
+          return
+        }
+
+        const estimatedServerUnixMs = serverUnixMs + Math.round((requestFinishedAt - requestStartedAt) / 2)
+        serverTimeOffsetMsRef.current = estimatedServerUnixMs - requestFinishedAt
+
+        if (isMounted) {
+          setNow(getSyncedNow())
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Gagal sinkronisasi waktu server:", error)
+        }
+      }
+    }
+
+    void syncServerTime()
+    const tickId = window.setInterval(() => setNow(getSyncedNow()), 1000)
+    const syncId = window.setInterval(() => void syncServerTime(), 60000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(tickId)
+      window.clearInterval(syncId)
+    }
   }, [])
 
   useEffect(() => {

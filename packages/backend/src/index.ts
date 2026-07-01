@@ -31,6 +31,7 @@ import {
 } from './utils/schema';
 import { getProfileUploadsDir } from './utils/storage-paths';
 import { createScopedLogger } from './utils/logger';
+import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
 import assetRoutes from './routes/asset.routes';
@@ -49,6 +50,7 @@ import sanctionsRoutes from './routes/sanctions.routes';
 import umlRoutes from './routes/uml.routes';
 import userRoutes from './routes/user.routes';
 import userActivityRoutes from './routes/user_activity.routes';
+import borrowingService from './services/borrowing.service';
 
 // Load environment variables
 loadEnvironment();
@@ -130,11 +132,13 @@ const PORT = process.env.PORT || 4000;
 const isProduction = (process.env.NODE_ENV || 'development') === 'production';
 const STARTUP_RETRY_ATTEMPTS = Number.parseInt(process.env.STARTUP_RETRY_ATTEMPTS || '12', 10);
 const STARTUP_RETRY_DELAY_MS = Number.parseInt(process.env.STARTUP_RETRY_DELAY_MS || '5000', 10);
+const BORROWING_OVERDUE_SYNC_INTERVAL_MS = Number.parseInt(process.env.BORROWING_OVERDUE_SYNC_INTERVAL_MS || '60000', 10);
 const infrastructureStatus = {
   database: 'initializing' as 'initializing' | 'up' | 'down',
   redis: 'initializing' as 'initializing' | 'up' | 'down' | 'optional-down',
   schema: 'initializing' as 'initializing' | 'up' | 'down',
 };
+let borrowingOverdueSyncInterval: NodeJS.Timeout | null = null;
 
 const resolveTrustProxy = (value: string | undefined): boolean | number => {
   if (!value) {
@@ -275,7 +279,7 @@ const healthHandler = (req: express.Request, res: express.Response) => {
 
   res.status(200).json({
     status,
-    timestamp: new Date().toISOString(),
+    timestamp: getServerTimeSnapshot().now,
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
     services: infrastructureStatus,
@@ -286,6 +290,13 @@ const healthHandler = (req: express.Request, res: express.Response) => {
 // Health check endpoints
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
+app.get('/api/time', (_req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'Server time synchronized',
+    data: getServerTimeSnapshot(),
+  });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -327,6 +338,23 @@ app.use(errorHandler);
 
 const sleep = async (delayMs: number): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, delayMs));
+};
+
+const startBorrowingOverdueSync = (): void => {
+  if (borrowingOverdueSyncInterval || !Number.isFinite(BORROWING_OVERDUE_SYNC_INTERVAL_MS) || BORROWING_OVERDUE_SYNC_INTERVAL_MS <= 0) {
+    return;
+  }
+
+  const sync = async () => {
+    try {
+      await borrowingService.refreshOverdueStatuses();
+    } catch (error) {
+      logger.error('Borrowing overdue synchronization failed', { error });
+    }
+  };
+
+  void sync();
+  borrowingOverdueSyncInterval = setInterval(() => void sync(), BORROWING_OVERDUE_SYNC_INTERVAL_MS);
 };
 
 // Start the HTTP server with port-retry logic so a busy port doesn't crash the process.
@@ -415,6 +443,7 @@ const initializeInfrastructure = async (): Promise<void> => {
       }
 
       logger.info('Startup initialization complete');
+      startBorrowingOverdueSync();
       return;
     } catch (error) {
       logger.error('Startup initialization attempt failed', {
@@ -446,11 +475,17 @@ void initializeInfrastructure();
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  if (borrowingOverdueSyncInterval) {
+    clearInterval(borrowingOverdueSyncInterval);
+  }
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
+  if (borrowingOverdueSyncInterval) {
+    clearInterval(borrowingOverdueSyncInterval);
+  }
   process.exit(0);
 });
 

@@ -545,6 +545,10 @@ export class BorrowingService {
     );
   }
 
+  async refreshOverdueStatuses(): Promise<void> {
+    await this.syncOverdueBorrowings();
+  }
+
   private getOverdueBorrowingInfo(dueDate?: Date | string | null, referenceDate: Date = new Date()): {
     overdueDays: number;
     sanctionStatus: 'none' | 'active' | 'resolved';

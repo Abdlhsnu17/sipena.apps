@@ -24,6 +24,7 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'sipena_db_local',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || undefined,
+  timezone: 'Z',
   waitForConnections: true,
   connectionLimit,
   maxIdle: connectionLimit,
@@ -34,13 +35,23 @@ const pool = mysql.createPool({
   keepAliveInitialDelay,
 });
 
+pool.on('connection', (connection) => {
+  void connection.query("SET time_zone = '+00:00'").catch((error) => {
+    logger.error('Failed to set database session time zone to UTC', { error });
+  });
+});
+
 export const connectDatabase = async (): Promise<void> => {
+  let connection: mysql.PoolConnection | null = null;
+
   try {
-    const connection = await pool.getConnection();
-    connection.release();
+    connection = await pool.getConnection();
+    await connection.query("SET time_zone = '+00:00'");
   } catch (error) {
     logger.error('Database connection failed', { error });
     throw error;
+  } finally {
+    connection?.release();
   }
 };
 
