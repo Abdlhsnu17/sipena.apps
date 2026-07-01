@@ -102,6 +102,41 @@ export function formatDateTimeForMySQL(value?: string | Date | null): string | n
 }
 
 /**
+ * Format an instant into a MySQL DATETIME string using a specific IANA timezone.
+ * Useful for DATETIME columns that are displayed as local wall time by the UI.
+ */
+export function formatDateTimeForMySQLTimeZone(value: Date, timeZone: string): string | null {
+  if (Number.isNaN(value.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(value);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
+    parts.find((part) => part.type === type)?.value;
+
+  const year = getPart('year');
+  const month = getPart('month');
+  const day = getPart('day');
+  const hour = getPart('hour');
+  const minute = getPart('minute');
+  const second = getPart('second');
+
+  if (!year || !month || !day || !hour || !minute || !second) {
+    return null;
+  }
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+/**
  * Format currency to Indonesian Rupiah
  */
 export function formatCurrency(amount: number): string {

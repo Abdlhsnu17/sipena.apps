@@ -13,9 +13,11 @@ import {
 import {
     buildOverdueSanctionNote,
     formatDateTimeForMySQL,
+    formatDateTimeForMySQLTimeZone,
     generateBorrowingCode,
     getOverdueDays
 } from '../utils/helpers';
+import { DISPLAY_TIME_ZONE } from '../utils/time';
 import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
@@ -1516,13 +1518,16 @@ export class BorrowingService {
       };
     }
 
-    const overdueInfo = this.getOverdueBorrowingInfo(borrowingRow.dueDate ?? borrowingRow.due_date, new Date());
+    const returnedAt = new Date();
+    const returnDateValue = formatDateTimeForMySQLTimeZone(returnedAt, DISPLAY_TIME_ZONE)
+      ?? formatDateTimeForMySQL(returnedAt);
+    const overdueInfo = this.getOverdueBorrowingInfo(borrowingRow.dueDate ?? borrowingRow.due_date, returnedAt);
 
     if (hasSanctionColumns) {
       await pool.query(
         `UPDATE borrowing_records
          SET status = ?,
-             return_date = NOW(),
+             return_date = ?,
              return_condition = ?,
              return_notes = ?,
              returned_by = ?,
@@ -1534,6 +1539,7 @@ export class BorrowingService {
          WHERE id = ?`,
         [
           'returned',
+          returnDateValue,
           data.condition,
           data.notes || null,
           data.returnedBy || null,
@@ -1548,7 +1554,7 @@ export class BorrowingService {
       await pool.query(
         `UPDATE borrowing_records
          SET status = ?,
-             return_date = NOW(),
+             return_date = ?,
              return_condition = ?,
              return_notes = ?,
              returned_by = ?,
@@ -1556,6 +1562,7 @@ export class BorrowingService {
          WHERE id = ?`,
         [
           'returned',
+          returnDateValue,
           data.condition,
           data.notes || null,
           data.returnedBy || null,
