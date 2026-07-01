@@ -300,6 +300,17 @@ export class BorrowingController {
         return;
       }
 
+      // SECURITY FIX: Hanya admin/leader yang boleh approve borrowing request
+      const actorRole = req.user?.role;
+      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
+      if (!isAdmin) {
+        res.status(403).json({
+          success: false,
+          message: 'Hanya admin atau leader yang dapat menyetujui peminjaman'
+        });
+        return;
+      }
+
       const result = await this.borrowingService.approve(id, approvedBy);
 
       if (!result.success) {
@@ -356,6 +367,17 @@ export class BorrowingController {
         res.status(401).json({
           success: false,
           message: 'Authentication required'
+        });
+        return;
+      }
+
+      // SECURITY FIX: Hanya admin/leader yang boleh reject borrowing request
+      const actorRole = req.user?.role;
+      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
+      if (!isAdmin) {
+        res.status(403).json({
+          success: false,
+          message: 'Hanya admin atau leader yang dapat menolak peminjaman'
         });
         return;
       }
@@ -485,6 +507,17 @@ export class BorrowingController {
         res.status(401).json({
           success: false,
           message: 'Authentication required'
+        });
+        return;
+      }
+
+      // SECURITY FIX: Hanya admin/leader yang boleh validate return
+      const actorRole = req.user?.role;
+      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
+      if (!isAdmin) {
+        res.status(403).json({
+          success: false,
+          message: 'Hanya admin atau leader yang dapat memvalidasi pengembalian alat'
         });
         return;
       }

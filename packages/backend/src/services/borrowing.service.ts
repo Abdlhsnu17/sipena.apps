@@ -16,10 +16,10 @@ import {
     generateBorrowingCode,
     getOverdueDays
 } from '../utils/helpers';
+import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
 import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
-import { hasAnyRole } from '../utils/role';
 
 /**
  * Parse datetime string as LOCAL time (not UTC)
@@ -694,6 +694,7 @@ export class BorrowingService {
       detailId?: string | null;
       detailCode?: string | null;
       returnCondition?: string | null;
+      isValidatedReturn?: boolean;
     }
   ): Promise<void> {
     const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
@@ -780,7 +781,9 @@ export class BorrowingService {
       } else if (isDamagedReturn) {
         nextStatus = 'Nonaktif';
         nextCondition = 'Rusak';
-      } else if (hasReturnCondition) {
+      } else if (hasReturnCondition && options?.isValidatedReturn) {
+        // SECURITY FIX: Hanya set 'Tersedia' jika return sudah divalidasi (returnValidatedAt IS NOT NULL)
+        // Ini mencegah alat langsung tersedia untuk dipinjam lagi sebelum validasi pasca peminjaman selesai
         nextStatus = 'Tersedia';
       } else if (this.isStaleBorrowedDetailStatus(detail.status) || this.isStaleMaintenanceDetailStatus(detail.status)) {
         nextStatus = 'Tersedia';
@@ -1391,10 +1394,13 @@ export class BorrowingService {
       returnCondition
     });
 
+    // SECURITY FIX: Hanya saat validateReturn() dipanggil, baru set detail status ke 'Tersedia'
+    // Ini memastikan validasi pasca peminjaman harus diselesaikan sebelum alat bisa dipinjam lagi
     await this.syncAssetDetailBorrowingState(assetId, assetType, {
       detailId: assetDetailId,
       detailCode: assetDetailCode,
-      returnCondition
+      returnCondition,
+      isValidatedReturn: true
     });
 
     return this.getById(id);
@@ -1542,10 +1548,14 @@ export class BorrowingService {
       );
     }
 
+    // SECURITY FIX: Jangan ubah status detail ke 'Tersedia' saat return() dipanggil
+    // Tunggu sampai validateReturn() dipanggil (saat returnValidatedAt di-set)
+    // Hanya sync untuk menandai sebagai 'Dipinjam' atau 'Dalam Perbaikan' jika ada borrowing/maintenance lain
     await this.syncAssetDetailBorrowingState(assetId, assetType, {
       detailId: assetDetailId,
       detailCode: assetDetailCode,
-      returnCondition: data.condition || null
+      returnCondition: null,  // Set ke null saat return, bukan saat validateReturn baru ada condition
+      isValidatedReturn: false
     });
 
     try {
@@ -1753,13 +1763,15 @@ export class BorrowingService {
         ?? borrowingRow.return_condition
         ?? null;
 
+      // SECURITY FIX: Saat update() dipanggil, jangan set detail ke 'Tersedia' sampai validateReturn() dipanggil
       await this.syncAssetDetailBorrowingState(
         assetId,
         assetType,
         {
           detailId: assetDetailId,
           detailCode: assetDetailCode,
-          returnCondition
+          returnCondition,
+          isValidatedReturn: false
         }
       );
 
