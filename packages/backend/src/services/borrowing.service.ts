@@ -1405,6 +1405,20 @@ export class BorrowingService {
       isValidatedReturn: true
     });
 
+    try {
+      await this.completeUsageLogForBorrowing({
+        borrowingId: id,
+        assetId,
+        assetType,
+        assetDetailId,
+        operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
+        conditionAfter: returnCondition,
+        notes: borrowingRow.returnNotes ?? borrowingRow.return_notes ?? null
+      });
+    } catch {
+      // ignore logging errors to avoid blocking return validation flow
+    }
+
     return this.getById(id);
   }
 
@@ -1559,20 +1573,6 @@ export class BorrowingService {
       returnCondition: null,  // Set ke null saat return, bukan saat validateReturn baru ada condition
       isValidatedReturn: false
     });
-
-    try {
-      await this.completeUsageLogForBorrowing({
-        borrowingId: id,
-        assetId,
-        assetType,
-        assetDetailId,
-        operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
-        conditionAfter: data.condition || null,
-        notes: data.notes || null
-      });
-    } catch {
-      // ignore logging errors to avoid breaking return flow
-    }
 
     return await this.getById(id);
   }
@@ -1776,20 +1776,6 @@ export class BorrowingService {
           isValidatedReturn: false
         }
       );
-
-      try {
-        await this.completeUsageLogForBorrowing({
-          borrowingId: id,
-          assetId,
-          assetType,
-          assetDetailId,
-          operatorUserId: borrowingRow.userId ?? borrowingRow.user_id ?? null,
-          conditionAfter: returnCondition,
-          notes: data.returnNotes ?? borrowingRow.returnNotes ?? borrowingRow.return_notes ?? null
-        });
-      } catch {
-        // ignore logging errors to avoid breaking borrowing update flow
-      }
 
       const returnValidatedBy = borrowingRow.returnValidatedBy
         ?? borrowingRow.return_validated_by
