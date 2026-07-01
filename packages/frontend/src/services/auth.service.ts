@@ -24,6 +24,7 @@ const LOGIN_RATE_LIMIT_MESSAGE = 'Terlalu banyak percobaan login. Silakan coba l
 const LOGIN_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
 const REGISTER_DUPLICATE_ACCOUNT_MESSAGE = 'Akun dengan NIP atau email ini sudah terdaftar';
 const REGISTER_SERVER_ISSUE_MESSAGE = 'Terjadi gangguan pada server, silakan coba lagi nanti';
+const REGISTER_INVALID_PHONE_MESSAGE = 'Nomor WhatsApp/SMS tidak valid';
 const AUTH_SESSION_INVALID_MESSAGE = 'Sesi Anda tidak valid atau sudah berakhir. Silakan login kembali.';
 const AUTH_FORBIDDEN_MESSAGE = 'Anda tidak memiliki izin untuk melakukan tindakan ini.';
 const AUTH_NOT_FOUND_MESSAGE = 'Data yang diminta tidak ditemukan.';
@@ -142,7 +143,10 @@ function normalizeLoginError(error: any): string {
     serverMessage === LOGIN_IDENTIFIER_REQUIRED_MESSAGE ||
     serverMessage === LOGIN_PASSWORD_REQUIRED_MESSAGE ||
     serverMessage === 'Akun tidak ditemukan' ||
-    serverMessage === 'Password yang Anda masukkan salah'
+    serverMessage === 'Password yang Anda masukkan salah' ||
+    serverMessage === 'Akun Anda sedang ditangguhkan. Hubungi admin.' ||
+    serverMessage === 'Akun Anda sedang nonaktif. Hubungi admin.' ||
+    (typeof serverMessage === 'string' && serverMessage.startsWith('Akun terkunci sementara'))
   ) {
     return serverMessage;
   }
@@ -159,9 +163,12 @@ function normalizeRegisterError(error: any): string {
 
   if (
     serverMessage === REGISTER_DUPLICATE_ACCOUNT_MESSAGE ||
-    serverMessage === 'User with this NIP or email already exists'
+    serverMessage === 'User with this NIP or email already exists' ||
+    serverMessage === REGISTER_INVALID_PHONE_MESSAGE
   ) {
-    return REGISTER_DUPLICATE_ACCOUNT_MESSAGE;
+    return serverMessage === REGISTER_INVALID_PHONE_MESSAGE
+      ? REGISTER_INVALID_PHONE_MESSAGE
+      : REGISTER_DUPLICATE_ACCOUNT_MESSAGE;
   }
 
   return normalizeCommonAuthError(error, REGISTER_SERVER_ISSUE_MESSAGE);
