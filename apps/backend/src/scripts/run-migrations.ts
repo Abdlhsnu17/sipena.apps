@@ -2,12 +2,34 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import path from 'path';
+import { statSync } from 'fs';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from '../config/env';
 
 loadEnvironment();
 applyDevelopmentEnvDefaults();
 
-const migrationsDir = path.resolve(__dirname, '../../../database/migrations');
+const resolveMigrationsDir = (): string => {
+  const candidates = [
+    path.resolve(process.cwd(), '../database/migrations'),
+    path.resolve(process.cwd(), '../../packages/database/migrations'),
+    path.resolve(__dirname, '../../../database/migrations'),
+    path.resolve(__dirname, '../../../../packages/database/migrations'),
+  ];
+
+  const matchedPath = candidates.find((candidate) => {
+    try {
+      return statSync(candidate).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  if (!matchedPath) {
+    throw new Error(`Migrations directory not found. Checked: ${candidates.join(', ')}`);
+  }
+
+  return matchedPath;
+};
 
 const getConnection = () =>
   mysql.createConnection({
@@ -34,6 +56,7 @@ const run = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    const migrationsDir = resolveMigrationsDir();
     const files = (await fs.readdir(migrationsDir))
       .filter((file) => file.endsWith('.sql'))
       .sort((a, b) => a.localeCompare(b));
