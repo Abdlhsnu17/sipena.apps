@@ -85,6 +85,10 @@ type CreateAssetUsageOptions = {
   skipSubRoomValidation?: boolean;
 };
 
+type UpdateAssetUsageOptions = {
+  allowBorrowingCompletion?: boolean;
+};
+
 const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(String(value));
@@ -498,6 +502,48 @@ export class AssetUsageService {
     return (rows[0]?.count || 0) > 0;
   }
 
+  private async hasUnvalidatedReturnedBorrowing(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null
+  ): Promise<boolean> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+
+    if (!normalizedDetailId || isFallbackDetail) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COUNT(*) as count
+         FROM borrowing_records
+         WHERE asset_id = ?
+           AND COALESCE(asset_type, 'medical') = ?
+           AND status = 'returned'
+           AND return_validated_at IS NULL
+           AND deleted_at IS NULL`,
+        [assetId, normalizedAssetType]
+      );
+      return (rows[0]?.count || 0) > 0;
+    }
+
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM borrowing_records
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND status = 'returned'
+         AND return_validated_at IS NULL
+         AND deleted_at IS NULL
+         AND (
+           asset_detail_id = ?
+           OR asset_detail_id IS NULL
+           OR asset_detail_id IN (?, ?)
+         )`,
+      [assetId, normalizedAssetType, normalizedDetailId, fallbackIds[0], fallbackIds[1]]
+    );
+    return (rows[0]?.count || 0) > 0;
+  }
+
   private async hasUsageForBorrowingId(borrowingId?: number | null): Promise<boolean> {
     if (!borrowingId) return false;
 
@@ -605,6 +651,11 @@ export class AssetUsageService {
     const normalizedAssetType = this.normalizeAssetType(assetType);
     const detailId = this.normalizeDetailIdentifier(options?.detailId);
     if (await this.hasActiveUsageForAssetDetail(assetId, normalizedAssetType, detailId || null, options?.usageId)) {
+      return;
+    }
+
+    const hasUnvalidatedReturn = await this.hasUnvalidatedReturnedBorrowing(assetId, normalizedAssetType, detailId || null);
+    if (hasUnvalidatedReturn) {
       return;
     }
 
@@ -874,6 +925,13 @@ export class AssetUsageService {
       return { success: false, message: 'Waktu selesai tidak boleh lebih awal dari waktu mulai' };
     }
 
+    if (data.borrowingId && data.endedAt) {
+      return {
+        success: false,
+        message: 'Asset dari peminjaman tidak dapat langsung diselesaikan saat pembuatan usage log. Harus melalui proses pengembalian peminjaman yang terpisah.'
+      };
+    }
+
     const operatorValidation = await this.validateOperatorExists(data.operatorUserId);
     if (operatorValidation) return operatorValidation;
 
@@ -942,13 +1000,21 @@ export class AssetUsageService {
     return this.getById(String(result.insertId));
   }
 
-  async update(id: string, data: UpdateAssetUsageLogDTO): Promise<ApiResponse<AssetUsageLog>> {
+  async update(id: string, data: UpdateAssetUsageLogDTO, options: UpdateAssetUsageOptions = {}): Promise<ApiResponse<AssetUsageLog>> {
     const existingLog = await this.getById(id);
     if (!existingLog.success || !existingLog.data) {
       return existingLog;
     }
 
     const isCompleting = data.endedAt !== undefined && data.endedAt !== null && !existingLog.data.endedAt;
+
+    if (isCompleting && existingLog.data.borrowingId && !options.allowBorrowingCompletion) {
+      return {
+        success: false,
+        message: 'Asset dari peminjaman harus diselesaikan melalui proses pengembalian peminjaman (PATCH /api/borrowing/:id/return), bukan melalui selesai penggunaan. Alasan: Pengembalian alat harus divalidasi oleh admin/leader sebelum alat tersedia kembali.'
+      };
+    }
+
     const hasActorContext = data.actorId !== undefined || data.actorRole !== undefined;
     if (isCompleting && hasActorContext) {
       if (!canCompleteUsage(data.actorRole, data.actorId, existingLog.data.operatorUserId, existingLog.data.createdBy)) {

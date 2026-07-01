@@ -142,6 +142,7 @@ type EditFormState = {
   conditionBefore: string;
   conditionAfter: string;
   notes: string;
+  isBorrowingSync: boolean;
 };
 
 type CompleteFormState = {
@@ -339,7 +340,12 @@ const deriveUsageContextFromProfile = (
 
 const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
 
+const isBorrowingUsageLog = (log: AssetUsageLog): boolean => {
+  return log.sourceType === "borrowing_sync" || Boolean(log.borrowingId);
+};
+
 const canCompleteUsage = (actor: User | null, log: AssetUsageLog): boolean => {
+  if (isBorrowingUsageLog(log)) return false;
   if (!actor) return false;
   const role = actor.role.toLowerCase().replace(/[\s-]+/g, "_");
   if (role === "admin" || role === "leader") return true;
@@ -792,6 +798,7 @@ export default function AssetUsagePage() {
       conditionBefore: log.conditionBefore || "Baik",
       conditionAfter: log.conditionAfter || "",
       notes: log.notes || "",
+      isBorrowingSync: isBorrowingUsageLog(log),
     });
   };
 
@@ -803,7 +810,7 @@ export default function AssetUsagePage() {
       const response = await assetUsageService.update(editForm.id, {
         roomName: editForm.roomName.trim(),
         startedAt: editForm.startedAt,
-        endedAt: editForm.endedAt || undefined,
+        endedAt: editForm.isBorrowingSync ? undefined : editForm.endedAt || undefined,
         usageCount: editForm.usageCount,
         conditionBefore: editForm.conditionBefore.trim(),
         conditionAfter: editForm.conditionAfter.trim() || undefined,
@@ -849,6 +856,10 @@ export default function AssetUsagePage() {
 
   const handleStatusChange = (log: AssetUsageLog, status: string) => {
     if (status !== "completed" || log.endedAt) return;
+    if (isBorrowingUsageLog(log)) {
+      router.push("/returns");
+      return;
+    }
     openCompleteDialog(log);
   };
 
@@ -1373,6 +1384,19 @@ export default function AssetUsagePage() {
                                 Lihat
                               </Button>
                               {!log.endedAt && (() => {
+                                if (isBorrowingUsageLog(log)) {
+                                  return (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleStatusChange(log, "completed")}
+                                      className="h-7 rounded-full border-blue-200 px-2.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-400/10"
+                                    >
+                                      Pengembalian
+                                    </Button>
+                                  );
+                                }
+
                                 const allowed = canCompleteUsage(currentUser, log);
                                 return allowed ? (
                                   <Button
@@ -1673,6 +1697,8 @@ export default function AssetUsagePage() {
                 type="datetime-local"
                 value={editForm?.endedAt ?? ""}
                 onChange={(event) => setEditForm((prev) => prev ? { ...prev, endedAt: event.target.value } : prev)}
+                disabled={Boolean(editForm?.isBorrowingSync)}
+                title={editForm?.isBorrowingSync ? "Log dari peminjaman diselesaikan melalui Pengembalian" : undefined}
               />
             </div>
             <div>

@@ -325,7 +325,9 @@ export class BorrowingService {
       updateData.endedAt = new Date();
     }
 
-    await this.assetUsageService.update(String(usageLog.id), updateData);
+    await this.assetUsageService.update(String(usageLog.id), updateData, {
+      allowBorrowingCompletion: true
+    });
   }
 
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
