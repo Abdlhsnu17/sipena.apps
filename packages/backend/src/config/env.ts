@@ -41,7 +41,6 @@ export const loadEnvironment = (): void => {
   }
 
   hasLoadedEnv = true;
-  process.env.TZ ||= 'UTC';
 };
 
 export const applyDevelopmentEnvDefaults = (): void => {
