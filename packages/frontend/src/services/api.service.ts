@@ -10,11 +10,14 @@ const envApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim();
 // this keeps calls same‑origin (e.g. when frontend and backend are deployed together)
 // and prevents the client from ever seeing an explicit localhost host in network requests.
 export const API_BASE_URL = envApiUrl ? normalizeApiBaseUrl(envApiUrl) : '/api';
+const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+const LOGIN_REQUEST_TIMEOUT_MS = 8000;
 
 interface RequestOptions {
   method?: string;
   headers?: Record<string, string>;
   body?: any;
+  timeoutMs?: number;
 }
 
 interface ApiError extends Error {
@@ -55,19 +58,34 @@ class ApiService {
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const controller = new AbortController();
+    const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     const config: RequestInit = {
       method: options.method || 'GET',
       headers: {
         ...this.getHeaders(isFormData),
         ...options.headers,
       },
+      signal: controller.signal,
     };
 
     if (options.body) {
       config.body = isFormData ? options.body : JSON.stringify(options.body);
     }
 
-    const response = await fetch(url, config);
+    let response: Response;
+    try {
+      response = await fetch(url, config);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Server terlalu lama merespons. Pastikan backend aktif lalu coba lagi.');
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       // build a generic message for the user; do not reveal the internal host
@@ -121,7 +139,11 @@ class ApiService {
 
   // POST request
   async post<T>(endpoint: string, data: any): Promise<T> {
-    return this.request<T>(endpoint, { method: 'POST', body: data });
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data,
+      timeoutMs: endpoint === '/auth/login' ? LOGIN_REQUEST_TIMEOUT_MS : undefined,
+    });
   }
 
   // PUT request

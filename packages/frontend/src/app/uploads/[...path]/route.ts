@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createProxyAbortSignal } from "../../api/proxy-timeout"
 import { applyProxyForwardHeaders } from "../../api/request-utils"
 
 const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:4000").replace(/\/$/, "")
@@ -17,6 +18,7 @@ const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
       method: req.method,
       headers,
       redirect: "manual",
+      signal: createProxyAbortSignal(),
     })
 
     const responseHeaders = new Headers(apiResponse.headers)
@@ -31,7 +33,9 @@ const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
     return NextResponse.json(
       {
         success: false,
-        message: "Upload proxy request failed",
+        message: error instanceof DOMException && error.name === "TimeoutError"
+          ? "Backend terlalu lama merespons"
+          : "Upload proxy request failed",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 502 },

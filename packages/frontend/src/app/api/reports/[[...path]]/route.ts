@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { applyProxyForwardHeaders } from "../../request-utils"
+import { createProxyAbortSignal } from "../../proxy-timeout"
 
 const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:4000").replace(/\/$/, "")
 export const dynamic = "force-dynamic"
@@ -45,6 +46,7 @@ const proxyRequest = async (request: NextRequest, context: ReportsRouteContext) 
       body,
       redirect: "manual",
       cache: "no-store",
+      signal: createProxyAbortSignal(),
     })
 
     const responseHeaders = new Headers(apiResponse.headers)
@@ -59,7 +61,9 @@ const proxyRequest = async (request: NextRequest, context: ReportsRouteContext) 
     return NextResponse.json(
       {
         success: false,
-        message: "Reports API proxy request failed",
+        message: error instanceof DOMException && error.name === "TimeoutError"
+          ? "Backend terlalu lama merespons"
+          : "Reports API proxy request failed",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 502 },
