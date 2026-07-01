@@ -1326,11 +1326,19 @@ export default function BorrowingPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt">) => {
+    const { status } = borrowing
     if (status === "overdue") {
       return <Badge variant="destructive">Terlambat</Badge>
     }
     if (status === "returned") {
+      if (!borrowing.returnValidatedAt) {
+        return (
+          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
+            Menunggu validasi pengembalian
+          </Badge>
+        )
+      }
       return <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300">Dikembalikan</Badge>
     }
     if (status === "pending") {
@@ -1729,9 +1737,7 @@ export default function BorrowingPage() {
   const pendingValidationCount = visibleBorrowings.filter(
     (b) => b.status === "returned" && !b.returnValidatedAt
   ).length
-  const activeBorrowings = visibleBorrowings.filter((b) =>
-    ["approved", "borrowed", "overdue"].includes(b.status)
-  )
+  const activeBorrowings = visibleBorrowings.filter(isBorrowingLockRecord)
   const activeBorrowingAssetLocks = new Set<string>()
   const activeBorrowingDetailLocks = new Set<string>()
 
@@ -1777,6 +1783,7 @@ export default function BorrowingPage() {
       return "maintenance"
     }
     if (asset.availability === "in_use") return "in_use"
+    if (asset.availability === "borrowed") return "borrowed"
     if (isBorrowingLockedAsset(asset)) {
       return "borrowed"
     }
@@ -2614,7 +2621,7 @@ export default function BorrowingPage() {
                               )}
                               statusBadges={(
                                 <>
-                                  {getStatusBadge(b.status)}
+                                  {getStatusBadge(b)}
                                   {getBorrowingRestrictionBadge(b.status)}
                                   {b.status === "rejected" && b.rejectionReason ? (
                                     <p className="basis-full text-left text-[13px] font-medium text-red-700 lg:text-right">

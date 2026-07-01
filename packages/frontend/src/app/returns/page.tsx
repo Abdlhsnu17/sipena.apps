@@ -1123,11 +1123,19 @@ export default function ReturnsPage() {
     })
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt">) => {
+    const { status } = borrowing
     if (status === "overdue") {
       return <Badge variant="destructive">Terlambat</Badge>
     }
     if (status === "returned") {
+      if (!borrowing.returnValidatedAt) {
+        return (
+          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
+            Menunggu validasi pengembalian
+          </Badge>
+        )
+      }
       return <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300">Dikembalikan</Badge>
     }
     if (status === "pending") {
@@ -1407,7 +1415,7 @@ export default function ReturnsPage() {
                               )}
                               statusBadges={(
                                 <>
-                                  {getStatusBadge(b.status)}
+                                  {getStatusBadge(b)}
                                   {getBorrowingRestrictionBadge(b.status)}
                                 </>
                               )}
@@ -1808,7 +1816,7 @@ export default function ReturnsPage() {
                               )}
                               statusBadges={(
                                 <>
-                                  {getStatusBadge(b.status)}
+                                  {getStatusBadge(b)}
                                   {showDamagedNotice && (
                                     <Badge className="rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-[11px] font-medium text-red-800 sm:text-[12px] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300">
                                       Alat rusak
