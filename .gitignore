@@ -62,7 +62,7 @@ pids/
 *.pid.lock
 
 # Uploads (generated files)
-packages/backend/uploads/
+apps/backend/uploads/
 
 # ==========================
 # Operating System files

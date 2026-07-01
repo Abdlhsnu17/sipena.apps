@@ -13,7 +13,7 @@ The canonical seed schema for `sipena_db_local` lives in `packages/database/seed
    * The compose file will start MySQL (`sipena_db_local`) on the private Docker network and phpMyAdmin on `localhost:8081`. The default credentials are `root` / `root_changeme`.
    * If you plan to connect the backend container to this MySQL container, use `DB_HOST=mysql`, `DB_PORT=3306`, `DB_USER=sipena_app`, and `DB_PASSWORD=changeme`.
 2. Open `http://localhost:8081`, log in as `root` and import `packages/database/seeds/schema.sql` into the `sipena_db_local` database.
-   * `schema.sql` only contains table structure, no sample rows. The first time the backend starts against an empty `users` table, it bootstraps exactly one admin account from `INITIAL_ADMIN_NIP` / `INITIAL_ADMIN_NAME` / `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` / `INITIAL_ADMIN_PHONE` in `packages/backend/.env` (see `ensureInitialAdminAccount` in `packages/backend/src/utils/schema.ts`). Set all five before starting the backend, or no admin will exist to log in with.
+   * `schema.sql` only contains table structure, no sample rows. The first time the backend starts against an empty `users` table, it bootstraps exactly one admin account from `INITIAL_ADMIN_NIP` / `INITIAL_ADMIN_NAME` / `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` / `INITIAL_ADMIN_PHONE` in `apps/backend/.env` (see `ensureInitialAdminAccount` in `apps/backend/src/utils/schema.ts`). Set all five before starting the backend, or no admin will exist to log in with.
 3. Run migration scripts from `packages/database/migrations` after pulling backend changes that add new columns.
 
 Current migrations include:

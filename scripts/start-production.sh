@@ -19,5 +19,5 @@ cleanup() {
 
 trap cleanup INT TERM EXIT
 
-cd "$APP_ROOT/packages/frontend"
+cd "$APP_ROOT/apps/frontend"
 exec npm run start -- --hostname 0.0.0.0 --port "$FRONTEND_PORT"

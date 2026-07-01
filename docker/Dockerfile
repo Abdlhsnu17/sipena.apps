@@ -8,14 +8,14 @@ ENV BACKEND_PORT=4000
 ENV API_PROXY_TARGET=http://127.0.0.1:4000
 
 COPY package.json package-lock.json ./
-COPY packages/backend/package.json packages/backend/package.json
-COPY packages/frontend/package.json packages/frontend/package.json
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
 
 RUN npm install -g npm@11.7.0
 RUN npm ci
 
-COPY packages/backend packages/backend
-COPY packages/frontend packages/frontend
+COPY apps/backend apps/backend
+COPY apps/frontend apps/frontend
 COPY packages/database packages/database
 COPY scripts scripts
 COPY tsconfig.json tsconfig.json
@@ -24,7 +24,7 @@ RUN npm run build
 
 ENV NODE_ENV=production
 
-RUN mkdir -p /data/uploads/profiles /data/uploads/reports packages/backend/uploads/profiles packages/backend/uploads/reports
+RUN mkdir -p /data/uploads/profiles /data/uploads/reports apps/backend/uploads/profiles apps/backend/uploads/reports
 
 COPY scripts/start-production.sh scripts/start-production.sh
 RUN chmod +x scripts/start-production.sh

@@ -6,20 +6,20 @@ ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
-COPY packages/backend/package.json packages/backend/package.json
-COPY packages/frontend/package.json packages/frontend/package.json
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
 
 RUN npm install -g npm@11.7.0
 RUN npm ci
 
 COPY tsconfig.json tsconfig.json
-COPY packages/frontend packages/frontend
+COPY apps/frontend apps/frontend
 
 RUN npm run build --workspace=inventory-frontend
 
 ENV NODE_ENV=production
 
-WORKDIR /app/packages/frontend
+WORKDIR /app/apps/frontend
 
 EXPOSE 3000
 

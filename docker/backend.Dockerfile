@@ -5,21 +5,21 @@ WORKDIR /app
 ENV CI=true
 
 COPY package.json package-lock.json ./
-COPY packages/backend/package.json packages/backend/package.json
-COPY packages/frontend/package.json packages/frontend/package.json
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
 
 RUN npm install -g npm@11.7.0
 RUN npm ci
 
 COPY tsconfig.json tsconfig.json
-COPY packages/backend packages/backend
+COPY apps/backend apps/backend
 COPY packages/database packages/database
 
 RUN npm run build --workspace=inventory-backend
 
 ENV NODE_ENV=production
 
-WORKDIR /app/packages/backend
+WORKDIR /app/apps/backend
 
 RUN mkdir -p uploads/profiles uploads/reports
 
