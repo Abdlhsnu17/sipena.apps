@@ -857,7 +857,7 @@ export default function AssetUsagePage() {
   const handleStatusChange = (log: AssetUsageLog, status: string) => {
     if (status !== "completed" || log.endedAt) return;
     if (isBorrowingUsageLog(log)) {
-      router.push("/returns");
+      router.push("/returns", { scroll: false });
       return;
     }
     openCompleteDialog(log);
@@ -1387,10 +1387,11 @@ export default function AssetUsagePage() {
                                 if (isBorrowingUsageLog(log)) {
                                   return (
                                     <Button
+                                      type="button"
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleStatusChange(log, "completed")}
-                                      className="h-7 rounded-full border-blue-200 px-2.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-400/10"
+                                      className="h-8 rounded-lg border-blue-200 px-2.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-400/10"
                                     >
                                       Pengembalian
                                     </Button>
@@ -1400,15 +1401,16 @@ export default function AssetUsagePage() {
                                 const allowed = canCompleteUsage(currentUser, log);
                                 return allowed ? (
                                   <Button
+                                    type="button"
                                     size="sm"
                                     onClick={() => handleStatusChange(log, "completed")}
-                                    className="h-7 rounded-full bg-teal-600 px-2.5 text-[11px] font-semibold text-white hover:bg-teal-700"
+                                    className="h-8 rounded-lg bg-teal-600 px-2.5 text-[12px] font-semibold text-white hover:bg-teal-700"
                                   >
                                     Selesaikan
                                   </Button>
                                 ) : (
                                   <span
-                                    className="inline-flex h-7 items-center rounded-full border border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 px-2.5 text-[11px] font-medium text-slate-400 dark:text-slate-500"
+                                    className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-slate-100 px-2.5 text-[12px] font-medium text-slate-400 dark:border-slate-800/35 dark:bg-slate-800/60 dark:text-slate-500"
                                     title="Hanya admin, leader, atau pengguna pemilik riwayat yang dapat menyelesaikan pemakaian ini"
                                   >
                                     Selesaikan
