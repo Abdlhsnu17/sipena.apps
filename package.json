@@ -13,7 +13,8 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build": "npm run build:packages && npm run build:backend && npm run build:frontend",
+    "build:packages": "npm run build --workspace=@sipena/types && npm run build --workspace=@sipena/utils && npm run build --workspace=@sipena/config && npm run build --workspace=@sipena/database",
     "lint": "npm run lint --workspace=inventory-backend && npm run lint --workspace=inventory-frontend",
     "type-check": "npm run type-check --workspace=inventory-frontend",
     "verify": "npm run lint && npm run build && npm run type-check",

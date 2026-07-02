@@ -1,38 +1,10 @@
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
-import pool from '../config/database';
 import { ActivityMetadata, ApiResponse, CreateUserActivityDTO, UserActivity } from '../models';
+import { UserActivityRow } from '../repositories/user_activity.repository';
+import { userActivityRepository } from '../repositories';
 import { createScopedLogger } from '../utils/logger';
 import { canViewOtherUsersActivity } from '../utils/role';
 
 const logger = createScopedLogger('service:user-activity');
-
-interface UserActivityRow extends RowDataPacket {
-  id: number;
-  user_id: number;
-  user_name?: string | null;
-  user_nip?: string | null;
-  feature: string;
-  action: string;
-  description: string;
-  metadata_json: string | null;
-  created_at: Date;
-}
-
-interface BorrowingRecordInfoRow extends RowDataPacket {
-  borrowing_code: string | null;
-  asset_name: string | null;
-  asset_code: string | null;
-}
-
-interface MaintenanceRecordInfoRow extends RowDataPacket {
-  maintenance_code: string | null;
-  asset_name: string | null;
-  asset_code: string | null;
-}
-
-interface TotalRow extends RowDataPacket {
-  total: number;
-}
 
 interface ActivityRecordInfo {
   recordNoId?: string | null;
@@ -141,22 +113,7 @@ const getTextMetadataValue = (metadata: ActivityMetadata | null | undefined, key
 };
 
 const resolveBorrowingRecordInfo = async (borrowingId: number): Promise<ActivityRecordInfo | null> => {
-  const [rows] = await pool.query<BorrowingRecordInfoRow[]>(
-    `SELECT
-       br.borrowing_code,
-       COALESCE(br.asset_detail_name, ma.name, na.name) AS asset_name,
-       COALESCE(br.asset_detail_code, ma.asset_code, na.asset_code) AS asset_code
-     FROM borrowing_records br
-     LEFT JOIN medical_assets ma
-       ON (br.asset_type = 'medical' OR br.asset_type IS NULL) AND br.asset_id = ma.id
-     LEFT JOIN non_medical_assets na
-       ON br.asset_type = 'non_medical' AND br.asset_id = na.id
-     WHERE br.id = ?
-     LIMIT 1`,
-    [borrowingId]
-  );
-
-  const record = rows[0];
+  const record = await userActivityRepository.findBorrowingRecordInfo(borrowingId);
   if (!record) return null;
 
   return {
@@ -167,22 +124,7 @@ const resolveBorrowingRecordInfo = async (borrowingId: number): Promise<Activity
 };
 
 const resolveMaintenanceRecordInfoByMaintenanceId = async (maintenanceId: number): Promise<ActivityRecordInfo | null> => {
-  const [rows] = await pool.query<MaintenanceRecordInfoRow[]>(
-    `SELECT
-       mr.maintenance_code,
-       COALESCE(mr.asset_detail_name, ma.name, na.name) AS asset_name,
-       COALESCE(mr.asset_detail_code, ma.asset_code, na.asset_code) AS asset_code
-     FROM maintenance_records mr
-     LEFT JOIN medical_assets ma
-       ON (mr.asset_type = 'medical' OR mr.asset_type IS NULL) AND mr.asset_id = ma.id
-     LEFT JOIN non_medical_assets na
-       ON mr.asset_type = 'non_medical' AND mr.asset_id = na.id
-     WHERE mr.id = ?
-     LIMIT 1`,
-    [maintenanceId]
-  );
-
-  const record = rows[0];
+  const record = await userActivityRepository.findMaintenanceRecordInfoByMaintenanceId(maintenanceId);
   if (!record) return null;
 
   return {
@@ -193,23 +135,7 @@ const resolveMaintenanceRecordInfoByMaintenanceId = async (maintenanceId: number
 };
 
 const resolveMaintenanceRecordInfoByScheduleId = async (scheduleId: number): Promise<ActivityRecordInfo | null> => {
-  const [rows] = await pool.query<MaintenanceRecordInfoRow[]>(
-    `SELECT
-       mr.maintenance_code,
-       COALESCE(mr.asset_detail_name, ma.name, na.name) AS asset_name,
-       COALESCE(mr.asset_detail_code, ma.asset_code, na.asset_code) AS asset_code
-     FROM maintenance_records mr
-     LEFT JOIN medical_assets ma
-       ON (mr.asset_type = 'medical' OR mr.asset_type IS NULL) AND mr.asset_id = ma.id
-     LEFT JOIN non_medical_assets na
-       ON mr.asset_type = 'non_medical' AND mr.asset_id = na.id
-     WHERE mr.schedule_id = ?
-     ORDER BY mr.id DESC
-     LIMIT 1`,
-    [scheduleId]
-  );
-
-  const record = rows[0];
+  const record = await userActivityRepository.findMaintenanceRecordInfoByScheduleId(scheduleId);
   if (!record) return null;
 
   return {
@@ -316,17 +242,13 @@ export class UserActivityService {
     const userId = toNumber(payload.userId);
     if (!userId) return;
 
-    await pool.query<ResultSetHeader>(
-      `INSERT INTO user_activity_logs (user_id, feature, action, description, metadata_json)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        userId,
-        payload.feature,
-        payload.action,
-        payload.description,
-        payload.metadata ? JSON.stringify(payload.metadata) : null,
-      ]
-    );
+    await userActivityRepository.create({
+      userId,
+      feature: payload.feature,
+      action: payload.action,
+      description: payload.description,
+      metadataJson: payload.metadata ? JSON.stringify(payload.metadata) : null,
+    });
   }
 
   async getByUserId(userIdValue: number | string, limitValue: number = 10): Promise<ApiResponse<UserActivity[]>> {
@@ -337,16 +259,7 @@ export class UserActivityService {
 
     const limit = Math.max(1, Math.min(Number(limitValue) || 10, 10));
 
-    const [rows] = await pool.query<UserActivityRow[]>(
-      `SELECT ual.id, ual.user_id, u.name AS user_name, u.nip AS user_nip, ual.feature, ual.action, ual.description, ual.metadata_json, ual.created_at
-       FROM user_activity_logs ual
-       LEFT JOIN users u ON u.id = ual.user_id
-       WHERE ual.user_id = ?
-         AND NOT (feature = 'pencarian' AND action = 'search')
-       ORDER BY ual.created_at DESC
-       LIMIT ?`,
-      [userId, limit]
-    );
+    const rows = await userActivityRepository.findRecentByUserId(userId, limit);
 
     return {
       success: true,
@@ -392,25 +305,9 @@ export class UserActivityService {
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-    const [countRows] = await pool.query<TotalRow[]>(
-      `SELECT COUNT(*) AS total
-       FROM user_activity_logs ual
-       ${whereClause}`,
-      params
-    );
-
-    const total = Number(countRows[0]?.total || 0);
-    const [rows] = await pool.query<UserActivityRow[]>(
-      `SELECT ual.id, ual.user_id, u.name AS user_name, u.nip AS user_nip,
-              ual.feature, ual.action, ual.description, ual.metadata_json, ual.created_at
-       FROM user_activity_logs ual
-       LEFT JOIN users u ON u.id = ual.user_id
-       ${whereClause}
-       ORDER BY ual.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
-    );
+    const activityWhere = { clause: whereClause, params };
+    const total = await userActivityRepository.countActivities(activityWhere);
+    const rows = await userActivityRepository.findActivities(activityWhere, limit, offset);
 
     return {
       success: true,

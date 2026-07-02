@@ -1,8 +1,5 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import userActivityService from '../services/user_activity.service';
-import { createScopedLogger } from '../utils/logger';
-
-const logger = createScopedLogger('controller:user-activity');
 
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
@@ -10,7 +7,7 @@ const toNumber = (value: unknown): number | null => {
 };
 
 export class UserActivityController {
-  getActivities = async (req: Request, res: Response): Promise<void> => {
+  getActivities = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = toNumber(req.user?.id);
       if (!userId) {
@@ -32,15 +29,11 @@ export class UserActivityController {
       });
       res.json(result);
     } catch (error) {
-      logger.error('Get activity archive error', { error });
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      });
+      next(error);
     }
   };
 
-  getMyActivities = async (req: Request, res: Response): Promise<void> => {
+  getMyActivities = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = toNumber(req.user?.id);
       if (!userId) {
@@ -55,11 +48,7 @@ export class UserActivityController {
       const result = await userActivityService.getByUserId(userId, limit);
       res.json(result);
     } catch (error) {
-      logger.error('Get user activities error', { error });
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      });
+      next(error);
     }
   };
 }

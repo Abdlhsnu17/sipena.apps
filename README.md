@@ -95,23 +95,49 @@ Isi paket database:
 
 ## Arsitektur
 
-SIPENA memakai arsitektur three-tier:
+SIPENA memakai monorepo berbasis clean architecture secara bertahap:
 
-1. Frontend Next.js menampilkan UI dan mengirim request ke API.
-2. Backend Node.js dan Express memproses request serta validasi bisnis.
-3. Database MySQL menyimpan data utama aplikasi.
+1. Frontend Next.js berada di `apps/frontend` dan hanya berkomunikasi dengan API.
+2. Backend Express berada di `apps/backend` dengan lapisan `controllers`, `services`, `repositories`, `middlewares`, `config`, dan `utils`.
+3. Shared packages berada di `packages/*` untuk database client, tipe bersama, utilitas umum, dan konfigurasi aplikasi.
+4. Infrastruktur Docker berada di `docker/`, sedangkan otomasi runtime berada di `scripts/`.
+
+Kontrak utama backend:
+
+- Controller hanya menangani request/response dan meneruskan error ke middleware global.
+- Service menyimpan business logic dan orkestrasi antar modul.
+- Repository menjadi satu-satunya tempat query SQL untuk bounded context yang sudah dimigrasikan.
+- Config, logger, env loading, database client, dan shared types dipisah agar bisa digunakan ulang oleh service lain.
 
 ## Struktur Monorepo
 
 ```
 .
-├── packages/
+├── apps/
 │   ├── backend/
-│   ├── frontend/
-│   └── database/
+│   │   └── src/
+│   │       ├── config/
+│   │       ├── controllers/
+│   │       ├── middlewares/
+│   │       ├── models/
+│   │       ├── repositories/
+│   │       ├── routes/
+│   │       ├── services/
+│   │       └── utils/
+│   └── frontend/
+├── packages/
+│   ├── config/
+│   ├── database/
+│   ├── types/
+│   └── utils/
+├── docker/
+├── scripts/
+├── .env.example
 ├── package.json
 └── README.md
 ```
+
+`packages/database` menyimpan `migrations/`, `seeds/`, dan shared database client. Migrasi query SQL dari service lama ke repository dilakukan per modul agar alur produksi yang sudah berjalan tidak berubah secara massal dalam satu perubahan.
 
 ## Endpoint Backend
 
