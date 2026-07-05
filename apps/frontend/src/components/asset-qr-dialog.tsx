@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Printer, QrCode } from "lucide-react";
+import { Download, FileText, Printer, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 
@@ -15,6 +15,10 @@ export interface AssetQrDialogProps {
   assetCode?: string
   serialNumber?: string
   location?: string
+  condition?: string
+  status?: string
+  purchaseDate?: string
+  nextMaintenance?: string
   /** "Medis" / "Non-Medis" badge label. */
   sourceLabel?: string
 }
@@ -54,6 +58,37 @@ const LABEL_SIZES: LabelSize[] = [
 
 const sizeDimensionLabel = (size: LabelSize): string => `${size.widthMm}×${size.heightMm} mm`
 
+const hasValue = (value?: string): value is string => Boolean(value?.trim() && value.trim() !== "-")
+
+const formatDateId = (value?: string): string => {
+  if (!hasValue(value)) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString("id-ID")
+}
+
+const buildQrIdentityValue = ({
+  noId,
+  assetName,
+  assetCode,
+  serialNumber,
+  location,
+  sourceLabel,
+}: Pick<AssetQrDialogProps, "noId" | "assetName" | "assetCode" | "serialNumber" | "location" | "sourceLabel">): string => {
+  const rows = [
+    ["NO ID", noId],
+    ["NAMA", assetName],
+    ["KODE", assetCode],
+    ["SN", serialNumber],
+    ["LOKASI", location],
+    ["SUMBER", sourceLabel],
+  ]
+    .filter(([, value]) => hasValue(value))
+    .map(([label, value]) => `${label}: ${value?.trim()}`)
+
+  return rows.length ? rows.join("\n") : "ASET SIPENA"
+}
+
 export function AssetQrDialog({
   open,
   onOpenChange,
@@ -62,15 +97,19 @@ export function AssetQrDialog({
   assetCode,
   serialNumber,
   location,
+  condition,
+  status,
+  purchaseDate,
+  nextMaintenance,
   sourceLabel,
 }: AssetQrDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [dataUrl, setDataUrl] = useState<string>("")
   const [selectedSizeId, setSelectedSizeId] = useState<LabelSizeId>("medium")
 
-  // The QR encodes the most stable searchable identifier so a scan can be
-  // pasted straight into the inventory search box to locate the asset.
-  const qrValue = (assetCode && assetCode !== "-" ? assetCode : noId).trim()
+  // The QR encodes the full visible asset identity so generic scanners show
+  // the complete label details, not just the asset code.
+  const qrValue = buildQrIdentityValue({ noId, assetName, assetCode, serialNumber, location, sourceLabel })
 
   useEffect(() => {
     if (!open) return
@@ -195,6 +234,89 @@ export function AssetQrDialog({
     printWindow.document.close()
   }
 
+  const handleManualPrint = () => {
+    const printWindow = window.open("", "_blank", "width=720,height=640")
+    if (!printWindow) return
+
+    const rows = [
+      { label: "No ID", value: noId },
+      { label: "Kode Inventaris", value: assetCode },
+      { label: "Kategori", value: sourceLabel },
+      { label: "No Seri", value: serialNumber },
+      { label: "Lokasi", value: location },
+      { label: "Kondisi", value: condition },
+      { label: "Status", value: status },
+      { label: "Tanggal Beli", value: formatDateId(purchaseDate) },
+      { label: sourceLabel === "Medis" ? "Kalibrasi/Pemeliharaan" : "Pemeliharaan Berikutnya", value: formatDateId(nextMaintenance) },
+    ]
+      .filter((row) => hasValue(row.value))
+      .map(
+        (row) =>
+          `<tr><td class="label">${escapeHtml(row.label)}</td><td class="value">${escapeHtml(String(row.value))}</td></tr>`,
+      )
+      .join("")
+
+    printWindow.document.write(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Label Manual ${escapeHtml(noId || assetCode || assetName || "Aset")}</title>
+    <style>
+      * { box-sizing: border-box; }
+      @page { size: 90mm 55mm; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
+      .label-card {
+        width: 90mm;
+        height: 55mm;
+        padding: 4mm;
+        border: 0.3mm solid #111827;
+        overflow: hidden;
+      }
+      .topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 3mm;
+        border-bottom: 0.25mm solid #111827;
+        padding-bottom: 1.5mm;
+        margin-bottom: 2mm;
+      }
+      .brand { font-size: 7pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+      .type { border: 0.25mm solid #111827; padding: 0.8mm 1.5mm; font-size: 6pt; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+      .title { margin: 0 0 2mm; font-size: 11pt; font-weight: 800; line-height: 1.15; word-break: break-word; }
+      table { width: 100%; border-collapse: collapse; font-size: 7pt; }
+      td { border-bottom: 0.15mm solid #d1d5db; padding: 0.8mm 0; vertical-align: top; line-height: 1.2; }
+      td.label { width: 35%; color: #4b5563; text-transform: uppercase; font-size: 6pt; letter-spacing: 0.03em; }
+      td.value { font-weight: 700; word-break: break-word; }
+      .footer { margin-top: 2mm; display: flex; justify-content: space-between; gap: 2mm; color: #4b5563; font-size: 5.5pt; text-transform: uppercase; letter-spacing: 0.06em; }
+    </style>
+  </head>
+  <body>
+    <div class="label-card">
+      <div class="topline">
+        <div class="brand">SIPENA - Identitas Inventaris</div>
+        <div class="type">${escapeHtml(sourceLabel || "Inventaris")}</div>
+      </div>
+      <p class="title">${escapeHtml(assetName || "Aset")}</p>
+      <table>${rows}</table>
+      <div class="footer">
+        <span>Label manual</span>
+        <span>Scan QR untuk detail digital</span>
+      </div>
+    </div>
+    <script>
+      window.onload = function () {
+        window.focus();
+        window.print();
+        setTimeout(function () { window.close(); }, 300);
+      };
+    </script>
+  </body>
+</html>`)
+    printWindow.document.close()
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -268,6 +390,10 @@ export function AssetQrDialog({
           <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
             <Download className="mr-2 h-4 w-4" />
             Unduh
+          </Button>
+          <Button variant="outline" onClick={handleManualPrint}>
+            <FileText className="mr-2 h-4 w-4" />
+            Cetak Manual
           </Button>
           <Button onClick={handlePrint} disabled={!dataUrl} className="bg-teal-600 hover:bg-teal-700">
             <Printer className="mr-2 h-4 w-4" />

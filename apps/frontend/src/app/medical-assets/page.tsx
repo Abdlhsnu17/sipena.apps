@@ -425,16 +425,19 @@ export default function MedicalAssetsPage() {
   const getAssetNoId = (roomId: string, assetId: string) =>
     assetNoIdByRoomAndAssetId.get(`${roomId}:${assetId}`) ?? formatNoId("IMD-DTL", assetId)
 
-  const matchesAssetSearch = (roomId: string, asset: MedicalAsset) => {
+  const matchesAssetSearch = (roomId: string, roomName: string, asset: MedicalAsset) => {
     if (!searchTermNormalized) return false
     return matchesSearchKeyword(searchTerm, [
       getAssetNoId(roomId, asset.id),
       asset.id,
       asset.roomId,
+      roomName,
       asset.inventoryName,
       asset.name,
       asset.serialNumber,
       asset.assetCode,
+      "Medis",
+      "Medical",
       normalizeUsagePurpose(asset.usagePurpose, MEDICAL_USAGE_OPTIONS),
       asset.notes,
       asset.status,
@@ -451,7 +454,7 @@ export default function MedicalAssetsPage() {
       room.assetCode,
       room.category,
     ])
-    const matchesDetailSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, asset)) : false
+    const matchesDetailSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, room.roomName, asset)) : false
     const matchesCategory = filterCategory === "Semua" || room.category === filterCategory
     return (matchesRoomSearch || matchesDetailSearch) && matchesCategory
   })
@@ -615,9 +618,9 @@ export default function MedicalAssetsPage() {
         ) : (
           <div className="space-y-3">
             {filteredRooms.map((room) => {
-              const detailMatchesSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, asset)) : false
+              const detailMatchesSearch = searchTermNormalized ? room.assets.some((asset) => matchesAssetSearch(room.id, room.roomName, asset)) : false
               const assetsToDisplay = detailMatchesSearch
-                ? room.assets.filter((asset) => matchesAssetSearch(room.id, asset))
+                ? room.assets.filter((asset) => matchesAssetSearch(room.id, room.roomName, asset))
                 : room.assets
               const isExpanded = expandedRooms.has(room.id)
               const shouldAutoExpandFromSearch = Boolean(searchTermNormalized)
@@ -938,6 +941,10 @@ export default function MedicalAssetsPage() {
           assetCode={qrTarget.asset.assetCode}
           serialNumber={qrTarget.asset.serialNumber}
           location={qrTarget.location}
+          condition={qrTarget.asset.condition}
+          status={qrTarget.asset.status}
+          purchaseDate={qrTarget.asset.purchaseDate}
+          nextMaintenance={qrTarget.asset.nextMaintenance}
           sourceLabel="Medis"
         />
       )}

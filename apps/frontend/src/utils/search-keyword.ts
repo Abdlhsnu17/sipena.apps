@@ -8,25 +8,22 @@ const normalizeBase = (value: string): string =>
 
 const normalizeToken = (value: string): string => normalizeBase(value).replace(/[^a-z0-9]/g, "")
 
-export const matchesSearchKeyword = (
-  keyword: string,
-  values: SearchableValue[]
+const buildKeywordVariants = (keyword: string): string[] => {
+  const variants = new Set<string>([keyword])
+  const qrIdentityValueOnly = keyword
+    .replace(/\b(no\s*id|nama|kode|sn|lokasi|sumber)\s*:/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+  if (qrIdentityValueOnly) variants.add(qrIdentityValueOnly)
+
+  return Array.from(variants)
+}
+
+const matchesKeywordVariant = (
+  normalizedKeyword: string,
+  searchableValues: { raw: string; normalized: string }[]
 ): boolean => {
-  const normalizedKeyword = normalizeBase(keyword.trim())
-  if (!normalizedKeyword) return true
-
-  const searchableValues = values
-    .filter((value): value is string | number => value !== null && value !== undefined)
-    .map((value) => {
-      const raw = normalizeBase(String(value))
-      return {
-        raw,
-        normalized: normalizeToken(raw),
-      }
-    })
-
-  if (searchableValues.length === 0) return false
-
   const compactKeyword = normalizeToken(normalizedKeyword)
   const tokenPairs = normalizedKeyword
     .split(/\s+/)
@@ -54,5 +51,29 @@ export const matchesSearchKeyword = (
       if (!token.normalized) return false
       return value.normalized.includes(token.normalized)
     })
+  )
+}
+
+export const matchesSearchKeyword = (
+  keyword: string,
+  values: SearchableValue[]
+): boolean => {
+  const normalizedKeyword = normalizeBase(keyword.trim())
+  if (!normalizedKeyword) return true
+
+  const searchableValues = values
+    .filter((value): value is string | number => value !== null && value !== undefined)
+    .map((value) => {
+      const raw = normalizeBase(String(value))
+      return {
+        raw,
+        normalized: normalizeToken(raw),
+      }
+    })
+
+  if (searchableValues.length === 0) return false
+
+  return buildKeywordVariants(normalizedKeyword).some((variant) =>
+    matchesKeywordVariant(variant, searchableValues)
   )
 }
