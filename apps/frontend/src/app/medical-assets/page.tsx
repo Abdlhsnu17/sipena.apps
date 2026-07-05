@@ -24,7 +24,7 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 import { AssetImportDialog } from "@/components/asset-import-dialog";
 import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
-import { ChevronDown, ChevronUp, Edit2, FileDown, FileSpreadsheet, FileText, Plus, QrCode, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronUp, Edit2, FileDown, FileSpreadsheet, FileText, Hash, MapPin, Package, Plus, QrCode, Search, Sparkles, Stethoscope, Tag, Trash2, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -744,187 +744,230 @@ export default function MedicalAssetsPage() {
                               nextMaintenance: asset.nextMaintenance,
                               sourceLabel: "Medis",
                             }
+                            const purchaseDateText = asset.purchaseDate
+                              ? new Date(asset.purchaseDate).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                              : "-"
+                            const maintenanceDateText = asset.lastMaintenance
+                              ? new Date(asset.lastMaintenance).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                              : asset.lastRepair
+                                ? new Date(asset.lastRepair).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                })
+                                : "-"
+                            const maintenanceLabelText = asset.lastMaintenance
+                              ? "Pemeliharaan Terakhir"
+                              : asset.lastRepair
+                                ? "Perbaikan Terakhir"
+                                : "Pemeliharaan Terakhir"
+
                             return (
-                            <div
-                              key={asset.id}
-                              className="border border-border rounded-lg p-3 hover:bg-muted/50 h-full flex flex-col justify-between gap-4"
-                            >
-                              <div className="flex items-start justify-between gap-3 flex-wrap">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-semibold text-sm">{asset.inventoryName || asset.name}</span>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      No ID: {noId}
-                                    </Badge>
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs border ${
-                                        statusLabel === "Tersedia"
-                                          ? "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300"
-                                          : isMaintenanceDetailStatus(statusLabel)
-                                            ? "bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300"
-                                            : statusLabel === "Dipinjam"
-                                              ? "bg-sky-100 border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300"
-                                            : statusLabel === "Sedang Digunakan"
-                                              ? "bg-sky-100 border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300"
-                                              : "bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-400/10 dark:border-rose-400/30 dark:text-rose-300"
-                                      }`}
-                                    >
-                                      {statusLabel}
-                                    </Badge>
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs border ${
-                                        asset.condition === "Baik"
-                                          ? "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300"
-                                          : asset.condition === "Cukup"
-                                            ? "bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300"
-                                            : "bg-red-100 border-red-300 text-red-800 dark:bg-red-400/10 dark:border-red-400/30 dark:text-red-300"
-                                      }`}
-                                    >
-                                      {asset.condition}
-                                    </Badge>
-                                  </div>
-                                  {asset.type && (
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs ${getMedicalAssetTypeColor(asset.type)}`}
-                                    >
-                                      {getMedicalAssetTypeLabel(asset.type)}
-                                    </Badge>
-                                  )}
-                                  <div className="grid grid-cols-1 gap-3 text-xs text-muted-foreground sm:grid-cols-2 sm:gap-4">
-                                    <div>
-                                      <p className="text-[11px] uppercase tracking-wide">Kode</p>
-                                      <p className="text-foreground font-medium">{asset.assetCode || "-"}</p>
+                              <div
+                                key={asset.id}
+                                className="h-full overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm"
+                              >
+                                <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
+                                  <div className="space-y-3">
+                                    <h5 className="text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+                                      {asset.inventoryName || asset.name}
+                                    </h5>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className="text-xs font-medium">
+                                        No ID: {noId}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-xs border ${
+                                          statusLabel === "Tersedia"
+                                            ? "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300"
+                                            : isMaintenanceDetailStatus(statusLabel)
+                                              ? "bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300"
+                                              : statusLabel === "Dipinjam"
+                                                ? "bg-sky-100 border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300"
+                                                : statusLabel === "Sedang Digunakan"
+                                                  ? "bg-sky-100 border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300"
+                                                  : "bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-400/10 dark:border-rose-400/30 dark:text-rose-300"
+                                        }`}
+                                      >
+                                        {statusLabel}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-xs border ${
+                                          asset.condition === "Baik"
+                                            ? "bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300"
+                                            : asset.condition === "Cukup"
+                                              ? "bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300"
+                                              : "bg-red-100 border-red-300 text-red-800 dark:bg-red-400/10 dark:border-red-400/30 dark:text-red-300"
+                                        }`}
+                                      >
+                                        {asset.condition}
+                                      </Badge>
                                     </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase tracking-wide">SN</p>
-                                      <p className="text-foreground font-medium">{asset.serialNumber || "-"}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase tracking-wide">Merk</p>
-                                      <p className="text-foreground font-medium">{asset.name || "-"}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] uppercase tracking-wide">Beli</p>
-                                      <p className="text-foreground font-medium">
-                                        {asset.purchaseDate
-                                          ? new Date(asset.purchaseDate).toLocaleDateString("id-ID")
-                                          : "-"}
-                                      </p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        <Tag className="mr-1.5 h-3.5 w-3.5" />
+                                        Kategori: {room.category}
+                                      </Badge>
+                                      {asset.type && (
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-xs ${getMedicalAssetTypeColor(asset.type)}`}
+                                        >
+                                          {getMedicalAssetTypeLabel(asset.type)}
+                                        </Badge>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="grid grid-cols-1 gap-3 text-[13px] text-muted-foreground sm:grid-cols-2 sm:gap-4">
-                                    {asset.lastMaintenance && (
-                                      <div>
-                                        <p className="text-[11px] uppercase tracking-wide">Pemeliharaan</p>
-                                        <p className="text-foreground font-medium">
-                                          {new Date(asset.lastMaintenance).toLocaleDateString("id-ID")}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {asset.lastRepair && (
-                                      <div>
-                                        <p className="text-[11px] uppercase tracking-wide">Perbaikan</p>
-                                        <p className="text-foreground font-medium">
-                                          {new Date(asset.lastRepair).toLocaleDateString("id-ID")}
-                                        </p>
-                                      </div>
-                                    )}
-                                    <div>
-                                      <p className="text-[11px] uppercase tracking-wide">Penggunaan</p>
-                                      <p className="text-foreground font-medium">
-                                        {normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", MEDICAL_USAGE_OPTIONS)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  {asset.notes && (
-                                    <div className="text-[13px] text-muted-foreground">
-                                      <p className="text-[11px] uppercase tracking-wide">Catatan</p>
-                                      <p className="text-foreground font-medium">{asset.notes}</p>
-                                    </div>
-                                  )}
-                                  <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+
+                                  <div className="flex flex-wrap gap-2 lg:justify-end">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 bg-white text-xs dark:bg-background"
-                                      onClick={() => downloadManualAssetLabel(labelData)}
+                                      className="h-16 min-w-22 flex-col gap-1 rounded-2xl"
+                                      onClick={() =>
+                                        setQrTarget({
+                                          noId,
+                                          asset,
+                                          location: room.roomName,
+                                        })
+                                      }
                                     >
-                                      <FileDown className="mr-1.5 h-3.5 w-3.5" />
-                                      Unduh Label
+                                      <QrCode className="h-4 w-4" />
+                                      <span className="text-[11px] font-medium">QR Code</span>
                                     </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 bg-white text-xs dark:bg-background"
-                                      onClick={() => printManualAssetLabel(labelData)}
-                                    >
-                                      <FileText className="mr-1.5 h-3.5 w-3.5" />
-                                      Cetak Label
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1 shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Lihat / cetak barcode"
-                                    className="h-9 w-9 p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-400/10"
-                                    onClick={() =>
-                                      setQrTarget({
-                                        noId,
-                                        asset,
-                                        location: room.roomName,
-                                      })
-                                    }
-                                  >
-                                    <QrCode className="w-4 h-4" />
-                                  </Button>
-                                  {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
-                                  <div className="flex gap-1 shrink-0">
                                     {canEditInventory && (
                                       <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
-                                        className="h-9 w-9 p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-400/10"
+                                        className="h-16 min-w-22 flex-col gap-1 rounded-2xl"
                                         onClick={() => {
                                           setSelectedRoomId(room.id)
                                           setEditingAsset(asset)
                                           setShowAssetForm(true)
                                         }}
                                       >
-                                        <Edit2 className="w-4 h-4" />
+                                        <Edit2 className="h-4 w-4" />
+                                        <span className="text-[11px] font-medium">Edit</span>
                                       </Button>
                                     )}
                                     {canRequestInventoryDeletion && (
                                       <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
                                         title="Ajukan penghapusan aset"
-                                        className="h-9 w-9 p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
+                                        className="h-16 min-w-22 flex-col gap-1 rounded-2xl border-red-200 text-red-700 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
                                         onClick={() => setDisposalTarget({ roomId: room.id, asset })}
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="text-[11px] font-medium">Ajukan</span>
                                       </Button>
                                     )}
                                     {canDeleteInventory && (
                                       <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
                                         title="Hapus permanen"
-                                        className="h-9 w-9 p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
+                                        className="h-16 min-w-22 flex-col gap-1 rounded-2xl border-red-200 text-red-700 hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-400/10"
                                         onClick={() => handleDeleteAsset(room.id, asset.id)}
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="text-[11px] font-medium">Hapus</span>
                                       </Button>
                                     )}
                                   </div>
+                                </div>
+
+                                <div className="border-y border-border bg-muted/20 px-3 py-4 sm:px-4">
+                                  <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border bg-background sm:grid-cols-2">
+                                    <div className="divide-y divide-border border-b border-border sm:border-b-0 sm:border-r">
+                                      <div className="flex items-start gap-3 p-4">
+                                        <Tag className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kode</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">{asset.assetCode || "-"}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-start gap-3 p-4">
+                                        <Package className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Merk</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">{asset.name || "-"}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-start gap-3 p-4">
+                                        <Wrench className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{maintenanceLabelText}</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">{maintenanceDateText}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="divide-y divide-border">
+                                      <div className="flex items-start gap-3 p-4">
+                                        <Hash className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SN</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">{asset.serialNumber || "-"}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-start gap-3 p-4">
+                                        <CalendarDays className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal Beli</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">{purchaseDateText}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-start gap-3 p-4">
+                                        <MapPin className="mt-0.5 h-4 w-4 text-blue-600" />
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Penggunaan</p>
+                                          <p className="text-base font-semibold text-foreground sm:text-[1.85rem] sm:leading-tight">
+                                            {normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", MEDICAL_USAGE_OPTIONS)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {asset.notes && (
+                                    <div className="mt-3 rounded-xl border border-border bg-background p-3">
+                                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Catatan</p>
+                                      <p className="mt-1 text-sm font-medium text-foreground">{asset.notes}</p>
+                                    </div>
                                   )}
                                 </div>
+
+                                <div className="flex flex-wrap gap-2 p-4 sm:px-5 sm:pb-5">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 rounded-xl bg-white px-4 text-xs dark:bg-background"
+                                    onClick={() => downloadManualAssetLabel(labelData)}
+                                  >
+                                    <FileDown className="mr-1.5 h-4 w-4" />
+                                    Unduh Label
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 rounded-xl bg-white px-4 text-xs dark:bg-background"
+                                    onClick={() => printManualAssetLabel(labelData)}
+                                  >
+                                    <FileText className="mr-1.5 h-4 w-4" />
+                                    Cetak Label
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
                             )
                           })}
                         </div>
