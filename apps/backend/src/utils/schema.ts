@@ -27,6 +27,7 @@ let ensuredInitialAdminAccount = false;
 let ensuredRoleMenuAccessControlTables = false;
 let ensuredDeletionRequestsTable = false;
 let ensuredAssetDisposalTable = false;
+let ensuredAssetCategoryUmbrellaValues = false;
 let attemptedCoreSchemaBootstrap = false;
 
 const tableExists = async (tableName: string): Promise<boolean> => {
@@ -209,6 +210,28 @@ export async function ensureNonMedicalSpecificationsColumn(): Promise<void> {
   }
 
   ensuredNonMedicalSpecificationsColumn = true;
+}
+
+export async function ensureAssetCategoryUmbrellaValues(): Promise<void> {
+  if (ensuredAssetCategoryUmbrellaValues) return;
+
+  if (await tableExists('medical_assets')) {
+    await pool.query(
+      `UPDATE medical_assets
+       SET category = 'Medis'
+       WHERE COALESCE(TRIM(category), '') <> 'Medis'`
+    );
+  }
+
+  if (await tableExists('non_medical_assets')) {
+    await pool.query(
+      `UPDATE non_medical_assets
+       SET category = 'Non Medis'
+       WHERE COALESCE(TRIM(category), '') <> 'Non Medis'`
+    );
+  }
+
+  ensuredAssetCategoryUmbrellaValues = true;
 }
 
 export async function ensureReportUploadsTable(): Promise<void> {

@@ -11,6 +11,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import { createScopedLogger } from './utils/logger';
 import {
+    ensureAssetCategoryUmbrellaValues,
     ensureAssetDisposalTable,
     ensureAssetUsageLogsTable,
     ensureBorrowingWorkflowColumns,
@@ -413,6 +414,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureMaintenanceDetailColumns();
         await ensureMaintenanceCancellationReasonColumn();
         await ensureNonMedicalSpecificationsColumn();
+        await ensureAssetCategoryUmbrellaValues();
         await ensureReportUploadsTable();
         await ensureScheduleAssetForeignKeyRemoved();
         await ensureUserProfileColumns();

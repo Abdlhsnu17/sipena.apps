@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
+import { ResultSetHeader } from 'mysql2';
 import { Readable } from 'stream';
 import pool from '../config/database';
-import { ResultSetHeader } from 'mysql2';
 import { generateAssetCode } from '../utils/helpers';
 import { ensureNonMedicalConditionColumn, ensureNonMedicalSpecificationsColumn } from '../utils/schema';
 
@@ -133,7 +133,7 @@ const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
     };
 
     const name = get(['nama', 'name', 'nama_aset']);
-    const category = get(['kategori', 'category']);
+    const category = get(['kategori', 'category', 'tipe', 'type']);
     if (!name) return;
 
     rows.push({
@@ -173,6 +173,7 @@ export async function importAssetsFromBuffer(
 
   const result: ImportResult = { success: 0, failed: 0, errors: [], inserted: [] };
   const table = assetType === 'non_medical' ? 'non_medical_assets' : 'medical_assets';
+  const umbrellaCategory = assetType === 'medical' ? 'Medis' : 'Non Medis';
 
   if (assetType === 'non_medical') {
     await ensureNonMedicalSpecificationsColumn();
@@ -189,7 +190,7 @@ export async function importAssetsFromBuffer(
 
       if (assetType === 'non_medical') {
         const fields = ['asset_code', 'name', 'category', 'status', '`condition`', 'created_by'];
-        const values: any[] = [code, row.name, row.category, status, condition, createdBy];
+        const values: any[] = [code, row.name, umbrellaCategory, status, condition, createdBy];
 
         if (row.brand) { fields.push('brand'); values.push(row.brand); }
         if (row.model) { fields.push('model'); values.push(row.model); }
@@ -220,7 +221,7 @@ export async function importAssetsFromBuffer(
         const values: any[] = [
           code,
           row.location || row.name,
-          row.category,
+          umbrellaCategory,
           'medical',
           status,
           condition,
@@ -252,7 +253,7 @@ export function generateImportTemplate(assetType: 'medical' | 'non_medical'): Ex
 
   const headers = [
     { header: 'Nama Aset *', key: 'nama', width: 30 },
-    { header: 'Kategori *', key: 'kategori', width: 25 },
+    { header: 'Tipe Detail *', key: 'kategori', width: 25 },
     { header: 'Kode Aset', key: 'kode_aset', width: 20 },
     { header: 'Merek', key: 'merek', width: 20 },
     { header: 'Model', key: 'model', width: 20 },
@@ -273,8 +274,8 @@ export function generateImportTemplate(assetType: 'medical' | 'non_medical'): Ex
   headerRow.commit();
 
   const exampleCategories = assetType === 'medical'
-    ? ['Alat Diagnostik', 'Alat Terapi', 'Alat Laboratorium']
-    : ['Furnitur', 'Elektronik', 'Kendaraan'];
+    ? ['Alat Gawat Darurat', 'Alat Diagnostik dan Pencitraan', 'Alat Laboratorium Medis']
+    : ['IT dan Komunikasi', 'HVAC dan Tata Udara', 'Keamanan dan Akses'];
 
   ws.addRow([
     'Contoh Nama Aset',
@@ -294,7 +295,7 @@ export function generateImportTemplate(assetType: 'medical' | 'non_medical'): Ex
   const noteWs = wb.addWorksheet('Panduan');
   noteWs.addRow(['Kolom', 'Keterangan', 'Nilai yang Valid']);
   noteWs.addRow(['Nama Aset *', 'Wajib diisi', '']);
-  noteWs.addRow(['Kategori *', 'Wajib diisi', exampleCategories.join(', ')]);
+  noteWs.addRow(['Tipe Detail *', 'Wajib diisi (kategori ruangan otomatis diset Medis/Non Medis)', exampleCategories.join(', ')]);
   noteWs.addRow(['Status', 'Opsional', 'tersedia, dipinjam, pemeliharaan, dihapus']);
   noteWs.addRow(['Kondisi', 'Opsional', 'baik, cukup, buruk, rusak']);
   noteWs.addRow(['Tanggal', 'Format', 'YYYY-MM-DD']);

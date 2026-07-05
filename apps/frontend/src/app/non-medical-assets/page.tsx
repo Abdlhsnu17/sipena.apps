@@ -20,9 +20,9 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets-types";
 
 import { AssetImportDialog } from "@/components/asset-import-dialog";
-import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
+import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { USAGE_OPTIONS, USAGE_PURPOSE_ALIASES } from "@/utils/asset-usage";
 import { Building, ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -59,8 +59,8 @@ export default function NonMedicalAssetsPage() {
   const [filterCategory, setFilterCategory] = useState("Semua")
   const [isResettingInventory, setIsResettingInventory] = useState(false)
 
-  const categoryOptions = Object.keys(NON_MEDICAL_ASSET_CATEGORIES)
-  const defaultCategory = categoryOptions[0] ?? "Sarana Gedung dan Infrastruktur"
+  const categoryOptions = ["Non Medis"]
+  const defaultCategory = "Non Medis"
   const roomFormRef = useRef<HTMLDivElement | null>(null)
   const [roomFormData, setRoomFormData] = useState({
     roomName: "",
@@ -116,7 +116,7 @@ export default function NonMedicalAssetsPage() {
           roomName: asset.location || "",
           assetName: asset.name,
           assetCode: asset.assetCode,
-          category: asset.category,
+          category: defaultCategory,
           assets: details,
         }
       })

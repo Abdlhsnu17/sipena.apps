@@ -621,6 +621,7 @@ const flattenAssetReportRows = (rows: RowDataPacket[]): Record<string, unknown>[
         asset_code: asset.asset_code,
         name: asset.name,
         category: asset.category,
+        asset_type: assetType,
         type: assetType,
         status: asset.status,
         condition: asset.condition,
@@ -649,7 +650,8 @@ const flattenAssetReportRows = (rows: RowDataPacket[]): Record<string, unknown>[
         asset_detail_name: detailName,
         name: detailName,
         category: asset.category,
-        type: assetType,
+        asset_type: assetType,
+        type: getTextValue(detail.type, detail.detailType, detail.assetType, assetType),
         status: getTextValue(detail.status, asset.status),
         condition: getTextValue(detail.condition, asset.condition),
         location: resolveAssetDetailLocation(detail, asset, locationLookup),
@@ -1046,16 +1048,21 @@ export class ReportService {
       params.push(filters.category);
     }
 
-    if (filters.type) {
-      query += ' AND a.type = ?';
-      params.push(filters.type);
-    }
-
     query += ' ORDER BY a.created_at DESC';
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
+    let flattened = flattenAssetReportRows(rows);
 
-    return { success: true, message: 'Asset report generated successfully', data: flattenAssetReportRows(rows) };
+    if (filters.type) {
+      const normalizedFilterType = String(filters.type).trim().toLowerCase();
+      flattened = flattened.filter((row) => {
+        const detailType = String(row.type ?? '').trim().toLowerCase();
+        const assetType = String(row.asset_type ?? '').trim().toLowerCase();
+        return detailType === normalizedFilterType || assetType === normalizedFilterType;
+      });
+    }
+
+    return { success: true, message: 'Asset report generated successfully', data: flattened };
   }
 
   async getBorrowingReport(filters: ReportFilters): Promise<ApiResponse> {

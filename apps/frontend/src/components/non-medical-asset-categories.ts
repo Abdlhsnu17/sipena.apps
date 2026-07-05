@@ -88,11 +88,11 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Dispenser Air Dingin",
       "Dispenser Air Minum",
       "Dispenser Air Panas",
-      "Dispenser Air Panas & Dingin",
+      "Dispenser Air Panas dan Dingin",
       "Display Antrian",
       "Display Informasi Lokal",
       "Door Closer Fire",
-      "Ducting & Diffuser",
+      "Ducting dan Diffuser",
       "DVR CCTV (Shared)",
       "Earth Tester",
       "Earthquake Sensor System",
@@ -136,7 +136,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Gerinda",
       "Grease Trap System",
       "Grill/Pemanggang",
-      "Grounding Rod & Earth Pit",
+      "Grounding Rod dan Earth Pit",
       "Grounding System Lokal",
       "Hand Pallet",
       "Hand Sanitizer Dispenser",
@@ -163,12 +163,12 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Jam Dinding Lokal",
       "Jam Digital Lokal",
       "Jam Meja (Meja Perawat/Admin)",
-      "Kabel Power & Grounding System",
+      "Kabel Power dan Grounding System",
       "Kabel UTP/Fiber Optic",
       "Kamera CCTV Dome",
       "Kamera CCTV Indoor",
       "Keyboard",
-      "Keyboard & Mouse",
+      "Keyboard dan Mouse",
       "Kompor Industri",
       "Kompressor Angin",
       "Komputer Nurse Station",
@@ -286,7 +286,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Rompi Safety",
       "Router",
       "Router Lokal",
-      "Safety Cone & Barrier",
+      "Safety Cone dan Barrier",
       "Safety Harness",
       "Scanner Dokumen",
       "Scaffolding",
@@ -322,7 +322,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Telephone IP Lokal",
       "Thermal Camera (jika ada)",
       "Thermometer Lokal",
-      "Thermostat & Building HVAC Controller",
+      "Thermostat dan Building HVAC Controller",
       "Timer Switch",
       "Timbangan Digital Lokal",
       "Tirai / Curtain Privasi",
@@ -330,7 +330,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "Tirai Pembatas (Curtain)",
       "Tool Set (kunci pas/ring/soket)",
       "Trafo Distribusi",
-      "Tray & Tray Rack",
+      "Tray dan Tray Rack",
       "Troli Linen",
       "Troli Logistik Kecil",
       "Troli Logistik Lokal",
@@ -343,7 +343,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "UV Disinfection Robot (bukan hanya lamp)",
       "UV-C Disinfection Lamp (ruang tertentu)",
       "Vacuum Cleaner (Dry)",
-      "Vacuum Cleaner Industri (Wet & Dry)",
+      "Vacuum Cleaner Industri (Wet dan Dry)",
       "Vacuum Cleaner Lokal",
       "Variable Frequency Drive (VFD) HVAC",
       "Visitor Management System",
@@ -359,7 +359,7 @@ const RAW_NON_MEDICAL_ASSET_TYPES = [
       "X-Ray Baggage Scanner (jika ada)",
 ]
 
-const DEFAULT_USAGE_PURPOSE: (typeof USAGE_OPTIONS)[number] = "Operasional bersama"
+const DEFAULT_USAGE_PURPOSE: (typeof USAGE_OPTIONS)[number] = "Operasional"
 const DEFAULT_TYPE_LABEL = "Lainnya / Belum diklasifikasikan"
 const DEFAULT_TYPE_CATEGORY = "Umum"
 
@@ -417,7 +417,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
   keywords: string[]
 }> = [
   {
-    usagePurpose: "Administrasi & Komunikasi",
+    usagePurpose: "Admin",
     keywords: [
       "access point",
       "barcode",
@@ -445,7 +445,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Keamanan & Darurat",
+    usagePurpose: "Keamanan",
     keywords: [
       "alarm",
       "apar",
@@ -468,7 +468,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Utilitas & Tata Udara",
+    usagePurpose: "Utilitas",
     keywords: [
       "ac",
       "ahu",
@@ -499,7 +499,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Kebersihan & Limbah",
+    usagePurpose: "Kebersihan",
     keywords: [
       "bucket",
       "clean",
@@ -516,7 +516,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Dapur, Laundry & Penunjang",
+    usagePurpose: "Dapur",
     keywords: [
       "blender",
       "dishwasher",
@@ -536,7 +536,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Transportasi Operasional",
+    usagePurpose: "Transportasi",
     keywords: [
       "agv",
       "ambulans",
@@ -550,7 +550,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Logistik & Penyimpanan",
+    usagePurpose: "Logistik",
     keywords: [
       "box",
       "cabinet",
@@ -565,7 +565,7 @@ const NON_MEDICAL_USAGE_RULES: Array<{
     ],
   },
   {
-    usagePurpose: "Fasilitas & Furnitur",
+    usagePurpose: "Fasilitas",
     keywords: [
       "air curtain",
       "bell",

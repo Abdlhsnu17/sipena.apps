@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/services/api.service";
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
@@ -12,7 +13,6 @@ import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
 import userService, { type User } from "@/services/user.service";
-import { useToast } from "@/hooks/use-toast";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { parseDateValue } from "@/utils/format";
 import {
@@ -49,6 +49,7 @@ type ExportFilters = {
   reportType: ExportReportType
   startDate: string
   endDate: string
+  category: string
   status: string
   type: string
   userId: string
@@ -109,6 +110,11 @@ const assetTypeOptions: FilterOption[] = [
   { value: "non_medical", label: "Non Medis" },
 ]
 
+const assetCategoryOptions: FilterOption[] = [
+  { value: "Medis", label: "Medis" },
+  { value: "Non Medis", label: "Non Medis" },
+]
+
 const maintenanceTypeOptions: FilterOption[] = [
   { value: "preventive", label: "Rutin" },
   { value: "corrective", label: "Perbaikan" },
@@ -124,6 +130,7 @@ const initialExportFilters: ExportFilters = {
   reportType: "assets",
   startDate: "",
   endDate: "",
+  category: "",
   status: "",
   type: "",
   userId: "",
@@ -509,12 +516,14 @@ export default function ReportsPage() {
         : exportFilters.reportType === "usage"
           ? usageContextOptions
           : []
+  const availableCategoryOptions = exportFilters.reportType === "assets" ? assetCategoryOptions : []
   const availableTypeOptions =
-    exportFilters.reportType === "assets" || exportFilters.reportType === "usage"
+    exportFilters.reportType === "usage"
       ? assetTypeOptions
       : exportFilters.reportType === "maintenance"
         ? maintenanceTypeOptions
         : []
+  const showCategoryFilter = availableCategoryOptions.length > 0
   const showStatusFilter = availableStatusOptions.length > 0
   const showTypeFilter = availableTypeOptions.length > 0
   const showUserFilter = exportFilters.reportType === "activity" || exportFilters.reportType === "all"
@@ -523,6 +532,7 @@ export default function ReportsPage() {
     exportFilters.startDate && exportFilters.endDate && exportFilters.startDate > exportFilters.endDate
   )
   const selectedStatusLabel = availableStatusOptions.find((option) => option.value === exportFilters.status)?.label
+  const selectedCategoryLabel = availableCategoryOptions.find((option) => option.value === exportFilters.category)?.label
   const selectedTypeLabel = availableTypeOptions.find((option) => option.value === exportFilters.type)?.label
   const selectedUserLabel =
     canSelectReportUser && exportFilters.userId
@@ -541,6 +551,7 @@ export default function ReportsPage() {
   const activeExportFilterLabels = [
     selectedReportType.label,
     periodLabel,
+    selectedCategoryLabel ? `Kategori: ${selectedCategoryLabel}` : null,
     selectedStatusLabel ? `${exportFilters.reportType === "usage" ? "Konteks" : "Status"}: ${selectedStatusLabel}` : null,
     selectedTypeLabel ? `Jenis: ${selectedTypeLabel}` : null,
     showUserFilter ? `User: ${selectedUserLabel}` : null,
@@ -550,6 +561,7 @@ export default function ReportsPage() {
     setExportFilters((current) => ({
       ...current,
       reportType,
+      category: "",
       status: "",
       type: "",
       userId: reportType === "activity" || reportType === "all" ? current.userId : "",
@@ -715,8 +727,24 @@ export default function ReportsPage() {
                 </Button>
               </div>
 
-              {(showStatusFilter || showTypeFilter || showUserFilter) ? (
+              {(showCategoryFilter || showStatusFilter || showTypeFilter || showUserFilter) ? (
                 <div className="grid gap-3 md:grid-cols-2">
+                  {showCategoryFilter ? (
+                    <label className="space-y-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                      <span>Kategori aset</span>
+                      <select
+                        aria-label="Kategori aset"
+                        value={exportFilters.category}
+                        onChange={(event) => setExportFilters((current) => ({ ...current, category: event.target.value }))}
+                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-xs outline-none transition focus:border-slate-400 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-200"
+                      >
+                        <option value="">Semua kategori</option>
+                        {availableCategoryOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   {showStatusFilter ? (
                     <label className="space-y-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                       <span>{exportFilters.reportType === "usage" ? "Konteks penggunaan" : "Status"}</span>

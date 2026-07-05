@@ -20,7 +20,7 @@ type AssetTypeOption = {
   category: string
 }
 
-const DEFAULT_USAGE_PURPOSE = "Operasional bersama"
+const DEFAULT_USAGE_PURPOSE = "Operasional"
 
 const normalizeText = (value?: string | null) =>
   (value ?? "")
@@ -128,39 +128,39 @@ export const matchNonMedicalTypeFromInventoryName = (inventoryName?: string) =>
   findExactMatchingOption(inventoryName, NON_MEDICAL_ASSET_TYPE_OPTIONS)
 
 const MEDICAL_CATEGORY_USAGE_MAP: Record<string, string> = {
-  "Alat Bedah dan Operasi": "Bedah & Sterilisasi",
-  "Alat Diagnostik dan Pencitraan": "Diagnostik & Pencitraan",
-  "Alat Gawat Darurat": "Terapi & Dukungan Hidup",
-  "Alat ICU/HCU": "ICU & Dukungan Kritis",
-  "Alat Kebidanan dan Kandungan": "Ibu, Bayi & Neonatal",
-  "Alat Kesehatan Dasar dan P3K": "Pemeriksaan & Monitoring",
-  "Alat Laboratorium Medis": "Lab, Farmasi & Sampel",
-  "Alat Pemeriksaan & Tindakan": "Pemeriksaan & Monitoring",
-  "Alat Terapi dan Perawatan": "Terapi & Dukungan Hidup",
-  "Blood Bank & Biologics": "Lab, Farmasi & Sampel",
-  "Dental & ENT": "Spesialistik & Tindakan",
-  "Farmasi & Penyimpanan Sensitif": "Lab, Farmasi & Sampel",
+  "Alat Bedah dan Operasi": "Bedah",
+  "Alat Diagnostik dan Pencitraan": "Diagnostik",
+  "Alat Gawat Darurat": "Terapi",
+  "Alat ICU/HCU": "ICU",
+  "Alat Kebidanan dan Kandungan": "Ibu dan Bayi",
+  "Alat Kesehatan Dasar dan P3K": "Pemeriksaan",
+  "Alat Laboratorium Medis": "Lab",
+  "Alat Pemeriksaan dan Tindakan": "Pemeriksaan",
+  "Alat Terapi dan Perawatan": "Terapi",
+  "Blood Bank dan Biologics": "Lab",
+  "Dental dan ENT": "Tindakan",
+  "Farmasi dan Penyimpanan Sensitif": "Lab",
   Hemodialisis: "Hemodialisis",
-  "Hemodinamika & ICU": "ICU & Dukungan Kritis",
-  "Keamanan & Monitoring Pasien": "Pemeriksaan & Monitoring",
-  Kemoterapi: "Terapi & Dukungan Hidup",
-  "Laboratorium Diagnostik": "Lab, Farmasi & Sampel",
-  "Neurologi & Neuro Monitoring": "Diagnostik & Pencitraan",
-  "Oftalmologi & Optometri": "Spesialistik & Tindakan",
-  "Penunjang & Khusus RS Tipe A": "Diagnostik & Pencitraan",
-  "Perinatologi / NICU": "Ibu, Bayi & Neonatal",
-  "Perlengkapan Ruang Perawatan": "Perawatan & Rawat Inap",
-  "Rehabilitasi & Mobilitas": "Rehabilitasi & Mobilisasi",
-  "Set Instrumen": "Bedah & Sterilisasi",
-  "Set Operasi Bedah": "Bedah & Sterilisasi",
-  "Set Operasi Kebidanan": "Ibu, Bayi & Neonatal",
-  "Sterilisasi & CSSD": "Bedah & Sterilisasi",
-  "Telehealth & Identifikasi Pasien": "Pemeriksaan & Monitoring",
+  "Hemodinamika dan ICU": "ICU",
+  "Keamanan dan Monitoring Pasien": "Pemeriksaan",
+  Kemoterapi: "Terapi",
+  "Laboratorium Diagnostik": "Lab",
+  "Neurologi dan Neuro Monitoring": "Diagnostik",
+  "Oftalmologi dan Optometri": "Tindakan",
+  "Penunjang dan Khusus RS Tipe A": "Diagnostik",
+  "Perinatologi / NICU": "Ibu dan Bayi",
+  "Perlengkapan Ruang Perawatan": "Rawat Inap",
+  "Rehabilitasi dan Mobilitas": "Rehabilitasi",
+  "Set Instrumen": "Bedah",
+  "Set Operasi Bedah": "Bedah",
+  "Set Operasi Kebidanan": "Ibu dan Bayi",
+  "Sterilisasi dan CSSD": "Bedah",
+  "Telehealth dan Identifikasi Pasien": "Pemeriksaan",
 }
 
 const MEDICAL_USAGE_RULES: UsageRule[] = [
   {
-    usagePurpose: "Ibu, Bayi & Neonatal",
+    usagePurpose: "Ibu dan Bayi",
     keywords: [
       "baby",
       "bilirubin",
@@ -193,7 +193,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Lab, Farmasi & Sampel",
+    usagePurpose: "Lab",
     keywords: [
       "analyzer",
       "apheresis",
@@ -236,7 +236,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Bedah & Sterilisasi",
+    usagePurpose: "Bedah",
     keywords: [
       "aer",
       "anesthesia",
@@ -269,7 +269,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "ICU & Dukungan Kritis",
+    usagePurpose: "ICU",
     keywords: [
       "brain oxygen",
       "capnography",
@@ -322,7 +322,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Rehabilitasi & Mobilisasi",
+    usagePurpose: "Rehabilitasi",
     keywords: [
       "balance trainer",
       "fall detection",
@@ -338,7 +338,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Spesialistik & Tindakan",
+    usagePurpose: "Tindakan",
     keywords: [
       "apex locator",
       "audiometer",
@@ -363,7 +363,7 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Diagnostik & Pencitraan",
+    usagePurpose: "Diagnostik",
     keywords: [
       "blood gas",
       "bronchoscope",
@@ -428,32 +428,29 @@ const MEDICAL_USAGE_RULES: UsageRule[] = [
 ]
 
 const NON_MEDICAL_CATEGORY_USAGE_MAP: Record<string, string> = {
-  "Building Automation & Monitoring": "Utilitas & Tata Udara",
-  "Emergency & Evakuasi": "Keamanan & Darurat",
-  "Facility Support & Logistics": "Logistik & Penyimpanan",
-  "Food & Pantry": "Dapur, Laundry & Penunjang",
-  "Furnitur & Perlengkapan Pasien": "Fasilitas & Furnitur",
-  "Furniture Kantor": "Fasilitas & Furnitur",
-  "HVAC & Lingkungan Ruangan": "Utilitas & Tata Udara",
-  "HVAC & Tata Udara": "Utilitas & Tata Udara",
-  "IT & Elektronik": "Administrasi & Komunikasi",
-  "IT & Komunikasi Ruangan": "Administrasi & Komunikasi",
-  "Identifikasi & Label": "Logistik & Penyimpanan",
-  "Keamanan & Kontrol Akses": "Keamanan & Darurat",
-  "Kelistrikan & Power System": "Utilitas & Tata Udara",
-  "Kelistrikan & Utilitas Ruang": "Utilitas & Tata Udara",
-  "Kendaraan Operasional": "Transportasi Operasional",
-  "Logistik & Penyimpanan": "Logistik & Penyimpanan",
-  "Perlengkapan Umum": "Fasilitas & Furnitur",
-  "Proteksi Kebakaran & Evakuasi": "Keamanan & Darurat",
-  "Proteksi Kebakaran": "Keamanan & Darurat",
-  "Sanitasi & Kebersihan": "Kebersihan & Limbah",
-  "Utilities & Mechanical Systems": "Utilitas & Tata Udara",
+  "Otomasi dan Monitoring Gedung": "Utilitas",
+  "Keselamatan Darurat": "Keamanan",
+  "Pendukung Fasilitas dan Logistik": "Logistik",
+  "Dapur dan Pantry": "Dapur",
+  "Furnitur dan Perlengkapan Pasien": "Fasilitas",
+  "Furniture Kantor": "Fasilitas",
+  "HVAC dan Tata Udara": "Utilitas",
+  "IT dan Komunikasi": "Admin",
+  "Identifikasi Aset": "Logistik",
+  "Keamanan dan Akses": "Keamanan",
+  "Kelistrikan dan Utilitas": "Utilitas",
+  "Kendaraan Operasional": "Transportasi",
+  "Logistik": "Logistik",
+  "Perlengkapan Umum": "Fasilitas",
+  "Proteksi Kebakaran dan Evakuasi": "Keamanan",
+  "Proteksi Kebakaran": "Keamanan",
+  "Sanitasi dan Kebersihan": "Kebersihan",
+  "Utilitas dan Sistem Mekanik": "Utilitas",
 }
 
 const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
   {
-    usagePurpose: "Keamanan & Darurat",
+    usagePurpose: "Keamanan",
     keywords: [
       "access control",
       "alarm",
@@ -489,7 +486,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Kebersihan & Limbah",
+    usagePurpose: "Kebersihan",
     keywords: [
       "bucket cleaning",
       "cleaning",
@@ -514,7 +511,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Dapur, Laundry & Penunjang",
+    usagePurpose: "Dapur",
     keywords: [
       "blender",
       "cold room",
@@ -540,7 +537,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Logistik & Penyimpanan",
+    usagePurpose: "Logistik",
     keywords: [
       "asset tracking",
       "automated linen",
@@ -567,7 +564,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Transportasi Operasional",
+    usagePurpose: "Transportasi",
     keywords: [
       "agv",
       "ambulans",
@@ -582,7 +579,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Utilitas & Tata Udara",
+    usagePurpose: "Utilitas",
     keywords: [
       "ac ",
       "access point room cooling",
@@ -648,7 +645,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Administrasi & Komunikasi",
+    usagePurpose: "Admin",
     keywords: [
       "all in one pc",
       "cash drawer",
@@ -692,7 +689,7 @@ const NON_MEDICAL_USAGE_RULES: UsageRule[] = [
     ],
   },
   {
-    usagePurpose: "Fasilitas & Furnitur",
+    usagePurpose: "Fasilitas",
     keywords: [
       "chair",
       "clock",

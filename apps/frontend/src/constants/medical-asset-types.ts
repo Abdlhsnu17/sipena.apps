@@ -59,7 +59,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
 
   // =========================
-  // MONITORING & PEMERIKSAAN
+  // MONITORING dan PEMERIKSAAN
   // =========================
   "patient-monitor": {
     label: "Patient Monitor (ECG/NIBP/SpO₂/Temp)",
@@ -93,42 +93,42 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
   glucometer: {
     label: "Glucometer",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   otoscope: {
     label: "Otoscope",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   ophthalmoscope: {
     label: "Ophthalmoscope",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   "reflex-hammer": {
     label: "Reflex Hammer",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   "tuning-fork": {
     label: "Tuning Fork",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   "examination-bed": {
     label: "Medical Examination Bed / Bed Periksa",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   "examination-lamp": {
     label: "Examination Lamp / Lampu Periksa",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
   "medical-examination-lamp": {
     label: "Medical Examination Lamp (Lampu Periksa)",
-    category: "Alat Pemeriksaan & Tindakan",
+    category: "Alat Pemeriksaan dan Tindakan",
     color: "bg-cyan-100 text-cyan-800",
   },
 
@@ -136,7 +136,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   // TERAPI, OKSIGEN, NAFAS
   // =========================
   "oxygen-flowmeter": {
-    label: "Oxygen Flowmeter & Humidifier",
+    label: "Oxygen Flowmeter dan Humidifier",
     category: "Alat Terapi dan Perawatan",
     color: "bg-green-100 text-green-800",
   },
@@ -222,7 +222,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
 
   // =========================
-  // JANTUNG & RESUSITASI
+  // JANTUNG dan RESUSITASI
   // =========================
   ekg: {
     label: "ECG/EKG (Portable/Bedside)",
@@ -251,7 +251,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
 
   // =========================
-  // AIRWAY & TRAUMA IGD
+  // AIRWAY dan TRAUMA IGD
   // =========================
   laryngoscope: {
     label: "Laryngoscope Set",
@@ -294,7 +294,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   // =========================
   "autoclave-mini": {
     label: "Autoclave Kecil / Sterilizer Kecil",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "minor-surgery-set": {
@@ -471,7 +471,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "spill-kit": {
-    label: "PPE & Spill Kit Kemoterapi",
+    label: "PPE dan Spill Kit Kemoterapi",
     category: "Kemoterapi",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
@@ -777,12 +777,12 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
     color: "bg-orange-100 text-orange-800",
   },
   "elisa-reader-washer": {
-    label: "ELISA Reader & Washer",
+    label: "ELISA Reader dan Washer",
     category: "Laboratorium Diagnostik",
     color: "bg-orange-100 text-orange-800",
   },
   "centrifuge-lab-blood-bank": {
-    label: "Centrifuge (Lab & Blood Bank)",
+    label: "Centrifuge (Lab dan Blood Bank)",
     category: "Laboratorium Diagnostik",
     color: "bg-orange-100 text-orange-800",
   },
@@ -822,7 +822,7 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
     color: "bg-orange-100 text-orange-800",
   },
   "slide-stainer": {
-    label: "Slide Stainer (H&E / IHC)",
+    label: "Slide Stainer (H dan E / IHC)",
     category: "Laboratorium Diagnostik",
     color: "bg-orange-100 text-orange-800",
   },
@@ -833,442 +833,442 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
 
   // =========================
-  // BLOOD BANK & BIOLOGICS
+  // BLOOD BANK dan BIOLOGICS
   // =========================
   "blood-bank-refrigerator": {
     label: "Blood Bank Refrigerator",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "plasma-freezer": {
     label: "Plasma Freezer (-30°C / -80°C)",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "platelet-agitator-incubator": {
-    label: "Platelet Agitator & Incubator",
-    category: "Blood Bank & Biologics",
+    label: "Platelet Agitator dan Incubator",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "blood-thawing-system": {
     label: "Blood Thawing System",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "blood-irradiator": {
     label: "Blood Irradiator",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "apheresis-machine": {
     label: "Apheresis Machine",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "blood-bag-sealer": {
     label: "Blood Bag Sealer",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "hemoglobinometer": {
     label: "Hemoglobinometer",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
   "crossmatch-analyzer": {
     label: "Crossmatch Analyzer",
-    category: "Blood Bank & Biologics",
+    category: "Blood Bank dan Biologics",
     color: "bg-fuchsia-100 text-fuchsia-800",
   },
 
   // =========================
-  // STERILISASI & CSSD
+  // STERILISASI dan CSSD
   // =========================
   "steam-generator-autoclave": {
     label: "Steam Generator Autoclave",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "pass-through-autoclave": {
     label: "Pass-Through Autoclave",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "instrument-tracking-system-rfid": {
     label: "Instrument Tracking System (RFID)",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "endoscope-reprocessor-aer": {
     label: "Endoscope Reprocessor (AER)",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "drying-cabinet-endoscope": {
     label: "Drying Cabinet Endoscope",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "sterile-storage-cabinet-hepa": {
     label: "Sterile Storage Cabinet (HEPA)",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "packing-sealing-machine": {
-    label: "Packing & Sealing Machine",
-    category: "Sterilisasi & CSSD",
+    label: "Packing dan Sealing Machine",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "bowie-dick-test-system": {
     label: "Bowie-Dick Test System",
-    category: "Sterilisasi & CSSD",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
   "chemical-biological-indicator-reader": {
-    label: "Chemical & Biological Indicator Reader",
-    category: "Sterilisasi & CSSD",
+    label: "Chemical dan Biological Indicator Reader",
+    category: "Sterilisasi dan CSSD",
     color: "bg-teal-100 text-teal-800",
   },
 
   // =========================
-  // HEMODINAMIKA & ICU
+  // HEMODINAMIKA dan ICU
   // =========================
   "hemodynamic-monitoring-system": {
     label: "Hemodynamic Monitoring System",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "cardiac-output-monitor": {
     label: "Cardiac Output Monitor",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   iabp: {
     label: "IABP (Intra-Aortic Balloon Pump)",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "nitric-oxide-delivery-system": {
     label: "Nitric Oxide Delivery System",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "bed-scale-icu-integrated": {
     label: "Bed Scale (ICU Integrated)",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "pressure-ulcer-prevention-system": {
     label: "Pressure Ulcer Prevention System",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "closed-suction-system": {
     label: "Closed Suction System",
-    category: "Hemodinamika & ICU",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
   "icu-ceiling-pendant": {
-    label: "ICU Ceiling Pendant (Gas & Electric)",
-    category: "Hemodinamika & ICU",
+    label: "ICU Ceiling Pendant (Gas dan Electric)",
+    category: "Hemodinamika dan ICU",
     color: "bg-rose-100 text-rose-800",
   },
 
   // =========================
-  // NEUROLOGI & MONITORING
+  // NEUROLOGI dan MONITORING
   // =========================
   "eeg-system": {
     label: "EEG System",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "emg-nerve-conduction-study": {
     label: "EMG / Nerve Conduction Study",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "tcd-transcranial-doppler": {
     label: "TCD (Transcranial Doppler)",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "intracranial-pressure-monitor": {
     label: "Intracranial Pressure Monitor (ICP)",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "brain-oxygen-monitor": {
     label: "Brain Oxygen Monitor",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "neuro-navigation-system": {
     label: "Neuro Navigation System",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
   "stereotactic-frame": {
     label: "Stereotactic Frame",
-    category: "Neurologi & Neuro Monitoring",
+    category: "Neurologi dan Neuro Monitoring",
     color: "bg-indigo-100 text-indigo-800",
   },
 
   // =========================
-  // OFTALMOLOGI & OPTOMETRI
+  // OFTALMOLOGI dan OPTOMETRI
   // =========================
   "slit-lamp": {
     label: "Slit Lamp",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "fundus-camera": {
     label: "Fundus Camera",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "oct-scanner": {
     label: "OCT (Optical Coherence Tomography)",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "auto-refractometer": {
     label: "Auto Refractometer",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "phacoemulsification-system": {
     label: "Phacoemulsification System",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "yag-laser": {
     label: "YAG Laser",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "operating-microscope-eye": {
     label: "Operating Microscope (Eye)",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
   "visual-field-analyzer": {
     label: "Visual Field Analyzer",
-    category: "Oftalmologi & Optometri",
+    category: "Oftalmologi dan Optometri",
     color: "bg-cyan-100 text-cyan-800",
   },
 
   // =========================
-  // DENTAL & ENT
+  // DENTAL dan ENT
   // =========================
   "dental-unit": {
     label: "Dental Unit",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "dental-xray": {
     label: "Dental X-Ray",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "panoramic-xray-opg": {
     label: "Panoramic X-Ray (OPG)",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "cbct-dental": {
     label: "CBCT Dental",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "ultrasonic-scaler": {
     label: "Ultrasonic Scaler",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "dental-autoclave": {
     label: "Dental Autoclave",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "dental-suction-system": {
     label: "Dental Suction System",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "ent-examination-unit": {
     label: "ENT Examination Unit",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   audiometer: {
     label: "Audiometer",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   tympanometer: {
     label: "Tympanometer",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "endoscopy-ent-tower": {
     label: "Endoscopy ENT Tower",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "ent-microscope": {
     label: "ENT Microscope",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "coblator-system": {
     label: "Coblator System",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
   "hearing-screening-device": {
     label: "Hearing Screening Device (OAE/ABR)",
-    category: "Dental & ENT",
+    category: "Dental dan ENT",
     color: "bg-purple-100 text-purple-800",
   },
 
   // =========================
-  // REHABILITASI & MOBILITAS
+  // REHABILITASI dan MOBILITAS
   // =========================
   "parallel-bar": {
     label: "Parallel Bar",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "gait-trainer": {
     label: "Gait Trainer",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "standing-frame": {
     label: "Standing Frame",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "robotic-gait-training-system": {
     label: "Robotic Gait Training System",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "upper-limb-rehabilitation-robot": {
     label: "Upper Limb Rehabilitation Robot",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "balance-trainer-system": {
     label: "Balance Trainer System",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "wheelchair-medical-grade": {
     label: "Wheelchair Medical Grade",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
   "patient-hoist-lifter": {
     label: "Patient Hoist / Lifter",
-    category: "Rehabilitasi & Mobilitas",
+    category: "Rehabilitasi dan Mobilitas",
     color: "bg-amber-100 text-amber-800",
   },
 
   // =========================
-  // KEAMANAN & MONITORING PASIEN
+  // KEAMANAN dan MONITORING PASIEN
   // =========================
   "anti-fall-monitoring-system": {
     label: "Anti-Fall Monitoring System",
-    category: "Keamanan & Monitoring Pasien",
+    category: "Keamanan dan Monitoring Pasien",
     color: "bg-slate-100 text-slate-800",
   },
   "patient-fall-detection-system": {
     label: "Patient Fall Detection System",
-    category: "Keamanan & Monitoring Pasien",
+    category: "Keamanan dan Monitoring Pasien",
     color: "bg-slate-100 text-slate-800",
   },
   "nurse-call-system-medical": {
     label: "Nurse Call System",
-    category: "Keamanan & Monitoring Pasien",
+    category: "Keamanan dan Monitoring Pasien",
     color: "bg-slate-100 text-slate-800",
   },
   "bed-exit-alarm": {
     label: "Bed Exit Alarm",
-    category: "Keamanan & Monitoring Pasien",
+    category: "Keamanan dan Monitoring Pasien",
     color: "bg-slate-100 text-slate-800",
   },
   "medical-gas-alarm-system": {
     label: "Medical Gas Alarm System",
-    category: "Keamanan & Monitoring Pasien",
+    category: "Keamanan dan Monitoring Pasien",
     color: "bg-slate-100 text-slate-800",
   },
 
   // =========================
-  // FARMASI & PENYIMPANAN SENSITIF
+  // FARMASI dan PENYIMPANAN SENSITIF
   // =========================
   "temperature-humidity-monitoring-pharmacy-cssd": {
-    label: "Temperature & Humidity Monitoring (Pharmacy/CSSD)",
-    category: "Farmasi & Penyimpanan Sensitif",
+    label: "Temperature dan Humidity Monitoring (Pharmacy/CSSD)",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "refrigerator-monitoring-vaccine-drug": {
     label: "Refrigerator Monitoring System (Vaccine/Drug)",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "ups-medical-grade": {
     label: "UPS Medical Grade",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "isolation-room-pressure-monitor": {
     label: "Isolation Room Pressure Monitor",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "medical-refrigerator": {
     label: "Medical Refrigerator (Drug/Vaccine)",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "warming-cabinet": {
     label: "Warming Cabinet (Blanket/Fluid)",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
   "medication-cart-locked": {
     label: "Medication Cart (Locked)",
-    category: "Farmasi & Penyimpanan Sensitif",
+    category: "Farmasi dan Penyimpanan Sensitif",
     color: "bg-sky-100 text-sky-800",
   },
 
   // =========================
-  // TELEHEALTH & IDENTIFIKASI PASIEN
+  // TELEHEALTH dan IDENTIFIKASI PASIEN
   // =========================
   "smart-iv-pole": {
     label: "Smart IV Pole",
-    category: "Telehealth & Identifikasi Pasien",
+    category: "Telehealth dan Identifikasi Pasien",
     color: "bg-blue-100 text-blue-800",
   },
   "mobile-workstation-wow": {
     label: "Mobile Workstation on Wheels (WOW)",
-    category: "Telehealth & Identifikasi Pasien",
+    category: "Telehealth dan Identifikasi Pasien",
     color: "bg-blue-100 text-blue-800",
   },
   "telemedicine-cart": {
     label: "Telemedicine Cart",
-    category: "Telehealth & Identifikasi Pasien",
+    category: "Telehealth dan Identifikasi Pasien",
     color: "bg-blue-100 text-blue-800",
   },
   "digital-consent-system-bedside": {
     label: "Digital Consent System (Bedside)",
-    category: "Telehealth & Identifikasi Pasien",
+    category: "Telehealth dan Identifikasi Pasien",
     color: "bg-blue-100 text-blue-800",
   },
   "smart-patient-id-wristband-system": {
     label: "Smart Patient ID Wristband System",
-    category: "Telehealth & Identifikasi Pasien",
+    category: "Telehealth dan Identifikasi Pasien",
     color: "bg-blue-100 text-blue-800",
   },
 
@@ -1290,12 +1290,12 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   // =========================
   "pet-ct": {
     label: "PET-CT",
-    category: "Penunjang & Khusus RS Tipe A",
+    category: "Penunjang dan Khusus RS Tipe A",
     color: "bg-teal-100 text-teal-800",
   },
   dsa: {
     label: "DSA / Cath Lab",
-    category: "Penunjang & Khusus RS Tipe A",
+    category: "Penunjang dan Khusus RS Tipe A",
     color: "bg-teal-100 text-teal-800",
   },
 }

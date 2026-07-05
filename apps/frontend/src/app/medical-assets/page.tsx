@@ -1,6 +1,5 @@
 "use client"
 
-import { MEDICAL_ASSET_CATEGORIES } from "@/components/medical-asset-categories";
 import MedicalAssetForm from "@/components/medical-asset-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,9 +20,9 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 
 
 import { AssetImportDialog } from "@/components/asset-import-dialog";
-import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
+import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,8 +52,8 @@ export default function MedicalAssetsPage() {
   const [filterCategory, setFilterCategory] = useState("Semua")
   const [isResettingInventory, setIsResettingInventory] = useState(false)
 
-  const categoryOptions = Object.keys(MEDICAL_ASSET_CATEGORIES)
-  const defaultCategory = categoryOptions[0] ?? "Alat Diagnostik dan Pencitraan"
+  const categoryOptions = ["Medis"]
+  const defaultCategory = "Medis"
   const roomFormRef = useRef<HTMLDivElement | null>(null)
   const [roomFormData, setRoomFormData] = useState({
     roomName: "",
@@ -99,7 +98,7 @@ export default function MedicalAssetsPage() {
           roomName: asset.location || "",
           assetName: asset.name,
           assetCode: asset.assetCode,
-          category: asset.category,
+          category: defaultCategory,
           assets: details,
         }
       })
