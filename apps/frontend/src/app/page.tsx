@@ -390,37 +390,33 @@ export default function DashboardPage() {
     <div className="min-h-full">
       <div className="space-y-6">
         {/* Quick Actions */}
-        <Card className="rounded-[28px] border-0 bg-linear-to-br from-teal-50/80 via-white/80 to-cyan-50/80 shadow-[0_30px_60px_rgba(14,165,233,0.15)] dark:border dark:border-slate-800/35 dark:from-slate-900/60 dark:via-slate-900/60 dark:to-slate-900/60 dark:shadow-none">
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {quickActions.map((action) => {
-                const Icon = action.icon
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => handleQuickActionClick(action)}
-                    className={`group flex h-full flex-col justify-between rounded-3xl border border-white/50 bg-linear-to-br ${action.gradient} p-5 text-left shadow-[0_25px_45px_rgba(15,23,42,0.25)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500`}
-                    aria-label={`Navigasi ke ${action.label}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/30 text-white backdrop-blur dark:bg-white/15">
-                        <Icon className="h-5 w-5 text-white" />
-                      </span>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-semibold text-white">{action.label}</p>
-                        <p className="text-xs text-white/80">{action.description}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <ArrowRight className="h-4 w-4 text-white/80" />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {quickActions.map((action) => {
+            const Icon = action.icon
+            return (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => handleQuickActionClick(action)}
+                className={`group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br ${action.gradient} p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500`}
+                aria-label={`Navigasi ke ${action.label}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur dark:bg-white/15">
+                    <Icon className="h-5 w-5 text-white" />
+                  </span>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-base font-bold text-white">{action.label}</p>
+                    <p className="text-xs text-white/90">{action.description}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center">
+                  <ArrowRight className="h-4 w-4 text-white/80" />
+                </div>
+              </button>
+            )
+          })}
+        </section>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
