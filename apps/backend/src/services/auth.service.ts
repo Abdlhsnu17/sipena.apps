@@ -11,15 +11,15 @@ import {
     User
 } from '../types/auth';
 import {
+    isValidPhoneNumber,
+    normalizePhoneNumberForStorage,
+    sendPasswordResetOtp,
+} from '../utils/otp-delivery';
+import {
     deletePasswordResetSession,
     getPasswordResetSession,
     savePasswordResetSession
 } from '../utils/password-reset-store';
-import {
-  isValidPhoneNumber,
-  normalizePhoneNumberForStorage,
-  sendPasswordResetOtp,
-} from '../utils/otp-delivery';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -73,6 +73,8 @@ export class AuthService {
   private static readonly PASSWORD_RESET_MAX_ATTEMPTS = 5;
   private static readonly MAX_FAILED_LOGIN_ATTEMPTS = 5;
   private static readonly ACCOUNT_LOCK_DURATION_MINUTES = 15;
+  private static readonly PASSWORD_RESET_REQUEST_MESSAGE =
+    'Jika data Anda terdaftar, kode verifikasi akan dikirim melalui kanal yang tersedia.';
 
   private mapRowToUser(row: UserRow): User {
     return {
@@ -239,15 +241,13 @@ export class AuthService {
     );
 
     if (rows.length === 0) {
-      return { success: false, message: 'NIP tidak ditemukan' };
+      return { success: true, message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE };
     }
 
     const user = rows[0];
     if (!user.phone_number || !isValidPhoneNumber(user.phone_number)) {
-      return {
-        success: false,
-        message: 'Nomor WhatsApp/SMS pengguna belum tersedia atau tidak valid. Hubungi admin.'
-      };
+      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; skipping OTP delivery.`);
+      return { success: true, message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE };
     }
     const verificationCode = this.generateVerificationCode();
     const expiresAt = Date.now() + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
@@ -294,16 +294,16 @@ export class AuthService {
     return {
       success: true,
       message: deliveryResult.preview
-        ? 'Kode verifikasi berhasil dibuat. Karena mode pengembangan aktif, kode ditampilkan sebagai preview lokal.'
-        : deliveryResult.channel === 'whatsapp'
-          ? 'Kode verifikasi berhasil dikirim ke WhatsApp terdaftar.'
-          : 'WhatsApp tidak tersedia. Kode verifikasi dikirim melalui SMS.',
-      data: {
-        deliveryTarget: deliveryResult.preview ? 'Preview lokal aplikasi' : deliveryResult.deliveryTarget,
-        expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-        deliveryMethod: deliveryResult.preview ? 'local_preview' : deliveryResult.channel,
-        previewCode: deliveryResult.preview ? verificationCode : undefined,
-      }
+        ? 'Kode verifikasi tersedia di preview lokal pengembangan.'
+        : AuthService.PASSWORD_RESET_REQUEST_MESSAGE,
+      data: deliveryResult.preview
+        ? {
+            deliveryTarget: 'Preview lokal aplikasi',
+            expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+            deliveryMethod: 'local_preview',
+            previewCode: verificationCode,
+          }
+        : undefined
     };
   }
 
@@ -315,7 +315,10 @@ export class AuthService {
     );
 
     if (rows.length === 0) {
-      return { success: false, message: 'Pengguna tidak ditemukan' };
+      return {
+        success: false,
+        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
+      };
     }
 
     const user = rows[0];
@@ -324,7 +327,7 @@ export class AuthService {
     if (!session || session.userId !== user.id) {
       return {
         success: false,
-        message: 'Kode verifikasi tidak ditemukan atau sudah kedaluwarsa. Silakan minta kode baru.'
+        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
       };
     }
 
@@ -335,7 +338,7 @@ export class AuthService {
         await deletePasswordResetSession(nip);
         return {
           success: false,
-          message: 'Kode verifikasi salah terlalu banyak kali. Silakan minta kode baru.'
+          message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
         };
       }
 
@@ -346,7 +349,7 @@ export class AuthService {
 
       return {
         success: false,
-        message: `Kode verifikasi salah. Sisa percobaan: ${nextAttemptsLeft}.`
+        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
       };
     }
 

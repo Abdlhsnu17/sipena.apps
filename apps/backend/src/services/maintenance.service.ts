@@ -12,6 +12,7 @@ import {
     UpdateMaintenanceDTO
 } from '../models';
 import { formatCostLabel, formatDateTimeForMySQL, generateMaintenanceCode } from '../utils/helpers';
+import { sendPhoneNotification } from '../utils/notification-delivery';
 import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import * as MaintenanceHistoryService from './maintenance_history.service';
@@ -36,8 +37,33 @@ const toLocalIsoDateTime = (value?: string | Date | null): string => {
   const pad = (num: number) => String(num).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
+const formatMaintenanceStatusLabel = (status?: string | null): string => {
+  switch (status) {
+    case 'requested':
+      return 'diajukan';
+    case 'scheduled':
+      return 'disetujui';
+    case 'in_progress':
+      return 'diproses';
+    case 'completed':
+      return 'selesai perbaikan';
+    case 'validated':
+      return 'divalidasi';
+    case 'cancelled':
+      return 'dibatalkan';
+    default:
+      return status || 'diproses';
+  }
+};
+const shouldSendMaintenancePhoneNotification = (status?: string | null): boolean =>
+  ['scheduled', 'in_progress', 'completed', 'validated', 'cancelled'].includes(String(status || ''));
 interface CountRow extends RowDataPacket {
   count: number;
+}
+
+interface UserNotificationRow extends RowDataPacket {
+  name?: string | null;
+  phone_number?: string | null;
 }
 
 export class MaintenanceService {
@@ -560,6 +586,65 @@ export class MaintenanceService {
     return null;
   }
 
+  private async getUserNotificationTarget(userId?: number | string | null): Promise<{ name?: string; phoneNumber?: string } | null> {
+    const normalizedUserId = this.normalizeAssetId(userId);
+    if (!normalizedUserId) return null;
+
+    const [rows] = await pool.query<UserNotificationRow[]>(
+      'SELECT name, phone_number FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+      [normalizedUserId]
+    );
+
+    const row = rows[0];
+    if (!row) return null;
+
+    return {
+      name: row.name || undefined,
+      phoneNumber: row.phone_number || undefined,
+    };
+  }
+
+  private async notifyMaintenancePhone(params: {
+    userId?: number | string | null;
+    action: 'created' | 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled';
+    maintenanceCode?: string | null;
+    assetName?: string | null;
+    status?: string | null;
+    scheduledDate?: string | Date | null;
+  }): Promise<void> {
+    try {
+      const target = await this.getUserNotificationTarget(params.userId);
+      if (!target?.phoneNumber) return;
+
+      const code = params.maintenanceCode ? ` ${params.maintenanceCode}` : '';
+      const assetName = params.assetName || 'aset';
+      const statusLabel = formatMaintenanceStatusLabel(params.status);
+      const scheduleSuffix = this.formatDateOnly(params.scheduledDate)
+        ? ` Jadwal: ${this.formatDateOnly(params.scheduledDate)}.`
+        : '';
+      const titleMap: Record<'created' | 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled', string> = {
+        created: 'Pemeliharaan baru dibuat',
+        scheduled: 'Pemeliharaan disetujui',
+        in_progress: 'Pemeliharaan diproses',
+        completed: 'Pemeliharaan selesai perbaikan',
+        validated: 'Pemeliharaan divalidasi',
+        cancelled: 'Pemeliharaan dibatalkan',
+      };
+
+      await sendPhoneNotification({
+        phoneNumber: target.phoneNumber,
+        userName: target.name,
+        title: titleMap[params.action],
+        message: `${assetName}${code} ${statusLabel}.${scheduleSuffix}`,
+        referenceCode: params.maintenanceCode || undefined,
+        referenceType: 'maintenance',
+        link: '/maintenance',
+      });
+    } catch (error) {
+      console.error('[Maintenance Notification] Gagal mengirim notifikasi HP:', error);
+    }
+  }
+
   async getAll(filters: MaintenanceFilters): Promise<PaginatedResponse<Maintenance>> {
     const { page, limit, status, view, assetId, assetType, type, actorUserId, actorRole, actorWorkUnit } = filters;
     const offset = (page - 1) * limit;
@@ -845,6 +930,18 @@ export class MaintenanceService {
       scheduledDate: toLocalIsoDateTime(newMaintenance.scheduled_date ?? null),
       costLabel: formatCostLabel(newMaintenance.cost),
     };
+
+    if (shouldSendMaintenancePhoneNotification(newMaintenance.status)) {
+      await this.notifyMaintenancePhone({
+        userId: newMaintenance.created_by || data.createdBy,
+        action: newMaintenance.status as 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled',
+        maintenanceCode,
+        assetName: asset.data?.name || newMaintenance.asset_detail_name || undefined,
+        status: newMaintenance.status,
+        scheduledDate: newMaintenance.scheduled_date ?? scheduledDateValue,
+      });
+    }
+
     return { success: true, message: 'Maintenance record created successfully', data: dataWithLabel };
   }
 
@@ -1017,6 +1114,17 @@ export class MaintenanceService {
       [id]
     );
 
+    if (nextStatus && currentStatus !== nextStatus && shouldSendMaintenancePhoneNotification(nextStatus)) {
+      await this.notifyMaintenancePhone({
+        userId: existingMaintenance.createdBy ?? existingMaintenance.created_by,
+        action: nextStatus,
+        maintenanceCode: rows[0]?.maintenanceCode || rows[0]?.maintenance_code || existingMaintenance.maintenanceCode || existingMaintenance.maintenance_code,
+        assetName: rows[0]?.assetName || rows[0]?.asset_name || existingMaintenance.assetName || existingMaintenance.asset_name,
+        status: rows[0]?.status || nextStatus,
+        scheduledDate: rows[0]?.scheduledDate || rows[0]?.scheduled_date || nextScheduledDate,
+      });
+    }
+
     return { success: true, message: 'Maintenance record updated successfully', data: rows[0] };
   }
 
@@ -1090,6 +1198,16 @@ export class MaintenanceService {
 
     const updated = await this.getById(id);
     if (!updated.success) return updated;
+
+    await this.notifyMaintenancePhone({
+      userId: maintenanceData.createdBy ?? maintenanceData.created_by,
+      action: 'completed',
+      maintenanceCode: maintenanceData.maintenanceCode ?? maintenanceData.maintenance_code,
+      assetName: maintenanceData.assetName ?? maintenanceData.asset_name,
+      status: 'completed',
+      scheduledDate: maintenanceData.scheduledDate ?? maintenanceData.scheduled_date,
+    });
+
     return {
       ...updated,
       message: 'Pemeliharaan selesai diperbaiki dan menunggu validasi akhir'
@@ -1155,6 +1273,15 @@ export class MaintenanceService {
 
     const updated = await this.getById(id);
     if (!updated.success) return updated;
+
+    await this.notifyMaintenancePhone({
+      userId: maintenanceData.createdBy ?? maintenanceData.created_by,
+      action: 'validated',
+      maintenanceCode: maintenanceData.maintenanceCode ?? maintenanceData.maintenance_code,
+      assetName: maintenanceData.assetName ?? maintenanceData.asset_name,
+      status: 'validated',
+      scheduledDate: maintenanceData.scheduledDate ?? maintenanceData.scheduled_date,
+    });
 
     return {
       ...updated,

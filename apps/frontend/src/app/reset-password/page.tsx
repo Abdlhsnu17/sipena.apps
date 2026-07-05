@@ -148,7 +148,7 @@ export default function ResetPasswordPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Kode verifikasi akan dikirim ke WhatsApp terdaftar. Jika gagal, sistem akan mencoba SMS. Pada mode development, kode bisa muncul sebagai preview lokal.
+                  Jika data terdaftar, kode verifikasi akan dikirim melalui kanal yang tersedia. Pada mode development, kode bisa muncul sebagai preview lokal.
                 </p>
               </div>
 
@@ -170,8 +170,17 @@ export default function ResetPasswordPage() {
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-3">
               <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
-                Kode verifikasi tersedia di <span className="font-medium">{deliveryTarget || "aplikasi lokal"}</span>.
-                {expiresInMinutes ? ` Berlaku selama ${expiresInMinutes} menit.` : ""}
+                {deliveryMethod === "local_preview" && deliveryTarget ? (
+                  <>
+                    Kode verifikasi tersedia di <span className="font-medium">{deliveryTarget}</span>.
+                    {expiresInMinutes ? ` Berlaku selama ${expiresInMinutes} menit.` : ""}
+                  </>
+                ) : (
+                  <>
+                    Jika data terdaftar, kode verifikasi sudah dikirim ke kanal yang tersedia.
+                    {expiresInMinutes ? ` Kode berlaku selama ${expiresInMinutes} menit.` : ""}
+                  </>
+                )}
               </div>
 
               {deliveryMethod === "local_preview" && (
