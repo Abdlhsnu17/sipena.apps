@@ -853,7 +853,11 @@ export default function BorrowingPage() {
     ].filter(Boolean)
 
     if (missingRequiredFields.length > 0) {
-      alert(`Mohon lengkapi field berikut: ${missingRequiredFields.join(", ")}`)
+      toast({
+        title: "Formulir belum lengkap",
+        description: `Lengkapi field berikut: ${missingRequiredFields.join(", ")}.`,
+        variant: "destructive",
+      })
       return
     }
 
@@ -876,7 +880,11 @@ export default function BorrowingPage() {
 
       const blockedAsset = usageChecks.find((item) => item.hasActiveUsage)
       if (blockedAsset) {
-        alert(`Aset ${formatInventoryLabel(blockedAsset.asset)} sedang dalam penggunaan aktif dan belum dapat dipinjam.`)
+        toast({
+          title: "Aset belum dapat dipinjam",
+          description: `${formatInventoryLabel(blockedAsset.asset)} sedang dalam penggunaan aktif.`,
+          variant: "destructive",
+        })
         return
       }
     } catch (usageError) {
@@ -918,8 +926,9 @@ export default function BorrowingPage() {
 
           successLabels.push(formatInventoryLabel(selectedAsset))
         } catch (error: any) {
+          console.error("Error creating borrowing item:", error)
           failedAssets.push(selectedAsset)
-          failureMessages.push(`${formatInventoryLabel(selectedAsset)}: ${error.message || "Gagal dibuat"}`)
+          failureMessages.push(`${formatInventoryLabel(selectedAsset)}: peminjaman belum dapat dibuat.`)
         }
       }
 
@@ -957,9 +966,10 @@ export default function BorrowingPage() {
         variant: "destructive",
       })
     } catch (error: any) {
+      console.error("Error creating borrowing:", error)
       toast({
-        title: "Gagal",
-        description: error.message || "Gagal membuat peminjaman",
+        title: "Peminjaman belum tersimpan",
+        description: "Terjadi kesalahan saat membuat peminjaman.",
         variant: "destructive",
       })
     }
@@ -967,7 +977,11 @@ export default function BorrowingPage() {
 
   const handleDeleteBorrowing = async (borrowing: ApiBorrowing) => {
     if (!canDeleteBorrowing) {
-      alert("Hanya Admin yang dapat menghapus data peminjaman")
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin yang dapat menghapus data peminjaman.",
+        variant: "destructive",
+      })
       return
     }
     const isConfirmed = await confirm({
@@ -985,21 +999,34 @@ export default function BorrowingPage() {
     if (!pendingDeleteBorrowing) return
     const reason = deleteReason.trim()
     if (!reason) {
-      alert("Alasan penghapusan wajib diisi")
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penghapusan sebelum melanjutkan.",
+        variant: "destructive",
+      })
       return
     }
     setIsDeletingBorrowing(true)
     try {
       const response = await borrowingService.delete(pendingDeleteBorrowing.id, reason)
       if (!response.success) {
-        alert(response.message || "Gagal menghapus peminjaman")
+        toast({
+          title: "Peminjaman belum terhapus",
+          description: response.message || "Data peminjaman belum dapat dihapus.",
+          variant: "destructive",
+        })
         return
       }
       setPendingDeleteBorrowing(null)
       setDeleteReason("")
       await refreshOperationalDataAndNotify()
     } catch (error: any) {
-      alert(error.message || "Gagal menghapus peminjaman")
+      console.error("Error deleting borrowing:", error)
+      toast({
+        title: "Peminjaman belum terhapus",
+        description: "Terjadi kesalahan saat menghapus data peminjaman.",
+        variant: "destructive",
+      })
     } finally {
       setIsDeletingBorrowing(false)
     }
@@ -1048,9 +1075,10 @@ export default function BorrowingPage() {
         description: "Status peminjaman sudah diperbarui.",
       })
     } catch (error: any) {
+      console.error("Error approving borrowing:", error)
       toast({
         title: "Persetujuan gagal",
-        description: error.message || "Gagal menyetujui peminjaman.",
+        description: "Terjadi kesalahan saat menyetujui peminjaman.",
         variant: "destructive",
       })
     } finally {
@@ -1114,9 +1142,10 @@ export default function BorrowingPage() {
         description: "Status peminjaman sudah diperbarui.",
       })
     } catch (error: any) {
+      console.error("Error rejecting borrowing:", error)
       toast({
         title: "Penolakan gagal",
-        description: error.message || "Gagal menolak peminjaman.",
+        description: "Terjadi kesalahan saat menolak peminjaman.",
         variant: "destructive",
       })
     } finally {
@@ -1129,7 +1158,11 @@ export default function BorrowingPage() {
     if (!pendingArchiveBorrowingRequest) return
     const reason = deleteReason.trim()
     if (!reason) {
-      alert("Alasan penghapusan wajib diisi")
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penghapusan sebelum mengirim permintaan.",
+        variant: "destructive",
+      })
       return
     }
     setIsDeletingBorrowing(true)
@@ -1141,14 +1174,23 @@ export default function BorrowingPage() {
         reason,
       })
       if (!response.success) {
-        alert(response.message || "Gagal mengajukan penghapusan peminjaman")
+        toast({
+          title: "Permintaan belum terkirim",
+          description: response.message || "Permintaan penghapusan peminjaman belum dapat dikirim.",
+          variant: "destructive",
+        })
         return
       }
       setPendingArchiveBorrowingRequest(null)
       setDeleteReason("")
       toast({ title: "Permintaan penghapusan diajukan" })
     } catch (error: any) {
-      alert(error.message || "Gagal mengajukan penghapusan peminjaman")
+      console.error("Error requesting borrowing deletion:", error)
+      toast({
+        title: "Permintaan belum terkirim",
+        description: "Terjadi kesalahan saat mengirim permintaan penghapusan peminjaman.",
+        variant: "destructive",
+      })
     } finally {
       setIsDeletingBorrowing(false)
     }
@@ -1207,7 +1249,11 @@ export default function BorrowingPage() {
       !editForm.ownerWorkUnit.trim() ||
       !editForm.destinationRoom.trim()
     ) {
-      alert("Lengkapi field formulir yang wajib diisi")
+      toast({
+        title: "Formulir belum lengkap",
+        description: "Lengkapi field wajib sebelum menyimpan perubahan.",
+        variant: "destructive",
+      })
       return
     }
     setEditSubmitting(true)
@@ -1230,13 +1276,22 @@ export default function BorrowingPage() {
       }
       const result = await borrowingService.update(editingBorrowing.id, payload)
       if (!result.success) {
-        alert(result.message || "Gagal menyimpan perubahan")
+        toast({
+          title: "Perubahan belum tersimpan",
+          description: result.message || "Data peminjaman belum dapat diperbarui.",
+          variant: "destructive",
+        })
         return
       }
       await refreshOperationalDataAndNotify()
       handleEditDialogClose()
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan perubahan")
+      console.error("Error editing borrowing:", error)
+      toast({
+        title: "Perubahan belum tersimpan",
+        description: "Terjadi kesalahan saat menyimpan perubahan peminjaman.",
+        variant: "destructive",
+      })
     } finally {
       setEditSubmitting(false)
     }
@@ -1316,9 +1371,10 @@ export default function BorrowingPage() {
         description: "Batas waktu peminjaman sudah diperbarui.",
       })
     } catch (error: any) {
+      console.error("Error extending borrowing:", error)
       toast({
         title: "Perpanjangan gagal",
-        description: error.message || "Gagal memperpanjang waktu peminjaman.",
+        description: "Terjadi kesalahan saat memperpanjang waktu peminjaman.",
         variant: "destructive",
       })
     } finally {
@@ -1342,13 +1398,16 @@ export default function BorrowingPage() {
       return <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300">Dikembalikan</Badge>
     }
     if (status === "pending") {
-      return <Badge variant="secondary">Menunggu</Badge>
+      return <Badge variant="secondary">Menunggu Persetujuan</Badge>
     }
     if (status === "rejected") {
       return <Badge variant="destructive">Ditolak</Badge>
     }
-    if (status === "approved" || status === "borrowed") {
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/10">Dipinjam</Badge>
+    if (status === "approved") {
+      return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:bg-sky-400/10">Disetujui</Badge>
+    }
+    if (status === "borrowed") {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/10">Sedang Dipinjam</Badge>
     }
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
@@ -2017,7 +2076,7 @@ export default function BorrowingPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Menunggu</p>
+                    <p className="text-[12px] text-muted-foreground">Menunggu Persetujuan</p>
                     <p className="text-xl font-semibold text-amber-600 mt-1">{pendingCount}</p>
                   </div>
                   <Search className="h-4 w-4 text-amber-500 shrink-0" />

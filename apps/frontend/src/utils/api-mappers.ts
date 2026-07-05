@@ -59,10 +59,11 @@ export const deriveAssetStatus = (details: Array<{ status?: string }>): AssetSta
 export const borrowingStatusLabel = (status: string): string => {
   switch (status) {
     case "pending":
-      return "Menunggu"
+      return "Menunggu Persetujuan"
     case "approved":
+      return "Disetujui"
     case "borrowed":
-      return "Dipinjam"
+      return "Sedang Dipinjam"
     case "returned":
       return "Dikembalikan"
     case "overdue":

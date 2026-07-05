@@ -384,7 +384,11 @@ export default function MaintenancePage() {
 
     const cancellationReason = pendingStatusChange.cancellationReason.trim()
     if (!cancellationReason) {
-      alert("Alasan pembatalan wajib diisi")
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan pembatalan sebelum memperbarui status.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -395,7 +399,11 @@ export default function MaintenancePage() {
       })
 
       if (!response.success) {
-        alert(response.message || "Gagal memperbarui status pemeliharaan")
+        toast({
+          title: "Status belum diperbarui",
+          description: response.message || "Status pemeliharaan belum dapat dibatalkan.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -406,7 +414,12 @@ export default function MaintenancePage() {
         description: "Status pemeliharaan sudah diperbarui menjadi dibatalkan.",
       })
     } catch (error: any) {
-      alert(error?.message || "Gagal memperbarui status pemeliharaan")
+      console.error("Error cancelling maintenance:", error)
+      toast({
+        title: "Status belum diperbarui",
+        description: "Terjadi kesalahan saat membatalkan pemeliharaan.",
+        variant: "destructive",
+      })
     } finally {
       setPendingStatusChange(null)
     }
@@ -419,11 +432,19 @@ export default function MaintenancePage() {
 
   const handleSaveMaintenance = async (data: any) => {
     if (!currentUser) {
-      alert("Anda harus login terlebih dahulu")
+      toast({
+        title: "Sesi tidak tersedia",
+        description: "Silakan login terlebih dahulu sebelum menyimpan pemeliharaan.",
+        variant: "destructive",
+      })
       return
     }
     if (!data.assetId || !data.scheduledDate) {
-      alert("Mohon lengkapi data pemeliharaan")
+      toast({
+        title: "Formulir belum lengkap",
+        description: "Pilih aset dan isi jadwal pemeliharaan sebelum menyimpan.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -439,7 +460,11 @@ export default function MaintenancePage() {
         return matchesDetail && !usage.endedAt
       })
       if (hasActiveUsage) {
-        alert("Aset sedang dalam penggunaan aktif dan belum dapat ditambahkan ke pemeliharaan")
+        toast({
+          title: "Aset belum dapat dipelihara",
+          description: "Aset sedang dalam penggunaan aktif. Selesaikan penggunaan terlebih dahulu.",
+          variant: "destructive",
+        })
         return
       }
     } catch (usageError) {
@@ -451,7 +476,11 @@ export default function MaintenancePage() {
 
       if (isEditing) {
         if (!canEditMaintenance) {
-          alert("Anda tidak memiliki izin untuk mengedit jadwal pemeliharaan")
+          toast({
+            title: "Akses ditolak",
+            description: "Anda tidak memiliki izin untuk mengedit jadwal pemeliharaan.",
+            variant: "destructive",
+          })
           return
         }
 
@@ -477,12 +506,20 @@ export default function MaintenancePage() {
         }
         const response = await maintenanceService.update(currentMaintenance.id, updatePayload)
         if (!response.success) {
-          alert(response.message || "Gagal memperbarui jadwal pemeliharaan")
+          toast({
+            title: "Pemeliharaan belum diperbarui",
+            description: response.message || "Data pemeliharaan belum dapat diperbarui.",
+            variant: "destructive",
+          })
           return
         }
       } else {
         if (!canCreateMaintenance) {
-          alert("Anda tidak memiliki izin untuk menambah pengajuan pemeliharaan sarana")
+          toast({
+            title: "Akses ditolak",
+            description: "Anda tidak memiliki izin untuk menambah pengajuan pemeliharaan sarana.",
+            variant: "destructive",
+          })
           return
         }
 
@@ -509,7 +546,11 @@ export default function MaintenancePage() {
         })
 
         if (!response.success) {
-          alert(response.message || "Gagal menambah pemeliharaan sarana")
+          toast({
+            title: "Pemeliharaan belum tersimpan",
+            description: response.message || "Pengajuan pemeliharaan sarana belum dapat disimpan.",
+            variant: "destructive",
+          })
           return
         }
       }
@@ -527,16 +568,22 @@ export default function MaintenancePage() {
         })
       }
     } catch (error: any) {
-      // strip any accidental hostnames from the message before showing to user
-      let msg = error?.message || "Gagal menyimpan pemeliharaan sarana";
-      msg = msg.replace(/https?:\/\/[\w.:-]+/g, '');
-      alert(msg);
+      console.error("Error saving maintenance:", error)
+      toast({
+        title: "Pemeliharaan belum tersimpan",
+        description: "Terjadi kesalahan saat menyimpan pemeliharaan sarana.",
+        variant: "destructive",
+      })
     }
   }
 
   const handleDeleteMaintenance = async (id: string | number) => {
     if (!canDeleteMaintenance) {
-      alert("Hanya Admin yang dapat menghapus jadwal pemeliharaan")
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin yang dapat menghapus jadwal pemeliharaan.",
+        variant: "destructive",
+      })
       return
     }
     const isConfirmed = await confirm({
@@ -550,19 +597,32 @@ export default function MaintenancePage() {
     try {
       const response = await maintenanceService.delete(String(id), "Dihapus oleh Admin dari daftar pemeliharaan")
       if (!response.success) {
-        alert(response.message || "Gagal menghapus jadwal pemeliharaan")
+        toast({
+          title: "Pemeliharaan belum terhapus",
+          description: response.message || "Jadwal pemeliharaan belum dapat dihapus.",
+          variant: "destructive",
+        })
         return
       }
       await loadMaintenance()
       await loadAssets()
     } catch (error: any) {
-      alert(error?.message || "Gagal menghapus jadwal pemeliharaan")
+      console.error("Error deleting maintenance:", error)
+      toast({
+        title: "Pemeliharaan belum terhapus",
+        description: "Terjadi kesalahan saat menghapus jadwal pemeliharaan.",
+        variant: "destructive",
+      })
     }
   }
 
   const handleEditMaintenance = (data: Maintenance) => {
     if (!canEditMaintenance) {
-      alert("Anda tidak memiliki izin untuk mengedit jadwal pemeliharaan")
+      toast({
+        title: "Akses ditolak",
+        description: "Anda tidak memiliki izin untuk mengedit jadwal pemeliharaan.",
+        variant: "destructive",
+      })
       return
     }
     setEditingMaintenance(data)
@@ -571,23 +631,39 @@ export default function MaintenancePage() {
 
   const handleUpdateStatus = async (id: string | number, newStatus: string) => {
     if (!currentUser) {
-      alert("Anda harus login terlebih dahulu")
+      toast({
+        title: "Sesi tidak tersedia",
+        description: "Silakan login terlebih dahulu sebelum mengubah status pemeliharaan.",
+        variant: "destructive",
+      })
       return
     }
 
     const currentRecord = maintenance.find((item) => String(item.id) === String(id))
     if (!currentRecord) {
-      alert("Data pemeliharaan tidak ditemukan")
+      toast({
+        title: "Data tidak ditemukan",
+        description: "Data pemeliharaan tidak ditemukan atau sudah berubah.",
+        variant: "destructive",
+      })
       return
     }
 
     if (["validated", "cancelled"].includes(currentRecord.status)) {
-      alert("Status pemeliharaan yang sudah selesai final atau dibatalkan tidak dapat diubah lagi")
+      toast({
+        title: "Status tidak dapat diubah",
+        description: "Pemeliharaan yang sudah selesai final atau dibatalkan tidak dapat diubah lagi.",
+        variant: "destructive",
+      })
       return
     }
 
     if (!canManageAdvancedStatuses) {
-      alert("Hanya Admin/Leader/Teknisi yang dapat mengubah alur status pemeliharaan")
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin, Leader, atau Teknisi yang dapat mengubah alur status pemeliharaan.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -597,7 +673,11 @@ export default function MaintenancePage() {
 
     const allowedTransitions = MAINTENANCE_STATUS_TRANSITIONS[currentRecord.status] || []
     if (!allowedTransitions.includes(newStatus)) {
-      alert("Transisi status tidak valid untuk tahap pemeliharaan saat ini")
+      toast({
+        title: "Status tidak valid",
+        description: "Perubahan status tidak sesuai dengan tahap pemeliharaan saat ini.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -605,7 +685,11 @@ export default function MaintenancePage() {
       if (newStatus === "completed") {
         const response = await maintenanceService.complete(String(id), undefined, undefined, Number(currentUser.id))
         if (!response.success) {
-          alert(response.message || "Gagal menyelesaikan pemeliharaan")
+          toast({
+            title: "Status belum diperbarui",
+            description: response.message || "Pemeliharaan belum dapat diselesaikan.",
+            variant: "destructive",
+          })
           return
         }
       } else if (["requested", "scheduled", "in_progress", "validated", "cancelled"].includes(newStatus)) {
@@ -613,7 +697,11 @@ export default function MaintenancePage() {
           status: newStatus as "requested" | "scheduled" | "in_progress" | "validated" | "cancelled",
         })
         if (!response.success) {
-          alert(response.message || "Gagal memperbarui status pemeliharaan")
+          toast({
+            title: "Status belum diperbarui",
+            description: response.message || "Status pemeliharaan belum dapat diperbarui.",
+            variant: "destructive",
+          })
           return
         }
       }
@@ -649,7 +737,12 @@ export default function MaintenancePage() {
         })
       }
     } catch (error: any) {
-      alert(error?.message || "Gagal memperbarui status pemeliharaan")
+      console.error("Error updating maintenance status:", error)
+      toast({
+        title: "Status belum diperbarui",
+        description: "Terjadi kesalahan saat memperbarui status pemeliharaan.",
+        variant: "destructive",
+      })
     }
   }
 

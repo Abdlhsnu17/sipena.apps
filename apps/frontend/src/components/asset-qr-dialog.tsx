@@ -27,6 +27,33 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 
+type LabelSizeId = "small" | "medium" | "large"
+
+interface LabelSize {
+  id: LabelSizeId
+  /** Short display name shown on the selector. */
+  label: string
+  /** Physical label dimensions in millimetres (matches the printed page). */
+  widthMm: number
+  heightMm: number
+  qrMm: number
+  nameFontPt: number
+  tableFontPt: number
+  paddingMm: number
+  /** Small labels place the QR beside the info to fit the limited height. */
+  layout: "vertical" | "horizontal"
+  /** Small labels only show the most essential rows so nothing overflows. */
+  maxRows: number
+}
+
+const LABEL_SIZES: LabelSize[] = [
+  { id: "small", label: "Kecil", widthMm: 40, heightMm: 30, qrMm: 20, nameFontPt: 5, tableFontPt: 4.5, paddingMm: 1.5, layout: "horizontal", maxRows: 3 },
+  { id: "medium", label: "Sedang", widthMm: 50, heightMm: 50, qrMm: 28, nameFontPt: 8, tableFontPt: 6, paddingMm: 3, layout: "vertical", maxRows: 5 },
+  { id: "large", label: "Besar", widthMm: 70, heightMm: 50, qrMm: 32, nameFontPt: 10, tableFontPt: 7.5, paddingMm: 4, layout: "vertical", maxRows: 5 },
+]
+
+const sizeDimensionLabel = (size: LabelSize): string => `${size.widthMm}×${size.heightMm} mm`
+
 export function AssetQrDialog({
   open,
   onOpenChange,
@@ -39,6 +66,7 @@ export function AssetQrDialog({
 }: AssetQrDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [dataUrl, setDataUrl] = useState<string>("")
+  const [selectedSizeId, setSelectedSizeId] = useState<LabelSizeId>("medium")
 
   // The QR encodes the most stable searchable identifier so a scan can be
   // pasted straight into the inventory search box to locate the asset.
@@ -90,7 +118,8 @@ export function AssetQrDialog({
 
   const handlePrint = () => {
     if (!dataUrl) return
-    const printWindow = window.open("", "_blank", "width=420,height=560")
+    const size = LABEL_SIZES.find((item) => item.id === selectedSizeId) ?? LABEL_SIZES[1]
+    const printWindow = window.open("", "_blank", "width=520,height=640")
     if (!printWindow) return
 
     const rows = [
@@ -101,11 +130,14 @@ export function AssetQrDialog({
       { label: "Sumber", value: sourceLabel },
     ]
       .filter((row) => row.value && row.value !== "-")
+      .slice(0, size.maxRows)
       .map(
         (row) =>
           `<tr><td class="label">${escapeHtml(row.label)}</td><td class="value">${escapeHtml(String(row.value))}</td></tr>`,
       )
       .join("")
+
+    const isHorizontal = size.layout === "horizontal"
 
     printWindow.document.write(`<!doctype html>
 <html>
@@ -114,23 +146,42 @@ export function AssetQrDialog({
     <title>Label QR ${escapeHtml(noId || qrValue)}</title>
     <style>
       * { box-sizing: border-box; }
-      body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 16px; color: #0f172a; }
-      .label-card { width: 260px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin: 0 auto; text-align: center; }
-      .name { font-size: 14px; font-weight: 700; margin: 0 0 8px; word-break: break-word; }
-      img { width: 200px; height: 200px; }
-      table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 11px; }
-      td { padding: 2px 4px; text-align: left; vertical-align: top; }
-      td.label { color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; width: 34%; }
+      @page { size: ${size.widthMm}mm ${size.heightMm}mm; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; }
+      .label-card {
+        width: ${size.widthMm}mm;
+        height: ${size.heightMm}mm;
+        padding: ${size.paddingMm}mm;
+        overflow: hidden;
+        display: flex;
+        flex-direction: ${isHorizontal ? "row" : "column"};
+        align-items: center;
+        justify-content: ${isHorizontal ? "flex-start" : "center"};
+        gap: ${isHorizontal ? size.paddingMm : 0}mm;
+        text-align: ${isHorizontal ? "left" : "center"};
+      }
+      .qr-box { flex: 0 0 auto; }
+      .qr-box img { display: block; width: ${size.qrMm}mm; height: ${size.qrMm}mm; }
+      .info { ${isHorizontal ? "flex: 1 1 auto; min-width: 0;" : "width: 100%;"} }
+      .name { font-size: ${size.nameFontPt}pt; font-weight: 700; margin: 0 0 1mm; line-height: 1.15; word-break: break-word; }
+      table { width: 100%; border-collapse: collapse; font-size: ${size.tableFontPt}pt; }
+      td { padding: 0.2mm 0.6mm; text-align: left; vertical-align: top; line-height: 1.15; }
+      td.label { color: #475569; text-transform: uppercase; letter-spacing: 0.02em; width: 32%; white-space: nowrap; }
       td.value { font-weight: 600; word-break: break-all; }
-      .brand { margin-top: 10px; font-size: 10px; color: #94a3b8; letter-spacing: 0.14em; text-transform: uppercase; }
+      .brand { margin-top: 1mm; font-size: ${Math.max(4, size.tableFontPt - 1)}pt; color: #94a3b8; letter-spacing: 0.14em; text-transform: uppercase; }
     </style>
   </head>
   <body>
     <div class="label-card">
-      <p class="name">${escapeHtml(assetName || "Aset")}</p>
-      <img src="${dataUrl}" alt="QR ${escapeHtml(qrValue)}" />
-      <table>${rows}</table>
-      <div class="brand">SIPENA</div>
+      <div class="qr-box">
+        <img src="${dataUrl}" alt="QR ${escapeHtml(qrValue)}" />
+      </div>
+      <div class="info">
+        <p class="name">${escapeHtml(assetName || "Aset")}</p>
+        <table>${rows}</table>
+        ${isHorizontal ? "" : '<div class="brand">SIPENA</div>'}
+      </div>
     </div>
     <script>
       window.onload = function () {
@@ -185,6 +236,31 @@ export function AssetQrDialog({
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">Ukuran cetak label</p>
+          <div className="grid grid-cols-3 gap-2">
+            {LABEL_SIZES.map((size) => {
+              const isActive = size.id === selectedSizeId
+              return (
+                <button
+                  key={size.id}
+                  type="button"
+                  onClick={() => setSelectedSizeId(size.id)}
+                  className={`flex flex-col items-center rounded-lg border px-2 py-1.5 text-center transition ${
+                    isActive
+                      ? "border-teal-600 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
+                      : "border-border text-foreground hover:border-teal-300 hover:bg-teal-50/50"
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  <span className="text-sm font-semibold">{size.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{sizeDimensionLabel(size)}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

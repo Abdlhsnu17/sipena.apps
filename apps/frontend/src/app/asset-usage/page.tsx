@@ -59,7 +59,13 @@ const usageExportColumnDefinitions = [
 ] as const;
 
 type UsageExportColumnKey = (typeof usageExportColumnDefinitions)[number]["key"];
-type UsageSourceFilter = "Semua" | "medical" | "non_medical";
+type UsageSourceFilter = "all" | "manual" | "borrowing_sync";
+
+const usageSourceFilterOptions: Array<{ value: UsageSourceFilter; label: string }> = [
+  { value: "manual", label: "Input Manual" },
+  { value: "borrowing_sync", label: "Dari Peminjaman" },
+  { value: "all", label: "Semua" },
+];
 
 const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
   if (totalPages <= 7) {
@@ -374,7 +380,7 @@ export default function AssetUsagePage() {
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set());
   const [overdueBorrowings, setOverdueBorrowings] = useState<Borrowing[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [usageSourceFilter, setUsageSourceFilter] = useState<UsageSourceFilter>("Semua");
+  const [usageSourceFilter, setUsageSourceFilter] = useState<UsageSourceFilter>("all");
   const [selectedUsageIds, setSelectedUsageIds] = useState<number[]>([]);
   const [selectedUsageColumns, setSelectedUsageColumns] = useState<UsageExportColumnKey[]>(
     usageExportColumnDefinitions.map((column) => column.key)
@@ -506,7 +512,7 @@ export default function AssetUsagePage() {
       setActiveUsageLocks(new Set());
       setActiveMaintenanceLocks(new Set());
       setActiveBorrowingLocks(new Set());
-      toast({ title: "Gagal memuat data", description: "Data penggunaan alat belum dapat dimuat.", variant: "destructive" });
+      toast({ title: "Data penggunaan belum termuat", description: "Data penggunaan alat belum dapat dimuat.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -593,7 +599,8 @@ export default function AssetUsagePage() {
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
-      if (usageSourceFilter !== "Semua" && log.assetType !== usageSourceFilter) return false;
+      const sourceType = isBorrowingUsageLog(log) ? "borrowing_sync" : "manual";
+      if (usageSourceFilter !== "all" && sourceType !== usageSourceFilter) return false;
 
       const matchesSearch = matchesSearchKeyword(searchTerm, [
         getUsageNoId(log),
@@ -604,11 +611,23 @@ export default function AssetUsagePage() {
         log.roomName,
         log.operatorName,
         log.notes,
+        isBorrowingUsageLog(log) ? "Dari Peminjaman" : "Input Manual",
         log.endedAt ? "Selesai" : "Sedang Digunakan",
       ]);
       return matchesSearch;
     });
   }, [logs, searchTerm, usageSourceFilter]);
+
+  const usageSourceCounts = useMemo(() => {
+    return logs.reduce<Record<UsageSourceFilter, number>>(
+      (acc, log) => {
+        acc.all += 1;
+        acc[isBorrowingUsageLog(log) ? "borrowing_sync" : "manual"] += 1;
+        return acc;
+      },
+      { all: 0, manual: 0, borrowing_sync: 0 }
+    );
+  }, [logs]);
 
   useEffect(() => {
     setUsageHistoryPage(1);
@@ -739,14 +758,14 @@ export default function AssetUsagePage() {
         dispatchInventoryRefresh();
       } else {
         toast({
-          title: "Gagal menyimpan",
+          title: "Penggunaan belum tersimpan",
           description: response.message || "Catatan penggunaan alat belum tersimpan.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Error saving asset usage:", error);
-      toast({ title: "Gagal menyimpan", description: "Catatan penggunaan alat belum tersimpan.", variant: "destructive" });
+      toast({ title: "Penggunaan belum tersimpan", description: "Terjadi kesalahan saat menyimpan catatan penggunaan alat.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -776,13 +795,16 @@ export default function AssetUsagePage() {
     try {
       const response = await assetUsageService.delete(pendingDeleteLog.id, reason);
       if (!response.success) {
-        toast({ title: "Gagal mengarsipkan", description: response.message, variant: "destructive" });
+        toast({ title: "Log belum diarsipkan", description: response.message || "Log penggunaan belum dapat diarsipkan.", variant: "destructive" });
         return;
       }
       setPendingDeleteLog(null);
       setDeleteReason("");
       await loadData();
       dispatchInventoryRefresh();
+    } catch (error) {
+      console.error("Error archiving asset usage:", error);
+      toast({ title: "Log belum diarsipkan", description: "Terjadi kesalahan saat mengarsipkan log penggunaan.", variant: "destructive" });
     } finally {
       setIsDeletingLog(false);
     }
@@ -827,7 +849,7 @@ export default function AssetUsagePage() {
         dispatchInventoryRefresh();
       } else {
         toast({
-          title: "Gagal menyimpan edit",
+          title: "Perubahan belum tersimpan",
           description: response.message || "Tidak dapat memperbarui data pemakaian.",
           variant: "destructive",
         });
@@ -835,7 +857,7 @@ export default function AssetUsagePage() {
     } catch (error) {
       console.error("Error editing asset usage:", error);
       toast({
-        title: "Gagal menyimpan edit",
+        title: "Perubahan belum tersimpan",
         description: "Terjadi kesalahan saat menyimpan data pemakaian.",
         variant: "destructive",
       });
@@ -857,7 +879,7 @@ export default function AssetUsagePage() {
   const handleStatusChange = (log: AssetUsageLog, status: string) => {
     if (status !== "completed" || log.endedAt) return;
     if (isBorrowingUsageLog(log)) {
-      router.push("/returns", { scroll: false });
+      router.push(log.borrowingId ? `/returns?borrowingId=${log.borrowingId}` : "/returns", { scroll: false });
       return;
     }
     openCompleteDialog(log);
@@ -892,7 +914,7 @@ export default function AssetUsagePage() {
         dispatchInventoryRefresh();
       } else {
         toast({
-          title: "Gagal memperbarui status",
+          title: "Status belum diperbarui",
           description: response.message || "Tidak dapat memperbarui log penggunaan.",
           variant: "destructive",
         });
@@ -900,7 +922,7 @@ export default function AssetUsagePage() {
     } catch (error) {
       console.error("Error updating asset usage status:", error);
       toast({
-        title: "Gagal memperbarui status",
+        title: "Status belum diperbarui",
         description: "Terjadi kesalahan saat mengubah status pemakaian alat.",
         variant: "destructive",
       });
@@ -920,7 +942,7 @@ export default function AssetUsagePage() {
   const getUsageStatusLabel = (log: AssetUsageLog) => (log.endedAt ? "Selesai" : "Sedang Digunakan");
 
   const getUsageSourceLabel = (log: AssetUsageLog) =>
-    log.sourceType === "borrowing_sync"
+    isBorrowingUsageLog(log)
       ? `Otomatis dari Peminjaman${log.borrowingId ? ` No. ${log.borrowingId}` : ""}`
       : "Manual";
 
@@ -1316,7 +1338,7 @@ export default function AssetUsagePage() {
                 </span>
               </div>
             </div>
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
               <div>
                 <label className="sr-only">Cari alat atau operator</label>
                 <div className="relative">
@@ -1330,15 +1352,35 @@ export default function AssetUsagePage() {
                   />
                 </div>
               </div>
-              <select
-                value={usageSourceFilter}
-                onChange={(event) => setUsageSourceFilter(event.target.value as UsageSourceFilter)}
-                className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] transition focus:border-teal-500"
-              >
-                <option value="Semua">Semua Sumber</option>
-                <option value="medical">Inventaris Medis</option>
-                <option value="non_medical">Inventaris Non-Medis</option>
-              </select>
+              <div className="flex w-full rounded-2xl bg-slate-100 p-1 shadow-inner dark:bg-slate-800/70 lg:w-auto">
+                {usageSourceFilterOptions.map((option) => {
+                  const active = usageSourceFilter === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setUsageSourceFilter(option.value)}
+                      className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-[12px] font-semibold transition sm:text-[13px] lg:flex-none ${
+                        active
+                          ? "bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-slate-50"
+                          : "text-slate-600 hover:bg-white/60 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900/70 dark:hover:text-slate-50"
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <span>{option.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                          active
+                            ? "bg-teal-100 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
+                            : "bg-white/70 text-slate-500 dark:bg-slate-900/70 dark:text-slate-400"
+                        }`}
+                      >
+                        {usageSourceCounts[option.value]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="px-0">
@@ -1352,7 +1394,9 @@ export default function AssetUsagePage() {
                   <div className="space-y-4 py-3">
                   {filteredLogs.length === 0 ? (
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40 px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-300">
-                      {isLoading ? "Memuat data..." : "Belum ada log penggunaan alat."}
+                      {isLoading
+                        ? "Memuat data..."
+                        : "Belum ada log penggunaan alat. Catat penggunaan manual atau proses peminjaman aktif akan tampil di sini."}
                     </div>
                   ) : (
                     paginatedLogs.map((log) => {
@@ -1392,8 +1436,9 @@ export default function AssetUsagePage() {
                                       variant="outline"
                                       onClick={() => handleStatusChange(log, "completed")}
                                       className="h-8 rounded-lg border-blue-200 px-2.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-400/10"
+                                      title="Log dari peminjaman harus diselesaikan lewat Pengembalian agar validasi alat tetap tercatat"
                                     >
-                                      Pengembalian
+                                      Buka Pengembalian
                                     </Button>
                                   );
                                 }
@@ -1483,12 +1528,12 @@ export default function AssetUsagePage() {
                                       <Tag className="h-3 w-3 shrink-0" />
                                       <span className="truncate">Lokasi alat: {log.assetLocation || roomDisplay.secondary || "-"}</span>
                                     </span>
-                                    {log.sourceType === "borrowing_sync" && (
+                                    {isBorrowingUsageLog(log) && (
                                       <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-300">
-                                        (Peminjaman)
+                                        Dari Peminjaman
                                       </Badge>
                                     )}
-                                    {log.sourceType !== "borrowing_sync" && (
+                                    {!isBorrowingUsageLog(log) && (
                                       <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
                                         Input Manual
                                       </Badge>

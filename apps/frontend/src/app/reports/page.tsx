@@ -12,6 +12,7 @@ import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
 import userService, { type User } from "@/services/user.service";
+import { useToast } from "@/hooks/use-toast";
 import { getSpecificationDetails } from "@/utils/api-mappers";
 import { parseDateValue } from "@/utils/format";
 import {
@@ -88,9 +89,9 @@ const reportTypeOptions: Array<FilterOption & { value: ExportReportType; descrip
 ]
 
 const borrowingStatusOptions: FilterOption[] = [
-  { value: "pending", label: "Menunggu" },
+  { value: "pending", label: "Menunggu Persetujuan" },
   { value: "approved", label: "Disetujui" },
-  { value: "borrowed", label: "Dipinjam" },
+  { value: "borrowed", label: "Sedang Dipinjam" },
   { value: "returned", label: "Dikembalikan" },
   { value: "overdue", label: "Terlambat" },
 ]
@@ -225,6 +226,7 @@ function ChartCard({
  * Mengambil data inventaris, pemeliharaan, dan peminjaman dari API.
  */
 export default function ReportsPage() {
+  const { toast } = useToast()
   const [nonMedicalRooms, setNonMedicalRooms] = useState<any[]>([])
   const [medicalRooms, setMedicalRooms] = useState<any[]>([])
   const [maintenance, setMaintenance] = useState<any[]>([])
@@ -478,8 +480,10 @@ export default function ReportsPage() {
     .slice(0, 8)
   const borrowingStatusData = [
     { status: "Total", total: borrowings.length },
-    { status: "Dipinjam", total: borrowings.filter((b) => ["approved", "borrowed"].includes(b.status)).length },
-    { status: "Kembali", total: borrowings.filter((b) => b.status === "returned").length },
+    { status: "Menunggu Persetujuan", total: borrowings.filter((b) => b.status === "pending").length },
+    { status: "Disetujui", total: borrowings.filter((b) => b.status === "approved").length },
+    { status: "Sedang Dipinjam", total: borrowings.filter((b) => b.status === "borrowed").length },
+    { status: "Dikembalikan", total: borrowings.filter((b) => b.status === "returned").length },
     { status: "Terlambat", total: borrowings.filter((b) => b.status === "overdue").length },
   ]
   const maintenanceCostData = [
@@ -561,7 +565,11 @@ export default function ReportsPage() {
 
   const handleExport = async (format: "excel" | "csv") => {
     if (dateRangeInvalid) {
-      alert("Tanggal mulai tidak boleh lebih besar dari tanggal akhir")
+      toast({
+        title: "Rentang tanggal belum valid",
+        description: "Tanggal mulai tidak boleh lebih besar dari tanggal akhir.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -578,7 +586,7 @@ export default function ReportsPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Gagal mengunduh laporan")
+        throw new Error("report export request failed")
       }
 
       const blob = await response.blob()
@@ -596,7 +604,11 @@ export default function ReportsPage() {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Failed to export report:", error)
-      alert(error instanceof Error ? error.message : "Gagal mengunduh laporan")
+      toast({
+        title: "Laporan belum terunduh",
+        description: "Terjadi kesalahan saat mengunduh laporan.",
+        variant: "destructive",
+      })
     } finally {
       setExporting(null)
     }

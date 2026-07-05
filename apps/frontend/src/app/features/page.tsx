@@ -7,13 +7,13 @@ export default function FeaturesPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace("/maintenance")
+    router.replace("/")
   }, [router])
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <p className="text-lg">Mengalihkan ke halaman Pemeliharaan...</p>
+        <p className="text-lg">Mengalihkan ke dashboard...</p>
       </div>
     </div>
   )

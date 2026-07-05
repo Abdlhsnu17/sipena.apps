@@ -125,6 +125,7 @@ export default function ReturnsPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [borrowings, setBorrowings] = useState<ApiBorrowing[]>([])
   const [activeSearchTerm, setActiveSearchTerm] = useState("")
+  const [linkedBorrowingFilter, setLinkedBorrowingFilter] = useState("")
   const [activeFilterSource, setActiveFilterSource] = useState<AssetSourceKey>("Semua")
   const [historySearchTerm, setHistorySearchTerm] = useState("")
   const [historyFilterSource, setHistoryFilterSource] = useState<AssetSourceKey>("Semua")
@@ -277,6 +278,17 @@ export default function ReturnsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const borrowingId = new URLSearchParams(window.location.search).get("borrowingId")?.trim()
+    if (!borrowingId) return
+
+    setActiveSearchTerm(borrowingId)
+    setLinkedBorrowingFilter(borrowingId)
+    setIsActiveSectionMinimized(false)
+  }, [])
+
   const handleOpenReturn = (borrowing: ApiBorrowing) => {
     const accessMessage = getReturnAccessMessage(borrowing)
     if (accessMessage) {
@@ -314,7 +326,11 @@ export default function ReturnsPage() {
       )
 
       if (!response.success) {
-        alert(response.message || "Gagal memproses pengembalian")
+        toast({
+          title: "Pengembalian belum tersimpan",
+          description: response.message || "Data pengembalian alat belum dapat diproses.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -328,7 +344,12 @@ export default function ReturnsPage() {
         description: "Data pengembalian alat sudah tersimpan.",
       })
     } catch (error: any) {
-      alert(error.message || "Gagal memproses pengembalian")
+      console.error("Error confirming return:", error)
+      toast({
+        title: "Pengembalian belum tersimpan",
+        description: "Terjadi kesalahan saat memproses pengembalian alat.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -337,7 +358,11 @@ export default function ReturnsPage() {
       setValidatingReturnId(borrowingId)
       const response = await borrowingService.validateReturn(borrowingId)
       if (!response.success) {
-        alert(response.message || "Gagal memvalidasi pengembalian")
+        toast({
+          title: "Validasi belum tersimpan",
+          description: response.message || "Data pengembalian belum dapat divalidasi.",
+          variant: "destructive",
+        })
         return
       }
       await loadBorrowings()
@@ -347,7 +372,12 @@ export default function ReturnsPage() {
         description: "Data pengembalian telah divalidasi.",
       })
     } catch (error: any) {
-      alert(error.message || "Gagal memvalidasi pengembalian")
+      console.error("Error validating return:", error)
+      toast({
+        title: "Validasi belum tersimpan",
+        description: "Terjadi kesalahan saat memvalidasi pengembalian.",
+        variant: "destructive",
+      })
     } finally {
       setValidatingReturnId(null)
     }
@@ -355,7 +385,11 @@ export default function ReturnsPage() {
 
   const handleDeleteReturn = async (borrowing: ApiBorrowing) => {
     if (!canDeleteReturns) {
-      alert("Hanya Admin yang dapat menghapus data pengembalian")
+      toast({
+        title: "Akses ditolak",
+        description: "Hanya Admin yang dapat menghapus data pengembalian.",
+        variant: "destructive",
+      })
       return
     }
     const isConfirmed = await confirm({
@@ -373,21 +407,34 @@ export default function ReturnsPage() {
     if (!pendingDeleteReturn) return
     const reason = deleteReason.trim()
     if (!reason) {
-      alert("Alasan penghapusan wajib diisi")
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penghapusan sebelum melanjutkan.",
+        variant: "destructive",
+      })
       return
     }
     setIsDeletingReturn(true)
     try {
       const response = await borrowingService.delete(pendingDeleteReturn.id, reason)
       if (!response.success) {
-        alert(response.message || "Gagal menghapus pengembalian")
+        toast({
+          title: "Pengembalian belum terhapus",
+          description: response.message || "Data pengembalian belum dapat dihapus.",
+          variant: "destructive",
+        })
         return
       }
       setPendingDeleteReturn(null)
       setDeleteReason("")
       await loadBorrowings()
     } catch (error: any) {
-      alert(error.message || "Gagal menghapus pengembalian")
+      console.error("Error deleting return:", error)
+      toast({
+        title: "Pengembalian belum terhapus",
+        description: "Terjadi kesalahan saat menghapus data pengembalian.",
+        variant: "destructive",
+      })
     } finally {
       setIsDeletingReturn(false)
     }
@@ -402,7 +449,11 @@ export default function ReturnsPage() {
     if (!pendingArchiveReturnRequest) return
     const reason = deleteReason.trim()
     if (!reason) {
-      alert("Alasan penghapusan wajib diisi")
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penghapusan sebelum mengirim permintaan.",
+        variant: "destructive",
+      })
       return
     }
     setIsDeletingReturn(true)
@@ -414,14 +465,23 @@ export default function ReturnsPage() {
         reason,
       })
       if (!response.success) {
-        alert(response.message || "Gagal mengajukan penghapusan pengembalian")
+        toast({
+          title: "Permintaan belum terkirim",
+          description: response.message || "Permintaan penghapusan pengembalian belum dapat dikirim.",
+          variant: "destructive",
+        })
         return
       }
       setPendingArchiveReturnRequest(null)
       setDeleteReason("")
       toast({ title: "Permintaan penghapusan diajukan" })
     } catch (error: any) {
-      alert(error.message || "Gagal mengajukan penghapusan pengembalian")
+      console.error("Error requesting return deletion:", error)
+      toast({
+        title: "Permintaan belum terkirim",
+        description: "Terjadi kesalahan saat mengirim permintaan penghapusan pengembalian.",
+        variant: "destructive",
+      })
     } finally {
       setIsDeletingReturn(false)
     }
@@ -455,7 +515,11 @@ export default function ReturnsPage() {
       }
       const result = await borrowingService.update(editingReturn.id, payload)
       if (!result.success) {
-        alert(result.message || "Gagal menyimpan perubahan")
+        toast({
+          title: "Perubahan belum tersimpan",
+          description: result.message || "Data pengembalian belum dapat diperbarui.",
+          variant: "destructive",
+        })
         return
       }
       await loadBorrowings()
@@ -465,7 +529,12 @@ export default function ReturnsPage() {
       })
       handleReturnEditClose()
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan perubahan")
+      console.error("Error editing return:", error)
+      toast({
+        title: "Perubahan belum tersimpan",
+        description: "Terjadi kesalahan saat menyimpan perubahan pengembalian.",
+        variant: "destructive",
+      })
     } finally {
       setReturnEditSubmitting(false)
     }
@@ -483,6 +552,7 @@ export default function ReturnsPage() {
     const assetSource = deriveAssetSource(b.assetType, b.assetCode)
     const matchesSearch = matchesSearchKeyword(activeSearchTerm, [
       getReturnNoId(b),
+      b.id,
       b.borrowingCode,
       assetName,
       borrowerName,
@@ -860,7 +930,7 @@ export default function ReturnsPage() {
         getValue: (borrowing) =>
           borrowing.returnValidatorName || borrowing.returnValidatorNip
             ? `${borrowing.returnValidatorName || ""} ${borrowing.returnValidatorNip || ""}`.trim()
-            : "Menunggu",
+            : "Menunggu Validasi",
       },
       {
         key: "validatorNip",
@@ -1139,13 +1209,16 @@ export default function ReturnsPage() {
       return <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-400/10 dark:text-teal-300">Dikembalikan</Badge>
     }
     if (status === "pending") {
-      return <Badge variant="secondary">Menunggu</Badge>
+      return <Badge variant="secondary">Menunggu Persetujuan</Badge>
     }
     if (status === "rejected") {
       return <Badge variant="destructive">Ditolak</Badge>
     }
-    if (status === "approved" || status === "borrowed") {
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/10">Dipinjam</Badge>
+    if (status === "approved") {
+      return <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:bg-sky-400/10">Disetujui</Badge>
+    }
+    if (status === "borrowed") {
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/10">Sedang Dipinjam</Badge>
     }
     return <Badge variant="secondary">{borrowingStatusLabel(status)}</Badge>
   }
@@ -1190,7 +1263,7 @@ export default function ReturnsPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Dipinjam</p>
+                    <p className="text-[12px] text-muted-foreground">Perlu Dikembalikan</p>
                     <p className="text-xl font-semibold text-foreground mt-1">{activeBorrowings.length}</p>
                   </div>
                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
@@ -1296,7 +1369,10 @@ export default function ReturnsPage() {
                       type="text"
                       placeholder="Cari No ID, aset, atau peminjam..."
                       value={activeSearchTerm}
-                      onChange={(e) => setActiveSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setActiveSearchTerm(e.target.value)
+                        setLinkedBorrowingFilter("")
+                      }}
                       className="w-full rounded-xl border border-border/80 bg-background px-10 py-2 text-[13px] text-foreground transition focus:border-teal-500"
                     />
                   </div>
@@ -1311,6 +1387,23 @@ export default function ReturnsPage() {
                   <option value="non_medis">Inventaris Non-Medis</option>
                 </select>
               </div>
+              {linkedBorrowingFilter && (
+                <div className="flex flex-col gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-[12px] text-blue-800 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-200 sm:flex-row sm:items-center sm:justify-between">
+                  <span>Daftar difilter dari log Penggunaan untuk peminjaman #{linkedBorrowingFilter}.</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-xl border-blue-200 bg-white px-3 text-[12px] text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:bg-transparent dark:text-blue-200"
+                    onClick={() => {
+                      setActiveSearchTerm("")
+                      setLinkedBorrowingFilter("")
+                    }}
+                  >
+                    Tampilkan semua
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="px-0">
               {isActiveSectionMinimized ? (
