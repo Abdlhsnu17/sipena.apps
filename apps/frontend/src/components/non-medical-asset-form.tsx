@@ -390,16 +390,6 @@ export default function NonMedicalAssetForm({
     )
   }, [typeOptions, typeSearch])
 
-  const inferredUsagePurpose = useMemo(
-    () =>
-      normalizeUsagePurpose(
-        inferNonMedicalUsagePurpose(formData.inventoryName, formData.type),
-        USAGE_OPTIONS,
-        USAGE_PURPOSE_ALIASES,
-      ),
-    [formData.inventoryName, formData.type],
-  )
-
   const usagePurposeOptions = useMemo(
     () => buildUsagePurposeOptions(USAGE_OPTIONS, formData.usagePurpose, USAGE_PURPOSE_ALIASES),
     [formData.usagePurpose],
@@ -620,7 +610,6 @@ export default function NonMedicalAssetForm({
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-muted-foreground">{inferredUsagePurpose}</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Pemeliharaan Terakhir</label>

@@ -210,16 +210,6 @@ export default function MedicalAssetForm({
     return typeOptions.filter((option) => option.label.toLowerCase().includes(query))
   }, [typeOptions, typeSearch])
 
-  const inferredUsagePurpose = useMemo(
-    () =>
-      normalizeUsagePurpose(
-        inferMedicalUsagePurpose(formData.inventoryName, formData.type),
-        MEDICAL_USAGE_OPTIONS,
-        MEDICAL_USAGE_ALIASES,
-      ),
-    [formData.inventoryName, formData.type],
-  )
-
   const usagePurposeOptions = useMemo(
     () => buildUsagePurposeOptions(MEDICAL_USAGE_OPTIONS, formData.usagePurpose, MEDICAL_USAGE_ALIASES),
     [formData.usagePurpose],
@@ -518,7 +508,6 @@ export default function MedicalAssetForm({
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-muted-foreground">{inferredUsagePurpose}</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Pemeliharaan Terakhir</label>
