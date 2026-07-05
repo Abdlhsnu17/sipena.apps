@@ -964,7 +964,7 @@ export default function DssPage() {
       </div>
 
       <Dialog open={Boolean(auditItem)} onOpenChange={(open) => { if (!open) setAuditItem(null) }}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-5xl overflow-hidden p-0">
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
           <DialogHeader className="shrink-0 px-6 pb-0 pt-6">
             <DialogTitle className="flex min-w-0 items-start gap-2 pr-8 text-xl leading-tight">
               <Scale className="h-4 w-4 text-teal-700" />
