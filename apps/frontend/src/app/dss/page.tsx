@@ -964,30 +964,30 @@ export default function DssPage() {
       </div>
 
       <Dialog open={Boolean(auditItem)} onOpenChange={(open) => { if (!open) setAuditItem(null) }}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-5xl overflow-hidden p-0">
+          <DialogHeader className="shrink-0 px-6 pb-0 pt-6">
+            <DialogTitle className="flex min-w-0 items-start gap-2 pr-8 text-xl leading-tight">
               <Scale className="h-4 w-4 text-teal-700" />
-              Audit TOPSIS · {auditItem?.detailName}
+              <span className="min-w-0 break-words">Audit TOPSIS · {auditItem?.detailName}</span>
             </DialogTitle>
             <DialogDescription>
               {auditItem ? `${auditItem.detailCode} · ${auditItem.serialNumber || "Tanpa nomor seri"} · Rank #${auditItem.rank}` : ""}
             </DialogDescription>
           </DialogHeader>
           {auditItem && (
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+            <div className="min-h-0 min-w-0 space-y-4 overflow-y-auto px-6 py-4">
+              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="min-w-0 rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
                   <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Preference Score</div>
                   <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{formatScore(auditItem.preferenceScore)}</div>
                 </div>
-                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+                <div className="min-w-0 rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
                   <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Jarak Ideal Positif (D+)</div>
                   <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
                     {auditItem.positiveDistance != null ? formatScore(auditItem.positiveDistance) : "-"}
                   </div>
                 </div>
-                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+                <div className="min-w-0 rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
                   <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Jarak Ideal Negatif (D-)</div>
                   <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
                     {auditItem.negativeDistance != null ? formatScore(auditItem.negativeDistance) : "-"}
@@ -995,8 +995,8 @@ export default function DssPage() {
                 </div>
               </div>
 
-              <div className="max-h-[50vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800/35">
-                <table className="w-full min-w-160 text-left text-[13px]">
+              <div className="min-w-0 max-w-full overflow-auto rounded-lg border border-slate-200 dark:border-slate-800/35">
+                <table className="w-full min-w-[52rem] text-left text-[13px]">
                   <thead className="sticky top-0 border-b border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">
                     <tr>
                       <th className="px-3 py-2">Kriteria</th>
@@ -1011,22 +1011,22 @@ export default function DssPage() {
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
                     {(rankingResult?.criteria ?? []).map((criterion) => (
                       <tr key={criterion.id} className="text-slate-700 dark:text-slate-300">
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-top">
                           <div className="font-medium text-slate-900 dark:text-slate-100">{criterion.name}</div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">{criterion.type === "benefit" ? "Benefit" : "Cost"}</div>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">{formatPercent(criterion.weight)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{(auditItem.criteriaScores?.[criterion.id] ?? 0).toString()}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-right tabular-nums align-top">{formatPercent(criterion.weight)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums align-top">{(auditItem.criteriaScores?.[criterion.id] ?? 0).toString()}</td>
+                        <td className="px-3 py-2 text-right tabular-nums align-top">
                           {auditItem.normalizedScores?.[criterion.id] != null ? formatScore(auditItem.normalizedScores[criterion.id]) : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-right tabular-nums align-top">
                           {auditItem.weightedScores?.[criterion.id] != null ? formatScore(auditItem.weightedScores[criterion.id]) : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-right tabular-nums align-top">
                           {rankingResult?.idealSolutions?.positive?.[criterion.id] != null ? formatScore(rankingResult.idealSolutions.positive[criterion.id]) : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-right tabular-nums align-top">
                           {rankingResult?.idealSolutions?.negative?.[criterion.id] != null ? formatScore(rankingResult.idealSolutions.negative[criterion.id]) : "-"}
                         </td>
                       </tr>
@@ -1041,7 +1041,7 @@ export default function DssPage() {
             </div>
           )}
           {auditItem && canRequestMaintenance && (
-            <DialogFooter>
+            <DialogFooter className="shrink-0 border-t border-slate-200 px-6 py-4 dark:border-slate-800/35">
               <Button
                 type="button"
                 className="gap-2"
