@@ -12,6 +12,7 @@ import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails, isMaintenanceDetailStatus } from "@/utils/api-mappers";
+import { downloadManualAssetLabel, printManualAssetLabel } from "@/utils/asset-label";
 import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
@@ -23,7 +24,7 @@ import { AssetImportDialog } from "@/components/asset-import-dialog";
 import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
 import { USAGE_OPTIONS } from "@/utils/asset-usage";
-import { Building, ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, QrCode, Search, Sparkles, Trash2 } from "lucide-react";
+import { Building, ChevronDown, ChevronUp, Edit2, FileDown, FileSpreadsheet, FileText, Plus, QrCode, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -776,6 +777,19 @@ export default function NonMedicalAssetsPage() {
                           {assetsToDisplay.map((asset, assetIndex) => {
                             const assetKey = asset.id ?? `${room.id}-${assetIndex}`
                             const statusLabel = getInventoryStatusLabel(asset.status)
+                            const noId = getAssetNoId(room.id, asset.id)
+                            const labelData = {
+                              noId,
+                              assetName: asset.inventoryName || asset.name,
+                              assetCode: asset.assetCode,
+                              serialNumber: asset.serialNumber,
+                              location: room.roomName,
+                              condition: asset.condition,
+                              status: asset.status,
+                              purchaseDate: asset.purchaseDate,
+                              nextMaintenance: asset.nextMaintenance,
+                              sourceLabel: "Non-Medis",
+                            }
                             return (
                               <div
                                 key={assetKey}
@@ -786,7 +800,7 @@ export default function NonMedicalAssetsPage() {
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-semibold text-sm">{asset.inventoryName || asset.name}</span>
                                     <Badge variant="outline" className="text-[10px]">
-                                      No ID: {getAssetNoId(room.id, asset.id)}
+                                      No ID: {noId}
                                     </Badge>
                                     <Badge
                                       variant="outline"
@@ -877,24 +891,45 @@ export default function NonMedicalAssetsPage() {
                                       <p className="text-foreground font-medium">{asset.notes}</p>
                                     </div>
                                   )}
-                                </div>
-                                {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
-                                  <div className="flex gap-1 shrink-0">
+                                  <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                                     <Button
-                                      variant="ghost"
+                                      variant="outline"
                                       size="sm"
-                                      title="Lihat / cetak kode QR"
-                                      className="h-9 w-9 p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-400/10"
-                                      onClick={() =>
-                                        setQrTarget({
-                                          noId: getAssetNoId(room.id, asset.id),
-                                          asset,
-                                          location: room.roomName,
-                                        })
-                                      }
+                                      className="h-8 bg-white text-xs dark:bg-background"
+                                      onClick={() => downloadManualAssetLabel(labelData)}
                                     >
-                                      <QrCode className="w-4 h-4" />
+                                      <FileDown className="mr-1.5 h-3.5 w-3.5" />
+                                      Unduh Label
                                     </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 bg-white text-xs dark:bg-background"
+                                      onClick={() => printManualAssetLabel(labelData)}
+                                    >
+                                      <FileText className="mr-1.5 h-3.5 w-3.5" />
+                                      Cetak Label
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Lihat / cetak barcode"
+                                    className="h-9 w-9 p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-400/10"
+                                    onClick={() =>
+                                      setQrTarget({
+                                        noId,
+                                        asset,
+                                        location: room.roomName,
+                                      })
+                                    }
+                                  >
+                                    <QrCode className="w-4 h-4" />
+                                  </Button>
+                                  {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
+                                    <div className="flex gap-1 shrink-0">
                                     {canEditInventory && (
                                       <Button
                                         variant="ghost"
@@ -933,7 +968,8 @@ export default function NonMedicalAssetsPage() {
                                       </Button>
                                     )}
                                   </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
                             </div>
                             )

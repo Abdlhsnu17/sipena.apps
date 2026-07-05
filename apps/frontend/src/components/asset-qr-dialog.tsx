@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, FileDown, FileText, Printer, QrCode } from "lucide-react";
+import { sanitizeAssetFilename } from "@/utils/asset-label";
+import { Download, Printer, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 
@@ -60,25 +61,6 @@ const sizeDimensionLabel = (size: LabelSize): string => `${size.widthMm}×${size
 
 const hasValue = (value?: string): value is string => Boolean(value?.trim() && value.trim() !== "-")
 
-const sanitizeFilename = (value: string): string =>
-  value
-    .trim()
-    .replace(/[^a-z0-9-]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "aset"
-
-const formatDateId = (value?: string): string => {
-  if (!hasValue(value)) return ""
-  const dateOnlyMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (dateOnlyMatch) {
-    const [, year, month, day] = dateOnlyMatch
-    return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString("id-ID")
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString("id-ID")
-}
-
 const buildQrIdentityValue = ({
   noId,
   assetName,
@@ -109,10 +91,6 @@ export function AssetQrDialog({
   assetCode,
   serialNumber,
   location,
-  condition,
-  status,
-  purchaseDate,
-  nextMaintenance,
   sourceLabel,
 }: AssetQrDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -161,7 +139,7 @@ export function AssetQrDialog({
     if (!dataUrl) return
     const link = document.createElement("a")
     link.href = dataUrl
-    link.download = `QR-${sanitizeFilename(noId || assetCode || assetName || "aset")}.png`
+    link.download = `QR-${sanitizeAssetFilename(noId || assetCode || assetName || "aset")}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -216,109 +194,6 @@ export function AssetQrDialog({
     printWindow.document.close()
   }
 
-  const buildManualLabelHtml = (autoPrint: boolean) => {
-    const rows = [
-      { label: "No ID", value: noId },
-      { label: "Kode Inventaris", value: assetCode },
-      { label: "Kategori", value: sourceLabel },
-      { label: "No Seri", value: serialNumber },
-      { label: "Lokasi", value: location },
-      { label: "Kondisi", value: condition },
-      { label: "Status", value: status },
-      { label: "Tanggal Beli", value: formatDateId(purchaseDate) },
-      { label: sourceLabel === "Medis" ? "Kalibrasi/Pemeliharaan" : "Pemeliharaan Berikutnya", value: formatDateId(nextMaintenance) },
-    ]
-      .filter((row) => hasValue(row.value))
-      .map(
-        (row) =>
-          `<tr><td class="label">${escapeHtml(row.label)}</td><td class="value">${escapeHtml(String(row.value))}</td></tr>`,
-      )
-      .join("")
-
-    return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Label Manual ${escapeHtml(noId || assetCode || assetName || "Aset")}</title>
-    <style>
-      * { box-sizing: border-box; }
-      @page { size: 100mm 80mm; margin: 0; }
-      html, body { margin: 0; padding: 0; }
-      body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
-      .label-card {
-        width: 100mm;
-        min-height: 80mm;
-        padding: 4mm;
-        border: 0.3mm solid #111827;
-      }
-      .topline {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 3mm;
-        border-bottom: 0.25mm solid #111827;
-        padding-bottom: 1.5mm;
-        margin-bottom: 2mm;
-      }
-      .brand { font-size: 7pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-      .type { border: 0.25mm solid #111827; padding: 0.8mm 1.5mm; font-size: 6pt; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
-      .title { margin: 0 0 2mm; font-size: 10pt; font-weight: 800; line-height: 1.2; word-break: break-word; }
-      table { width: 100%; border-collapse: collapse; font-size: 7pt; table-layout: fixed; }
-      td { border-bottom: 0.15mm solid #d1d5db; padding: 0.7mm 0; vertical-align: top; line-height: 1.25; }
-      td.label { width: 35%; color: #4b5563; text-transform: uppercase; font-size: 6pt; letter-spacing: 0.03em; }
-      td.value { font-weight: 700; word-break: break-word; }
-      .footer { margin-top: 2mm; display: flex; justify-content: space-between; gap: 2mm; color: #4b5563; font-size: 5.5pt; text-transform: uppercase; letter-spacing: 0.06em; }
-    </style>
-  </head>
-  <body>
-    <div class="label-card">
-      <div class="topline">
-        <div class="brand">SIPENA - Identitas Inventaris</div>
-        <div class="type">${escapeHtml(sourceLabel || "Inventaris")}</div>
-      </div>
-      <p class="title">${escapeHtml(assetName || "Aset")}</p>
-      <table>${rows}</table>
-      <div class="footer">
-        <span>Label manual</span>
-        <span>Identitas inventaris</span>
-      </div>
-    </div>
-    ${
-      autoPrint
-        ? `<script>
-      window.onload = function () {
-        window.focus();
-        window.print();
-        setTimeout(function () { window.close(); }, 300);
-      };
-    </script>`
-        : ""
-    }
-  </body>
-</html>`
-  }
-
-  const handleManualDownload = () => {
-    const html = buildManualLabelHtml(false)
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `LABEL-MANUAL-${sanitizeFilename(noId || assetCode || assetName || "aset")}.html`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const handleManualPrint = () => {
-    const printWindow = window.open("", "_blank", "width=720,height=640")
-    if (!printWindow) return
-
-    printWindow.document.write(buildManualLabelHtml(true))
-    printWindow.document.close()
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -328,43 +203,18 @@ export function AssetQrDialog({
             Kode QR Aset
           </DialogTitle>
           <DialogDescription>
-            Pindai kode ini untuk mencari aset dengan cepat, atau cetak sebagai label.
+            Pindai, unduh, atau cetak barcode aset ini.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-3 py-2">
+        <div className="flex flex-col items-center py-2">
           <div className="rounded-xl border border-slate-200 bg-white p-3">
             <canvas ref={canvasRef} className="h-55 w-55" aria-label={`QR ${qrValue}`} />
-          </div>
-          <div className="w-full space-y-1 text-sm">
-            <p className="text-center text-base font-semibold text-foreground wrap-break-word">{assetName || "Aset"}</p>
-            <div className="mx-auto grid max-w-xs grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="uppercase tracking-wide">No ID</span>
-              <span className="font-medium text-foreground break-all">{noId || "-"}</span>
-              {assetCode && assetCode !== "-" && (
-                <>
-                  <span className="uppercase tracking-wide">Kode</span>
-                  <span className="font-medium text-foreground break-all">{assetCode}</span>
-                </>
-              )}
-              {serialNumber && serialNumber !== "-" && (
-                <>
-                  <span className="uppercase tracking-wide">SN</span>
-                  <span className="font-medium text-foreground break-all">{serialNumber}</span>
-                </>
-              )}
-              {location && location !== "-" && (
-                <>
-                  <span className="uppercase tracking-wide">Lokasi</span>
-                  <span className="font-medium text-foreground wrap-break-word">{location}</span>
-                </>
-              )}
-            </div>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Ukuran cetak label</p>
+          <p className="text-xs font-medium text-muted-foreground">Ukuran cetak barcode</p>
           <div className="grid grid-cols-3 gap-2">
             {LABEL_SIZES.map((size) => {
               const isActive = size.id === selectedSizeId
@@ -388,18 +238,10 @@ export function AssetQrDialog({
           </div>
         </div>
 
-        <DialogFooter className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <DialogFooter className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
             <Download className="mr-2 h-4 w-4" />
             Unduh Barcode
-          </Button>
-          <Button variant="outline" onClick={handleManualDownload}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Unduh Label
-          </Button>
-          <Button variant="outline" onClick={handleManualPrint}>
-            <FileText className="mr-2 h-4 w-4" />
-            Cetak Label
           </Button>
           <Button variant="outline" onClick={handlePrint} disabled={!dataUrl}>
             <Printer className="mr-2 h-4 w-4" />
