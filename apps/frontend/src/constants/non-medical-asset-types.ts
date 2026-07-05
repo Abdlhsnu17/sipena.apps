@@ -117,12 +117,12 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
     color: "bg-slate-100 text-slate-800",
   },
   "display-informasi-ruangan": {
-    label: "Display Informasi Ruangan",
+    label: "Display Informasi Lokal",
     category: "Perlengkapan Umum",
     color: "bg-slate-100 text-slate-800",
   },
   "jam-dinding-ruangan": {
-    label: "Jam Dinding Ruangan",
+    label: "Jam Dinding Lokal",
     category: "Perlengkapan Umum",
     color: "bg-slate-100 text-slate-800",
   },
@@ -447,7 +447,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "oxygen-signage-ruangan": {
-    label: "Oxygen Signage Ruangan",
+    label: "Oxygen Signage Lokal",
     category: "Emergency & Evakuasi",
     color: "bg-rose-100 text-rose-800",
   },
@@ -459,7 +459,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "panic-button-ruangan": {
-    label: "Panic Button Ruangan",
+    label: "Panic Button Lokal",
     category: "Emergency & Evakuasi",
     color: "bg-rose-100 text-rose-800",
   },
@@ -498,13 +498,13 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "rice-cooker-ruangan": {
-    label: "Rice Cooker Ruangan",
+    label: "Rice Cooker Lokal",
     category: "Food & Pantry",
     color: "bg-amber-100 text-amber-800",
   },
 
   "microwave-ruangan": {
-    label: "Microwave Ruangan",
+    label: "Microwave Lokal",
     category: "Food & Pantry",
     color: "bg-amber-100 text-amber-800",
   },
@@ -525,7 +525,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   // Logistik & Penyimpanan
   // =========================
   "rak-logistik-ruangan": {
-    label: "Rak Logistik Ruangan",
+    label: "Rak Logistik Lokal",
     category: "Logistik & Penyimpanan",
     color: "bg-slate-100 text-slate-800",
   },
@@ -555,7 +555,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "troli-logistik-ruangan": {
-    label: "Troli Logistik Ruangan",
+    label: "Troli Logistik Lokal",
     category: "Logistik & Penyimpanan",
     color: "bg-slate-100 text-slate-800",
   },
@@ -567,7 +567,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "timbangan-digital-ruangan": {
-    label: "Timbangan Digital Ruangan",
+    label: "Timbangan Digital Lokal",
     category: "Logistik & Penyimpanan",
     color: "bg-slate-100 text-slate-800",
   },
@@ -591,7 +591,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "troli-serbaguna-ruangan": {
-    label: "Troli Serbaguna Ruangan",
+    label: "Troli Serbaguna Lokal",
     category: "Logistik & Penyimpanan",
     color: "bg-slate-100 text-slate-800",
   },
@@ -632,7 +632,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   // Sanitasi & Kebersihan
   // =========================
   "wastafel-stainless-steel-ruangan": {
-    label: "Wastafel Stainless Steel Ruangan",
+    label: "Wastafel Stainless Steel Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
@@ -692,24 +692,24 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "spill-kit-ruangan": {
-    label: "Spill Kit Ruangan",
+    label: "Spill Kit Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
 
   "cleaning-trolley-ruangan": {
-    label: "Cleaning Trolley Ruangan",
+    label: "Cleaning Trolley Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
   "cleaning-trolley-cart": {
-    label: "Cleaning Trolley / Cart",
+    label: "Cleaning Trolley Cart",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
 
   "mop-set-ruangan": {
-    label: "Mop Set Ruangan",
+    label: "Mop Set Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
@@ -737,7 +737,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "vacuum-cleaner-ruangan": {
-    label: "Vacuum Cleaner Ruangan",
+    label: "Vacuum Cleaner Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
@@ -748,7 +748,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "troli-sampah-ruangan": {
-    label: "Troli Sampah Ruangan",
+    label: "Troli Sampah Lokal",
     category: "Sanitasi & Kebersihan",
     color: "bg-emerald-100 text-emerald-800",
   },
@@ -769,7 +769,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "exhaust-fan-ruangan": {
-    label: "Exhaust Fan Ruangan",
+    label: "Exhaust Fan Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
@@ -781,31 +781,31 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "hepa-filter-ruangan": {
-    label: "HEPA Filter Ruangan",
+    label: "HEPA Filter Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
 
   "dehumidifier-ruangan": {
-    label: "Dehumidifier Ruangan",
+    label: "Dehumidifier Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
 
   "humidifier-ruangan": {
-    label: "Humidifier Ruangan",
+    label: "Humidifier Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
 
   "air-curtain-ruangan": {
-    label: "Air Curtain Ruangan",
+    label: "Air Curtain Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
 
   "thermometer-ruangan": {
-    label: "Thermometer Ruangan",
+    label: "Thermometer Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
@@ -821,7 +821,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "hygrometer-ruangan": {
-    label: "Hygrometer Ruangan",
+    label: "Hygrometer Lokal",
     category: "HVAC & Lingkungan Ruangan",
     color: "bg-cyan-100 text-cyan-800",
   },
@@ -842,13 +842,13 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   // Kelistrikan & Utilitas Ruang
   // =========================
   "panel-listrik-sub-ruangan": {
-    label: "Panel Listrik Sub Ruangan",
+    label: "Panel Listrik Sub Lokal",
     category: "Kelistrikan & Utilitas Ruang",
     color: "bg-blue-100 text-blue-800",
   },
 
   "mcb-ruangan": {
-    label: "MCB Ruangan",
+    label: "MCB Lokal",
     category: "Kelistrikan & Utilitas Ruang",
     color: "bg-blue-100 text-blue-800",
   },
@@ -882,7 +882,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "ups-ruangan": {
-    label: "UPS Ruangan",
+    label: "UPS Lokal",
     category: "Kelistrikan & Utilitas Ruang",
     color: "bg-blue-100 text-blue-800",
   },
@@ -904,7 +904,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "grounding-system-ruangan": {
-    label: "Grounding System Ruangan",
+    label: "Grounding System Lokal",
     category: "Kelistrikan & Utilitas Ruang",
     color: "bg-blue-100 text-blue-800",
   },
@@ -928,7 +928,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "panel-kontrol-ruangan": {
-    label: "Panel Kontrol Ruangan",
+    label: "Panel Kontrol Lokal",
     category: "Kelistrikan & Utilitas Ruang",
     color: "bg-blue-100 text-blue-800",
   },
@@ -1129,7 +1129,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   // Keamanan & Kontrol Akses
   // =========================
   "cctv-ruangan": {
-    label: "CCTV Ruangan",
+    label: "CCTV Lokal",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
@@ -1165,13 +1165,13 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "access-door-control-ruangan-rfid": {
-    label: "Access Door Control Ruangan (RFID)",
+    label: "Access Door Control Lokal (RFID)",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
 
   "access-door-control-ruangan-biometric": {
-    label: "Access Door Control Ruangan (Biometric)",
+    label: "Access Door Control Lokal (Biometric)",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
@@ -1189,13 +1189,13 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "intercom-ruangan": {
-    label: "Intercom Ruangan",
+    label: "Intercom Lokal",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
 
   "calling-bell-ruangan": {
-    label: "Calling Bell Ruangan",
+    label: "Calling Bell Lokal",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
@@ -1352,7 +1352,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "sensor-pintu-ruangan": {
-    label: "Sensor Pintu Ruangan",
+    label: "Sensor Pintu Lokal",
     category: "Keamanan & Kontrol Akses",
     color: "bg-red-100 text-red-800",
   },
@@ -1361,73 +1361,73 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   // Proteksi Kebakaran & Evakuasi
   // =========================
   "fire-extinguisher-apar-ruangan": {
-    label: "Fire Extinguisher (APAR) Ruangan",
+    label: "Fire Extinguisher (APAR) Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "fire-blanket-ruangan": {
-    label: "Fire Blanket Ruangan",
+    label: "Fire Blanket Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "smoke-detector-ruangan": {
-    label: "Smoke Detector Ruangan",
+    label: "Smoke Detector Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "heat-detector-ruangan": {
-    label: "Heat Detector Ruangan",
+    label: "Heat Detector Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "manual-call-point-mcp-ruangan": {
-    label: "Manual Call Point (MCP) Ruangan",
+    label: "Manual Call Point (MCP) Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "fire-alarm-bell-ruangan": {
-    label: "Fire Alarm Bell Ruangan",
+    label: "Fire Alarm Bell Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "fire-alarm-strobe-light-ruangan": {
-    label: "Fire Alarm Strobe Light Ruangan",
+    label: "Fire Alarm Strobe Light Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "emergency-exit-sign-dalam-ruangan": {
-    label: "Emergency Exit Sign (Dalam Ruangan)",
+    label: "Emergency Exit Sign",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "emergency-lamp-lampu-darurat-ruangan": {
-    label: "Emergency Lamp / Lampu Darurat Ruangan",
+    label: "Emergency Lamp / Lampu Darurat Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "rambu-evakuasi-dalam-ruangan": {
-    label: "Rambu Evakuasi Dalam Ruangan",
+    label: "Rambu Evakuasi",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "peta-jalur-evakuasi-ruangan": {
-    label: "Peta Jalur Evakuasi Ruangan",
+    label: "Peta Jalur Evakuasi Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
 
   "pintu-darurat-ruangan": {
-    label: "Pintu Darurat Ruangan",
+    label: "Pintu Darurat Lokal",
     category: "Proteksi Kebakaran & Evakuasi",
     color: "bg-orange-100 text-orange-800",
   },
@@ -1460,7 +1460,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "kursi-roda-ruangan": {
-    label: "Kursi Roda Ruangan",
+    label: "Kursi Roda Lokal",
     category: "Furnitur & Perlengkapan Pasien",
     color: "bg-lime-100 text-lime-800",
   },
@@ -1494,7 +1494,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "lemari-linen-ruangan": {
-    label: "Lemari Linen Ruangan",
+    label: "Lemari Linen Lokal",
     category: "Furnitur & Perlengkapan Pasien",
     color: "bg-lime-100 text-lime-800",
   },
@@ -1506,7 +1506,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "partisi-ruangan": {
-    label: "Partisi Ruangan",
+    label: "Partisi Lokal",
     category: "Furnitur & Perlengkapan Pasien",
     color: "bg-lime-100 text-lime-800",
   },
@@ -1589,7 +1589,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "telephone-ip-ruangan": {
-    label: "Telephone IP Ruangan",
+    label: "Telephone IP Lokal",
     category: "IT & Komunikasi Ruangan",
     color: "bg-indigo-100 text-indigo-800",
   },
@@ -1610,13 +1610,13 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "access-point-wifi-ruangan": {
-    label: "Access Point (WiFi Ruangan)",
+    label: "Access Point (WiFi Lokal)",
     category: "IT & Komunikasi Ruangan",
     color: "bg-indigo-100 text-indigo-800",
   },
 
   "router-ruangan": {
-    label: "Router Ruangan",
+    label: "Router Lokal",
     category: "IT & Komunikasi Ruangan",
     color: "bg-indigo-100 text-indigo-800",
   },
@@ -1633,7 +1633,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
   },
 
   "ups-it-ruangan": {
-    label: "UPS IT Ruangan",
+    label: "UPS IT Lokal",
     category: "IT & Komunikasi Ruangan",
     color: "bg-indigo-100 text-indigo-800",
   },
@@ -1644,7 +1644,7 @@ export const NON_MEDICAL_ASSET_TYPE_DEFINITIONS = {
     color: "bg-indigo-100 text-indigo-800",
   },
   "komputer-pc-ruangan": {
-    label: "Komputer/PC Ruangan",
+    label: "Komputer/PC Lokal",
     category: "IT & Komunikasi Ruangan",
     color: "bg-indigo-100 text-indigo-800",
   },

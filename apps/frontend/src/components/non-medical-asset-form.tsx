@@ -11,10 +11,10 @@ import {
 import type { NonMedicalAsset } from "@/types/non-medical-assets-types";
 import { maintenanceDetailStatusLabels } from "@/utils/api-mappers";
 import { inferNonMedicalUsagePurpose, matchNonMedicalTypeFromInventoryName } from "@/utils/asset-function-classifier";
-import { USAGE_OPTIONS } from "@/utils/asset-usage";
+import { USAGE_OPTIONS, USAGE_PURPOSE_ALIASES } from "@/utils/asset-usage";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { buildUsagePurposeOptions, normalizeUsagePurpose } from "@/utils/usage-purpose";
-import { X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -51,7 +51,7 @@ const createInitialFormData = (defaultTypeValue: NonMedicalAsset["type"]) => ({
   condition: "Baik" as ConditionType,
   status: "Tersedia" as StatusType,
   notes: "",
-  usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose("", defaultTypeValue), USAGE_OPTIONS),
+  usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose("", defaultTypeValue), USAGE_OPTIONS, USAGE_PURPOSE_ALIASES),
 })
 
 const createCustomTypeOption = (value: string) => ({
@@ -59,6 +59,38 @@ const createCustomTypeOption = (value: string) => ({
   label: value,
   category: "Tipe Manual",
 })
+
+const resolveNonMedicalAssetCategory = (type?: string, inventoryName?: string) => {
+  const matchedTypeOption = NON_MEDICAL_ASSET_TYPE_OPTIONS.find((option) => option.value === type)
+  if (matchedTypeOption) {
+    return matchedTypeOption.category
+  }
+
+  const normalizedType = type?.trim().toLowerCase()
+  if (normalizedType) {
+    const matchedCategoryOption = Array.from(new Set(NON_MEDICAL_ASSET_TYPE_OPTIONS.map((option) => option.category))).find(
+      (category) => category.toLowerCase() === normalizedType,
+    )
+    if (matchedCategoryOption) {
+      return matchedCategoryOption
+    }
+  }
+
+  const normalizedInventoryName = inventoryName?.trim().toLowerCase()
+  if (!normalizedInventoryName) {
+    return ""
+  }
+
+  return (
+    NON_MEDICAL_ASSET_CLASSIFICATIONS.find((classification) => {
+      if (classification.inventoryName.trim().toLowerCase() === normalizedInventoryName) {
+        return true
+      }
+
+      return classification.aliases.some((alias) => alias.trim().toLowerCase() === normalizedInventoryName)
+    })?.recommendedTypeCategory ?? ""
+  )
+}
 
 export default function NonMedicalAssetForm({
   asset,
@@ -80,9 +112,7 @@ export default function NonMedicalAssetForm({
     [],
   )
 
-  const defaultTypeValue =
-    (nonMedicalTypeCategoryOptions[0]?.value as NonMedicalAsset["type"]) ??
-    ("IT & Elektronik" as NonMedicalAsset["type"])
+  const defaultTypeValue = "" as NonMedicalAsset["type"]
   const defaultTypeLabel = defaultTypeValue
 
   const [formData, setFormData] = useState(createInitialFormData(defaultTypeValue))
@@ -107,8 +137,7 @@ export default function NonMedicalAssetForm({
   useEffect(() => {
     if (asset) {
       const resolvedType = asset.type ?? defaultTypeValue
-      const resolvedTypeCategory =
-        NON_MEDICAL_ASSET_TYPE_OPTIONS.find((option) => option.value === resolvedType)?.category ?? resolvedType
+      const resolvedTypeCategory = resolveNonMedicalAssetCategory(resolvedType, asset.inventoryName)
       setFormData({
         assetCode: asset.assetCode ?? "",
         inventoryName: asset.inventoryName ?? "",
@@ -125,6 +154,7 @@ export default function NonMedicalAssetForm({
         usagePurpose: normalizeUsagePurpose(
           asset.usagePurpose ?? inferNonMedicalUsagePurpose(asset.inventoryName, resolvedTypeCategory),
           USAGE_OPTIONS,
+          USAGE_PURPOSE_ALIASES,
         ),
       })
       setTypeSearch(resolvedTypeCategory)
@@ -173,7 +203,7 @@ export default function NonMedicalAssetForm({
       return
     }
 
-    const resolvedType = formData.type?.trim() || typeSearch.trim() || defaultTypeValue
+    const resolvedType = resolveNonMedicalAssetCategory(formData.type, formData.inventoryName) || typeSearch.trim() || defaultTypeValue
     
     const assetData: NonMedicalAsset = {
       ...formData,
@@ -192,7 +222,7 @@ export default function NonMedicalAssetForm({
       nextMaintenance: formData.nextMaintenance,
       condition: formData.condition as "Baik" | "Cukup" | "Rusak",
       status: formData.status as StatusType,
-      usagePurpose: normalizeUsagePurpose(formData.usagePurpose, USAGE_OPTIONS),
+      usagePurpose: normalizeUsagePurpose(formData.usagePurpose, USAGE_OPTIONS, USAGE_PURPOSE_ALIASES),
     }
     
     onSave(assetData)
@@ -222,12 +252,26 @@ export default function NonMedicalAssetForm({
 
   const filteredInventoryOptions = useMemo(() => {
     const query = formData.inventoryName.trim()
-    if (!query) {
-      return inventoryOptions
+    const selectedCategory = formData.type.trim().toLowerCase()
+
+    const matchingOptions = inventoryOptions.filter((option) => matchesSearchKeyword(query, [option]))
+
+    if (!selectedCategory) {
+      return query ? matchingOptions : inventoryOptions
     }
 
-    return inventoryOptions.filter((option) => matchesSearchKeyword(query, [option]))
-  }, [formData.inventoryName, inventoryOptions])
+    if (!query) {
+      return inventoryOptions.filter((option) => resolveNonMedicalAssetCategory(undefined, option).toLowerCase() === selectedCategory)
+    }
+
+    return [...matchingOptions].sort((left, right) => {
+      const leftMatchesCategory = resolveNonMedicalAssetCategory(undefined, left).toLowerCase() === selectedCategory
+      const rightMatchesCategory = resolveNonMedicalAssetCategory(undefined, right).toLowerCase() === selectedCategory
+
+      if (leftMatchesCategory === rightMatchesCategory) return left.localeCompare(right)
+      return leftMatchesCategory ? -1 : 1
+    })
+  }, [formData.inventoryName, formData.type, inventoryOptions])
 
   const classificationByInventoryName = useMemo(() => {
     const lookup = new Map<string, (typeof NON_MEDICAL_ASSET_CLASSIFICATIONS)[number]>()
@@ -291,6 +335,7 @@ export default function NonMedicalAssetForm({
         usagePurpose: normalizeUsagePurpose(
           matchedType?.usagePurpose ?? inferNonMedicalUsagePurpose(value, resolvedType),
           USAGE_OPTIONS,
+          USAGE_PURPOSE_ALIASES,
         ),
       }
     })
@@ -312,6 +357,7 @@ export default function NonMedicalAssetForm({
         usagePurpose: normalizeUsagePurpose(
           matchedType?.usagePurpose ?? inferNonMedicalUsagePurpose(value, resolvedType),
           USAGE_OPTIONS,
+          USAGE_PURPOSE_ALIASES,
         ),
       }
     })
@@ -345,12 +391,17 @@ export default function NonMedicalAssetForm({
   }, [typeOptions, typeSearch])
 
   const inferredUsagePurpose = useMemo(
-    () => normalizeUsagePurpose(inferNonMedicalUsagePurpose(formData.inventoryName, formData.type), USAGE_OPTIONS),
+    () =>
+      normalizeUsagePurpose(
+        inferNonMedicalUsagePurpose(formData.inventoryName, formData.type),
+        USAGE_OPTIONS,
+        USAGE_PURPOSE_ALIASES,
+      ),
     [formData.inventoryName, formData.type],
   )
 
   const usagePurposeOptions = useMemo(
-    () => buildUsagePurposeOptions(USAGE_OPTIONS, formData.usagePurpose),
+    () => buildUsagePurposeOptions(USAGE_OPTIONS, formData.usagePurpose, USAGE_PURPOSE_ALIASES),
     [formData.usagePurpose],
   )
 
@@ -359,7 +410,11 @@ export default function NonMedicalAssetForm({
     setFormData((prev) => ({
       ...prev,
       type: option.value,
-      usagePurpose: normalizeUsagePurpose(inferNonMedicalUsagePurpose(prev.inventoryName, option.value), USAGE_OPTIONS),
+      usagePurpose: normalizeUsagePurpose(
+        inferNonMedicalUsagePurpose(prev.inventoryName, option.value),
+        USAGE_OPTIONS,
+        USAGE_PURPOSE_ALIASES,
+      ),
     }))
     setShowTypeSuggestions(false)
   }
@@ -378,6 +433,7 @@ export default function NonMedicalAssetForm({
       usagePurpose: normalizeUsagePurpose(
         inferNonMedicalUsagePurpose(prev.inventoryName, exactMatch?.value ?? value.trim()),
         USAGE_OPTIONS,
+        USAGE_PURPOSE_ALIASES,
       ),
     }))
   }
@@ -455,7 +511,7 @@ export default function NonMedicalAssetForm({
             </div>
 
             <div ref={typeSelectorRef} className="relative">
-              <label className="block text-sm font-medium mb-1">Tipe Peralatan Non-Medis</label>
+              <label className="block text-sm font-medium mb-1">Kategori Inventaris Non-Medis</label>
               <input
                 type="text"
                 value={typeSearch}
@@ -464,7 +520,7 @@ export default function NonMedicalAssetForm({
                 onKeyDown={handleTypeInputKeyDown}
                 autoComplete="off"
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
-                placeholder="Cari atau ketik tipe peralatan"
+                placeholder="Cari kategori inventaris"
                 aria-expanded={showTypeSuggestions}
               />
               {showTypeSuggestions && (
@@ -610,9 +666,11 @@ export default function NonMedicalAssetForm({
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="submit" className="bg-teal-600 hover:bg-teal-700 flex-1">
+              <Save className="mr-2 h-4 w-4" />
               Simpan
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
+              <X className="mr-2 h-4 w-4" />
               Batal
             </Button>
           </div>

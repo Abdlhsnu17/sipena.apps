@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
-import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails, isMaintenanceDetailStatus } from "@/utils/api-mappers";
+import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
 import { downloadManualAssetLabel, printManualAssetLabel } from "@/utils/asset-label";
 import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
@@ -20,10 +20,11 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets-types";
 
 import { AssetImportDialog } from "@/components/asset-import-dialog";
+import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
-import { USAGE_OPTIONS } from "@/utils/asset-usage";
-import { Building, CalendarDays, ChevronDown, ChevronUp, Edit2, FileDown, FileSpreadsheet, FileText, Hash, MapPin, Package, Plus, QrCode, Search, Sparkles, Tag, Trash2, Wrench } from "lucide-react";
+import { USAGE_OPTIONS, USAGE_PURPOSE_ALIASES } from "@/utils/asset-usage";
+import { Building, ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -413,13 +414,13 @@ export default function NonMedicalAssetsPage() {
 
   const usageCounts = rooms.reduce<Record<string, number>>((acc, room) => {
     room.assets.forEach((asset) => {
-      const key = normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", USAGE_OPTIONS)
+      const key = normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", USAGE_OPTIONS, USAGE_PURPOSE_ALIASES)
       acc[key] = (acc[key] || 0) + 1
     })
     return acc
   }, {})
 
-  const usageOrder = buildOrderedUsagePurposeList(USAGE_OPTIONS, Object.keys(usageCounts))
+  const usageOrder = buildOrderedUsagePurposeList(USAGE_OPTIONS, Object.keys(usageCounts), USAGE_PURPOSE_ALIASES)
   const usageList = usageOrder.map((usage) => ({
     label: usage,
     count: usageCounts[usage] || 0,
@@ -472,7 +473,7 @@ export default function NonMedicalAssetsPage() {
       "Non-Medis",
       "Non Medis",
       "Non Medical",
-      normalizeUsagePurpose(asset.usagePurpose, USAGE_OPTIONS),
+      normalizeUsagePurpose(asset.usagePurpose, USAGE_OPTIONS, USAGE_PURPOSE_ALIASES),
       asset.notes,
       asset.status,
       asset.condition,
@@ -775,7 +776,6 @@ export default function NonMedicalAssetsPage() {
                         <div className="grid gap-3 md:grid-cols-2 auto-rows-fr">
                           {assetsToDisplay.map((asset, assetIndex) => {
                             const assetKey = asset.id ?? `${room.id}-${assetIndex}`
-                            const statusLabel = getInventoryStatusLabel(asset.status)
                             const noId = getAssetNoId(room.id, asset.id)
                             const purchaseDateText = asset.purchaseDate
                               ? new Date(asset.purchaseDate).toLocaleDateString("id-ID", {
@@ -802,125 +802,76 @@ export default function NonMedicalAssetsPage() {
                               : asset.lastRepair
                                 ? "Perbaikan Terakhir"
                                 : "Pemeliharaan Terakhir"
+                            const statusLabel = getInventoryStatusLabel(asset.status)
 
                             return (
-                              <div key={assetKey} className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/40 dark:bg-slate-950/50">
-                                <div className="border-b border-slate-200/80 bg-linear-to-r from-slate-50 via-white to-slate-50 p-4 sm:p-5 dark:border-slate-800/40 dark:from-slate-900/50 dark:via-slate-950/60 dark:to-slate-900/50">
-                                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                    <div className="min-w-0 space-y-3">
-                                      <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60 dark:text-slate-400">
-                                        Detail Inventaris
-                                      </div>
-                                      <h5 className="text-[17px] font-semibold leading-snug tracking-tight text-slate-950 sm:text-[18px] dark:text-slate-100">
-                                        {asset.inventoryName || asset.name}
-                                      </h5>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[11px] font-medium shadow-sm">
-                                          No ID: {noId}
-                                        </Badge>
-                                        <Badge variant="outline" className={`rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${statusLabel === "Tersedia" ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300" : isMaintenanceDetailStatus(statusLabel) ? "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300" : statusLabel === "Dipinjam" ? "bg-sky-50 border-sky-200 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300" : statusLabel === "Sedang Digunakan" ? "bg-sky-50 border-sky-200 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-300" : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-400/10 dark:border-rose-400/30 dark:text-rose-300"}`}>
-                                          {statusLabel}
-                                        </Badge>
-                                        <Badge variant="outline" className={`rounded-full border px-2.5 py-1 text-[11px] shadow-sm ${asset.condition === "Baik" ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-400/10 dark:border-emerald-400/30 dark:text-emerald-300" : asset.condition === "Cukup" ? "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-300" : "bg-red-50 border-red-200 text-red-800 dark:bg-red-400/10 dark:border-red-400/30 dark:text-red-300"}`}>
-                                          {asset.condition}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline" className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
-                                          <Tag className="mr-1.5 h-3.5 w-3.5" />
-                                          Kategori: {room.category}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end lg:min-w-76">
-                                      <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-3 text-[11px] font-medium shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60" onClick={() => setQrTarget({ noId, asset, location: room.roomName })}>
-                                        <QrCode className="mr-1.5 h-4 w-4" />
-                                        QR Code
-                                      </Button>
-                                      <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-3 text-[11px] font-medium shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60" onClick={() => downloadManualAssetLabel({ noId, assetName: asset.inventoryName || asset.name, assetCode: asset.assetCode, serialNumber: asset.serialNumber, location: room.roomName, condition: asset.condition, status: asset.status, purchaseDate: asset.purchaseDate, nextMaintenance: asset.nextMaintenance, sourceLabel: "Non-Medis" })}>
-                                        <FileDown className="mr-1.5 h-4 w-4" />
-                                        Unduh Label
-                                      </Button>
-                                      <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-3 text-[11px] font-medium shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60" onClick={() => printManualAssetLabel({ noId, assetName: asset.inventoryName || asset.name, assetCode: asset.assetCode, serialNumber: asset.serialNumber, location: room.roomName, condition: asset.condition, status: asset.status, purchaseDate: asset.purchaseDate, nextMaintenance: asset.nextMaintenance, sourceLabel: "Non-Medis" })}>
-                                        <FileText className="mr-1.5 h-4 w-4" />
-                                        Cetak Label
-                                      </Button>
-                                      {canEditInventory && (
-                                        <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 bg-white px-3 text-[11px] font-medium shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60" onClick={() => { setShowRoomForm(false); setSelectedRoomId(room.id); setEditingAsset(asset); setShowAssetForm(true) }}>
-                                          <Edit2 className="mr-1.5 h-4 w-4" />
-                                          Edit
-                                        </Button>
-                                      )}
-                                      {canRequestInventoryDeletion && (
-                                        <Button variant="outline" size="sm" title="Ajukan penghapusan aset" className="h-10 rounded-xl border-red-200 bg-white px-3 text-[11px] font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-400/40 dark:bg-slate-950/60 dark:text-red-300 dark:hover:bg-red-400/10" onClick={() => setDisposalTarget({ roomId: room.id, asset })}>
-                                          <Trash2 className="mr-1.5 h-4 w-4" />
-                                          Ajukan
-                                        </Button>
-                                      )}
-                                      {canDeleteInventory && (
-                                        <Button variant="outline" size="sm" title="Hapus permanen" className="h-10 rounded-xl border-red-200 bg-white px-3 text-[11px] font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-400/40 dark:bg-slate-950/60 dark:text-red-300 dark:hover:bg-red-400/10" onClick={() => handleDeleteAsset(room.id, asset.id)}>
-                                          <Trash2 className="mr-1.5 h-4 w-4" />
-                                          Hapus
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex-1 bg-slate-50/60 px-4 py-4 dark:bg-slate-900/30 sm:px-5">
-                                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <Tag className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Kode</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{asset.assetCode || "-"}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <Hash className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">SN</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{asset.serialNumber || "-"}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <Package className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Merk</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{asset.name || "-"}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Tanggal Beli</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{purchaseDateText}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{maintenanceLabelText}</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{maintenanceDateText}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                                      <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Penggunaan</p>
-                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{normalizeUsagePurpose(asset.usagePurpose || "Operasional bersama", USAGE_OPTIONS)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {asset.notes && (
-                                    <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800/50 dark:bg-slate-950/60">
-                                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Catatan</p>
-                                      <p className="mt-1 text-xs font-medium leading-5 text-slate-700 dark:text-slate-300">{asset.notes}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                              <InventoryDetailCard
+                                key={assetKey}
+                                title={asset.inventoryName || asset.name}
+                                noId={noId}
+                                statusLabel={statusLabel}
+                                conditionLabel={asset.condition}
+                                categoryLabel={room.category}
+                                code={asset.assetCode || "-"}
+                                serialNumber={asset.serialNumber || "-"}
+                                brand={asset.name || "-"}
+                                purchaseDateText={purchaseDateText}
+                                maintenanceLabel={maintenanceLabelText}
+                                maintenanceDateText={maintenanceDateText}
+                                usageText={normalizeUsagePurpose(
+                                  asset.usagePurpose || "Operasional bersama",
+                                  USAGE_OPTIONS,
+                                  USAGE_PURPOSE_ALIASES,
+                                )}
+                                notes={asset.notes}
+                                onShowQr={() => setQrTarget({ noId, asset, location: room.roomName })}
+                                onDownloadLabel={() =>
+                                  downloadManualAssetLabel({
+                                    noId,
+                                    assetName: asset.inventoryName || asset.name,
+                                    assetCode: asset.assetCode,
+                                    serialNumber: asset.serialNumber,
+                                    location: room.roomName,
+                                    condition: asset.condition,
+                                    status: asset.status,
+                                    purchaseDate: asset.purchaseDate,
+                                    nextMaintenance: asset.nextMaintenance,
+                                    sourceLabel: "Non-Medis",
+                                  })
+                                }
+                                onPrintLabel={() =>
+                                  printManualAssetLabel({
+                                    noId,
+                                    assetName: asset.inventoryName || asset.name,
+                                    assetCode: asset.assetCode,
+                                    serialNumber: asset.serialNumber,
+                                    location: room.roomName,
+                                    condition: asset.condition,
+                                    status: asset.status,
+                                    purchaseDate: asset.purchaseDate,
+                                    nextMaintenance: asset.nextMaintenance,
+                                    sourceLabel: "Non-Medis",
+                                  })
+                                }
+                                onEdit={
+                                  canEditInventory
+                                    ? () => {
+                                      setShowRoomForm(false)
+                                      setSelectedRoomId(room.id)
+                                      setEditingAsset(asset)
+                                      setShowAssetForm(true)
+                                    }
+                                    : undefined
+                                }
+                                onDelete={
+                                  canDeleteInventory
+                                    ? () => handleDeleteAsset(room.id, asset.id)
+                                    : canRequestInventoryDeletion
+                                      ? () => setDisposalTarget({ roomId: room.id, asset })
+                                      : undefined
+                                }
+                                deleteLabel={canDeleteInventory ? "Hapus" : canRequestInventoryDeletion ? "Ajukan" : undefined}
+                              />
                             )
                           })}
                         </div>

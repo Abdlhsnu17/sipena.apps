@@ -8,7 +8,17 @@ type MedicalAssetTypeDefinition = {
 
 const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition> = {
  "hospital-bed": {
-    label: "Hospital Bed / Tempat Tidur Pasien (Manual/Electric)",
+    label: "Bed Pasien",
+    category: "Perlengkapan Ruang Perawatan",
+    color: "bg-slate-100 text-slate-800",
+  },
+ "hospital-bed-manual": {
+    label: "Bed Pasien Manual",
+    category: "Perlengkapan Ruang Perawatan",
+    color: "bg-slate-100 text-slate-800",
+  },
+ "hospital-bed-electric": {
+    label: "Bed Pasien Elektrik",
     category: "Perlengkapan Ruang Perawatan",
     color: "bg-slate-100 text-slate-800",
   },
@@ -39,6 +49,11 @@ const MEDICAL_ASSET_TYPE_DEFINITIONS: Record<string, MedicalAssetTypeDefinition>
   },
   "emergency-bed": {
     label: "Emergency Bed / Stretcher Bed",
+    category: "Alat Gawat Darurat",
+    color: "bg-rose-100 text-rose-800",
+  },
+  "portable-stretcher": {
+    label: "Brankar Portabel",
     category: "Alat Gawat Darurat",
     color: "bg-rose-100 text-rose-800",
   },

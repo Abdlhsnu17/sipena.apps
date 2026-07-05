@@ -14,12 +14,15 @@ export interface MedicalAsset {
   inventoryName: string
   type:
     | "hospital-bed"
+    | "hospital-bed-manual"
+    | "hospital-bed-electric"
     | "bedside-cabinet"
     | "overbed-table"
     | "iv-pole"
     | "bedside-commode"
     | "trolley-medication"
     | "emergency-bed"
+    | "portable-stretcher"
     | "patient-monitor"
     | "central-monitoring"
     | "thermometer"

@@ -107,6 +107,7 @@ export const MEDICAL_ASSET_CATEGORIES: Record<string, MedicalAssetCategory> = {
       "ELISA Reader & Washer",
       "EMG / Nerve Conduction Study",
       "Emergency Bed / Stretcher Bed",
+      "Brankar Portabel",
       "Emergency Crash Cart",
       "Emergency Crash Cart (obstetri)",
       "Emergency Crash Cart (OK)",
@@ -140,8 +141,8 @@ export const MEDICAL_ASSET_CATEGORIES: Record<string, MedicalAssetCategory> = {
       "High Frequency Oscillatory Ventilator (HFOV)",
       "HFNC Neonatal (jika tersedia)",
       "Holter Monitor",
-      "Hospital Bed / Tempat Tidur Pasien (Manual)",
-      "Hospital Bed / Tempat Tidur Pasien (Electric)",
+      "Bed Pasien Manual",
+      "Bed Pasien Elektrik",
       "Humidifier Ventilator Heated System",
       "Intraoral Scanner",
 
