@@ -21,8 +21,9 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 
 
 import { AssetImportDialog } from "@/components/asset-import-dialog";
+import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
-import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, QrCode, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -43,6 +44,7 @@ export default function MedicalAssetsPage() {
   const [editingAsset, setEditingAsset] = useState<MedicalAsset | null>(null)
   const [editingRoom, setEditingRoom] = useState<MedicalRoom | null>(null)
   const [disposalTarget, setDisposalTarget] = useState<{ roomId: string; asset: MedicalAsset } | null>(null)
+  const [qrTarget, setQrTarget] = useState<{ noId: string; asset: MedicalAsset; location?: string } | null>(null)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [selectedRoomId, setSelectedRoomId] = useState("")
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set())
@@ -829,6 +831,21 @@ export default function MedicalAssetsPage() {
                                 </div>
                                 {(canEditInventory || canDeleteInventory || canRequestInventoryDeletion) && (
                                   <div className="flex gap-1 shrink-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      title="Lihat / cetak kode QR"
+                                      className="h-9 w-9 p-1.5 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-400/10"
+                                      onClick={() =>
+                                        setQrTarget({
+                                          noId: getAssetNoId(room.id, asset.id),
+                                          asset,
+                                          location: room.roomName,
+                                        })
+                                      }
+                                    >
+                                      <QrCode className="w-4 h-4" />
+                                    </Button>
                                     {canEditInventory && (
                                       <Button
                                         variant="ghost"
@@ -908,6 +925,20 @@ export default function MedicalAssetsPage() {
           assetDetailName={disposalTarget.asset.name}
           assetDetailCode={disposalTarget.asset.assetCode}
           onSuccess={() => setDisposalTarget(null)}
+        />
+      )}
+
+      {/* Asset QR Dialog */}
+      {qrTarget && (
+        <AssetQrDialog
+          open={true}
+          onOpenChange={(open) => { if (!open) setQrTarget(null) }}
+          noId={qrTarget.noId}
+          assetName={qrTarget.asset.inventoryName || qrTarget.asset.name}
+          assetCode={qrTarget.asset.assetCode}
+          serialNumber={qrTarget.asset.serialNumber}
+          location={qrTarget.location}
+          sourceLabel="Medis"
         />
       )}
 

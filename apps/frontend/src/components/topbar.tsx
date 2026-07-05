@@ -4,9 +4,10 @@ import { Bell, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { assetUsageService } from "@/services/asset-usage.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
-import { assetUsageService } from "@/services/asset-usage.service";
+import { serverTimeService } from "@/services/server-time.service";
 import {
     assetSourceLabel,
     borrowingStatusLabel,
@@ -16,7 +17,6 @@ import {
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { serverTimeService } from "@/services/server-time.service";
 
 import {
     DropdownMenu,
@@ -27,6 +27,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useNotifications } from "@/hooks/use-notifications";
 import { getAuthToken, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { normalizeUserRole } from "@/utils/role";
 
@@ -164,6 +165,16 @@ export default function Topbar() {
   const [notificationQuery, setNotificationQuery] = useState("")
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const isCompactNotification = notificationDensity === "compact"
+
+  // Real-time in-app notifications from the backend (delivered via SSE, with a
+  // polling fallback inside the hook).
+  const {
+    notifications: systemNotifications,
+    unreadCount: systemUnreadCount,
+    markAsRead: markSystemNotificationRead,
+    markAllAsRead: markAllSystemNotificationsRead,
+    remove: removeSystemNotification,
+  } = useNotifications({ limit: 15 })
 
   useEffect(() => {
     setMounted(true)
@@ -901,14 +912,18 @@ export default function Topbar() {
               aria-label="Menu notifikasi"
             >
               <Bell className="size-4.5" />
-              {notifications.length > 0 && (
+              {systemUnreadCount > 0 ? (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-background bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                  {systemUnreadCount > 99 ? "99+" : systemUnreadCount}
+                </span>
+              ) : notifications.length > 0 ? (
                 <span className={`absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background ${
                   notifications.some((n) => n.notifStatus === "urgent") ? "bg-red-500" :
                   notifications.some((n) => n.notifStatus === "warning") ? "bg-orange-500" :
                   notifications.some((n) => n.notifStatus === "reminder") ? "bg-amber-400" :
                   "bg-blue-500"
                 }`} />
-              )}
+              ) : null}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(62vh,30rem)] w-[min(calc(100vw-1rem),20rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-white text-slate-950 shadow-lg sm:w-84">
               <div className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-0.5">
@@ -943,6 +958,76 @@ export default function Topbar() {
                 </div>
               </div>
               <DropdownMenuSeparator />
+              {systemNotifications.length > 0 && (
+                <div className="pb-1">
+                  <div className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-1">
+                    <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
+                      Pemberitahuan Sistem
+                    </span>
+                    {systemUnreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void markAllSystemNotificationsRead()
+                        }}
+                        className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-900 shadow-sm transition hover:bg-slate-50"
+                      >
+                        Tandai dibaca
+                      </button>
+                    )}
+                  </div>
+                  {systemNotifications.map((item) => (
+                    <DropdownMenuItem
+                      key={`system-${item.id}`}
+                      className="mt-1 block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current"
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        if (!item.isRead) void markSystemNotificationRead(item.id)
+                        if (item.link) router.push(item.link)
+                      }}
+                    >
+                      <div className={`overflow-hidden rounded-lg border shadow-sm transition hover:shadow-md ${
+                        item.isRead ? "border-slate-100 bg-white" : "border-blue-200 bg-blue-50/60"
+                      }`}>
+                        <div className="flex items-start gap-2 px-2.5 py-2">
+                          {!item.isRead && (
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="min-w-0 wrap-break-word text-sm font-semibold leading-snug text-slate-900">
+                              {item.title}
+                            </p>
+                            {item.message && (
+                              <p className="min-w-0 wrap-break-word text-xs leading-snug text-slate-600">
+                                {item.message}
+                              </p>
+                            )}
+                            {item.createdAt && (
+                              <p className="pt-0.5 text-[11px] text-slate-400">
+                                {formatDateId(item.createdAt)}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              void removeSystemNotification(item.id)
+                            }}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            aria-label="Hapus pemberitahuan"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                </div>
+              )}
               {isCheckingNotifications ? (
                 <div className="px-3 py-2.5 text-sm text-muted-foreground">Memeriksa kendala…</div>
               ) : notifications.length === 0 ? (

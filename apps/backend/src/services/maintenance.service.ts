@@ -16,6 +16,7 @@ import { sendPhoneNotification } from '../utils/notification-delivery';
 import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import * as MaintenanceHistoryService from './maintenance_history.service';
+import notificationService from './notification.service';
 
 interface MaintenanceRow extends RowDataPacket, Maintenance {
   requester_name?: string | null;
@@ -614,7 +615,6 @@ export class MaintenanceService {
   }): Promise<void> {
     try {
       const target = await this.getUserNotificationTarget(params.userId);
-      if (!target?.phoneNumber) return;
 
       const code = params.maintenanceCode ? ` ${params.maintenanceCode}` : '';
       const assetName = params.assetName || 'aset';
@@ -630,6 +630,23 @@ export class MaintenanceService {
         validated: 'Pemeliharaan divalidasi',
         cancelled: 'Pemeliharaan dibatalkan',
       };
+
+      // In-app notification (works regardless of whether a phone number exists)
+      const targetUserId = this.normalizeAssetId(params.userId);
+      if (targetUserId) {
+        void notificationService.create({
+          userId: targetUserId,
+          type: `maintenance_${params.action}`,
+          category: 'maintenance',
+          title: titleMap[params.action],
+          message: `${assetName}${code} ${statusLabel}.${scheduleSuffix}`.trim(),
+          link: '/maintenance',
+          referenceType: 'maintenance',
+          referenceId: undefined,
+        });
+      }
+
+      if (!target?.phoneNumber) return;
 
       await sendPhoneNotification({
         phoneNumber: target.phoneNumber,

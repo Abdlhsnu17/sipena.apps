@@ -6,23 +6,24 @@ import helmet from 'helmet';
 import { connectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
 import { connectRedis } from './config/redis';
-import { authMiddleware } from './middlewares/authMiddleware';
+import { authMiddleware, sseAuthMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
+import { createScopedLogger } from './utils/logger';
 import {
     ensureAssetDisposalTable,
     ensureAssetUsageLogsTable,
     ensureBorrowingWorkflowColumns,
     ensureCoreSchemaInitialized,
     ensureDeletionRequestsTable,
+    ensureInitialAdminAccount,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
     ensureMaintenanceDetailColumns,
     ensureNonMedicalSpecificationsColumn,
-    ensureRoleMenuAccessControlTables,
     ensureReportUploadsTable,
+    ensureRoleMenuAccessControlTables,
     ensureScheduleAssetForeignKeyRemoved,
-    ensureInitialAdminAccount,
     ensureUserAccessControlColumns,
     ensureUserActivityLogsTable,
     ensureUserLoginSecurityColumns,
@@ -30,13 +31,13 @@ import {
     withSchemaLock
 } from './utils/schema';
 import { getProfileUploadsDir } from './utils/storage-paths';
-import { createScopedLogger } from './utils/logger';
 import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
-import assetRoutes from './routes/asset.routes';
-import assetUsageRoutes from './routes/asset_usage.routes';
 import accessControlRoutes from './routes/access_control.routes';
+import assetRoutes from './routes/asset.routes';
+import assetDisposalRoutes from './routes/asset_disposal.routes';
+import assetUsageRoutes from './routes/asset_usage.routes';
 import authRoutes from './routes/auth.routes';
 import borrowingRoutes from './routes/borrowing.routes';
 import deletionRequestRoutes from './routes/deletion_request.routes';
@@ -44,12 +45,15 @@ import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
 import maintenanceScheduleRoutes from './routes/maintenance_schedule.routes';
-import assetDisposalRoutes from './routes/asset_disposal.routes';
+import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
 import sanctionsRoutes from './routes/sanctions.routes';
 import umlRoutes from './routes/uml.routes';
 import userRoutes from './routes/user.routes';
 import userActivityRoutes from './routes/user_activity.routes';
+// Import notification controller for the standalone SSE stream route mounted
+// outside the header-authenticated notification router.
+import notificationController from './controllers/notification.controller';
 
 // Load environment variables
 loadEnvironment();
@@ -172,7 +176,16 @@ app.use(helmet({
   },
   crossOriginResourcePolicy: { policy: 'same-site' },
 }));
-app.use(compression());
+app.use(compression({
+  // Never compress Server-Sent Events: compression buffers the response and
+  // would delay (or withhold) real-time notification events.
+  filter: (req, res) => {
+    if (res.getHeader('Content-Type') === 'text/event-stream') {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+}));
 app.use(requestContextMiddleware);
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
@@ -320,6 +333,10 @@ app.use('/api/maintenance-schedule', authMiddleware, maintenanceScheduleRoutes);
 app.use('/api/user-activities', authMiddleware, userActivityRoutes);
 app.use('/api/sanctions', authMiddleware, sanctionsRoutes);
 app.use('/api/asset-disposal', authMiddleware, assetDisposalRoutes);
+// Real-time notification stream (SSE). Mounted before the header-authenticated
+// notification router because EventSource authenticates via a query-string token.
+app.get('/api/notifications/stream', sseAuthMiddleware, notificationController.stream);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

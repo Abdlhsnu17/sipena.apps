@@ -24,6 +24,72 @@ interface AuthUserRow extends RowDataPacket {
   uml_access: boolean;
 }
 
+type ResolvedUser =
+  | { ok: true; user: User; mustChangePassword: boolean }
+  | { ok: false; status: number; message: string };
+
+/**
+ * Verify a JWT and resolve the matching active user. Shared by the standard
+ * header-based auth middleware and the SSE middleware (which reads the token
+ * from a query string because EventSource cannot set request headers).
+ */
+const resolveUserFromToken = async (token: string): Promise<ResolvedUser> => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return { ok: false, status: 500, message: 'Server configuration error' };
+  }
+
+  const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
+  const [rows] = await pool.query<AuthUserRow[]>(
+    `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
+     FROM users
+     WHERE id = ?
+      AND deleted_at IS NULL
+     LIMIT 1`,
+    [decoded.id],
+  );
+
+  const user = rows[0];
+  if (!user) {
+    return { ok: false, status: 401, message: 'Invalid or expired token' };
+  }
+
+  if ((decoded.sessionVersion ?? 0) !== (Number(user.session_version) || 0)) {
+    return { ok: false, status: 401, message: 'Session has been invalidated' };
+  }
+
+  if ((user.account_status || 'active') !== 'active') {
+    return {
+      ok: false,
+      status: 403,
+      message: user.account_status === 'suspended'
+        ? 'Akun Anda sedang ditangguhkan'
+        : 'Akun Anda sedang nonaktif',
+    };
+  }
+
+  const mappedUser = {
+    id: user.id,
+    nip: user.nip,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    staffAccessType: user.staff_access_type,
+    gender: user.gender ?? undefined,
+    workUnit: user.work_unit ?? undefined,
+    subWorkUnit: user.sub_work_unit ?? undefined,
+    homeAddress: user.home_address ?? undefined,
+    phoneNumber: user.phone_number ?? undefined,
+    photoPath: user.photo_path ?? undefined,
+    sessionVersion: Number(user.session_version) || 0,
+    accountStatus: user.account_status || 'active',
+    mustChangePassword: Boolean(user.must_change_password),
+    umlAccess: user.uml_access,
+  } as User;
+
+  return { ok: true, user: mappedUser, mustChangePassword: Boolean(user.must_change_password) };
+};
+
 export const authMiddleware = async (
   req: Request,
   res: Response,
@@ -41,78 +107,21 @@ export const authMiddleware = async (
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const jwtSecret = process.env.JWT_SECRET;
-    
-    if (!jwtSecret) {
-      res.status(500).json({
-        success: false,
-        message: 'Server configuration error'
-      });
-      return;
-    }
-    
-    const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
-    const [rows] = await pool.query<AuthUserRow[]>(
-      `SELECT id, nip, name, email, role, staff_access_type, gender, work_unit, sub_work_unit, home_address, phone_number, photo_path, session_version, account_status, must_change_password, uml_access
-       FROM users
-       WHERE id = ?
-        AND deleted_at IS NULL
-       LIMIT 1`,
-      [decoded.id],
-    );
 
-    const user = rows[0];
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
+    const resolved = await resolveUserFromToken(token);
+    if (!resolved.ok) {
+      res.status(resolved.status).json({ success: false, message: resolved.message });
       return;
     }
 
-    if ((decoded.sessionVersion ?? 0) !== (Number(user.session_version) || 0)) {
-      res.status(401).json({
-        success: false,
-        message: 'Session has been invalidated'
-      });
-      return;
-    }
-
-    if ((user.account_status || 'active') !== 'active') {
-      res.status(403).json({
-        success: false,
-        message: user.account_status === 'suspended'
-          ? 'Akun Anda sedang ditangguhkan'
-          : 'Akun Anda sedang nonaktif'
-      });
-      return;
-    }
-
-    req.user = {
-      id: user.id,
-      nip: user.nip,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      staffAccessType: user.staff_access_type,
-      gender: user.gender ?? undefined,
-      workUnit: user.work_unit ?? undefined,
-      subWorkUnit: user.sub_work_unit ?? undefined,
-      homeAddress: user.home_address ?? undefined,
-      phoneNumber: user.phone_number ?? undefined,
-      photoPath: user.photo_path ?? undefined,
-      sessionVersion: Number(user.session_version) || 0,
-      accountStatus: user.account_status || 'active',
-      mustChangePassword: Boolean(user.must_change_password),
-      umlAccess: user.uml_access,
-    } as User;
+    req.user = resolved.user;
 
     const canProceedDuringPasswordChange =
       req.originalUrl === '/api/auth/me' ||
       req.originalUrl === '/api/auth/logout' ||
       /^\/api\/users\/\d+\/password$/.test(req.originalUrl);
 
-    if (Boolean(user.must_change_password) && !canProceedDuringPasswordChange) {
+    if (resolved.mustChangePassword && !canProceedDuringPasswordChange) {
       res.status(403).json({
         success: false,
         message: 'Anda wajib mengganti password sebelum menggunakan modul lain'
@@ -126,6 +135,43 @@ export const authMiddleware = async (
       success: false,
       message: 'Invalid or expired token'
     });
+  }
+};
+
+/**
+ * Authenticate an SSE connection. EventSource cannot attach an Authorization
+ * header, so the JWT is accepted from the `token` query parameter (falling back
+ * to a Bearer header when present). The must-change-password gate is not applied
+ * here because the notification stream is a passive, read-only channel.
+ */
+export const sseAuthMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const headerToken = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.substring(7)
+      : undefined;
+    const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
+    const token = headerToken || queryToken;
+
+    if (!token) {
+      res.status(401).json({ success: false, message: 'No token provided' });
+      return;
+    }
+
+    const resolved = await resolveUserFromToken(token);
+    if (!resolved.ok) {
+      res.status(resolved.status).json({ success: false, message: resolved.message });
+      return;
+    }
+
+    req.user = resolved.user;
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 

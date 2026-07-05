@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
-import { applyProxyForwardHeaders } from "../request-utils"
-import { createProxyAbortSignal } from "../proxy-timeout"
+import { NextRequest, NextResponse } from "next/server";
+import { createProxyAbortSignal } from "../proxy-timeout";
+import { applyProxyForwardHeaders } from "../request-utils";
 
 const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:4000").replace(/\/$/, "")
 export const dynamic = "force-dynamic"
@@ -8,6 +8,10 @@ export const dynamic = "force-dynamic"
 const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
   const { pathname, search } = new URL(req.url)
   const targetUrl = `${API_PROXY_TARGET}${pathname}${search}`
+
+  // Server-Sent Events are long-lived; the standard proxy timeout would abort
+  // the notification stream after a few seconds, so it is disabled for it.
+  const isEventStream = pathname.endsWith("/notifications/stream")
 
   const headers = new Headers(req.headers)
   headers.delete("host")
@@ -25,7 +29,7 @@ const proxyRequest = async (req: NextRequest): Promise<NextResponse> => {
       headers,
       body,
       redirect: "manual",
-      signal: createProxyAbortSignal(),
+      signal: isEventStream ? undefined : createProxyAbortSignal(),
     })
 
     const responseHeaders = new Headers(apiResponse.headers)

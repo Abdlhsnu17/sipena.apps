@@ -230,6 +230,10 @@ export class AssetDisposalService {
       const { assetType, assetId } = existing.data;
       const table = assetType === 'medical' ? 'medical_assets' : 'non_medical_assets';
       const [assetRows] = await conn.query<RowDataPacket[]>(`SELECT specifications FROM ${table} WHERE id = ? LIMIT 1`, [assetId]);
+      if (!assetRows.length) {
+        await conn.rollback();
+        return { success: false, message: 'Aset tidak ditemukan untuk diproses penghapusan' };
+      }
       const specifications = parseSpecifications(assetRows[0]?.specifications);
       const details = Array.isArray(specifications.details) ? specifications.details : [];
 
@@ -253,7 +257,7 @@ export class AssetDisposalService {
           return { success: false, message: 'Detail aset yang diajukan tidak ditemukan' };
         }
 
-        await conn.query(
+        const [assetUpdateResult] = await conn.query<ResultSetHeader>(
           `UPDATE ${table} SET status = ?, \`condition\` = ?, specifications = ?, updated_at = NOW() WHERE id = ?`,
           [
             deriveAggregateStatus(nextDetails),
@@ -262,8 +266,19 @@ export class AssetDisposalService {
             assetId,
           ]
         );
+        if (assetUpdateResult.affectedRows === 0) {
+          await conn.rollback();
+          return { success: false, message: 'Gagal memperbarui status aset saat menyetujui penghapusan' };
+        }
       } else {
-        await conn.query(`UPDATE ${table} SET status = 'disposed', updated_at = NOW() WHERE id = ?`, [assetId]);
+        const [assetUpdateResult] = await conn.query<ResultSetHeader>(
+          `UPDATE ${table} SET status = 'disposed', updated_at = NOW() WHERE id = ?`,
+          [assetId]
+        );
+        if (assetUpdateResult.affectedRows === 0) {
+          await conn.rollback();
+          return { success: false, message: 'Gagal memperbarui status aset saat menyetujui penghapusan' };
+        }
       }
 
       await conn.commit();

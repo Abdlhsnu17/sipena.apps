@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -61,6 +61,31 @@ CREATE TABLE `user_activity_logs` (
   `description` text DEFAULT NULL,
   `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `category` varchar(30) NOT NULL DEFAULT 'system',
+  `title` varchar(255) NOT NULL,
+  `message` text DEFAULT NULL,
+  `link` varchar(255) DEFAULT NULL,
+  `reference_type` varchar(50) DEFAULT NULL,
+  `reference_id` int(11) DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_notifications_user_read_created` (`user_id`, `is_read`, `created_at`),
+  KEY `idx_notifications_reference` (`reference_type`, `reference_id`),
+  KEY `idx_notifications_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

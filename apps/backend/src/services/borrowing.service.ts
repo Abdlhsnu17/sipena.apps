@@ -17,11 +17,12 @@ import {
     generateBorrowingCode,
     getOverdueDays
 } from '../utils/helpers';
-import { DISPLAY_TIME_ZONE } from '../utils/time';
 import { hasAnyRole } from '../utils/role';
+import { DISPLAY_TIME_ZONE } from '../utils/time';
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
 import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
+import notificationService from './notification.service';
 
 /**
  * Parse datetime string as LOCAL time (not UTC)
@@ -1344,6 +1345,29 @@ export class BorrowingService {
       // email errors never block the main flow
     }
 
+    // In-app notification for the borrower (non-blocking)
+    try {
+      const row = borrowing.data as any;
+      const ownerId = Number(row.userId ?? row.user_id);
+      if (Number.isFinite(ownerId) && ownerId > 0) {
+        const assetLabel =
+          row.asset_detail_name ?? row.assetDetailName ?? row.asset_name ?? row.assetName ?? `#${id}`;
+        const code = row.borrowing_code ?? row.borrowingCode ?? String(id);
+        void notificationService.create({
+          userId: ownerId,
+          type: 'borrowing_approved',
+          category: 'borrowing',
+          title: 'Peminjaman disetujui',
+          message: `Peminjaman ${assetLabel} (${code}) telah disetujui.`,
+          link: '/borrowing',
+          referenceType: 'borrowing',
+          referenceId: Number(id),
+        });
+      }
+    } catch {
+      // notification errors never block the main flow
+    }
+
     return await this.getById(id);
   }
 
@@ -1470,6 +1494,29 @@ export class BorrowingService {
       }
     } catch {
       // email errors never block the main flow
+    }
+
+    // In-app notification for the borrower (non-blocking)
+    try {
+      const row = borrowing.data as any;
+      const ownerId = Number(row.userId ?? row.user_id);
+      if (Number.isFinite(ownerId) && ownerId > 0) {
+        const assetLabel =
+          row.asset_detail_name ?? row.assetDetailName ?? row.asset_name ?? row.assetName ?? `#${id}`;
+        const code = row.borrowing_code ?? row.borrowingCode ?? String(id);
+        void notificationService.create({
+          userId: ownerId,
+          type: 'borrowing_rejected',
+          category: 'borrowing',
+          title: 'Peminjaman ditolak',
+          message: `Peminjaman ${assetLabel} (${code}) ditolak. Alasan: ${reason}`,
+          link: '/borrowing',
+          referenceType: 'borrowing',
+          referenceId: Number(id),
+        });
+      }
+    } catch {
+      // notification errors never block the main flow
     }
 
     return await this.getById(id);

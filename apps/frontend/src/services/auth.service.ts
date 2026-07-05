@@ -1,19 +1,18 @@
 import type { StaffAccessType, UserRole } from "@/types/auth-types";
-import apiService, { API_BASE_URL } from './api.service';
+import apiService from './api.service';
 import {
-  clearAuthSession,
-  getAuthToken,
-  getCurrentUser as getLocalUser,
-  initializeDefaultAdmin,
-  isLocalAuthSession,
-  login as localLogin,
-  logout as localLogout,
-  persistAuthSession,
-  register as registerLocal,
-  setCurrentUser,
+    clearAuthSession,
+    getAuthToken,
+    getCurrentUser as getLocalUser,
+    initializeDefaultAdmin,
+    isLocalAuthSession,
+    login as localLogin,
+    logout as localLogout,
+    persistAuthSession,
+    register as registerLocal,
+    setCurrentUser,
 } from './auth-utils';
 
-const API_HEALTH_URL = `${API_BASE_URL}/health`;
 const ENABLE_LOCAL_FALLBACK =
   process.env.NODE_ENV === 'development' &&
   process.env.NEXT_PUBLIC_ENABLE_LOCAL_FALLBACK === 'true';
@@ -112,24 +111,6 @@ export interface ProfileUpdatePayload {
   homeAddress?: string;
   phoneNumber?: string;
   photo?: File | null;
-}
-
-// Check if backend is available
-async function isBackendAvailable(): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-    
-    const response = await fetch(API_HEALTH_URL, {
-      method: 'GET',
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
-    return false;
-  }
 }
 
 function normalizeLoginError(error: any): string {
@@ -358,19 +339,11 @@ class AuthService {
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      const backendAvailable = await isBackendAvailable();
-
-      if (backendAvailable) {
-        const response = await apiService.post<AuthResponse>('/auth/register', credentials);
-        return {
-          ...response,
-          message: response.success ? 'Pendaftaran berhasil' : response.message
-        };
-      }
-
-      if (!ENABLE_LOCAL_FALLBACK) {
-        return { success: false, message: REGISTER_SERVER_ISSUE_MESSAGE };
-      }
+      const response = await apiService.post<AuthResponse>('/auth/register', credentials);
+      return {
+        ...response,
+        message: response.success ? 'Pendaftaran berhasil' : response.message
+      };
     } catch (error: any) {
       if (!ENABLE_LOCAL_FALLBACK) {
         return { success: false, message: normalizeRegisterError(error) };

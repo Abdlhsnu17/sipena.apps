@@ -812,7 +812,9 @@ export class AssetUsageService {
     await this.assetService.updateStatus(String(assetId), 'borrowed', normalizedAssetType);
   }
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
-    await this.syncActiveBorrowingUsageLogs();
+    if (process.env.ASSET_USAGE_SYNC_ON_READ === 'true') {
+      await this.syncActiveBorrowingUsageLogs();
+    }
 
     const { page, limit, assetId, assetType, roomName, usageContext, dateFrom, dateTo } = filters;
     const offset = (page - 1) * limit;
