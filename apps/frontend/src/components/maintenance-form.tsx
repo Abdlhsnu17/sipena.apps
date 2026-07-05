@@ -18,6 +18,8 @@ interface MaintenanceFormProps {
   assets: DetailInventoryItem[]
   totalAssetsCount?: number
   lockedAssetsCount?: number
+  prefillAsset?: DetailInventoryItem | null
+  prefillNote?: string
   onSave: (data: any) => void
   onCancel: () => void
 }
@@ -81,12 +83,15 @@ const EDITABLE_STATUS_TRANSITIONS: Record<string, string[]> = {
 export default function MaintenanceForm({
   maintenance,
   assets,
+  prefillAsset,
+  prefillNote,
   onSave,
   onCancel,
 }: MaintenanceFormProps) {
   const [selectedAsset, setSelectedAsset] = useState<DetailInventoryItem | null>(null)
   const defaultRepairNote = useMemo(() => buildRepairNoteTemplate(selectedAsset), [selectedAsset])
   const prevAutoRepairNoteRef = useRef(defaultRepairNote)
+  const appliedPrefillRef = useRef(false)
   const formCardRef = useRef<HTMLDivElement | null>(null)
   const inventoryPickerRef = useRef<HTMLDivElement | null>(null)
   const scheduledDateInputRef = useRef<HTMLInputElement | null>(null)
@@ -196,6 +201,29 @@ export default function MaintenanceForm({
       cost: maintenance.cost ? String(maintenance.cost) : "",
     }))
   }, [maintenance, assets])
+
+  useEffect(() => {
+    if (maintenance) return
+    if (appliedPrefillRef.current) return
+    if (!prefillAsset) return
+
+    appliedPrefillRef.current = true
+    setSelectedAsset(prefillAsset)
+    const prefillDescription = `${prefillNote ? prefillNote : ""}${buildRepairNoteTemplate(prefillAsset)}`
+    prevAutoRepairNoteRef.current = prefillDescription
+    setFormData((prev) => ({
+      ...prev,
+      inventarisInput: formatAssetLabel(prefillAsset),
+      assetId: String(prefillAsset.assetId),
+      assetType: prefillAsset.assetType || prev.assetType,
+      assetDetailId: prefillAsset.detailId || prev.assetDetailId,
+      assetDetailName: prefillAsset.detailInventoryName || prefillAsset.detailName || prev.assetDetailName,
+      assetDetailCode: prefillAsset.detailCode || prev.assetDetailCode,
+      assetLocation: prefillAsset.assetLocation || prev.assetLocation,
+      type: "corrective",
+      description: prefillDescription,
+    }))
+  }, [maintenance, prefillAsset, prefillNote])
 
   useEffect(() => {
     if (maintenance) return

@@ -3,39 +3,44 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingResult } from "@/services/dss.service";
+import { maintenanceService } from "@/services/maintenance.service";
 import { cn } from "@/utils";
 import { locationBadgeClass } from "@/utils/api-mappers";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
+import { canCreateMaintenanceRole } from "@/utils/role";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowDownUp,
-  Award,
-  Building2,
-  Calculator,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Flame,
-  Gauge,
-  HandHelping,
-  MapPin,
-  Medal,
-  PauseCircle,
-  RefreshCw,
-  Search,
-  ShieldAlert,
-  SlidersHorizontal,
-  Stethoscope,
-  Trophy,
-  Wrench,
+    Activity,
+    AlertTriangle,
+    ArrowDownUp,
+    Award,
+    Building2,
+    Calculator,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Flame,
+    Gauge,
+    HandHelping,
+    MapPin,
+    Medal,
+    PauseCircle,
+    RefreshCw,
+    Scale,
+    Search,
+    ShieldAlert,
+    SlidersHorizontal,
+    Stethoscope,
+    Trophy,
+    Wrench,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -207,13 +212,138 @@ const ageScore = (purchaseDate?: string | null) => {
   return Math.max(1, Math.round(Math.max(0, daysBetween(purchasedAt, new Date())) / 365))
 }
 
+const RANDOM_INDEX: Record<number, number> = {
+  1: 0,
+  2: 0,
+  3: 0.58,
+  4: 0.9,
+  5: 1.12,
+  6: 1.24,
+  7: 1.32,
+  8: 1.41,
+  9: 1.45,
+  10: 1.49,
+}
+
+const computeAhpConsistency = (matrix: number[][]): DssRankingResult["consistency"] => {
+  const n = matrix.length
+  if (!n || matrix.some((row) => row.length !== n)) return null
+
+  const numericMatrix = matrix.map((row) => row.map((value) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+  }))
+
+  let vector = Array.from({ length: n }, () => 1 / n)
+  for (let iter = 0; iter < 1000; iter += 1) {
+    const next = numericMatrix.map((row) => row.reduce((sum, value, j) => sum + value * vector[j], 0))
+    const total = next.reduce((acc, value) => acc + value, 0) || 1
+    const normalized = next.map((value) => value / total)
+    const diff = Math.max(...normalized.map((value, i) => Math.abs(value - vector[i])))
+    vector = normalized
+    if (diff < 1e-12) break
+  }
+
+  const weightSum = vector.reduce((sum, value) => sum + value, 0) || 1
+  const weights = vector.map((value) => value / weightSum)
+  const weightedSums = numericMatrix.map((row) => row.reduce((sum, value, j) => sum + value * weights[j], 0))
+  const lambdaMax = weightedSums.reduce((sum, value, i) => sum + value / (weights[i] || 1), 0) / n
+  const consistencyIndex = n > 1 ? (lambdaMax - n) / (n - 1) : 0
+  const randomIndex = RANDOM_INDEX[n] || 1.49
+  const consistencyRatio = randomIndex === 0 ? 0 : consistencyIndex / randomIndex
+
+  return {
+    lambdaMax,
+    consistencyIndex,
+    consistencyRatio,
+    isConsistent: Number.isFinite(consistencyRatio) ? consistencyRatio <= 0.1 : false,
+  }
+}
+
+const buildDetailCountKey = (
+  assetType: string,
+  assetId: number | string,
+  detailId?: string | null,
+  detailCode?: string | null
+) => {
+  const type = assetType === "non_medical" ? "non_medical" : "medical"
+  const id = String(detailId || "").trim()
+  const code = String(detailCode || "").trim()
+  return `${type}|${assetId}|${id || code || "asset"}`
+}
+
+type DetailCountEntry = {
+  assetId?: number | null
+  assetType?: string | null
+  assetDetailId?: string | null
+  assetDetailCode?: string | null
+}
+
+const aggregateDetailCounts = (entries: DetailCountEntry[]) => {
+  const counts = new Map<string, number>()
+  entries.forEach((entry) => {
+    if (entry.assetId == null) return
+    const key = buildDetailCountKey(String(entry.assetType || ""), entry.assetId, entry.assetDetailId, entry.assetDetailCode)
+    counts.set(key, (counts.get(key) || 0) + 1)
+  })
+  return counts
+}
+
+const lookupDetailCount = (
+  counts: Map<string, number>,
+  assetType: string,
+  assetId: number,
+  detailId?: string | null,
+  detailCode?: string | null
+) => counts.get(buildDetailCountKey(assetType, assetId, detailId, detailCode)) || 0
+
+const loadFallbackUsageCounts = async (assetType: DssAssetType): Promise<Map<string, number> | null> => {
+  try {
+    const response = await assetUsageService.getAll({
+      limit: 1000,
+      ...(assetType !== "all" ? { assetType } : {}),
+    })
+    if (!response.success) return null
+    return aggregateDetailCounts(response.data.map((log) => ({
+      assetId: log.assetId,
+      assetType: log.assetType,
+      assetDetailId: log.assetDetailId,
+      assetDetailCode: log.assetDetailCode,
+    })))
+  } catch {
+    return null
+  }
+}
+
+const loadFallbackMaintenanceCounts = async (assetType: DssAssetType): Promise<Map<string, number> | null> => {
+  try {
+    const response = await maintenanceService.getAll({
+      limit: 1000,
+      ...(assetType !== "all" ? { assetType } : {}),
+    })
+    if (!response.success) return null
+    return aggregateDetailCounts(response.data
+      .filter((record) => record.status !== "cancelled")
+      .map((record) => ({
+        assetId: record.assetId,
+        assetType: record.assetType,
+        assetDetailId: record.assetDetailId,
+        assetDetailCode: record.assetDetailCode,
+      })))
+  } catch {
+    return null
+  }
+}
+
 const buildClientFallbackRanking = async (
   assetType: DssAssetType,
   normalizedWeights: Record<string, number>
 ): Promise<DssRankingResult> => {
-  const [medicalResponse, nonMedicalResponse] = await Promise.all([
+  const [medicalResponse, nonMedicalResponse, usageCounts, maintenanceCounts] = await Promise.all([
     assetType === "non_medical" ? Promise.resolve(null) : assetService.getMedicalAssets({ page: 1, limit: 1000 }),
     assetType === "medical" ? Promise.resolve(null) : assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
+    loadFallbackUsageCounts(assetType),
+    loadFallbackMaintenanceCounts(assetType),
   ])
 
   const assets = [
@@ -232,8 +362,12 @@ const buildClientFallbackRanking = async (
       condition: conditionScore(item.conditionLabel || item.condition),
       age: ageScore((item as typeof item & { purchaseDate?: string }).purchaseDate),
       maintenanceDue: maintenanceDueScore(item.nextMaintenance),
-      usageFrequency: 0,
-      maintenanceHistory: item.lastMaintenance || item.lastRepair ? 1 : 0,
+      usageFrequency: usageCounts
+        ? lookupDetailCount(usageCounts, item.assetType, item.assetId, item.detailId, item.detailCode)
+        : 0,
+      maintenanceHistory: maintenanceCounts
+        ? lookupDetailCount(maintenanceCounts, item.assetType, item.assetId, item.detailId, item.detailCode)
+        : (item.lastMaintenance || item.lastRepair ? 1 : 0),
       functionalUrgency: functionalUrgencyScore(item.detailName, item.detailType, item.assetCategory),
       statusRisk: statusRiskScore(statusLabel),
     }
@@ -269,11 +403,14 @@ const buildClientFallbackRanking = async (
   }))
 
   const scored = alternatives.map((alternative) => {
-    const weightedScores: Record<string, number> = Object.fromEntries(criteria.map((criterion) => {
+    const normalizedScores: Record<string, number> = {}
+    const weightedScores: Record<string, number> = {}
+    criteria.forEach((criterion) => {
       const normalized = (alternative.criteriaScores[criterion.id] || 0) / denominators[criterion.id]
-      return [criterion.id, normalized * criterion.weight]
-    }))
-    return { ...alternative, weightedScores }
+      normalizedScores[criterion.id] = normalized
+      weightedScores[criterion.id] = normalized * criterion.weight
+    })
+    return { ...alternative, normalizedScores, weightedScores }
   })
 
   const positiveIdeal: Record<string, number> = {}
@@ -297,6 +434,8 @@ const buildClientFallbackRanking = async (
       const preferenceScore = positiveDistance + negativeDistance === 0 ? 0 : negativeDistance / (positiveDistance + negativeDistance)
       return {
         ...alternative,
+        positiveDistance,
+        negativeDistance,
         preferenceScore,
         recommendation: preferenceScore >= 0.7 ? "Prioritas tinggi" : preferenceScore >= 0.45 ? "Prioritas sedang" : "Prioritas rendah",
       }
@@ -307,7 +446,8 @@ const buildClientFallbackRanking = async (
 
   return {
     criteria,
-    consistency: null,
+    consistency: computeAhpConsistency(buildAhpPairwiseMatrix(normalizedWeights)),
+    idealSolutions: { positive: positiveIdeal, negative: negativeIdeal },
     generatedAt: new Date().toISOString(),
     totalAlternatives: alternatives.length,
     rankings,
@@ -324,12 +464,29 @@ export default function DssPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [rankingSource, setRankingSource] = useState<"backend" | "fallback" | null>(null)
   const [rankingPage, setRankingPage] = useState(1)
+  const [auditItem, setAuditItem] = useState<DssAssetRanking | null>(null)
+  const [canRequestMaintenance, setCanRequestMaintenance] = useState(false)
 
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) {
       router.replace(buildLoginRedirectUrl())
+      return
     }
+    setCanRequestMaintenance(canCreateMaintenanceRole(user.role))
+  }, [router])
+
+  const requestMaintenanceForItem = useCallback((item: DssAssetRanking) => {
+    const params = new URLSearchParams({
+      source: "dss",
+      assetType: item.assetType,
+      assetId: String(item.assetId),
+      detailId: item.detailId,
+      detailCode: item.detailCode || "",
+      score: item.preferenceScore.toFixed(4),
+      rank: String(item.rank),
+    })
+    router.push(`/maintenance?${params.toString()}`)
   }, [router])
 
   const normalizedWeights = useMemo(() => {
@@ -660,6 +817,7 @@ export default function DssPage() {
                       <th className="px-3 py-2.5">Status</th>
                       <th className="px-3 py-2.5">Skor</th>
                       <th className="px-3 py-2.5">Rekomendasi</th>
+                      <th className="px-3 py-2.5 text-right">Audit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35 bg-white dark:bg-slate-900/60">
@@ -719,12 +877,24 @@ export default function DssPage() {
                               {item.recommendation}
                             </Badge>
                           </td>
+                          <td className="px-3 py-2.5 align-top text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => setAuditItem(item)}
+                            >
+                              <Scale className="h-3.5 w-3.5" />
+                              Detail
+                            </Button>
+                          </td>
                         </tr>
                       )
                     })}
                     {filteredRankings.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                           Tidak ada data ranking yang sesuai.
                         </td>
                       </tr>
@@ -792,6 +962,98 @@ export default function DssPage() {
           Hasil dihitung dari kondisi, usia, jadwal maintenance, pemakaian, riwayat maintenance, urgensi fungsi, dan risiko status aset.
         </div>
       </div>
+
+      <Dialog open={Boolean(auditItem)} onOpenChange={(open) => { if (!open) setAuditItem(null) }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scale className="h-4 w-4 text-teal-700" />
+              Audit TOPSIS · {auditItem?.detailName}
+            </DialogTitle>
+            <DialogDescription>
+              {auditItem ? `${auditItem.detailCode} · ${auditItem.serialNumber || "Tanpa nomor seri"} · Rank #${auditItem.rank}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {auditItem && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+                  <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Preference Score</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{formatScore(auditItem.preferenceScore)}</div>
+                </div>
+                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+                  <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Jarak Ideal Positif (D+)</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    {auditItem.positiveDistance != null ? formatScore(auditItem.positiveDistance) : "-"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 p-3">
+                  <div className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">Jarak Ideal Negatif (D-)</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    {auditItem.negativeDistance != null ? formatScore(auditItem.negativeDistance) : "-"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-[50vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800/35">
+                <table className="w-full min-w-160 text-left text-[13px]">
+                  <thead className="sticky top-0 border-b border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">
+                    <tr>
+                      <th className="px-3 py-2">Kriteria</th>
+                      <th className="px-3 py-2 text-right">Bobot</th>
+                      <th className="px-3 py-2 text-right">Nilai Mentah</th>
+                      <th className="px-3 py-2 text-right">Normalisasi</th>
+                      <th className="px-3 py-2 text-right">Terbobot</th>
+                      <th className="px-3 py-2 text-right">Ideal +</th>
+                      <th className="px-3 py-2 text-right">Ideal -</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
+                    {(rankingResult?.criteria ?? []).map((criterion) => (
+                      <tr key={criterion.id} className="text-slate-700 dark:text-slate-300">
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-slate-900 dark:text-slate-100">{criterion.name}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{criterion.type === "benefit" ? "Benefit" : "Cost"}</div>
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">{formatPercent(criterion.weight)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{(auditItem.criteriaScores?.[criterion.id] ?? 0).toString()}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          {auditItem.normalizedScores?.[criterion.id] != null ? formatScore(auditItem.normalizedScores[criterion.id]) : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          {auditItem.weightedScores?.[criterion.id] != null ? formatScore(auditItem.weightedScores[criterion.id]) : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          {rankingResult?.idealSolutions?.positive?.[criterion.id] != null ? formatScore(rankingResult.idealSolutions.positive[criterion.id]) : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          {rankingResult?.idealSolutions?.negative?.[criterion.id] != null ? formatScore(rankingResult.idealSolutions.negative[criterion.id]) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Preference score = D- / (D+ + D-). Nilai terbobot = normalisasi × bobot kriteria. Solusi ideal positif/negatif diambil dari nilai terbobot terbaik/terburuk seluruh alternatif.
+              </p>
+            </div>
+          )}
+          {auditItem && canRequestMaintenance && (
+            <DialogFooter>
+              <Button
+                type="button"
+                className="gap-2"
+                onClick={() => requestMaintenanceForItem(auditItem)}
+              >
+                <Wrench className="h-4 w-4" />
+                Ajukan Pemeliharaan
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="mt-8 flex w-full justify-center border-t border-border pt-6">
         <p className="text-center text-[13px] text-muted-foreground">

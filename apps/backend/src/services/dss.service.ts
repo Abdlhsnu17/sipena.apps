@@ -50,6 +50,10 @@ export interface DssRankingResult {
     consistencyRatio: number;
     isConsistent: boolean;
   } | null;
+  idealSolutions: {
+    positive: Record<string, number>;
+    negative: Record<string, number>;
+  };
   generatedAt: string;
   totalAlternatives: number;
   rankings: DssAssetRanking[];
@@ -434,6 +438,7 @@ export class DssService {
         return {
           criteria,
           consistency: ahpComputed?.consistency || null,
+          idealSolutions: { positive: {}, negative: {} },
           generatedAt: new Date().toISOString(),
           totalAlternatives: 0,
           rankings: [],
@@ -496,6 +501,7 @@ export class DssService {
       return {
         criteria,
         consistency: ahpComputed?.consistency || null,
+        idealSolutions: { positive: positiveIdeal, negative: negativeIdeal },
         generatedAt: new Date().toISOString(),
         totalAlternatives: alternatives.length,
         rankings,

@@ -30,6 +30,10 @@ export interface DssAssetRanking {
   lastRepair?: string | null;
   nextMaintenance?: string | null;
   criteriaScores: Record<string, number>;
+  normalizedScores?: Record<string, number>;
+  weightedScores?: Record<string, number>;
+  positiveDistance?: number;
+  negativeDistance?: number;
   preferenceScore: number;
   recommendation: string;
 }
@@ -42,6 +46,10 @@ export interface DssRankingResult {
     consistencyRatio: number;
     isConsistent: boolean;
   } | null;
+  idealSolutions?: {
+    positive: Record<string, number>;
+    negative: Record<string, number>;
+  };
   generatedAt: string;
   totalAlternatives: number;
   rankings: DssAssetRanking[];

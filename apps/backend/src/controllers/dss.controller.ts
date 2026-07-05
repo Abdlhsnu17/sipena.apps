@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
 import dssService from '../services/dss.service';
 import { createScopedLogger } from '../utils/logger';
 
@@ -7,6 +8,12 @@ const logger = createScopedLogger('controller:dss');
 export class DssController {
   getRanking = async (req: Request, res: Response): Promise<void> => {
     try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
+        return;
+      }
+
       const result = await dssService.rankAssets({
         weights: req.body?.weights,
         pairwiseMatrix: req.body?.pairwiseMatrix,

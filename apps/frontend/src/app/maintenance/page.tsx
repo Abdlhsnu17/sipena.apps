@@ -21,8 +21,8 @@ import {
     Wrench,
     XCircle
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import MaintenanceForm from "@/components/maintenance-form";
 import MaintenanceHistoryList from "@/components/maintenance-history-list";
@@ -173,6 +173,8 @@ const getCalendarStartOffset = (date: Date) => (date.getDay() + 6) % 7
 
 export default function MaintenancePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const dssPrefillHandledRef = useRef(false)
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const activeMaintenanceStatuses = useMemo(
@@ -188,6 +190,8 @@ export default function MaintenancePage() {
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set())
   const [showForm, setShowForm] = useState(false)
   const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null)
+  const [prefillAsset, setPrefillAsset] = useState<DetailInventoryItem | null>(null)
+  const [prefillNote, setPrefillNote] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("Semua")
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
@@ -360,6 +364,56 @@ export default function MaintenancePage() {
   const canEditMaintenance = hasFullAccess || isTechnician
   const canManageAdvancedStatuses = canManageMaintenanceStatusRole(currentUser?.role)
   const createMaintenanceActionLabel = "Tambah Pemeliharaan"
+
+  useEffect(() => {
+    if (dssPrefillHandledRef.current) return
+    if (searchParams.get("source") !== "dss") return
+    if (!currentUser || assets.length === 0) return
+
+    const detailId = searchParams.get("detailId")
+    const detailCode = searchParams.get("detailCode")
+    const assetIdRaw = searchParams.get("assetId")
+    const assetId = assetIdRaw ? Number(assetIdRaw) : NaN
+    const matched =
+      (detailId ? assets.find((item) => item.detailId === detailId) : undefined) ||
+      (Number.isFinite(assetId) && detailCode ? assets.find((item) => item.assetId === assetId && item.detailCode === detailCode) : undefined) ||
+      (Number.isFinite(assetId) ? assets.find((item) => item.assetId === assetId) : undefined) ||
+      null
+
+    dssPrefillHandledRef.current = true
+
+    if (!canCreateMaintenance) {
+      toast({
+        title: "Akses ditolak",
+        description: "Anda tidak memiliki izin untuk mengajukan pemeliharaan dari SPK.",
+        variant: "destructive",
+      })
+      router.replace("/maintenance")
+      return
+    }
+
+    if (!matched) {
+      toast({
+        title: "Aset tidak ditemukan",
+        description: "Aset dari SPK tidak tersedia atau sedang tidak dapat diajukan pemeliharaan.",
+        variant: "destructive",
+      })
+      router.replace("/maintenance")
+      return
+    }
+
+    const score = searchParams.get("score")
+    const rank = searchParams.get("rank")
+    const noteParts = ["Diajukan dari SPK Prioritas Aset"]
+    if (rank) noteParts.push(`peringkat #${rank}`)
+    if (score) noteParts.push(`skor ${score}`)
+
+    setEditingMaintenance(null)
+    setPrefillAsset(matched)
+    setPrefillNote(noteParts.join(" · "))
+    setShowForm(true)
+    router.replace("/maintenance")
+  }, [assets, currentUser, canCreateMaintenance, searchParams, router, toast])
 
   const handleStatusSelection = (id: string | number, newStatus: string) => {
     if (newStatus === "cancelled") {
@@ -559,6 +613,8 @@ export default function MaintenancePage() {
       await loadAssets()
       setShowForm(false)
       setEditingMaintenance(null)
+      setPrefillAsset(null)
+      setPrefillNote("")
       window.scrollTo(0, 500)
 
       if (!isEditing) {
@@ -799,24 +855,31 @@ export default function MaintenancePage() {
   )
 
   const maintenanceFormAssets = useMemo(() => {
-    if (!editingMaintenance) return availableAssetsForForm
-
     const allowedByDetailId = new Set(availableAssetsForForm.map((item) => item.detailId))
+    let baseAssets = availableAssetsForForm
+
+    if (prefillAsset && !allowedByDetailId.has(prefillAsset.detailId)) {
+      baseAssets = [...baseAssets, prefillAsset]
+      allowedByDetailId.add(prefillAsset.detailId)
+    }
+
+    if (!editingMaintenance) return baseAssets
+
     const currentDetailId = editingMaintenance.assetDetailId
 
     if (currentDetailId && allowedByDetailId.has(currentDetailId)) {
-      return availableAssetsForForm
+      return baseAssets
     }
 
     const currentAsset = resolveDetailForMaintenance(editingMaintenance)
-    if (!currentAsset) return availableAssetsForForm
+    if (!currentAsset) return baseAssets
 
     if (allowedByDetailId.has(currentAsset.detailId)) {
-      return availableAssetsForForm
+      return baseAssets
     }
 
-    return [...availableAssetsForForm, currentAsset]
-  }, [availableAssetsForForm, editingMaintenance, resolveDetailForMaintenance])
+    return [...baseAssets, currentAsset]
+  }, [availableAssetsForForm, editingMaintenance, resolveDetailForMaintenance, prefillAsset])
 
   const maintenanceExportColumnDefinitions = useMemo<MaintenanceExportColumn[]>(
     () => [
@@ -1527,10 +1590,14 @@ export default function MaintenancePage() {
           <MaintenanceForm
             maintenance={editingMaintenance}
             assets={maintenanceFormAssets}
+            prefillAsset={editingMaintenance ? null : prefillAsset}
+            prefillNote={prefillNote}
             onSave={handleSaveMaintenance}
             onCancel={() => {
               setShowForm(false)
               setEditingMaintenance(null)
+              setPrefillAsset(null)
+              setPrefillNote("")
             }}
           />
         )}
