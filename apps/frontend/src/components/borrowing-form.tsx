@@ -9,6 +9,7 @@ import { getCurrentLocalDateTimeValue, toDateTimeLocalInputValue } from "@/utils
 import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { toLocalDateTimeString } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type BorrowingFormPayload = {
@@ -220,6 +221,7 @@ export default function BorrowingForm({
               Simpan
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
+              <X className="mr-2 h-4 w-4" />
               Batal
             </Button>
           </div>

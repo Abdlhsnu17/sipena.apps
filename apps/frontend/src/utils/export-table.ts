@@ -384,7 +384,7 @@ const escapeHtml = (value: string) =>
 
 const buildNarrativeExportHeaderHtml = () => `
   <header class="export-header">
-    <div class="export-header__brand">${escapeHtml(EXPORT_BRAND_NAME)}</div>
+    <div class="export-header__brand">${escapeHtml(EXPORT_BRAND_NAME)} · DOKUMEN OPERASIONAL</div>
   </header>
 `
 
@@ -432,7 +432,7 @@ const buildSectionHtml = (section: DocumentSection) => `
 const buildNarrativeEntryHtml = <T>(entry: T, index: number, total: number, buildSections: SectionBuilder<T>) => {
   const sections = buildSections(entry)
   if (!sections.length) return ''
-  const entryHeader = total > 1 ? `<div class="entry-card__heading">${escapeHtml(buildEntryHeaderLabel(entry, index))}</div>` : ''
+  const entryHeader = `<div class="entry-card__heading">${escapeHtml(buildEntryHeaderLabel(entry, index))}</div>`
   return `
     <article class="entry-card">
       ${entryHeader}
@@ -452,13 +452,13 @@ const buildNarrativeHtml = <T>(
   mode: ExportColorMode
 ) => {
   const isMonochrome = mode === 'monochrome'
-  const pageBg = isMonochrome ? '#ffffff' : '#f5f7ff'
-  const bodyColor = isMonochrome ? '#111111' : '#0f172a'
-  const subtitleColor = isMonochrome ? '#111111' : '#1d4ed8'
+  const pageBg = '#ffffff'
+  const bodyColor = '#0f172a'
+  const subtitleColor = '#64748b'
   const cardBg = '#ffffff'
-  const sectionBg = isMonochrome ? '#ffffff' : '#f5f7ff'
-  const sectionBorder = isMonochrome ? '#cfcfcf' : '#d8e2ff'
-  const sectionHeadingBg = isMonochrome ? '#111111' : '#1d4ed8'
+  const sectionBg = '#ffffff'
+  const sectionBorder = '#dbe4f0'
+  const sectionHeadingBg = '#ffffff'
 
   const entriesHtml =
     entries.length > 0
@@ -481,7 +481,7 @@ const buildNarrativeHtml = <T>(
             box-sizing: border-box;
           }
           body {
-            font-family: Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
             color: ${bodyColor};
@@ -490,14 +490,15 @@ const buildNarrativeHtml = <T>(
             line-height: 1.25;
           }
           .export-header {
-            border-bottom: 1px solid ${sectionBorder};
-            margin: 0 0 18px;
-            padding: 0 0 8px;
+            border: 0;
+            margin: 0 0 8px;
+            padding: 0;
           }
           .export-header__brand {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 700;
-            color: ${bodyColor};
+            color: #64748b;
+            letter-spacing: .16em;
           }
           .export-footer {
             border-top: 1px solid ${sectionBorder};
@@ -508,78 +509,98 @@ const buildNarrativeHtml = <T>(
             text-align: center;
           }
           h1 {
-            font-size: 18px;
+            font-size: 25px;
             font-weight: 700;
-            margin: 0 0 6px;
+            letter-spacing: -.02em;
+            margin: 0 0 10px;
           }
           .subtitle {
-            font-size: 16px;
+            border-bottom: 1px solid ${sectionBorder};
             color: ${subtitleColor};
-            margin: 0 0 34px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            margin: 0 0 22px;
+            padding: 0 0 12px;
+            text-transform: uppercase;
           }
           .entries {
             display: block;
           }
           .entry-card {
             background: ${cardBg};
+            border: 1px solid ${sectionBorder};
+            border-radius: 16px;
             box-shadow: none;
-            padding: 0;
+            padding: 18px 20px;
             page-break-inside: avoid;
-            border: 0;
             margin: 0 0 16px;
           }
           .entry-card + .entry-card {
             page-break-before: always;
           }
           .entry-card__heading {
-            border: 1px solid ${sectionBorder};
-            border-bottom: 0;
-            padding: 6px 8px;
-            font-size: ${BASE_EXPORT_FONT_SIZE}px;
+            border: 1px solid #c7d5e8;
+            border-radius: 999px;
+            color: #334155;
+            display: inline-block;
+            float: right;
+            font-size: 10px;
             font-weight: 700;
+            letter-spacing: .07em;
+            margin: 0 0 12px 12px;
+            padding: 6px 10px;
+            text-transform: uppercase;
           }
           .entry-card__body {
             display: block;
+            clear: both;
             padding: 0;
           }
           .section-block {
             background: ${sectionBg};
-            border: 1px solid ${sectionBorder};
+            border: 0;
             overflow: hidden;
             margin: 0;
             page-break-inside: avoid;
           }
           .section-block + .section-block {
-            border-top: 0;
+            margin-top: 16px;
           }
           .section-block__heading {
             background: ${sectionHeadingBg};
-            color: #fff;
-            font-size: 15px;
+            border-bottom: 1px solid ${sectionBorder};
+            color: #64748b;
+            font-size: 11px;
             font-weight: 700;
-            padding: 4px 6px;
+            letter-spacing: .12em;
+            padding: 0 0 8px;
           }
           .section-block__rows {
             padding: 0;
             display: block;
           }
           .section-block__row {
-            display: block;
-            padding: 3px 6px 4px;
+            display: flex;
+            gap: 16px;
+            padding: 10px 0;
             border-bottom: 1px solid ${sectionBorder};
           }
           .section-block__row:last-child {
             border-bottom: 0;
           }
           .section-block__label {
-            font-size: 14px;
-            font-weight: 400;
-            color: ${isMonochrome ? '#111111' : '#374151'};
+            color: #64748b;
+            flex: 0 0 31%;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .1em;
             margin: 0;
+            text-transform: uppercase;
           }
           .section-block__value {
             font-size: 14px;
-            font-weight: 700;
+            font-weight: 500;
             color: ${bodyColor};
             margin: 0;
             overflow-wrap: anywhere;
@@ -933,6 +954,7 @@ const buildFormularEntryHtml = (data: FormularData): string => {
 
   return `
   <div class="f-form">
+    <div class="f-brand">${escapeHtml(EXPORT_BRAND_NAME)} · DOKUMEN OPERASIONAL</div>
     <div class="f-title">${escapeHtml(data.formTitle)}</div>
     ${data.formNo ? `<div class="f-no">Nomor: ${escapeHtml(data.formNo)}</div>` : '<div class="f-no">&nbsp;</div>'}
     ${data.introText ? `<div class="f-intro">${escapeHtml(data.introText)}</div>` : ''}
@@ -966,11 +988,13 @@ const buildFormularPageHtml = <T>(entries: T[], buildFormular: (entry: T) => For
   <style>
     @page { margin: 25mm 20mm 20mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.55; color: #000; background: #fff; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.55; color: #0f172a; background: #fff; }
     .f-page-break { page-break-after: always; height: 0; }
-    .f-form { max-width: 680px; margin: 0 auto; }
-    .f-title { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
-    .f-no { text-align: center; font-size: 11pt; margin-bottom: 20px; }
+    .f-form { max-width: 680px; margin: 0 auto; border: 1px solid #dbe4f0; border-radius: 16px; padding: 22px 26px; }
+    .f-brand { color: #64748b; font-size: 9pt; font-weight: 700; letter-spacing: .14em; margin-bottom: 8px; }
+    .f-title { border-bottom: 1px solid #dbe4f0; font-size: 16pt; font-weight: bold; padding-bottom: 10px; text-align: left; text-transform: uppercase; margin-bottom: 4px; }
+    .f-no { color: #64748b; font-size: 10pt; margin-bottom: 20px; text-align: left; }
+    .f-footer { border-top: 1px solid #dbe4f0; color: #64748b; font-size: 9pt; margin: 24px auto 0; max-width: 680px; padding-top: 8px; text-align: center; }
     .f-intro { margin-bottom: 14px; }
     .f-section { margin-bottom: 10px; }
     .f-section-header { font-weight: bold; margin-bottom: 4px; }
@@ -993,10 +1017,13 @@ const buildFormularPageHtml = <T>(entries: T[], buildFormular: (entry: T) => For
     .f-approver-label { text-align: center; font-weight: bold; margin-bottom: 10px; }
     .f-notes { margin-top: 18px; border-top: 1px solid #ccc; padding-top: 8px; }
     .f-note { font-size: 10pt; line-height: 1.4; color: #444; }
-    @media print { .f-page-break { page-break-after: always; } }
+    @media print {
+      .f-page-break { page-break-after: always; }
+      .f-footer { position: fixed; bottom: -13mm; left: 0; right: 0; }
+    }
   </style>
 </head>
-<body>${formsHtml}</body>
+<body>${formsHtml}<footer class="f-footer">${escapeHtml(EXPORT_SYSTEM_NAME)}</footer></body>
 </html>`
 }
 

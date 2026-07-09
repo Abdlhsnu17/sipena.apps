@@ -239,18 +239,10 @@ export default function MaintenanceForm({
   useEffect(() => {
     if (maintenance) return
 
-    window.requestAnimationFrame(() => {
-      formCardRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "nearest",
-      })
-
-      const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
-        'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
-      )
-      pickerButton?.focus({ preventScroll: true })
-    })
+    const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
+    )
+    pickerButton?.focus({ preventScroll: true })
   }, [maintenance])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -280,18 +272,6 @@ export default function MaintenanceForm({
     window.setTimeout(() => {
       const scheduledDateInput = scheduledDateInputRef.current
       if (!scheduledDateInput) return
-
-      const rect = scheduledDateInput.getBoundingClientRect()
-      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight
-
-      if (!isVisible) {
-        scheduledDateInput.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        })
-      }
-
       scheduledDateInput.focus({ preventScroll: true })
     }, 120)
   }
@@ -461,7 +441,6 @@ export default function MaintenanceForm({
               </select>
               {!maintenance && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Pengajuan baru selalu masuk ke tahap diajukan dan harus disetujui sebelum lanjut ke pengecekan.
                 </p>
               )}
             </div>
@@ -526,6 +505,7 @@ export default function MaintenanceForm({
               )}
             </div>
             <Button type="button" variant="outline" onClick={onCancel}>
+              <X className="mr-2 h-4 w-4" />
               Batal
             </Button>
           </div>

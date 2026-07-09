@@ -37,8 +37,8 @@ import { formatNoId } from "@/utils/record-id";
 import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
-import InventoryPicker from "@/components/inventory-picker";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import InventoryPicker from "@/components/inventory-picker";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
     Dialog,
@@ -2393,6 +2393,7 @@ export default function BorrowingPage() {
                       setSelectedBorrowableAssetIds([])
                     }}
                   >
+                    <X className="mr-2 h-4 w-4" />
                     Batal
                   </Button>
                 </div>

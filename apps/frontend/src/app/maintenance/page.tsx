@@ -388,7 +388,7 @@ export default function MaintenancePage() {
         description: "Anda tidak memiliki izin untuk mengajukan pemeliharaan dari SPK.",
         variant: "destructive",
       })
-      router.replace("/maintenance")
+      router.replace("/maintenance", { scroll: false })
       return
     }
 
@@ -398,7 +398,7 @@ export default function MaintenancePage() {
         description: "Aset dari SPK tidak tersedia atau sedang tidak dapat diajukan pemeliharaan.",
         variant: "destructive",
       })
-      router.replace("/maintenance")
+      router.replace("/maintenance", { scroll: false })
       return
     }
 
@@ -412,7 +412,7 @@ export default function MaintenancePage() {
     setPrefillAsset(matched)
     setPrefillNote(noteParts.join(" · "))
     setShowForm(true)
-    router.replace("/maintenance")
+    router.replace("/maintenance", { scroll: false })
   }, [assets, currentUser, canCreateMaintenance, searchParams, router, toast])
 
   const handleStatusSelection = (id: string | number, newStatus: string) => {
@@ -615,7 +615,6 @@ export default function MaintenancePage() {
       setEditingMaintenance(null)
       setPrefillAsset(null)
       setPrefillNote("")
-      window.scrollTo(0, 500)
 
       if (!isEditing) {
         toast({
@@ -1368,11 +1367,11 @@ export default function MaintenancePage() {
 
   return (
     <main
-      className="min-h-full"
+      className="flex min-h-full flex-col"
       style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
       data-maintenance-page
     >
-      <div>
+      <div className="flex flex-col flex-1">
         <div className="w-full space-y-4">
           <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/35 dark:bg-slate-900/60">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2067,7 +2066,7 @@ export default function MaintenancePage() {
           </DialogContent>
         </Dialog>
 
-            <div className="mt-8 pt-6 border-t border-border text-center">
+            <div className="mt-auto pt-6 border-t border-border text-center">
               <p className="text-[13px] text-muted-foreground">
                 Sistem Inventaris  Peminjaman serta Pemeliharaan  sarana (SiPeNa)
               </p>

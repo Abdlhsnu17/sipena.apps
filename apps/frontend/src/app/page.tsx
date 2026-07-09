@@ -2,9 +2,9 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService, type Asset } from "@/services/asset.service";
-import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
@@ -399,16 +399,12 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => handleQuickActionClick(action)}
                 className={`group flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-linear-to-br ${action.gradient} p-4 text-left shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500`}
-                aria-label={`Navigasi ke ${action.label}`}
-              >
-                <div className="flex items-start gap-3">
+                aria-label={`Navigasi ke ${action.label}`}>
+                <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 text-white backdrop-blur dark:bg-white/15">
                     <Icon className="h-5 w-5 text-white" />
                   </span>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-base font-bold text-white">{action.label}</p>
-                    <p className="text-xs text-white/90">{action.description}</p>
-                  </div>
+                  <p className="text-base font-bold text-white">{action.label}</p>
                 </div>
                 <div className="mt-3 flex items-center">
                   <ArrowRight className="h-4 w-4 text-white/80" />
