@@ -20,6 +20,7 @@ import {
     ensureInitialAdminAccount,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
+    ensureMaintenanceOperationsSchema,
     ensureMaintenanceDetailColumns,
     ensureNonMedicalSpecificationsColumn,
     ensureReportUploadsTable,
@@ -45,6 +46,7 @@ import deletionRequestRoutes from './routes/deletion_request.routes';
 import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
+import { MaintenanceService } from './services/maintenance.service';
 import maintenanceScheduleRoutes from './routes/maintenance_schedule.routes';
 import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
@@ -413,6 +415,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureMaintenanceAssetTypeColumn();
         await ensureMaintenanceDetailColumns();
         await ensureMaintenanceCancellationReasonColumn();
+        await ensureMaintenanceOperationsSchema();
         await ensureNonMedicalSpecificationsColumn();
         await ensureAssetCategoryUmbrellaValues();
         await ensureReportUploadsTable();
@@ -442,6 +445,17 @@ const initializeInfrastructure = async (): Promise<void> => {
       }
 
       logger.info('Startup initialization complete');
+      const maintenanceService = new MaintenanceService();
+      const generatePreventiveTickets = async () => {
+        try {
+          const created = await maintenanceService.generateDuePreventiveMaintenance();
+          if (created) logger.info('Generated due preventive maintenance tickets', { created });
+        } catch (error) {
+          logger.error('Unable to generate due preventive maintenance tickets', { error });
+        }
+      };
+      void generatePreventiveTickets();
+      setInterval(() => void generatePreventiveTickets(), 24 * 60 * 60 * 1000).unref();
       return;
     } catch (error) {
       logger.error('Startup initialization attempt failed', {

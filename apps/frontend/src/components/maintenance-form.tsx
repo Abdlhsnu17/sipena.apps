@@ -105,10 +105,15 @@ export default function MaintenanceForm({
     assetDetailCode: "",
     assetLocation: "",
     type: "preventive",
+    priority: "normal",
     scheduledDate: "",
+    dueAt: "",
     description: "",
 
     technician: "",
+    vendorName: "",
+    vendorReference: "",
+    warrantyUntil: "",
     status: "requested",
     cancellationReason: "",
     cost: "",
@@ -192,9 +197,14 @@ export default function MaintenanceForm({
       assetDetailCode: maintenance.assetDetailCode || maintenance.assetCode || prev.assetDetailCode,
       assetLocation: maintenance.assetLocation || prev.assetLocation,
       type: maintenance.type || prev.type,
+      priority: maintenance.priority || "normal",
       scheduledDate: toLocalDateTimeString(maintenance.scheduledDate ?? maintenance.scheduled_date) ?? "",
+      dueAt: toLocalDateTimeString(maintenance.dueAt ?? maintenance.due_at) ?? "",
       description: maintenance.description ?? buildRepairNoteTemplate(resolvedAsset),
       technician: maintenance.technician || "",
+      vendorName: maintenance.vendorName || "",
+      vendorReference: maintenance.vendorReference || "",
+      warrantyUntil: maintenance.warrantyUntil ? String(maintenance.warrantyUntil).slice(0, 10) : "",
       status: maintenance.status || "requested",
       cancellationReason:
         maintenance.cancellationReason ?? maintenance.cancellation_reason ?? "",
@@ -397,6 +407,13 @@ export default function MaintenanceForm({
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Prioritas</label>
+              <select name="priority" value={formData.priority} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground">
+                <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="critical">Kritis</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-foreground mb-2">Tanggal &amp; Waktu Jadwal</label>
               <input
                 ref={scheduledDateInputRef}
@@ -411,6 +428,11 @@ export default function MaintenanceForm({
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Batas Penyelesaian (SLA)</label>
+              <input type="datetime-local" name="dueAt" value={formData.dueAt} onChange={handleChange} step={60} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-foreground mb-2">Teknisi/Penanggung Jawab</label>
               <input
                 type="text"
@@ -422,6 +444,16 @@ export default function MaintenanceForm({
               />
               <p className="mt-1 text-xs text-muted-foreground">
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Vendor/Penyedia Jasa</label>
+              <input type="text" name="vendorName" value={formData.vendorName} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="Opsional" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">No. Referensi Vendor</label>
+              <input type="text" name="vendorReference" value={formData.vendorReference} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="PO / invoice / tiket" />
             </div>
 
             <div>

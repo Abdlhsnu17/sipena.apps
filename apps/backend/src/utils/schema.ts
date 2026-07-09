@@ -13,6 +13,7 @@ let ensuredReportUploadsTable = false;
 let ensuredMaintenanceAssetTypeColumn = false;
 let ensuredMaintenanceDetailColumns = false;
 let ensuredMaintenanceCancellationReasonColumn = false;
+let ensuredMaintenanceOperationsSchema = false;
 let ensuredUserProfileColumns = false;
 let ensuredUserSessionVersionColumn = false;
 let ensuredUserPhoneNumberColumn = false;
@@ -679,6 +680,53 @@ export async function ensureMaintenanceCancellationReasonColumn(): Promise<void>
   }
 
   ensuredMaintenanceCancellationReasonColumn = true;
+}
+
+export async function ensureMaintenanceOperationsSchema(): Promise<void> {
+  if (ensuredMaintenanceOperationsSchema || !(await tableExists('maintenance_records'))) return;
+
+  const [columns] = await pool.query<RowDataPacket[]>(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'maintenance_records'
+      AND COLUMN_NAME IN ('priority', 'due_at', 'started_at', 'technician_user_id', 'vendor_name', 'vendor_reference', 'warranty_until')
+  `);
+  const existing = new Set(columns.map((row) => row.COLUMN_NAME));
+  const additions: Array<[string, string]> = [
+    ['priority', "VARCHAR(20) NOT NULL DEFAULT 'normal' AFTER type"],
+    ['due_at', 'DATETIME NULL AFTER scheduled_date'],
+    ['started_at', 'DATETIME NULL AFTER due_at'],
+    ['technician_user_id', 'INT(11) NULL AFTER technician'],
+    ['vendor_name', 'VARCHAR(255) NULL AFTER technician_user_id'],
+    ['vendor_reference', 'VARCHAR(100) NULL AFTER vendor_name'],
+    ['warranty_until', 'DATE NULL AFTER vendor_reference'],
+  ];
+  for (const [name, definition] of additions) {
+    if (!existing.has(name)) await pool.query(`ALTER TABLE maintenance_records ADD COLUMN ${name} ${definition}`);
+  }
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS maintenance_status_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, maintenance_id INT(11) NOT NULL,
+    from_status VARCHAR(20) NULL, to_status VARCHAR(20) NOT NULL, note TEXT NULL,
+    changed_by INT(11) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_maintenance_status_logs_record (maintenance_id, created_at),
+    CONSTRAINT fk_maintenance_status_logs_record FOREIGN KEY (maintenance_id) REFERENCES maintenance_records(id) ON DELETE CASCADE,
+    CONSTRAINT fk_maintenance_status_logs_user FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS maintenance_parts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, maintenance_id INT(11) NOT NULL, name VARCHAR(255) NOT NULL,
+    quantity DECIMAL(12,2) NOT NULL DEFAULT 1, unit VARCHAR(50) NULL, unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_maintenance_parts_record (maintenance_id),
+    CONSTRAINT fk_maintenance_parts_record FOREIGN KEY (maintenance_id) REFERENCES maintenance_records(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS maintenance_attachments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, maintenance_id INT(11) NOT NULL, file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL, mime_type VARCHAR(100) NULL, uploaded_by INT(11) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_maintenance_attachments_record (maintenance_id),
+    CONSTRAINT fk_maintenance_attachments_record FOREIGN KEY (maintenance_id) REFERENCES maintenance_records(id) ON DELETE CASCADE,
+    CONSTRAINT fk_maintenance_attachments_user FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  ensuredMaintenanceOperationsSchema = true;
 }
 
 export async function ensureScheduleAssetForeignKeyRemoved(): Promise<void> {

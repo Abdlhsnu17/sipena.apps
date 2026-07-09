@@ -19,11 +19,18 @@ export interface Maintenance {
   validatorNip?: string;
   scheduleId?: number;
   type: MaintenanceType;
+  priority?: MaintenancePriority;
   status: MaintenanceStatus;
   scheduledDate: Date | string;
+  dueAt?: Date | string;
+  startedAt?: Date | string;
   completedDate?: Date;
   description: string;
   technician?: string;
+  technicianUserId?: number;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: Date | string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -37,6 +44,7 @@ export interface Maintenance {
 }
 
 export type MaintenanceType = 'preventive' | 'corrective' | 'calibration' | 'inspection';
+export type MaintenancePriority = 'low' | 'normal' | 'high' | 'critical';
 
 export type MaintenanceStatus =
   | 'requested'
@@ -52,6 +60,7 @@ export interface CreateMaintenanceDTO {
   assetId: number;
   assetType?: AssetType;
   type: MaintenanceType;
+  priority?: MaintenancePriority;
   status?: MaintenanceStatus;
   scheduledDate: Date | string;
   description?: string;
@@ -59,6 +68,11 @@ export interface CreateMaintenanceDTO {
   assetDetailName?: string;
   assetDetailCode?: string;
   technician?: string;
+  technicianUserId?: number;
+  dueAt?: Date | string;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: Date | string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -71,12 +85,18 @@ export interface UpdateMaintenanceDTO {
   assetType?: AssetType;
   status?: MaintenanceStatus;
   type?: MaintenanceType;
+  priority?: MaintenancePriority;
   scheduledDate?: Date | string;
   description?: string;
   assetDetailId?: string;
   assetDetailName?: string;
   assetDetailCode?: string;
   technician?: string;
+  technicianUserId?: number;
+  dueAt?: Date | string;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: Date | string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;

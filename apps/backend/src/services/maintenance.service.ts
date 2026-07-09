@@ -98,6 +98,65 @@ export class MaintenanceService {
     this.assetService = new AssetService();
   }
 
+  private async recordStatusLog(
+    maintenanceId: number | string,
+    fromStatus: string | null,
+    toStatus: string,
+    changedBy?: number | null,
+    note?: string | null
+  ): Promise<void> {
+    try {
+      await pool.query(
+        `INSERT INTO maintenance_status_logs (maintenance_id, from_status, to_status, changed_by, note)
+         VALUES (?, ?, ?, ?, ?)`,
+        [maintenanceId, fromStatus, toStatus, changedBy ?? null, note?.trim() || null]
+      );
+    } catch (error) {
+      console.error('Error recording maintenance status audit:', error);
+    }
+  }
+
+  /** Creates one requested preventive ticket per overdue detail inventory, never duplicating an active ticket. */
+  async generateDuePreventiveMaintenance(): Promise<number> {
+    const [assets] = await pool.query<RowDataPacket[]>(`
+      SELECT id, 'medical' AS asset_type, name, asset_code, specifications FROM medical_assets
+      UNION ALL
+      SELECT id, 'non_medical' AS asset_type, name, asset_code, specifications FROM non_medical_assets
+    `);
+    const today = this.formatDateOnly(new Date());
+    if (!today) return 0;
+    let created = 0;
+
+    for (const asset of assets) {
+      let specifications: any;
+      try { specifications = typeof asset.specifications === 'string' ? JSON.parse(asset.specifications) : asset.specifications; } catch { continue; }
+      const details = Array.isArray(specifications?.details) ? specifications.details : [];
+      for (const detail of details) {
+        const dueDate = this.formatDateOnly(detail?.nextMaintenance);
+        const detailId = this.normalizeDetailIdentifier(detail?.id ?? detail?.detailId);
+        if (!dueDate || dueDate > today || !detailId) continue;
+        const [active] = await pool.query<RowDataPacket[]>(
+          `SELECT id FROM maintenance_records
+           WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ? AND asset_detail_id = ?
+             AND deleted_at IS NULL AND status IN ('requested', 'scheduled', 'in_progress', 'completed') LIMIT 1`,
+          [asset.id, asset.asset_type, detailId]
+        );
+        if (active.length) continue;
+        const result = await this.create({
+          assetId: asset.id, assetType: asset.asset_type, assetDetailId: detailId,
+          assetDetailName: detail.name ?? detail.detailName ?? asset.name,
+          assetDetailCode: detail.code ?? detail.detailCode ?? asset.asset_code,
+          type: 'preventive', priority: dueDate < today ? 'high' : 'normal', status: 'requested',
+          scheduledDate: `${dueDate}T08:00:00`, dueAt: `${dueDate}T17:00:00`,
+          description: `Tiket preventive otomatis untuk jadwal pemeliharaan ${dueDate}.`,
+          createdBy: null as unknown as number,
+        });
+        if (result.success) created += 1;
+      }
+    }
+    return created;
+  }
+
   private async hasActiveUsage(
     assetId: number,
     assetType: AssetType,
@@ -871,16 +930,22 @@ export class MaintenanceService {
          asset_detail_code,
          schedule_id,
          type,
+         priority,
          status,
          scheduled_date,
+         due_at,
          description,
          technician,
+         technician_user_id,
+         vendor_name,
+         vendor_reference,
+         warranty_until,
          cost,
          notes,
          cancellation_reason,
          created_by
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         maintenanceCode,
         data.assetId,
@@ -890,10 +955,16 @@ export class MaintenanceService {
         data.assetDetailCode || null,
         data.scheduleId || null,
         data.type,
+        data.priority || 'normal',
         statusValue,
         scheduledDateValue,
+        data.dueAt ? formatDateTimeForMySQL(data.dueAt) : null,
         descriptionValue,
         data.technician || null,
+        data.technicianUserId || null,
+        data.vendorName || null,
+        data.vendorReference || null,
+        data.warrantyUntil ? this.formatDateOnly(data.warrantyUntil) : null,
         data.cost || null,
         data.notes || null,
         data.cancellationReason || null,
@@ -906,6 +977,7 @@ export class MaintenanceService {
       [result.insertId]
     );
     const newMaintenance = newRows[0];
+    await this.recordStatusLog(newMaintenance.id, null, newMaintenance.status, data.createdBy, 'Pemeliharaan dibuat');
 
     await this.syncAssetAvailability(
       data.assetId,
@@ -962,7 +1034,7 @@ export class MaintenanceService {
     return { success: true, message: 'Maintenance record created successfully', data: dataWithLabel };
   }
 
-  async update(id: string, data: UpdateMaintenanceDTO): Promise<ApiResponse<Maintenance>> {
+  async update(id: string, data: UpdateMaintenanceDTO, changedBy?: number | null): Promise<ApiResponse<Maintenance>> {
     const existing = await this.getById(id);
     if (!existing.success) return existing;
 
@@ -1032,13 +1104,14 @@ export class MaintenanceService {
       if (value !== undefined) {
         const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         let normalizedValue = value;
-        if (key === 'scheduledDate') {
+        if (key === 'scheduledDate' || key === 'dueAt') {
           const formatted = formatDateTimeForMySQL(value);
           if (!formatted) {
             throw new Error('Invalid scheduled date');
           }
           normalizedValue = formatted;
         }
+        if (key === 'warrantyUntil') normalizedValue = this.formatDateOnly(value) || null;
         fields.push(`${snakeKey} = ?`);
         values.push(normalizedValue);
       }
@@ -1052,11 +1125,18 @@ export class MaintenanceService {
       fields.push('completed_date = NULL');
       fields.push('completed_by = NULL');
     }
+    if (data.status === 'in_progress' && currentStatus !== 'in_progress') {
+      fields.push('started_at = COALESCE(started_at, NOW())');
+    }
 
     fields.push('updated_at = NOW()');
     values.push(id);
 
     await pool.query(`UPDATE maintenance_records SET ${fields.join(', ')} WHERE id = ?`, values);
+
+    if (data.status !== undefined && data.status !== currentStatus) {
+      await this.recordStatusLog(id, currentStatus || null, data.status, changedBy, data.notes || data.cancellationReason);
+    }
 
     if (
       existingAssetId &&
@@ -1186,6 +1266,7 @@ export class MaintenanceService {
        WHERE id = ?`,
       [data.notes || null, data.cost || null, data.completedBy, id]
     );
+    await this.recordStatusLog(id, currentStatus, 'completed', data.completedBy, data.notes);
 
     try {
       await MaintenanceHistoryService.completeByMaintenanceId(Number(id), {
@@ -1258,6 +1339,7 @@ export class MaintenanceService {
        WHERE id = ?`,
       [id]
     );
+    await this.recordStatusLog(id, currentStatus, 'validated', validatedBy, 'Validasi akhir');
 
     try {
       await MaintenanceHistoryService.validateByMaintenanceId(Number(id), validatedBy, validatedAt);

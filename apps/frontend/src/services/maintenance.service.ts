@@ -17,12 +17,19 @@ export interface Maintenance {
   requesterWorkUnit?: string;
   requesterSubWorkUnit?: string;
   type: 'preventive' | 'corrective' | 'calibration' | 'inspection';
+  priority?: 'low' | 'normal' | 'high' | 'critical';
   status: 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled';
   scheduledDate: string;
+  dueAt?: string;
+  startedAt?: string;
   completedDate?: string;
   validatedAt?: string;
   description: string;
   technician?: string;
+  technicianUserId?: number;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -83,11 +90,18 @@ const normalizeMaintenance = (maintenance: any): Maintenance => {
     requesterWorkUnit: maintenance.requesterWorkUnit ?? maintenance.requester_work_unit,
     requesterSubWorkUnit: maintenance.requesterSubWorkUnit ?? maintenance.requester_sub_work_unit,
     type: maintenance.type,
+    priority: maintenance.priority ?? 'normal',
     status: maintenance.status,
     scheduledDate: normalizedScheduledDate,
+    dueAt: maintenance.dueAt ?? maintenance.due_at,
+    startedAt: maintenance.startedAt ?? maintenance.started_at,
     completedDate: maintenance.completedDate ?? maintenance.completed_date,
     description: maintenance.description,
     technician: maintenance.technician,
+    technicianUserId: maintenance.technicianUserId ?? maintenance.technician_user_id,
+    vendorName: maintenance.vendorName ?? maintenance.vendor_name,
+    vendorReference: maintenance.vendorReference ?? maintenance.vendor_reference,
+    warrantyUntil: maintenance.warrantyUntil ?? maintenance.warranty_until,
     cost: maintenance.cost,
     notes: maintenance.notes,
     cancellationReason: maintenance.cancellationReason ?? maintenance.cancellation_reason,
@@ -105,14 +119,20 @@ export interface CreateMaintenanceData {
   assetId: number;
   assetType?: 'medical' | 'non_medical';
   type: 'preventive' | 'corrective' | 'calibration' | 'inspection';
+  priority?: 'low' | 'normal' | 'high' | 'critical';
   status?: 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled';
   scheduledDate: string;
+  dueAt?: string;
   description?: string;
   assetDetailId?: string;
   assetDetailName?: string;
   assetDetailCode?: string;
   assetLocation?: string;
   technician?: string;
+  technicianUserId?: number;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -123,13 +143,19 @@ export interface UpdateMaintenanceData {
   assetId?: number;
   assetType?: 'medical' | 'non_medical';
   type?: 'preventive' | 'corrective' | 'calibration' | 'inspection';
+  priority?: 'low' | 'normal' | 'high' | 'critical';
   scheduledDate?: string;
+  dueAt?: string;
   description?: string;
   assetDetailId?: string;
   assetDetailName?: string;
   assetDetailCode?: string;
   assetLocation?: string;
   technician?: string;
+  technicianUserId?: number;
+  vendorName?: string;
+  vendorReference?: string;
+  warrantyUntil?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;

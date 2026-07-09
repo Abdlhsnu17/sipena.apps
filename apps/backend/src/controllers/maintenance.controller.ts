@@ -329,7 +329,7 @@ export class MaintenanceController {
         return;
       }
 
-      const result = await this.maintenanceService.update(id, req.body);
+      const result = await this.maintenanceService.update(id, req.body, actorId);
 
       if (!result.success) {
         res.status(404).json(result);

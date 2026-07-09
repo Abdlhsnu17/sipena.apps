@@ -1827,6 +1827,7 @@ export default function MaintenancePage() {
                             <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
                               <InfoRow label="Jenis Inventaris">{inventoryTypeLabel}</InfoRow>
                               <InfoRow label="Tipe Layanan">{maintenanceTypeLabel(m.type)}</InfoRow>
+                              <InfoRow label="Prioritas">{({ low: "Rendah", normal: "Normal", high: "Tinggi", critical: "Kritis" }[m.priority || "normal"] || "Normal")}</InfoRow>
                               <InfoRow label="No ID Jadwal">{maintenanceNoId}</InfoRow>
                               <InfoRow label="Nama Alat">{inventoryName}</InfoRow>
                               <InfoRow label="Kode Alat">{codeLabel}</InfoRow>
@@ -1840,6 +1841,7 @@ export default function MaintenancePage() {
                               <InfoRow label="Nama Pengirim">{m.requesterName || "-"}</InfoRow>
                               <InfoRow label="NIP Pengirim">{m.requesterNip || "-"}</InfoRow>
                               <InfoRow label="Jadwal Pemeliharaan Sarana">{scheduledLabel}</InfoRow>
+                              <InfoRow label="Batas Penyelesaian (SLA)">{m.dueAt ? formatDayTimeLabel(m.dueAt, { showWeekday: false }) : "-"}</InfoRow>
                               <InfoRow label="Catatan Pendaftaran">{registrationNote}</InfoRow>
                             </div>
                           </div>
@@ -1847,6 +1849,8 @@ export default function MaintenancePage() {
                             <SectionHeader label="Pelaksanaan & Biaya" />
                             <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
                               <InfoRow label="Teknisi Pelaksana">{m.technician || "-"}</InfoRow>
+                              <InfoRow label="Vendor/Penyedia Jasa">{m.vendorName || "-"}</InfoRow>
+                              <InfoRow label="Referensi Vendor">{m.vendorReference || "-"}</InfoRow>
                               <InfoRow label="Waktu Selesai">{completionLabel}</InfoRow>
                               <InfoRow label="Biaya Pemeliharaan">{costLabel}</InfoRow>
                               <InfoRow label="Catatan (After)">{afterNotesLabel}</InfoRow>
