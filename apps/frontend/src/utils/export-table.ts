@@ -411,15 +411,16 @@ export const appendLine = (lines: SectionLine[], label: string, value?: string) 
 
 export type SectionBuilder<T> = (entry: T) => DocumentSection[]
 
-const buildSectionHtml = (section: DocumentSection) => `
+const buildSectionHtml = (section: DocumentSection, index: number) => `
   <div class="section-block">
-    <div class="section-block__heading">${escapeHtml(normalizeCapsText(section.title))}</div>
+    <div class="section-block__heading"><span class="section-block__number">${toRomanNumeral(index + 1)}.</span> ${escapeHtml(normalizeCapsText(section.title))}</div>
     <div class="section-block__rows">
       ${section.lines
         .map(
           (line) => `
             <div class="section-block__row">
               <div class="section-block__label">${escapeHtml(normalizeCapsText(line.label))}</div>
+              <div class="section-block__separator">:</div>
               <div class="section-block__value">${escapeHtml(line.value)}</div>
             </div>
           `
@@ -429,6 +430,66 @@ const buildSectionHtml = (section: DocumentSection) => `
   </div>
 `
 
+const toRomanNumeral = (value: number) => {
+  const numerals = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+    [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ] as const
+  let remaining = value
+  return numerals.reduce((result, [amount, numeral]) => {
+    while (remaining >= amount) {
+      result += numeral
+      remaining -= amount
+    }
+    return result
+  }, '')
+}
+
+const getEntryText = (entry: unknown, keys: string[]) => {
+  if (!entry || typeof entry !== 'object') return ''
+  const values = entry as Record<string, unknown>
+  for (const key of keys) {
+    const value = values[key]
+    if (typeof value === 'string' && value.trim() && value.trim() !== '-') return value.trim()
+  }
+  return ''
+}
+
+const buildNarrativeSignatureHtml = <T>(entry: T) => {
+  const submitterName = getEntryText(entry, ['userName', 'operatorName', 'requesterName', 'createdByName']) || '................................'
+  const submitterNip = getEntryText(entry, ['userNip', 'operatorNip', 'requesterNip'])
+  const reviewerName = getEntryText(entry, ['ownerName', 'validatorName', 'technician', 'approvedByName', 'returnValidatorName']) || '................................'
+  const submitterRole = getEntryText(entry, ['userName'])
+    ? 'Peminjam / Pengguna'
+    : getEntryText(entry, ['operatorName'])
+      ? 'Pengguna Alat'
+      : 'Yang Mengajukan'
+  const reviewerRole = getEntryText(entry, ['ownerName'])
+    ? 'Pemilik Alat'
+    : getEntryText(entry, ['technician'])
+      ? 'Teknisi / Petugas'
+      : 'Mengetahui'
+
+  return `
+    <div class="signature-block">
+      <div class="signature-block__date">Jakarta, ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</div>
+      <div class="signature-block__columns">
+        <div class="signature-block__column">
+          <div class="signature-block__role">${escapeHtml(submitterRole)}</div>
+          <div class="signature-block__space"></div>
+          <div class="signature-block__name">${escapeHtml(submitterName)}</div>
+          ${submitterNip ? `<div class="signature-block__nip">NIP. ${escapeHtml(submitterNip)}</div>` : ''}
+        </div>
+        <div class="signature-block__column">
+          <div class="signature-block__role">${escapeHtml(reviewerRole)}</div>
+          <div class="signature-block__space"></div>
+          <div class="signature-block__name">${escapeHtml(reviewerName)}</div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 const buildNarrativeEntryHtml = <T>(entry: T, index: number, total: number, buildSections: SectionBuilder<T>) => {
   const sections = buildSections(entry)
   if (!sections.length) return ''
@@ -437,7 +498,8 @@ const buildNarrativeEntryHtml = <T>(entry: T, index: number, total: number, buil
     <article class="entry-card">
       ${entryHeader}
       <div class="entry-card__body">
-        ${sections.map((section) => buildSectionHtml(section)).join('')}
+        ${sections.map((section, sectionIndex) => buildSectionHtml(section, sectionIndex)).join('')}
+        ${buildNarrativeSignatureHtml(entry)}
       </div>
     </article>
   `
@@ -529,10 +591,12 @@ const buildNarrativeHtml = <T>(
           }
           .entry-card {
             background: ${cardBg};
-            border: 1px solid ${sectionBorder};
-            border-radius: 16px;
+            border: 0;
+            border-left: 1px solid ${sectionBorder};
+            border-right: 1px solid ${sectionBorder};
+            border-radius: 0;
             box-shadow: none;
-            padding: 18px 20px;
+            padding: 0 26px 18px;
             page-break-inside: avoid;
             margin: 0 0 16px;
           }
@@ -565,46 +629,82 @@ const buildNarrativeHtml = <T>(
             page-break-inside: avoid;
           }
           .section-block + .section-block {
-            margin-top: 16px;
+            margin-top: 18px;
           }
           .section-block__heading {
             background: ${sectionHeadingBg};
             border-bottom: 1px solid ${sectionBorder};
-            color: #64748b;
-            font-size: 11px;
+            color: #0f172a;
+            font-size: 14px;
             font-weight: 700;
-            letter-spacing: .12em;
-            padding: 0 0 8px;
+            letter-spacing: 0;
+            padding: 0 0 7px;
           }
+          .section-block__number { margin-right: 3px; }
           .section-block__rows {
             padding: 0;
             display: block;
           }
           .section-block__row {
             display: flex;
-            gap: 16px;
-            padding: 10px 0;
-            border-bottom: 1px solid ${sectionBorder};
+            gap: 8px;
+            padding: 5px 0;
+            border-bottom: 0;
           }
           .section-block__row:last-child {
             border-bottom: 0;
           }
           .section-block__label {
             color: #64748b;
-            flex: 0 0 31%;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: .1em;
+            flex: 0 0 32%;
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0;
             margin: 0;
-            text-transform: uppercase;
+            text-transform: none;
+          }
+          .section-block__separator {
+            color: #0f172a;
+            flex: 0 0 auto;
+            font-size: 13px;
           }
           .section-block__value {
+            border-bottom: 1px dashed #64748b;
+            flex: 1;
             font-size: 14px;
             font-weight: 500;
+            min-height: 20px;
             color: ${bodyColor};
             margin: 0;
             overflow-wrap: anywhere;
           }
+          .signature-block {
+            border-top: 1px solid ${sectionBorder};
+            margin-top: 26px;
+            padding-top: 12px;
+            page-break-inside: avoid;
+          }
+          .signature-block__date {
+            font-size: 12px;
+            margin: 0 0 18px;
+            text-align: right;
+          }
+          .signature-block__columns {
+            display: table;
+            table-layout: fixed;
+            width: 100%;
+          }
+          .signature-block__column {
+            display: table-cell;
+            padding: 0 14px;
+            text-align: center;
+            vertical-align: top;
+            width: 50%;
+          }
+          .signature-block__role { font-size: 12px; font-weight: 600; }
+          .signature-block__space { height: 64px; }
+          .signature-block__name { border-top: 1px solid #0f172a; font-size: 12px; font-weight: 700; padding-top: 4px; }
+          .signature-block__nip { color: #475569; font-size: 10px; margin-top: 2px; }
           @media print {
             body {
               -webkit-print-color-adjust: exact;
