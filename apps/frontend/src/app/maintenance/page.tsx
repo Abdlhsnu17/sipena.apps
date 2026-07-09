@@ -41,15 +41,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-    appendLine,
-    DocumentSection,
-    ExportFormat,
-    exportNarrativeReport,
-    SectionBuilder,
-    SectionLine,
-    TableExportColumn,
-} from "@/utils/export-table";
+import { ExportFormat, exportFormularReport, FormularData, TableExportColumn } from "@/utils/export-table";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
@@ -1177,10 +1169,6 @@ export default function MaintenancePage() {
     })
   }
 
-  const maintenanceColumnsForExport = maintenanceExportColumnDefinitions.filter((column) =>
-    selectedMaintenanceColumns.includes(column.key)
-  )
-
   const handleMaintenanceExportColumnToggle = (columnKey: string) => {
     setSelectedMaintenanceColumns((previous) => {
       if (previous.includes(columnKey)) {
@@ -1191,135 +1179,87 @@ export default function MaintenancePage() {
     })
   }
 
-  const buildMaintenanceNarrativeSections = (columnKeys: string[]): SectionBuilder<Maintenance> => {
-    const columnSet = new Set(columnKeys)
-    return (item) => {
-      const detail = resolveDetailForMaintenance(item)
-      const maintenanceNoId = getMaintenanceNoId(item)
-      const assetSource = deriveAssetSource(detail?.assetType ?? item.assetType, detail?.detailCode ?? item.assetCode)
-      const assetTypeLabel = assetSourceLabel(assetSource)
-      const assetName =
-        item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
-      const assetCode = item.assetDetailCode || detail?.detailCode || item.assetCode || "-"
-      const scheduledLabel = formatDayTimeLabel(item.scheduledDate, { showWeekday: false })
-      const completedLabel = formatDayTimeLabel(item.completedDate, { showWeekday: false })
-      const registrationNotesLabel = item.description || "-"
-      const afterNotesLabel = item.notes || "-"
-      const costLabel = item.cost ? formatCostLabel(item.cost) : "-"
-      const statusLabel = maintenanceStatusLabel(item.status)
-      const locationLabel = detail?.roomName || detail?.assetLocation || item.assetLocation || "-"
-      const brandModelLabel =
-        detail?.detailBrandModel || detail?.detailName || item.assetDetailName || item.assetName || "-"
+  const buildMaintenanceFormular = (item: Maintenance): FormularData => {
+    const detail = resolveDetailForMaintenance(item)
+    const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
+    const assetCode = item.assetDetailCode || detail?.detailCode || item.assetCode || "-"
+    const assetRoom = detail?.roomName || detail?.assetLocation || item.assetLocation || "-"
+    const assetType = assetSourceLabel(deriveAssetSource(detail?.assetType ?? item.assetType, detail?.detailCode ?? item.assetCode))
+    const requesterName = item.requesterName || "(................................)"
+    const technicianName = item.technician || "(................................)"
+    const validatorName = item.validatorName || technicianName
 
-      const identities: SectionLine[] = []
-      if (columnSet.has("noId")) {
-        appendLine(identities, "No ID Jadwal", maintenanceNoId)
-      }
-      if (columnSet.has("jenisInventaris")) {
-        appendLine(identities, "Jenis Inventaris", assetTypeLabel)
-      }
-      if (columnSet.has("namaAlat")) {
-        appendLine(identities, "Nama Alat", assetName)
-      }
-      if (columnSet.has("kode")) {
-        appendLine(identities, "Kode Alat", assetCode)
-      }
-      if (columnSet.has("tipeLayanan")) {
-        appendLine(identities, "Tipe Layanan", maintenanceTypeLabel(item.type))
-      }
-      if (columnSet.has("ruangan")) {
-        appendLine(identities, "Nama Ruangan Alat", locationLabel)
-      }
-      if (columnSet.has("merek")) {
-        appendLine(identities, "Merek / Model", brandModelLabel)
-      }
-
-      const administration: SectionLine[] = []
-      if (columnSet.has("tanggalPinjam")) {
-        appendLine(administration, "Jadwal Pemeliharaan", scheduledLabel)
-      }
-      if (columnSet.has("peminjam")) {
-        appendLine(administration, "Nama Pengirim", item.requesterName || "-")
-      }
-      if (columnSet.has("nip")) {
-        appendLine(administration, "NIP Pengirim", item.requesterNip || "-")
-      }
-      if (columnSet.has("catatanPendaftaran")) {
-        appendLine(administration, "Catatan Pendaftaran", registrationNotesLabel)
-      }
-
-      const execution: SectionLine[] = []
-      if (columnSet.has("teknisi")) {
-        appendLine(execution, "Teknisi Pelaksana", item.technician || "-")
-      }
-      if (columnSet.has("tanggalKembali")) {
-        appendLine(execution, "Waktu Selesai", completedLabel)
-      }
-      if (columnSet.has("biaya")) {
-        appendLine(execution, "Biaya Pemeliharaan", costLabel)
-      }
-      if (columnSet.has("catatanAfter")) {
-        appendLine(execution, "Catatan (After)", afterNotesLabel)
-      }
-      if (columnSet.has("alasanPembatalan") && item.cancellationReason) {
-        appendLine(execution, "Alasan Pembatalan", item.cancellationReason)
-      }
-      if (columnSet.has("catatan")) {
-        appendLine(execution, "Ringkasan Catatan", afterNotesLabel !== "-" ? afterNotesLabel : registrationNotesLabel)
-      }
-
-      const statusLines: SectionLine[] = []
-      if (columnSet.has("status")) {
-        appendLine(statusLines, "Status", statusLabel)
-      }
-
-      const sections: DocumentSection[] = []
-      if (identities.length) {
-        sections.push({ title: "Informasi Dasar Alat", lines: identities })
-      }
-      if (administration.length) {
-        sections.push({ title: "Detail Administrasi", lines: administration })
-      }
-      if (execution.length) {
-        sections.push({ title: "Pelaksanaan & Biaya", lines: execution })
-      }
-      if (statusLines.length) {
-        sections.push({ title: "Status Akhir", lines: statusLines })
-      }
-      return sections
+    return {
+      formTitle: "Formulir Pemeliharaan Sarana",
+      formNo: getMaintenanceNoId(item),
+      introText: "Dokumen ini menjadi catatan permohonan dan pelaksanaan pemeliharaan sarana.",
+      sections: [
+        {
+          numeral: "I",
+          title: "Identitas Pemohon",
+          fields: [
+            { label: "Nama", value: item.requesterName || "-" },
+            { label: "NIP", value: item.requesterNip || "-" },
+            { label: "Unit Kerja", value: item.requesterWorkUnit || "-" },
+            { label: "Sub Unit Kerja", value: item.requesterSubWorkUnit || "-" },
+          ],
+        },
+        {
+          numeral: "II",
+          title: "Identitas Alat",
+          fields: [
+            { label: "Jenis Inventaris", value: assetType },
+            { label: "Nama Alat", value: assetName },
+            { label: "Kode Alat", value: assetCode },
+            { label: "Ruangan Alat", value: assetRoom },
+          ],
+        },
+        {
+          numeral: "III",
+          title: "Rencana Pemeliharaan",
+          fields: [
+            { label: "Tipe Layanan", value: maintenanceTypeLabel(item.type) },
+            { label: "Jadwal Pemeliharaan", value: formatDayTimeLabel(item.scheduledDate, { showWeekday: false }) },
+            { label: "Uraian Permohonan", value: item.description || "-" },
+            { label: "Status", value: maintenanceStatusLabel(item.status) },
+          ],
+        },
+        {
+          numeral: "IV",
+          title: "Pelaksanaan Pemeliharaan",
+          fields: [
+            { label: "Teknisi Pelaksana", value: item.technician || "-" },
+            { label: "Waktu Selesai", value: formatDayTimeLabel(item.completedDate, { showWeekday: false }) || "-" },
+            { label: "Biaya Pemeliharaan", value: item.cost ? formatCostLabel(item.cost) : "-" },
+            { label: "Catatan Hasil", value: item.notes || "-" },
+            { label: "Alasan Pembatalan", value: item.cancellationReason || "-" },
+          ],
+        },
+      ],
+      signatureDate: "Jakarta, ..................... 20.....",
+      signatureLeft: { title: "Yang Mengajukan", name: requesterName, nip: item.requesterNip || undefined },
+      signatureRight: { title: "Teknisi / Pelaksana", name: technicianName },
+      approverLabel: "MENGETAHUI",
+      approverLeft: { title: "Penanggung Jawab Unit", name: requesterName },
+      approverRight: { title: "Validator", name: validatorName, nip: item.validatorNip || undefined },
+      notes: ["Dokumen ini digunakan sebagai bukti pencatatan pemeliharaan sarana."],
     }
   }
 
   const _exportSingleNarrative = async (format: ExportFormat, item: Maintenance) => {
-    const columnKeys =
-      maintenanceColumnsForExport.length > 0
-        ? maintenanceColumnsForExport.map((column) => column.key)
-        : maintenanceExportColumnDefinitions.map((column) => column.key)
-
-    void exportNarrativeReport(format, {
-      title: "Daftar Pemeliharaan Sarana",
-      subtitle: "LAPORAN PEMELIHARAAN",
+    void exportFormularReport(format, {
       entries: [item],
       filePrefix: `jadwal-pemeliharaan-${item.id}`,
-      buildSections: buildMaintenanceNarrativeSections(columnKeys),
-      emptyMessage: "Tidak ada pemeliharaan sarana yang dipilih.",
+      buildFormular: buildMaintenanceFormular,
     })
   }
 
   const handleExport = async (format: ExportFormat) => {
     if (!maintenanceRowsToExport.length) return
-    const columnKeys =
-      maintenanceColumnsForExport.length > 0
-        ? maintenanceColumnsForExport.map((column) => column.key)
-        : maintenanceExportColumnDefinitions.map((column) => column.key)
-
-    void exportNarrativeReport(format, {
-      title: "Daftar Pemeliharaan Sarana",
-      subtitle: "LAPORAN PEMELIHARAAN",
+    void exportFormularReport(format, {
       entries: maintenanceRowsToExport,
       filePrefix: "jadwal-pemeliharaan",
-      buildSections: buildMaintenanceNarrativeSections(columnKeys),
-      emptyMessage: "Tidak ada pemeliharaan sarana yang dipilih.",
+      buildFormular: buildMaintenanceFormular,
     })
   }
 

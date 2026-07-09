@@ -421,7 +421,6 @@ export default function MaintenanceForm({
                 placeholder="Opsional"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Dapat diisi setelah teknisi atau penanggung jawab ditentukan.
               </p>
             </div>
 

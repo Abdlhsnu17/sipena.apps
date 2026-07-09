@@ -1092,7 +1092,7 @@ const buildFormularPageHtml = <T>(entries: T[], buildFormular: (entry: T) => For
     .f-page-break { page-break-after: always; height: 0; }
     .f-form { max-width: 680px; margin: 0 auto; border: 1px solid #dbe4f0; border-radius: 16px; padding: 22px 26px; }
     .f-brand { color: #64748b; font-size: 9pt; font-weight: 700; letter-spacing: .14em; margin-bottom: 8px; }
-    .f-title { border-bottom: 1px solid #dbe4f0; font-size: 16pt; font-weight: bold; padding-bottom: 10px; text-align: left; text-transform: uppercase; margin-bottom: 4px; }
+    .f-title { border-bottom: 1px solid #dbe4f0; font-size: 16pt; font-weight: bold; padding-bottom: 10px; text-align: left; margin-bottom: 4px; }
     .f-no { color: #64748b; font-size: 10pt; margin-bottom: 20px; text-align: left; }
     .f-footer { border-top: 1px solid #dbe4f0; color: #64748b; font-size: 9pt; margin: 24px auto 0; max-width: 680px; padding-top: 8px; text-align: center; }
     .f-intro { margin-bottom: 14px; }

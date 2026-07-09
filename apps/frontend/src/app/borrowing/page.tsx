@@ -1633,7 +1633,7 @@ export default function BorrowingPage() {
     const dueDate = formatDayTimeLabel(borrowing.dueDate, { showWeekday: false })
     const duration = formatBorrowingDuration(borrowing.loanDurationValue, borrowing.loanDurationUnit)
     return {
-      formTitle: "FORMULIR PEMINJAMAN ALAT MEDIS",
+      formTitle: "Formulir Peminjaman Alat Medis",
       formNo: borrowingNoId,
       introText: "Saya yang bertanda tangan di bawah ini:",
       sections: [
