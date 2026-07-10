@@ -36,6 +36,18 @@ const tableExists = async (tableName: string): Promise<boolean> => {
   return rows.length > 0;
 };
 
+const getUserIdColumnType = async (): Promise<string> => {
+  const [rows] = await pool.query<RowDataPacket[]>(`
+    SELECT COLUMN_TYPE
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'id'
+    LIMIT 1
+  `);
+  // COLUMN_TYPE is database metadata, but keep a strict whitelist before interpolating it in DDL.
+  const type = String(rows[0]?.COLUMN_TYPE || 'int(11)').toLowerCase();
+  return /^(tinyint|smallint|mediumint|int|bigint)\(\d+\)( unsigned)?$/.test(type) ? type : 'int(11)';
+};
+
 const resolveSchemaFilePath = (): string => {
   const candidates = [
     path.resolve(process.cwd(), '../database/seeds/schema.sql'),
@@ -704,10 +716,11 @@ export async function ensureMaintenanceOperationsSchema(): Promise<void> {
     if (!existing.has(name)) await pool.query(`ALTER TABLE maintenance_records ADD COLUMN ${name} ${definition}`);
   }
 
+  const userIdType = await getUserIdColumnType();
   await pool.query(`CREATE TABLE IF NOT EXISTS maintenance_status_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY, maintenance_id INT(11) NOT NULL,
     from_status VARCHAR(20) NULL, to_status VARCHAR(20) NOT NULL, note TEXT NULL,
-    changed_by INT(11) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    changed_by ${userIdType} NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_maintenance_status_logs_record (maintenance_id, created_at),
     CONSTRAINT fk_maintenance_status_logs_record FOREIGN KEY (maintenance_id) REFERENCES maintenance_records(id) ON DELETE CASCADE,
     CONSTRAINT fk_maintenance_status_logs_user FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
@@ -720,7 +733,7 @@ export async function ensureMaintenanceOperationsSchema(): Promise<void> {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
   await pool.query(`CREATE TABLE IF NOT EXISTS maintenance_attachments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY, maintenance_id INT(11) NOT NULL, file_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL, mime_type VARCHAR(100) NULL, uploaded_by INT(11) NULL,
+    file_path VARCHAR(500) NOT NULL, mime_type VARCHAR(100) NULL, uploaded_by ${userIdType} NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_maintenance_attachments_record (maintenance_id),
     CONSTRAINT fk_maintenance_attachments_record FOREIGN KEY (maintenance_id) REFERENCES maintenance_records(id) ON DELETE CASCADE,
     CONSTRAINT fk_maintenance_attachments_user FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
@@ -757,10 +770,11 @@ export async function ensureUserActivityLogsTable(): Promise<void> {
 
   const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES LIKE 'user_activity_logs'");
   if (tables.length === 0) {
+    const userIdType = await getUserIdColumnType();
     await pool.query(`
       CREATE TABLE user_activity_logs (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
+        user_id ${userIdType} NOT NULL,
         feature VARCHAR(80) NOT NULL,
         action VARCHAR(80) NOT NULL,
         description VARCHAR(255) NOT NULL,
@@ -780,6 +794,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
 
   const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES LIKE 'asset_usage_logs'");
   if (tables.length === 0) {
+    const userIdType = await getUserIdColumnType();
     await pool.query(`
       CREATE TABLE asset_usage_logs (
         \`no\` VARCHAR(50) DEFAULT NULL,
@@ -792,7 +807,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
         asset_detail_code VARCHAR(100) DEFAULT NULL,
         asset_location VARCHAR(255) DEFAULT NULL,
         room_name VARCHAR(255) NOT NULL,
-        operator_user_id INT(11) DEFAULT NULL,
+        operator_user_id ${userIdType} DEFAULT NULL,
         usage_context VARCHAR(30) NOT NULL DEFAULT 'own_room',
         started_at DATETIME NOT NULL,
         ended_at DATETIME DEFAULT NULL,
@@ -800,7 +815,7 @@ export async function ensureAssetUsageLogsTable(): Promise<void> {
         condition_before VARCHAR(50) DEFAULT NULL,
         condition_after VARCHAR(50) DEFAULT NULL,
         notes TEXT DEFAULT NULL,
-        created_by INT(11) NOT NULL,
+        created_by ${userIdType} NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
         PRIMARY KEY (id),
