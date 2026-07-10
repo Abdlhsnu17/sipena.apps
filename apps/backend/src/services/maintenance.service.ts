@@ -211,47 +211,6 @@ export class MaintenanceService {
     }
   }
 
-  /** Creates one requested preventive ticket per overdue detail inventory, never duplicating an active ticket. */
-  async generateDuePreventiveMaintenance(): Promise<number> {
-    const [assets] = await pool.query<RowDataPacket[]>(`
-      SELECT id, 'medical' AS asset_type, name, asset_code, specifications FROM medical_assets
-      UNION ALL
-      SELECT id, 'non_medical' AS asset_type, name, asset_code, specifications FROM non_medical_assets
-    `);
-    const today = this.formatDateOnly(new Date());
-    if (!today) return 0;
-    let created = 0;
-
-    for (const asset of assets) {
-      let specifications: any;
-      try { specifications = typeof asset.specifications === 'string' ? JSON.parse(asset.specifications) : asset.specifications; } catch { continue; }
-      const details = Array.isArray(specifications?.details) ? specifications.details : [];
-      for (const detail of details) {
-        const dueDate = this.formatDateOnly(detail?.nextMaintenance);
-        const detailId = this.normalizeDetailIdentifier(detail?.id ?? detail?.detailId);
-        if (!dueDate || dueDate > today || !detailId) continue;
-        const [active] = await pool.query<RowDataPacket[]>(
-          `SELECT id FROM maintenance_records
-           WHERE asset_id = ? AND COALESCE(asset_type, 'medical') = ? AND asset_detail_id = ?
-             AND deleted_at IS NULL AND status IN ('requested', 'scheduled', 'in_progress', 'completed') LIMIT 1`,
-          [asset.id, asset.asset_type, detailId]
-        );
-        if (active.length) continue;
-        const result = await this.create({
-          assetId: asset.id, assetType: asset.asset_type, assetDetailId: detailId,
-          assetDetailName: detail.name ?? detail.detailName ?? asset.name,
-          assetDetailCode: detail.code ?? detail.detailCode ?? asset.asset_code,
-          type: 'preventive', priority: dueDate < today ? 'high' : 'normal', status: 'requested',
-          scheduledDate: `${dueDate}T08:00:00`, dueAt: `${dueDate}T17:00:00`,
-          description: `Tiket preventive otomatis untuk jadwal pemeliharaan ${dueDate}.`,
-          createdBy: null as unknown as number,
-        });
-        if (result.success) created += 1;
-      }
-    }
-    return created;
-  }
-
   private async hasActiveUsage(
     assetId: number,
     assetType: AssetType,
