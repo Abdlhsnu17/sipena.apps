@@ -34,6 +34,9 @@ export interface Maintenance {
   cost?: number;
   notes?: string;
   cancellationReason?: string;
+  slaStatus?: MaintenanceSlaStatus;
+  slaRemainingMinutes?: number;
+  slaLateMinutes?: number;
   createdBy: number;
   completedBy?: number;
   createdAt?: Date;
@@ -42,6 +45,8 @@ export interface Maintenance {
   deletedBy?: number;
   deleteReason?: string;
 }
+
+export type MaintenanceSlaStatus = 'no_target' | 'on_track' | 'at_risk' | 'overdue' | 'met' | 'met_late';
 
 export type MaintenanceType = 'preventive' | 'corrective' | 'calibration' | 'inspection';
 export type MaintenancePriority = 'low' | 'normal' | 'high' | 'critical';

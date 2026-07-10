@@ -148,6 +148,39 @@ const getSelectableStatuses = (currentStatus: string) => [
   ...(MAINTENANCE_STATUS_TRANSITIONS[currentStatus] || []),
 ]
 
+const maintenanceSlaLabel = (status?: Maintenance["slaStatus"]) => {
+  switch (status) {
+    case "on_track":
+      return "SLA Aman"
+    case "at_risk":
+      return "SLA Risiko"
+    case "overdue":
+      return "Lewat SLA"
+    case "met":
+      return "SLA Tercapai"
+    case "met_late":
+      return "SLA Tercapai Terlambat"
+    default:
+      return "-"
+  }
+}
+
+const maintenanceSlaBadgeClass = (status?: Maintenance["slaStatus"]) => {
+  switch (status) {
+    case "on_track":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+    case "at_risk":
+      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+    case "overdue":
+    case "met_late":
+      return "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+    case "met":
+      return "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300"
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700/35 dark:bg-slate-900/40 dark:text-slate-300"
+  }
+}
+
 const calendarWeekDays = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
 const parseCalendarDate = (value?: string | null) => {
@@ -1813,9 +1846,16 @@ export default function MaintenancePage() {
                           </>
                         )}
                         statusBadges={(
-                          <Badge variant={getStatusColor(m.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
-                            {maintenanceStatusLabel(m.status)}
-                          </Badge>
+                          <>
+                            <Badge variant={getStatusColor(m.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
+                              {maintenanceStatusLabel(m.status)}
+                            </Badge>
+                            {m.slaStatus && m.slaStatus !== "no_target" ? (
+                              <Badge className={`rounded-full border px-2.5 py-1 text-[11px] font-medium sm:text-[12px] ${maintenanceSlaBadgeClass(m.slaStatus)}`}>
+                                {maintenanceSlaLabel(m.slaStatus)}
+                              </Badge>
+                            ) : null}
+                          </>
                         )}
                       />
                     )}
@@ -1842,6 +1882,7 @@ export default function MaintenancePage() {
                               <InfoRow label="NIP Pengirim">{m.requesterNip || "-"}</InfoRow>
                               <InfoRow label="Jadwal Pemeliharaan Sarana">{scheduledLabel}</InfoRow>
                               <InfoRow label="Batas Penyelesaian (SLA)">{m.dueAt ? formatDayTimeLabel(m.dueAt, { showWeekday: false }) : "-"}</InfoRow>
+                              <InfoRow label="Status SLA">{maintenanceSlaLabel(m.slaStatus)}</InfoRow>
                               <InfoRow label="Catatan Pendaftaran">{registrationNote}</InfoRow>
                             </div>
                           </div>

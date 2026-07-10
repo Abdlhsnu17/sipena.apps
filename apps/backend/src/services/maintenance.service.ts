@@ -67,6 +67,8 @@ interface UserNotificationRow extends RowDataPacket {
   phone_number?: string | null;
 }
 
+type MaintenanceSlaStatus = 'no_target' | 'on_track' | 'at_risk' | 'overdue' | 'met' | 'met_late';
+
 export class MaintenanceService {
   private assetService: AssetService;
   private readonly activeStatuses = ['scheduled', 'in_progress', 'completed'];
@@ -93,9 +95,102 @@ export class MaintenanceService {
     'calibration': 6,    // Kalibrasi - every 6 months
     'inspection': 12     // Inspeksi - every 12 months
   };
+  private readonly automaticSlaHoursByPriority: Record<string, number> = {
+    low: 72,
+    normal: 48,
+    high: 24,
+    critical: 8,
+  };
+  private readonly slaAtRiskWindowMinutes = 120;
 
   constructor() {
     this.assetService = new AssetService();
+  }
+
+  private parseDateValue(value?: string | Date | null): Date | null {
+    if (!value) return null;
+    const parsed = value instanceof Date ? value : new Date(String(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private buildAutomaticDueAt(scheduledDate: string, priority?: string | null): string | null {
+    const normalizedPriority = String(priority || 'normal').toLowerCase();
+    const leadHours = this.automaticSlaHoursByPriority[normalizedPriority] || this.automaticSlaHoursByPriority.normal;
+    const scheduledAt = this.parseDateValue(scheduledDate);
+    if (!scheduledAt) return null;
+
+    const dueDate = new Date(scheduledAt.getTime() + leadHours * 60 * 60 * 1000);
+    return formatDateTimeForMySQL(dueDate);
+  }
+
+  private buildSlaInsight(row: Partial<MaintenanceRow> & Record<string, any>): {
+    slaStatus: MaintenanceSlaStatus;
+    slaRemainingMinutes?: number;
+    slaLateMinutes?: number;
+  } {
+    const dueAtRaw = row.due_at ?? row.dueAt;
+    const dueAt = this.parseDateValue(dueAtRaw);
+    if (!dueAt) {
+      return { slaStatus: 'no_target' };
+    }
+
+    const status = String(row.status || '').toLowerCase();
+    if (status === 'cancelled') {
+      return { slaStatus: 'no_target' };
+    }
+
+    const completionSource = row.completed_date ?? row.completedDate ?? (status === 'validated' ? row.updated_at ?? row.updatedAt : null);
+    const completedAt = this.parseDateValue(completionSource);
+    if (completedAt) {
+      const diffMinutes = Math.floor((completedAt.getTime() - dueAt.getTime()) / 60000);
+      if (diffMinutes <= 0) {
+        return {
+          slaStatus: 'met',
+          slaRemainingMinutes: Math.abs(diffMinutes),
+        };
+      }
+
+      return {
+        slaStatus: 'met_late',
+        slaLateMinutes: diffMinutes,
+      };
+    }
+
+    const now = new Date();
+    const remainingMinutes = Math.floor((dueAt.getTime() - now.getTime()) / 60000);
+    if (remainingMinutes < 0) {
+      return {
+        slaStatus: 'overdue',
+        slaLateMinutes: Math.abs(remainingMinutes),
+      };
+    }
+
+    if (remainingMinutes <= this.slaAtRiskWindowMinutes) {
+      return {
+        slaStatus: 'at_risk',
+        slaRemainingMinutes: remainingMinutes,
+      };
+    }
+
+    return {
+      slaStatus: 'on_track',
+      slaRemainingMinutes: remainingMinutes,
+    };
+  }
+
+  private mapMaintenancePresentation(row: MaintenanceRow): Maintenance {
+    return {
+      ...row,
+      scheduledDate: toLocalIsoDateTime(row.scheduledDate ?? row.scheduled_date ?? null),
+      costLabel: formatCostLabel(row.cost),
+      requesterName: row.requester_name || undefined,
+      requesterNip: row.requester_nip || undefined,
+      requesterWorkUnit: row.requester_work_unit || undefined,
+      requesterSubWorkUnit: row.requester_sub_work_unit || undefined,
+      validatorName: row.validator_name || undefined,
+      validatorNip: row.validator_nip || undefined,
+      ...this.buildSlaInsight(row)
+    } as Maintenance;
   }
 
   private async recordStatusLog(
@@ -805,18 +900,7 @@ export class MaintenanceService {
 
     const total = countRows[0].count;
 
-    // Tambahkan costLabel pada setiap data
-    const dataWithLabel = dataRows.map(row => ({
-      ...row,
-      scheduledDate: toLocalIsoDateTime(row.scheduledDate ?? row.scheduled_date ?? null),
-      costLabel: formatCostLabel(row.cost),
-      requesterName: row.requester_name || undefined,
-      requesterNip: row.requester_nip || undefined,
-      requesterWorkUnit: row.requester_work_unit || undefined,
-      requesterSubWorkUnit: row.requester_sub_work_unit || undefined,
-      validatorName: row.validator_name || undefined,
-      validatorNip: row.validator_nip || undefined
-    }));
+    const dataWithLabel = dataRows.map((row) => this.mapMaintenancePresentation(row));
     return {
       success: true,
       message: 'Maintenance records retrieved successfully',
@@ -852,18 +936,7 @@ export class MaintenanceService {
       return { success: false, message: 'Maintenance record not found' };
     }
 
-    // Tambahkan costLabel pada detail
-    const dataWithLabel = {
-      ...rows[0],
-      scheduledDate: toLocalIsoDateTime(rows[0].scheduledDate ?? rows[0].scheduled_date ?? null),
-      costLabel: formatCostLabel(rows[0].cost),
-      requesterName: rows[0].requester_name || undefined,
-      requesterNip: rows[0].requester_nip || undefined,
-      requesterWorkUnit: rows[0].requester_work_unit || undefined,
-      requesterSubWorkUnit: rows[0].requester_sub_work_unit || undefined,
-      validatorName: rows[0].validator_name || undefined,
-      validatorNip: rows[0].validator_nip || undefined
-    };
+    const dataWithLabel = this.mapMaintenancePresentation(rows[0]);
     return { success: true, message: 'Maintenance record retrieved successfully', data: dataWithLabel };
   }
 
@@ -918,6 +991,13 @@ export class MaintenanceService {
       return { success: false, message: 'Scheduled date is invalid' };
     }
 
+    const dueAtValue = data.dueAt
+      ? formatDateTimeForMySQL(data.dueAt)
+      : this.buildAutomaticDueAt(scheduledDateValue, data.priority);
+    if (data.dueAt && !dueAtValue) {
+      return { success: false, message: 'Due date is invalid' };
+    }
+
     const descriptionValue = data.description || '';
 
     const [result] = await pool.query<ResultSetHeader>(
@@ -958,7 +1038,7 @@ export class MaintenanceService {
         data.priority || 'normal',
         statusValue,
         scheduledDateValue,
-        data.dueAt ? formatDateTimeForMySQL(data.dueAt) : null,
+        dueAtValue,
         descriptionValue,
         data.technician || null,
         data.technicianUserId || null,
@@ -1013,12 +1093,7 @@ export class MaintenanceService {
       // Continue even if history fails, as the main record is created
     }
 
-    // Tambahkan costLabel pada hasil create
-    const dataWithLabel = {
-      ...newMaintenance,
-      scheduledDate: toLocalIsoDateTime(newMaintenance.scheduled_date ?? null),
-      costLabel: formatCostLabel(newMaintenance.cost),
-    };
+    const dataWithLabel = this.mapMaintenancePresentation(newMaintenance);
 
     if (shouldSendMaintenancePhoneNotification(newMaintenance.status)) {
       await this.notifyMaintenancePhone({
@@ -1116,6 +1191,21 @@ export class MaintenanceService {
         values.push(normalizedValue);
       }
     });
+
+    const shouldAutoAdjustDueAt =
+      data.dueAt === undefined &&
+      (data.scheduledDate !== undefined || data.priority !== undefined);
+    if (shouldAutoAdjustDueAt) {
+      const effectivePriority = data.priority ?? existingMaintenance.priority ?? existingMaintenance.priority_value ?? 'normal';
+      const effectiveScheduledDate = formatDateTimeForMySQL(nextScheduledDate);
+      if (effectiveScheduledDate) {
+        const computedDueAt = this.buildAutomaticDueAt(effectiveScheduledDate, effectivePriority);
+        if (computedDueAt) {
+          fields.push('due_at = ?');
+          values.push(computedDueAt);
+        }
+      }
+    }
 
     if (fields.length === 0) {
       return { success: false, message: 'No fields to update' };
@@ -1222,7 +1312,11 @@ export class MaintenanceService {
       });
     }
 
-    return { success: true, message: 'Maintenance record updated successfully', data: rows[0] };
+    return {
+      success: true,
+      message: 'Maintenance record updated successfully',
+      data: this.mapMaintenancePresentation(rows[0])
+    };
   }
 
   async complete(id: string, data: CompleteMaintenanceDTO): Promise<ApiResponse<Maintenance>> {

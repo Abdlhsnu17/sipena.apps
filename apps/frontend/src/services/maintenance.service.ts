@@ -33,6 +33,9 @@ export interface Maintenance {
   cost?: number;
   notes?: string;
   cancellationReason?: string;
+  slaStatus?: 'no_target' | 'on_track' | 'at_risk' | 'overdue' | 'met' | 'met_late';
+  slaRemainingMinutes?: number;
+  slaLateMinutes?: number;
   createdBy: number;
   completedBy?: number;
   validatorName?: string;
@@ -105,6 +108,9 @@ const normalizeMaintenance = (maintenance: any): Maintenance => {
     cost: maintenance.cost,
     notes: maintenance.notes,
     cancellationReason: maintenance.cancellationReason ?? maintenance.cancellation_reason,
+    slaStatus: maintenance.slaStatus ?? maintenance.sla_status,
+    slaRemainingMinutes: maintenance.slaRemainingMinutes ?? maintenance.sla_remaining_minutes,
+    slaLateMinutes: maintenance.slaLateMinutes ?? maintenance.sla_late_minutes,
     createdBy: maintenance.createdBy ?? maintenance.created_by,
     completedBy: maintenance.completedBy ?? maintenance.completed_by,
     validatorName: maintenance.validatorName ?? maintenance.validator_name,
