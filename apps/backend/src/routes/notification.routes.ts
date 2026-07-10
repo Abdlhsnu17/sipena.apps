@@ -4,6 +4,7 @@ import notificationController, { notificationValidators } from '../controllers/n
 const router = Router();
 
 router.get('/', notificationValidators.getMine, notificationController.getMine);
+router.get('/delivery-status', notificationController.getDeliveryStatus);
 
 router.get('/unread-count', notificationController.getUnreadCount);
 

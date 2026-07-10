@@ -60,6 +60,9 @@ const normalizeUpload = (upload: RawUpload): ReportUpload => {
     storedPath: (upload.storedPath as string | null) ?? (upload.stored_path as string | null) ?? null,
     uploadedAt,
     notes: (upload.notes as string | null) ?? null,
+    category: (upload.category as string | null) ?? (upload.category as string | null) ?? null,
+    relatedModule: (upload.relatedModule as string | null) ?? (upload.related_module as string | null) ?? null,
+    retentionUntil: (upload.retentionUntil as string | null) ?? (upload.retention_until as string | null) ?? null,
     downloadPath: (upload.downloadPath as string) ?? (upload.download_path as string) ?? "",
     previewPath:
       (upload.previewPath as string) ??
@@ -137,6 +140,7 @@ export default function UnggahanPage() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentUser())
+  const [uploadMetadata, setUploadMetadata] = useState({ category: "", relatedModule: "", retentionUntil: "", notes: "" })
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const folderInputRef = useRef<HTMLInputElement | null>(null)
   const canDeleteUploads = currentUser
@@ -319,7 +323,7 @@ export default function UnggahanPage() {
       }
 
       for (const file of validFiles) {
-        const response = await reportService.uploadReport(file)
+        const response = await reportService.uploadReport(file, uploadMetadata)
         if (response.success && response.data)
           uploadResults.push(normalizeUpload(response.data as unknown as RawUpload))
       }
@@ -485,6 +489,25 @@ export default function UnggahanPage() {
                     </Button>
                   </div>
 
+                  <div className="grid gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 sm:grid-cols-2 dark:border-slate-800/35 dark:bg-slate-900/40">
+                    <label className="space-y-1 text-xs font-medium text-muted-foreground">Kategori
+                      <select value={uploadMetadata.category} onChange={(event) => setUploadMetadata((current) => ({ ...current, category: event.target.value }))} className="h-9 w-full rounded-md border bg-background px-2 text-sm text-foreground">
+                        <option value="">Pilih kategori</option><option value="laporan">Laporan</option><option value="kontrak">Kontrak</option><option value="bukti_pemeliharaan">Bukti pemeliharaan</option><option value="lainnya">Lainnya</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-muted-foreground">Modul terkait
+                      <select value={uploadMetadata.relatedModule} onChange={(event) => setUploadMetadata((current) => ({ ...current, relatedModule: event.target.value }))} className="h-9 w-full rounded-md border bg-background px-2 text-sm text-foreground">
+                        <option value="">Tidak ditautkan</option><option value="assets">Aset</option><option value="maintenance">Pemeliharaan</option><option value="borrowing">Peminjaman</option><option value="disposal">Penghapusan</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-muted-foreground">Simpan hingga
+                      <input type="date" value={uploadMetadata.retentionUntil} onChange={(event) => setUploadMetadata((current) => ({ ...current, retentionUntil: event.target.value }))} className="h-9 w-full rounded-md border bg-background px-2 text-sm text-foreground" />
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-muted-foreground">Catatan
+                      <input value={uploadMetadata.notes} onChange={(event) => setUploadMetadata((current) => ({ ...current, notes: event.target.value }))} placeholder="Keterangan dokumen" className="h-9 w-full rounded-md border bg-background px-2 text-sm text-foreground" />
+                    </label>
+                  </div>
+
                   {uploadedReportName && (
                     <Button variant="ghost" size="sm" className="w-full text-muted-foreground sm:w-auto sm:self-end" onClick={clearUploadSelection}>
                       Batal pilihan
@@ -536,6 +559,7 @@ export default function UnggahanPage() {
                         <p className="text-xs text-muted-foreground">
                           {formatUploadDate(report.uploadedAt)} • {formatSize(report.sizeBytes)} KB
                         </p>
+                        {(report.category || report.relatedModule || report.retentionUntil || report.notes) && <p className="text-xs text-muted-foreground">{[report.category, report.relatedModule, report.retentionUntil ? `Simpan hingga ${report.retentionUntil}` : null, report.notes].filter(Boolean).join(" • ")}</p>}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px]">
                         <Badge variant="outline" className="border-teal-200 text-teal-600">Terunggah</Badge>

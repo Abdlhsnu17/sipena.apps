@@ -38,6 +38,12 @@ export interface UnreadCountResponse {
   message: string;
   data: { unreadCount: number };
 }
+export interface NotificationDeliveryStatus {
+  inApp: boolean;
+  whatsapp: { configured: boolean; mode: 'active' | 'preview' | 'unavailable' };
+  sms: { configured: boolean; mode: 'active' | 'preview' | 'unavailable' };
+  email: { configured: boolean; mode: 'active' | 'preview' | 'unavailable' };
+}
 
 class NotificationService {
   async list(params: {
@@ -57,6 +63,9 @@ class NotificationService {
 
   async getUnreadCount() {
     return apiService.get<UnreadCountResponse>('/notifications/unread-count');
+  }
+  async getDeliveryStatus() {
+    return apiService.get<{ success: boolean; data: NotificationDeliveryStatus }>('/notifications/delivery-status');
   }
 
   async markAsRead(id: number) {

@@ -35,6 +35,7 @@ const fullAccessRoutes = [
   "/uml",
   "/unggahan",
   "/maintenance",
+  "/maintenance-schedule",
   "/dss",
   "/asset-usage",
   "/medical-assets",
@@ -49,12 +50,13 @@ const fullAccessRoutes = [
   "/settings",
 ]
 
-const staffRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/dss", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings"]
+const staffRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/maintenance-schedule", "/dss", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings"]
 const staffPjRoutes = [
   "/",
   "/uml",
   "/unggahan",
   "/maintenance",
+  "/maintenance-schedule",
   "/dss",
   "/asset-usage",
   "/medical-assets",
@@ -65,7 +67,7 @@ const staffPjRoutes = [
   "/returns",
   "/settings",
 ]
-const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/dss", "/reports", "/activity-archive", "/settings"]
+const technicianRoutes = ["/", "/uml", "/unggahan", "/maintenance", "/maintenance-schedule", "/dss", "/reports", "/activity-archive", "/settings"]
 const inventoryRoutes = ["/medical-assets", "/non-medical-assets"]
 const userRoutes = ["/", "/uml", "/unggahan", "/dss", "/asset-usage", "/reports", "/activity-archive", "/borrowing", "/returns", "/settings", ...inventoryRoutes]
 

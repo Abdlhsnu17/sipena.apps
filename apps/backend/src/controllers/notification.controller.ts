@@ -11,6 +11,19 @@ const getActorUserId = (req: Request): number | null => {
 const SSE_HEARTBEAT_INTERVAL_MS = 25000;
 
 class NotificationController {
+  getDeliveryStatus = async (_req: Request, res: Response): Promise<void> => {
+    const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+    const hasWhatsapp = Boolean(process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL?.trim() || process.env.WHATSAPP_OTP_WEBHOOK_URL?.trim());
+    const hasSms = Boolean(process.env.SMS_NOTIFICATION_WEBHOOK_URL?.trim() || process.env.SMS_OTP_WEBHOOK_URL?.trim());
+    const hasEmail = Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+    res.json({ success: true, data: {
+      inApp: true,
+      whatsapp: { configured: hasWhatsapp, mode: hasWhatsapp ? 'active' : isProduction ? 'unavailable' : 'preview' },
+      sms: { configured: hasSms, mode: hasSms ? 'active' : isProduction ? 'unavailable' : 'preview' },
+      email: { configured: hasEmail, mode: hasEmail ? 'active' : isProduction ? 'unavailable' : 'preview' },
+    }});
+  };
+
   getMine = async (req: Request, res: Response): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

@@ -335,7 +335,7 @@ const loadFallbackMaintenanceCounts = async (assetType: DssAssetType): Promise<M
   }
 }
 
-const buildClientFallbackRanking = async (
+const _buildClientFallbackRanking = async (
   assetType: DssAssetType,
   normalizedWeights: Record<string, number>
 ): Promise<DssRankingResult> => {
@@ -511,15 +511,9 @@ export default function DssPage() {
       }
     } catch (error) {
       console.error("Error loading DSS ranking:", error)
-      try {
-        const fallbackResult = await buildClientFallbackRanking(assetType, normalizedWeights)
-        setRankingResult(fallbackResult)
-        setRankingSource("fallback")
-        setErrorMessage("Perhitungan memakai mode fallback dari data aset karena endpoint SPK backend belum merespons.")
-      } catch (fallbackError) {
-        console.error("Error loading DSS fallback ranking:", fallbackError)
-        setErrorMessage(error instanceof Error ? error.message : "Gagal memuat ranking SPK")
-      }
+      setRankingResult(null)
+      setRankingSource(null)
+      setErrorMessage(error instanceof Error ? error.message : "Endpoint SPK tidak dapat dihubungi. Periksa layanan backend lalu muat ulang.")
     } finally {
       setIsLoading(false)
     }

@@ -35,6 +35,9 @@ export class DssController {
     }
   };
 
+  /* debugRanking is intentionally removed: mutating the singleton DSS service
+     made a development request contaminate real subsequent rankings. */
+  /*
   debugRanking = async (req: Request, res: Response): Promise<void> => {
     if ((process.env.NODE_ENV || 'development') === 'production') {
       res.status(403).json({ success: false, message: 'Debug endpoint disabled in production' });
@@ -88,6 +91,7 @@ export class DssController {
       res.status(500).json({ success: false, message: 'Debug DSS failed' });
     }
   };
+  */
 }
 
 export default new DssController();

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
+import notificationService, { type NotificationDeliveryStatus } from "@/services/notification.service";
 import { userService } from "@/services/user.service";
 import { toPublicPhotoUrl } from "@/utils/photoUrl";
 import { isStrongPassword } from "@/utils/validation";
@@ -62,9 +63,16 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [deliveryStatus, setDeliveryStatus] = useState<NotificationDeliveryStatus | null>(null)
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    void notificationService.getDeliveryStatus().then((response) => {
+      if (response.success) setDeliveryStatus(response.data)
+    }).catch(() => undefined)
   }, [])
 
   useEffect(() => {
@@ -638,8 +646,16 @@ export default function SettingsPage() {
                   Mode sistem akan menyesuaikan tema perangkat Anda secara otomatis.
                 </p>
               </CardContent>
-            </Card>
-          </div>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Status Kanal Notifikasi</CardTitle><CardDescription>Status konfigurasi server tanpa menampilkan kredensial.</CardDescription></CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {[['Dalam aplikasi', deliveryStatus?.inApp ? 'active' : 'unavailable'], ['WhatsApp', deliveryStatus?.whatsapp.mode], ['SMS', deliveryStatus?.sms.mode], ['Email reset password', deliveryStatus?.email.mode]].map(([label, mode]) => (
+                <div key={label} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"><span>{label}</span><span className={mode === 'active' ? 'text-emerald-600' : mode === 'preview' ? 'text-amber-600' : 'text-red-600'}>{mode === 'active' ? 'Aktif' : mode === 'preview' ? 'Pratinjau lokal' : 'Belum dikonfigurasi'}</span></div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-border text-center">

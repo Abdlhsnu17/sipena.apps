@@ -261,12 +261,21 @@ export async function ensureReportUploadsTable(): Promise<void> {
         content_type VARCHAR(150) NOT NULL DEFAULT 'application/octet-stream',
         size_bytes BIGINT NOT NULL DEFAULT 0,
         stored_path VARCHAR(255) NULL,
-        uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        notes TEXT NULL,
+      uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      notes TEXT NULL,
+      category VARCHAR(80) NULL,
+      related_module VARCHAR(80) NULL,
+      retention_until DATE NULL,
         CONSTRAINT fk_report_uploads_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
   }
+
+  const [columns] = await pool.query<RowDataPacket[]>("SHOW COLUMNS FROM report_uploads");
+  const columnNames = new Set(columns.map((column) => String(column.Field)));
+  if (!columnNames.has('category')) await pool.query('ALTER TABLE report_uploads ADD COLUMN category VARCHAR(80) NULL AFTER notes');
+  if (!columnNames.has('related_module')) await pool.query('ALTER TABLE report_uploads ADD COLUMN related_module VARCHAR(80) NULL AFTER category');
+  if (!columnNames.has('retention_until')) await pool.query('ALTER TABLE report_uploads ADD COLUMN retention_until DATE NULL AFTER related_module');
 
   ensuredReportUploadsTable = true;
 }

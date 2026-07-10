@@ -54,6 +54,9 @@ export interface ReportUpload {
   storedPath: string | null
   uploadedAt: string
   notes?: string | null
+  category?: string | null
+  relatedModule?: string | null
+  retentionUntil?: string | null
   downloadPath: string
   previewPath?: string
 }
@@ -95,11 +98,11 @@ class ReportService {
     return apiService.get<ReportResponse<ReportUpload[]>>("/reports/uploads")
   }
 
-  async uploadReport(file: File, notes?: string): Promise<ReportResponse<ReportUpload>> {
+  async uploadReport(file: File, metadata: { notes?: string; category?: string; relatedModule?: string; retentionUntil?: string } = {}): Promise<ReportResponse<ReportUpload>> {
     const formData = new FormData()
     formData.append("file", file)
-    if (notes) {
-      formData.append("notes", notes)
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value) formData.append(key, value)
     }
     return apiService.post<ReportResponse<ReportUpload>>("/reports/uploads", formData as FormData)
   }
@@ -108,7 +111,7 @@ class ReportService {
     return apiService.delete<ReportResponse<null>>(`/reports/uploads/${id}`)
   }
 
-  getExportEndpoint(format: "excel" | "csv", params: Record<string, string> = {}): string {
+  getExportEndpoint(format: "pdf" | "excel" | "csv", params: Record<string, string> = {}): string {
     const query = new URLSearchParams(params).toString()
     return `/reports/export/${format}${query ? `?${query}` : ""}`
   }

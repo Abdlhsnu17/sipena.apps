@@ -54,6 +54,7 @@ type ExportFilters = {
   type: string
   userId: string
 }
+type ExportFormat = "pdf" | "excel" | "csv"
 
 type FilterOption = {
   value: string
@@ -247,7 +248,7 @@ export default function ReportsPage() {
   const [usageRoomData, setUsageRoomData] = useState<any[]>([])
   const [usageYearData, setUsageYearData] = useState<any[]>([])
   const [usageContextData, setUsageContextData] = useState<any[]>([])
-  const [exporting, setExporting] = useState<"excel" | "csv" | null>(null)
+  const [exporting, setExporting] = useState<ExportFormat | null>(null)
   const [exportFilters, setExportFilters] = useState<ExportFilters>(initialExportFilters)
 
   const toArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : [])
@@ -575,7 +576,7 @@ export default function ReportsPage() {
     }))
   }
 
-  const handleExport = async (format: "excel" | "csv") => {
+  const handleExport = async (format: ExportFormat) => {
     if (dateRangeInvalid) {
       toast({
         title: "Rentang tanggal belum valid",
@@ -604,7 +605,7 @@ export default function ReportsPage() {
       const blob = await response.blob()
       const disposition = response.headers.get("content-disposition") ?? ""
       const match = disposition.match(/filename="?([^"]+)"?/i)
-      const ext = format === "excel" ? "xlsx" : "csv"
+      const ext = format === "excel" ? "xlsx" : format
       const fileName = match?.[1] ?? `laporan-${exportFilters.reportType}-${new Date().toISOString().slice(0, 10)}.${ext}`
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -817,6 +818,10 @@ export default function ReportsPage() {
                 ))}
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                <Button type="button" variant="outline" className="justify-start bg-white dark:bg-transparent" onClick={() => void handleExport("pdf")} disabled={exporting !== null || dateRangeInvalid}>
+                  <FileText className="mr-2 size-4" />
+                  {exporting === "pdf" ? "Menyiapkan PDF..." : "Unduh PDF (.pdf)"}
+                </Button>
                 <Button type="button" variant="outline" className="justify-start bg-white dark:bg-transparent" onClick={() => void handleExport("excel")} disabled={exporting !== null || dateRangeInvalid}>
                   <FileSpreadsheet className="mr-2 size-4" />
                   {exporting === "excel" ? "Menyiapkan Excel..." : "Unduh Excel (.xlsx)"}

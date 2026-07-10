@@ -79,6 +79,9 @@ export interface ReportUpload {
   storedPath: string | null;
   uploadedAt: string;
   notes?: string | null;
+  category?: string | null;
+  relatedModule?: string | null;
+  retentionUntil?: string | null;
   downloadPath: string;
   previewPath?: string;
 }
@@ -92,6 +95,9 @@ interface ReportUploadRow extends RowDataPacket {
   stored_path: string | null;
   uploaded_at: Date;
   notes: string | null;
+  category: string | null;
+  related_module: string | null;
+  retention_until: Date | string | null;
 }
 
 interface ColumnCountRow extends RowDataPacket {
@@ -694,6 +700,9 @@ export class ReportService {
       storedPath: row.stored_path,
       uploadedAt: row.uploaded_at instanceof Date ? row.uploaded_at.toISOString() : (row.uploaded_at as unknown as string),
       notes: row.notes,
+      category: row.category,
+      relatedModule: row.related_module,
+      retentionUntil: row.retention_until ? new Date(row.retention_until).toISOString().slice(0, 10) : null,
       downloadPath: `/reports/uploads/${row.id}/download`,
       previewPath: `/reports/uploads/${row.id}/preview`,
     };
@@ -968,21 +977,24 @@ export class ReportService {
       .slice(0, 10);
   }
 
-  async saveUpload(file: Express.Multer.File, userId?: number | string, notes?: string): Promise<ApiResponse<ReportUpload>> {
+  async saveUpload(file: Express.Multer.File, userId?: number | string, metadata: { notes?: string; category?: string; relatedModule?: string; retentionUntil?: string } = {}): Promise<ApiResponse<ReportUpload>> {
     await this.ensureUploadDir();
 
     const storedPath = path.basename(file.filename || file.originalname);
 
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO report_uploads (user_id, filename, content_type, size_bytes, stored_path, notes)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO report_uploads (user_id, filename, content_type, size_bytes, stored_path, notes, category, related_module, retention_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId ? Number(userId) : null,
         file.originalname,
         file.mimetype || 'application/octet-stream',
         file.size || 0,
         storedPath,
-        notes || null,
+        metadata.notes || null,
+        metadata.category || null,
+        metadata.relatedModule || null,
+        metadata.retentionUntil || null,
       ]
     );
 

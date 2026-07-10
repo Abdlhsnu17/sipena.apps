@@ -355,9 +355,14 @@ export class ReportController {
       }
 
       const userId = req.user?.id;
-      const notes = (req.body.notes as string | undefined);
+      const metadata = {
+        notes: req.body.notes as string | undefined,
+        category: req.body.category as string | undefined,
+        relatedModule: req.body.relatedModule as string | undefined,
+        retentionUntil: req.body.retentionUntil as string | undefined,
+      };
 
-      const result = await this.reportService.saveUpload(file, userId, notes);
+      const result = await this.reportService.saveUpload(file, userId, metadata);
       const actorId = getActorUserId(req);
       if (actorId && result.success && result.data) {
         await recordUserActivity({
