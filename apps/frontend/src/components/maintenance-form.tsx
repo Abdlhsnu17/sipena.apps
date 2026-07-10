@@ -107,7 +107,6 @@ export default function MaintenanceForm({
     type: "preventive",
     priority: "normal",
     scheduledDate: "",
-    dueAt: "",
     description: "",
 
     technician: "",
@@ -199,7 +198,6 @@ export default function MaintenanceForm({
       type: maintenance.type || prev.type,
       priority: maintenance.priority || "normal",
       scheduledDate: toLocalDateTimeString(maintenance.scheduledDate ?? maintenance.scheduled_date) ?? "",
-      dueAt: toLocalDateTimeString(maintenance.dueAt ?? maintenance.due_at) ?? "",
       description: maintenance.description ?? buildRepairNoteTemplate(resolvedAsset),
       technician: maintenance.technician || "",
       vendorName: maintenance.vendorName || "",
@@ -428,11 +426,6 @@ export default function MaintenanceForm({
                 step={60}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Batas Penyelesaian (SLA)</label>
-              <input type="datetime-local" name="dueAt" value={formData.dueAt} onChange={handleChange} step={60} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
             </div>
 
             <div>
