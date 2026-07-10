@@ -252,7 +252,10 @@ export default function MaintenanceForm({
     const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
       'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
     )
-    pickerButton?.focus({ preventScroll: true })
+    if (!pickerButton) return
+
+    // Open picker right away so users can type in the search field without an extra click.
+    pickerButton.click()
   }, [maintenance])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

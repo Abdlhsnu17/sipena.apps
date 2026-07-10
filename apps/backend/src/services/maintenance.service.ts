@@ -397,6 +397,26 @@ export class MaintenanceService {
     );
   }
 
+  /**
+   * A maintenance record normally targets one inventory detail.  Only records
+   * without a detail (or using the generated whole-asset fallback) may change
+   * the status of the parent asset.  Otherwise one repaired tool would lock
+   * every tool stored under the same asset/room.
+   */
+  private isSpecificDetailTarget(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null,
+    detailCode?: string | null
+  ): boolean {
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(detailCode);
+
+    if (!normalizedDetailId && !normalizedDetailCode) return false;
+
+    return !this.isAssetFallbackDetailId(normalizedDetailId, assetId, assetType);
+  }
+
   private getMaintenanceInterval(maintenanceType?: string | null): number {
     if (!maintenanceType) return 1; // Default to 1 month
     return this.maintenanceIntervals[maintenanceType] || 1;
@@ -703,8 +723,14 @@ export class MaintenanceService {
     assetId: number,
     assetType: AssetType,
     maintenanceStatus?: string | null,
-    excludeMaintenanceId?: string | number
+    excludeMaintenanceId?: string | number,
+    detailId?: string | null,
+    detailCode?: string | null
   ): Promise<void> {
+    if (this.isSpecificDetailTarget(assetId, assetType, detailId, detailCode)) {
+      return;
+    }
+
     if (this.isActiveMaintenanceStatus(maintenanceStatus)) {
       await this.assetService.updateStatus(String(assetId), 'maintenance', assetType);
       return;
@@ -1063,7 +1089,9 @@ export class MaintenanceService {
       data.assetId,
       resolvedType,
       statusValue,
-      newMaintenance.id
+      newMaintenance.id,
+      data.assetDetailId,
+      data.assetDetailCode
     );
 
     await this.syncAssetDetailMaintenance(data.assetId, resolvedType, statusValue, {
@@ -1233,19 +1261,25 @@ export class MaintenanceService {
       nextAssetId &&
       (existingAssetId !== nextAssetId || existingAssetType !== nextAssetType)
     ) {
-      const previousAssetStillActive = await this.hasOtherActiveMaintenance(
+      await this.syncAssetAvailability(
         existingAssetId,
         existingAssetType,
-        id
+        'cancelled',
+        id,
+        existingDetailId,
+        existingDetailCode
       );
-
-      if (!previousAssetStillActive) {
-        await this.assetService.updateStatus(String(existingAssetId), 'available', existingAssetType);
-      }
     }
 
     if (nextAssetId) {
-      await this.syncAssetAvailability(nextAssetId, nextAssetType, nextStatus, id);
+      await this.syncAssetAvailability(
+        nextAssetId,
+        nextAssetType,
+        nextStatus,
+        id,
+        nextDetailId,
+        nextDetailCode
+      );
       await this.syncAssetDetailMaintenance(nextAssetId, nextAssetType, nextStatus, {
         detailId: nextDetailId,
         detailCode: nextDetailCode,
@@ -1374,7 +1408,14 @@ export class MaintenanceService {
     }
 
     if (assetId) {
-      await this.syncAssetAvailability(assetId, assetType, 'completed', id);
+      await this.syncAssetAvailability(
+        assetId,
+        assetType,
+        'completed',
+        id,
+        this.normalizeDetailIdentifier(maintenanceData.assetDetailId ?? maintenanceData.asset_detail_id),
+        this.normalizeDetailIdentifier(maintenanceData.assetDetailCode ?? maintenanceData.asset_detail_code)
+      );
       await this.syncAssetDetailMaintenance(assetId, assetType, 'completed', {
         detailId: this.normalizeDetailIdentifier(
           maintenanceData.assetDetailId ?? maintenanceData.asset_detail_id
@@ -1450,7 +1491,14 @@ export class MaintenanceService {
     const maintenanceType = maintenanceData.type ?? maintenanceData.maintenance_type;
 
     if (assetId) {
-      await this.syncAssetAvailability(assetId, assetType, 'validated', id);
+      await this.syncAssetAvailability(
+        assetId,
+        assetType,
+        'validated',
+        id,
+        this.normalizeDetailIdentifier(maintenanceData.assetDetailId ?? maintenanceData.asset_detail_id),
+        this.normalizeDetailIdentifier(maintenanceData.assetDetailCode ?? maintenanceData.asset_detail_code)
+      );
       await this.syncAssetDetailMaintenance(assetId, assetType, 'validated', {
         detailId: this.normalizeDetailIdentifier(
           maintenanceData.assetDetailId ?? maintenanceData.asset_detail_id
@@ -1521,7 +1569,14 @@ export class MaintenanceService {
     await MaintenanceHistoryService.removeByMaintenanceId(Number(id), deletedBy, deleteReason);
 
     if (existingAssetId) {
-      await this.syncAssetAvailability(existingAssetId, existingAssetType, 'cancelled', id);
+      await this.syncAssetAvailability(
+        existingAssetId,
+        existingAssetType,
+        'cancelled',
+        id,
+        existingDetailId,
+        existingDetailCode
+      );
 
       if (existingStatus) {
         await this.syncAssetDetailMaintenance(existingAssetId, existingAssetType, 'cancelled', {
