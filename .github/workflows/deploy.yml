@@ -178,7 +178,7 @@ jobs:
               db_name="${DB_NAME:-${APP_DB_NAME:-${MYSQL_DATABASE:-sipena_db_local}}}"
               db_user="${DB_USER:-${APP_DB_USER:-${MYSQL_USER:-sipena_app}}}"
               db_password="${DB_PASSWORD:-${APP_DB_PASSWORD:-${MYSQL_PASSWORD:-changeme}}}"
-              MYSQL_PWD="$db_password" mysqldump --protocol=TCP -h127.0.0.1 -u"$db_user" --single-transaction --routines --triggers "$db_name"
+              MYSQL_PWD="$db_password" mysqldump --protocol=TCP -h127.0.0.1 -u"$db_user" --single-transaction --routines --triggers --no-tablespaces "$db_name"
             ' > "$backup_file"; then
               gzip -f "$backup_file"
               echo "Database backup created: $backup_file.gz"
