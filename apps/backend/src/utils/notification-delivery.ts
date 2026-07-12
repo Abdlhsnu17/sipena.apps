@@ -6,6 +6,8 @@ interface PhoneNotificationPayload {
   referenceCode?: string;
   referenceType?: string;
   link?: string;
+  // Batasi kanal yang dicoba. Default: WhatsApp lalu SMS sebagai cadangan.
+  channels?: Array<'whatsapp' | 'sms'>;
 }
 
 export interface PhoneNotificationResult {
@@ -57,6 +59,7 @@ export const sendPhoneNotification = async ({
   referenceCode,
   referenceType,
   link,
+  channels,
 }: PhoneNotificationPayload): Promise<PhoneNotificationResult> => {
   const normalizedPhoneNumber = phoneNumber.trim();
   const deliveryTarget = maskPhoneNumber(normalizedPhoneNumber);
@@ -79,10 +82,11 @@ export const sendPhoneNotification = async ({
     link,
   };
 
+  const allowedChannels = channels && channels.length > 0 ? channels : ['whatsapp', 'sms'];
   const attempts: Array<{ channel: 'whatsapp' | 'sms'; url?: string; token?: string }> = [
     { channel: 'whatsapp', url: whatsappWebhookUrl, token: whatsappWebhookToken },
     { channel: 'sms', url: smsWebhookUrl, token: smsWebhookToken },
-  ];
+  ].filter((attempt) => allowedChannels.includes(attempt.channel));
 
   const configuredAttempts = attempts.filter(
     (attempt): attempt is { channel: 'whatsapp' | 'sms'; url: string; token?: string } => Boolean(attempt.url)

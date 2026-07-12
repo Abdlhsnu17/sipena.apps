@@ -795,6 +795,8 @@ export class MaintenanceService {
         referenceCode: params.maintenanceCode || undefined,
         referenceType: 'maintenance',
         link: '/maintenance',
+        // Kebijakan matriks: pemeliharaan memakai WhatsApp, bukan SMS (SMS khusus darurat/OTP).
+        channels: ['whatsapp'],
       });
     } catch (error) {
       console.error('[Maintenance Notification] Gagal mengirim notifikasi HP:', error);

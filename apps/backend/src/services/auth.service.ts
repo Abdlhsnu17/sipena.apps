@@ -10,6 +10,7 @@ import {
     RegisterCredentials,
     User
 } from '../types/auth';
+import { sendPasswordResetCodeEmail } from '../utils/mailer';
 import {
     isValidPhoneNumber,
     normalizePhoneNumberForStorage,
@@ -20,7 +21,6 @@ import {
     getPasswordResetSession,
     savePasswordResetSession
 } from '../utils/password-reset-store';
-import { sendPasswordResetCodeEmail } from '../utils/mailer';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -275,6 +275,10 @@ export class AuthService {
       target: string;
     }> = [];
 
+    // Kebijakan OTP: utamakan WhatsApp (fallback SMS). Email hanya dipakai
+    // sebagai cadangan bila pengiriman via WhatsApp/SMS tidak berhasil.
+    let phoneDeliverySucceeded = false;
+
     if (user.phone_number && isValidPhoneNumber(user.phone_number)) {
       try {
         const phoneDelivery = await sendPasswordResetOtp({
@@ -288,27 +292,30 @@ export class AuthService {
           preview: phoneDelivery.preview,
           target: phoneDelivery.deliveryTarget,
         });
+        phoneDeliverySucceeded = !phoneDelivery.preview;
       } catch (error) {
         console.error('Send password reset OTP error:', error);
       }
     } else {
-      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; trying email delivery.`);
+      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; falling back to email delivery.`);
     }
 
-    try {
-      const emailDelivery = await sendPasswordResetCodeEmail({
-        to: user.email,
-        name: user.name,
-        code: verificationCode,
-        expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-      });
-      deliveries.push({
-        method: emailDelivery.preview ? 'local_preview' : 'email',
-        preview: emailDelivery.preview,
-        target: this.maskEmail(user.email),
-      });
-    } catch (error) {
-      console.error('Send password reset email error:', error);
+    if (!phoneDeliverySucceeded) {
+      try {
+        const emailDelivery = await sendPasswordResetCodeEmail({
+          to: user.email,
+          name: user.name,
+          code: verificationCode,
+          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+        });
+        deliveries.push({
+          method: emailDelivery.preview ? 'local_preview' : 'email',
+          preview: emailDelivery.preview,
+          target: this.maskEmail(user.email),
+        });
+      } catch (error) {
+        console.error('Send password reset email error:', error);
+      }
     }
 
     if (deliveries.length === 0) {
