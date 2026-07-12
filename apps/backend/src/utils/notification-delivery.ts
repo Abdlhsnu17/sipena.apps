@@ -84,8 +84,8 @@ export const sendPhoneNotification = async ({
 
   const allowedChannels = channels && channels.length > 0 ? channels : ['whatsapp', 'sms'];
   const attempts: Array<{ channel: 'whatsapp' | 'sms'; url?: string; token?: string }> = [
-    { channel: 'whatsapp', url: whatsappWebhookUrl, token: whatsappWebhookToken },
-    { channel: 'sms', url: smsWebhookUrl, token: smsWebhookToken },
+    { channel: 'whatsapp' as const, url: whatsappWebhookUrl, token: whatsappWebhookToken },
+    { channel: 'sms' as const, url: smsWebhookUrl, token: smsWebhookToken },
   ].filter((attempt) => allowedChannels.includes(attempt.channel));
 
   const configuredAttempts = attempts.filter(
