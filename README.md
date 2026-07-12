@@ -2,6 +2,8 @@
 
 Sistem Inventaris, Peminjaman, dan Pemeliharaan Sarana (SIPENA) adalah aplikasi web untuk membantu pengelolaan sarana dan prasarana rumah sakit secara lebih rapi, cepat, dan terpusat. Aplikasi ini memadukan pengelolaan aset, peminjaman, pengembalian, penggunaan aset, pemeliharaan, SPK prioritas aset, laporan, unggah dokumen, dan dokumentasi sistem dalam satu monorepo.
 
+Dokumen kebutuhan produk dan baseline perilaku aplikasi tersedia di [`docs/PRD.md`](docs/PRD.md).
+
 ## Ringkasan Kegunaan
 
 SIPENA berfungsi sebagai pusat pengelolaan digital untuk sarana dan prasarana rumah sakit. Aplikasi ini membantu petugas dan admin mengelola aset, memantau peminjaman dan pengembalian, mencatat penggunaan aset, mengatur pemeliharaan, menentukan prioritas aset dengan SPK, serta menyusun laporan dalam satu sistem yang terhubung.
