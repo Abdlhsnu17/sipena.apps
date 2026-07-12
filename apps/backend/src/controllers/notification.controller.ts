@@ -10,11 +10,26 @@ const getActorUserId = (req: Request): number | null => {
 
 const SSE_HEARTBEAT_INTERVAL_MS = 25000;
 
+const isValidWebhookUrl = (value: string | undefined): boolean => {
+  if (!value?.trim()) return false;
+
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
 class NotificationController {
   getDeliveryStatus = async (_req: Request, res: Response): Promise<void> => {
     const isProduction = (process.env.NODE_ENV || 'development') === 'production';
-    const hasWhatsapp = Boolean(process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL?.trim() || process.env.WHATSAPP_OTP_WEBHOOK_URL?.trim());
-    const hasSms = Boolean(process.env.SMS_NOTIFICATION_WEBHOOK_URL?.trim() || process.env.SMS_OTP_WEBHOOK_URL?.trim());
+    const hasWhatsapp = isValidWebhookUrl(
+      process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL || process.env.WHATSAPP_OTP_WEBHOOK_URL
+    );
+    const hasSms = isValidWebhookUrl(
+      process.env.SMS_NOTIFICATION_WEBHOOK_URL || process.env.SMS_OTP_WEBHOOK_URL
+    );
     const hasEmail = Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
     res.json({ success: true, data: {
       inApp: true,

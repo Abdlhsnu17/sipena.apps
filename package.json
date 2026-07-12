@@ -19,6 +19,7 @@
     "type-check": "npm run type-check --workspace=inventory-frontend",
     "verify": "npm run lint && npm run build && npm run type-check",
     "start": "sh scripts/start-production.sh",
+    "configure:notifications": "sh scripts/configure-notification-channels.sh",
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
     "build:frontend": "npm run build --workspace=inventory-frontend",
