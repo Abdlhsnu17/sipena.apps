@@ -69,17 +69,46 @@ prompt_secret() {
   fi
 }
 
+prompt_url() {
+  label=$1
+  key=$2
+  current=$(get_env_value "$key")
+
+  while true; do
+    if [ -n "$current" ]; then
+      printf '%s sudah terisi. Tekan Enter untuk mempertahankan, atau isi nilai baru:\n> ' "$label"
+    else
+      printf '%s (kosongkan bila belum ada):\n> ' "$label"
+    fi
+
+    IFS= read -r entered
+    if [ -z "$entered" ]; then
+      return
+    fi
+
+    case "$entered" in
+      http://*|https://*)
+        set_env_value "$key" "$entered"
+        return
+        ;;
+      *)
+        printf '\nNilai tidak valid: "%s". URL webhook harus diawali http:// atau https:// (bukan nomor HP/angka). Coba lagi.\n' "$entered" >&2
+        ;;
+    esac
+  done
+}
+
 set_env_value NODE_ENV "$(get_env_value NODE_ENV || true)"
 if [ -z "$(get_env_value NODE_ENV)" ]; then set_env_value NODE_ENV development; fi
 set_env_value OTP_BRAND_NAME "$(get_env_value OTP_BRAND_NAME || true)"
 if [ -z "$(get_env_value OTP_BRAND_NAME)" ]; then set_env_value OTP_BRAND_NAME SiPeNa; fi
 
 printf '\nKonfigurasi WhatsApp OTP\n'
-prompt_value 'Webhook URL WhatsApp dari provider' WHATSAPP_OTP_WEBHOOK_URL
+prompt_url 'Webhook URL WhatsApp dari provider' WHATSAPP_OTP_WEBHOOK_URL
 prompt_secret 'Token webhook WhatsApp' WHATSAPP_OTP_WEBHOOK_TOKEN
 
 printf '\nKonfigurasi SMS OTP\n'
-prompt_value 'Webhook URL SMS dari provider' SMS_OTP_WEBHOOK_URL
+prompt_url 'Webhook URL SMS dari provider' SMS_OTP_WEBHOOK_URL
 prompt_secret 'Token webhook SMS' SMS_OTP_WEBHOOK_TOKEN
 
 printf '\nKonfigurasi Gmail SMTP\n'
