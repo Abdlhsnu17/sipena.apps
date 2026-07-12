@@ -89,7 +89,7 @@ export interface PasswordResetRequestResponse {
   data?: {
     deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: "whatsapp" | "sms" | "local_preview";
+    deliveryMethod: "whatsapp" | "sms" | "email" | "local_preview";
     previewCode?: string;
   };
 }

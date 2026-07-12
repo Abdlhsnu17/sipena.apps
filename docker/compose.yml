@@ -1,3 +1,5 @@
+name: sipena-apps
+
 services:
   mysql:
     image: mysql:8.0
@@ -76,6 +78,14 @@ services:
       WHATSAPP_OTP_WEBHOOK_TOKEN: ${WHATSAPP_OTP_WEBHOOK_TOKEN:-}
       SMS_OTP_WEBHOOK_URL: ${SMS_OTP_WEBHOOK_URL:-}
       SMS_OTP_WEBHOOK_TOKEN: ${SMS_OTP_WEBHOOK_TOKEN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@sipena.id}
+      EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME:-SiPeNa}
     ports:
       - "${BACKEND_HOST_PORT:-4000}:4000"
     volumes:

@@ -20,6 +20,7 @@ import {
     getPasswordResetSession,
     savePasswordResetSession
 } from '../utils/password-reset-store';
+import { sendPasswordResetCodeEmail } from '../utils/mailer';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -63,7 +64,7 @@ interface PasswordResetRequestResponse {
   data?: {
     deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: 'whatsapp' | 'sms' | 'local_preview';
+    deliveryMethod: 'whatsapp' | 'sms' | 'email' | 'local_preview';
     previewCode?: string;
   };
 }
@@ -245,10 +246,6 @@ export class AuthService {
     }
 
     const user = rows[0];
-    if (!user.phone_number || !isValidPhoneNumber(user.phone_number)) {
-      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; skipping OTP delivery.`);
-      return { success: true, message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE };
-    }
     const verificationCode = this.generateVerificationCode();
     const expiresAt = Date.now() + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
     const codeHash = await bcrypt.hash(verificationCode, 10);
@@ -272,38 +269,77 @@ export class AuthService {
       };
     }
 
-    let deliveryResult;
+    const deliveries: Array<{
+      method: 'whatsapp' | 'sms' | 'email' | 'local_preview';
+      preview: boolean;
+      target: string;
+    }> = [];
+
+    if (user.phone_number && isValidPhoneNumber(user.phone_number)) {
+      try {
+        const phoneDelivery = await sendPasswordResetOtp({
+          phoneNumber: user.phone_number,
+          userName: user.name,
+          code: verificationCode,
+          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+        });
+        deliveries.push({
+          method: phoneDelivery.channel,
+          preview: phoneDelivery.preview,
+          target: phoneDelivery.deliveryTarget,
+        });
+      } catch (error) {
+        console.error('Send password reset OTP error:', error);
+      }
+    } else {
+      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; trying email delivery.`);
+    }
+
     try {
-      deliveryResult = await sendPasswordResetOtp({
-        phoneNumber: user.phone_number,
-        userName: user.name,
+      const emailDelivery = await sendPasswordResetCodeEmail({
+        to: user.email,
+        name: user.name,
         code: verificationCode,
         expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
       });
+      deliveries.push({
+        method: emailDelivery.preview ? 'local_preview' : 'email',
+        preview: emailDelivery.preview,
+        target: this.maskEmail(user.email),
+      });
     } catch (error) {
-      console.error('Send password reset OTP error:', error);
+      console.error('Send password reset email error:', error);
+    }
+
+    if (deliveries.length === 0) {
       await deletePasswordResetSession(user.nip).catch(() => undefined);
       return {
         success: false,
-        message: error instanceof Error
-          ? error.message
-          : 'Pengiriman kode verifikasi gagal. Coba lagi beberapa saat.'
+        message: 'Pengiriman kode verifikasi gagal di semua kanal. Periksa konfigurasi WhatsApp, SMS, dan email.'
       };
     }
 
+    const activeDelivery = deliveries.find((delivery) => !delivery.preview);
+    const selectedDelivery = activeDelivery ?? deliveries[0];
+    const previewOnly = !activeDelivery;
+
     return {
       success: true,
-      message: deliveryResult.preview
+      message: previewOnly
         ? 'Kode verifikasi tersedia di preview lokal pengembangan.'
         : AuthService.PASSWORD_RESET_REQUEST_MESSAGE,
-      data: deliveryResult.preview
+      data: previewOnly
         ? {
-            deliveryTarget: 'Preview lokal aplikasi',
+            deliveryTarget: selectedDelivery.target,
             expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
             deliveryMethod: 'local_preview',
             previewCode: verificationCode,
           }
-        : undefined
+        : {
+            deliveryTarget: selectedDelivery.target,
+            expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+            deliveryMethod: selectedDelivery.method,
+          }
     };
   }
 

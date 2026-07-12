@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
   const [messageType, setMessageType] = useState<"success" | "error">("success")
   const [deliveryTarget, setDeliveryTarget] = useState("")
   const [previewVerificationCode, setPreviewVerificationCode] = useState("")
-  const [deliveryMethod, setDeliveryMethod] = useState<"whatsapp" | "sms" | "local_preview" | "">("")
+  const [deliveryMethod, setDeliveryMethod] = useState<"whatsapp" | "sms" | "email" | "local_preview" | "">("")
   const [expiresInMinutes, setExpiresInMinutes] = useState<number | null>(null)
   const { handleFocusCapture } = useMobileFocusScroll()
 

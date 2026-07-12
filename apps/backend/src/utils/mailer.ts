@@ -51,7 +51,9 @@ export const sendPasswordResetCodeEmail = async ({
   expiresInMinutes
 }: PasswordResetEmailPayload): Promise<MailDeliveryResult> => {
   const transporter = getTransporter();
-  const from = process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim();
+  const from = process.env.SMTP_FROM?.trim()
+    || process.env.EMAIL_FROM?.trim()
+    || process.env.SMTP_USER?.trim();
 
   if (!transporter || !from) {
     if (isPasswordResetPreviewMode()) {
