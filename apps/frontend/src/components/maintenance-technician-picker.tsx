@@ -44,7 +44,7 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="h-10 w-full justify-between px-3 font-normal">
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="h-10 w-full justify-between rounded-2xl px-3 font-normal">
           <span className={selected ? "truncate" : "truncate text-muted-foreground"}>
             {selected ? `${selected.name} — NIP ${selected.nip}` : "Cari nama atau NIP teknisi/PJ"}
           </span>

@@ -11,6 +11,7 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { toLocalDateTimeString } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
+import { getUserRoleLabel } from "@/utils/role";
 import { Save, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -467,6 +468,50 @@ export default function MaintenanceForm({
                 }))}
               />
               <p className="mt-1 text-xs text-muted-foreground">Nama dan NIP terisi dari akun aktif yang tertaut.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">NIP Teknisi / PJ</label>
+              <input
+                type="text"
+                value={formData.technicianNip}
+                readOnly
+                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
+                placeholder="Terisi dari akun"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Nama Teknisi / PJ</label>
+              <input
+                type="text"
+                value={formData.technician}
+                readOnly
+                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
+                placeholder="Terisi dari akun"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Jabatan Teknisi / PJ</label>
+              <input
+                type="text"
+                value={formData.technicianRole ? getUserRoleLabel(formData.technicianRole) : ""}
+                readOnly
+                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
+                placeholder="Terisi dari akun"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Unit Kerja Teknisi / PJ</label>
+              <input
+                type="text"
+                value={formData.technicianWorkUnit}
+                readOnly
+                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
+                placeholder="Terisi dari akun"
+              />
             </div>
 
             <div>
