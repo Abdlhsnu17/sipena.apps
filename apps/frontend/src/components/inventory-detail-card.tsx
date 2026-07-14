@@ -1,31 +1,31 @@
 "use client"
 
-import { cn } from "@/utils"
+import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/utils";
 import {
-  CalendarDays,
-  Download,
-  MapPin,
-  Package2,
-  PencilLine,
-  Printer,
-  QrCode,
-  ScanLine,
-  ShieldCheck,
-  SquareStack,
-  Tags,
-  Trash2,
-  Wrench,
-} from "lucide-react"
-import { useState, type ReactNode } from "react"
+    CalendarDays,
+    Download,
+    MapPin,
+    Package2,
+    PencilLine,
+    Printer,
+    QrCode,
+    ScanLine,
+    ShieldCheck,
+    SquareStack,
+    Tags,
+    Trash2,
+    Wrench,
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 type ActionConfig = {
   label: string
@@ -47,6 +47,7 @@ type InventoryDetailCardProps = {
   maintenanceLabel: string
   maintenanceDateText: string
   usageText: string
+  usageSummaryText?: string
   notes?: string
   onShowQr: () => void
   onDownloadLabel: () => void
@@ -160,6 +161,7 @@ export function InventoryDetailCard({
   maintenanceLabel,
   maintenanceDateText,
   usageText,
+  usageSummaryText,
   notes,
   onShowQr,
   onDownloadLabel,
@@ -184,6 +186,7 @@ export function InventoryDetailCard({
     { label: "Tanggal Beli", value: purchaseDateText },
     { label: maintenanceLabel, value: maintenanceDateText },
     { label: "Penggunaan", value: usageText },
+    ...(usageSummaryText ? [{ label: "Frekuensi", value: usageSummaryText }] : []),
   ]
 
   if (onEdit) {
@@ -239,6 +242,9 @@ export function InventoryDetailCard({
             <DetailStat icon={<CalendarDays className={detailIconClassName} />} label="Tanggal Beli" value={purchaseDateText} />
             <DetailStat icon={<Wrench className={detailIconClassName} />} label={maintenanceLabel} value={maintenanceDateText} />
             <DetailStat icon={<MapPin className={detailIconClassName} />} label="Penggunaan" value={usageText} />
+            {usageSummaryText ? (
+              <DetailStat icon={<CalendarDays className={detailIconClassName} />} label="Frekuensi" value={usageSummaryText} />
+            ) : null}
           </div>
 
           {notes ? (

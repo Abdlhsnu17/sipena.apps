@@ -172,4 +172,9 @@ export interface MedicalAsset {
     | "Dipinjam"
   notes: string
   usagePurpose: string
+  usageSummary?: {
+    total: number
+    manual: number
+    borrowing: number
+  }
 }

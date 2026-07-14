@@ -1115,6 +1115,7 @@ export default function AssetUsagePage() {
       filePrefix: `penggunaan-${log.id}`,
       buildSections: buildUsageLetterSections,
       emptyMessage: 'Tidak ada data pemakaian yang dipilih.',
+      showEntryHeader: false,
     })
   }
 
@@ -1127,6 +1128,7 @@ export default function AssetUsagePage() {
       filePrefix: "riwayat-penggunaan",
       buildSections: (log) => getUsageDetailSections(log, selectedUsageColumns),
       emptyMessage: "Tidak ada data pemakaian yang dipilih.",
+      showEntryHeader: false,
     });
   };
 

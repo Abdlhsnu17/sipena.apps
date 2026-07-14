@@ -88,9 +88,177 @@ interface TableExistsRow extends RowDataPacket {
   table_exists: number;
 }
 
+interface AssetUsageSummaryRow extends RowDataPacket {
+  asset_id: number;
+  asset_detail_id: string | null;
+  asset_detail_code: string | null;
+  source_type: string | null;
+  total_count: number;
+}
+
+interface UsageSummary {
+  total: number;
+  manual: number;
+  borrowing: number;
+}
+
 const RECONCILABLE_DETAIL_STATUSES = new Set(['Dipinjam', 'borrowed', 'Sedang Digunakan', 'Dalam Penggunaan']);
 
 export class AssetService {
+  private emptyUsageSummary(): UsageSummary {
+    return {
+      total: 0,
+      manual: 0,
+      borrowing: 0,
+    };
+  }
+
+  private normalizeUsageSource(sourceType?: string | null): 'manual' | 'borrowing' {
+    return sourceType === 'borrowing_sync' ? 'borrowing' : 'manual';
+  }
+
+  private summarizeUsageRows(rows: AssetUsageSummaryRow[]): UsageSummary {
+    return rows.reduce<UsageSummary>((acc, row) => {
+      const count = Number(row.total_count || 0);
+      const source = this.normalizeUsageSource(row.source_type);
+      acc.total += count;
+      if (source === 'manual') {
+        acc.manual += count;
+      } else {
+        acc.borrowing += count;
+      }
+      return acc;
+    }, this.emptyUsageSummary());
+  }
+
+  private async getUsageSummaryRowsByAssetIds(assetIds: number[], assetType: string): Promise<AssetUsageSummaryRow[]> {
+    if (assetIds.length === 0) return [];
+
+    const placeholders = assetIds.map(() => '?').join(', ');
+    const [rows] = await pool.query<AssetUsageSummaryRow[]>(
+      `SELECT
+          asset_id,
+          asset_detail_id,
+          asset_detail_code,
+          source_type,
+          COALESCE(SUM(usage_count), 0) AS total_count
+       FROM asset_usage_logs
+       WHERE deleted_at IS NULL
+         AND COALESCE(asset_type, 'medical') = ?
+         AND asset_id IN (${placeholders})
+       GROUP BY asset_id, asset_detail_id, asset_detail_code, source_type`,
+      [assetType, ...assetIds]
+    );
+
+    return rows;
+  }
+
+  private async attachUsageSummaries(rows: AssetRow[], assetType?: string): Promise<void> {
+    const normalizedAssetType = assetType === 'non_medical' ? 'non_medical' : 'medical';
+    const perAssetRows = new Map<number, AssetUsageSummaryRow[]>();
+    const byAssetDetailId = new Map<number, Map<string, AssetUsageSummaryRow[]>>();
+    const byAssetDetailCode = new Map<number, Map<string, AssetUsageSummaryRow[]>>();
+    const byAssetNoDetail = new Map<number, AssetUsageSummaryRow[]>();
+
+    const appendToMap = (
+      target: Map<number, Map<string, AssetUsageSummaryRow[]>>,
+      assetId: number,
+      key: string,
+      row: AssetUsageSummaryRow
+    ) => {
+      const bucket = target.get(assetId) || new Map<string, AssetUsageSummaryRow[]>();
+      const rowsInKey = bucket.get(key) || [];
+      rowsInKey.push(row);
+      bucket.set(key, rowsInKey);
+      target.set(assetId, bucket);
+    };
+
+    const assignUsageRows = (usageRows: AssetUsageSummaryRow[]) => {
+      for (const row of usageRows) {
+        const assetId = Number(row.asset_id);
+
+        const assetRows = perAssetRows.get(assetId) || [];
+        assetRows.push(row);
+        perAssetRows.set(assetId, assetRows);
+
+        const detailIdKey = this.normalizeDetailIdentifier(row.asset_detail_id);
+        const detailCodeKey = this.normalizeDetailIdentifier(row.asset_detail_code);
+
+        if (detailIdKey) {
+          appendToMap(byAssetDetailId, assetId, detailIdKey, row);
+        }
+        if (detailCodeKey) {
+          appendToMap(byAssetDetailCode, assetId, detailCodeKey, row);
+        }
+        if (!detailIdKey && !detailCodeKey) {
+          const rowsWithoutDetail = byAssetNoDetail.get(assetId) || [];
+          rowsWithoutDetail.push(row);
+          byAssetNoDetail.set(assetId, rowsWithoutDetail);
+        }
+      }
+    };
+
+    const assetIds = rows.map((row) => Number(row.id)).filter((id) => Number.isFinite(id) && id > 0);
+    if (assetIds.length === 0) return;
+
+    const usageRows = await this.getUsageSummaryRowsByAssetIds(assetIds, normalizedAssetType);
+    assignUsageRows(usageRows);
+
+    for (const row of rows) {
+      const assetId = Number(row.id);
+      const allRowsForAsset = perAssetRows.get(assetId) || [];
+      (row as any).usageSummary = this.summarizeUsageRows(allRowsForAsset);
+
+      const specifications = this.parseAssetSpecifications(row.specifications);
+      const details = Array.isArray(specifications.details) ? specifications.details : [];
+      if (details.length === 0) {
+        continue;
+      }
+
+      const detailIdMap = byAssetDetailId.get(assetId) || new Map<string, AssetUsageSummaryRow[]>();
+      const detailCodeMap = byAssetDetailCode.get(assetId) || new Map<string, AssetUsageSummaryRow[]>();
+      const noDetailRows = byAssetNoDetail.get(assetId) || [];
+
+      const updatedDetails = details.map((rawDetail) => {
+        const detail = rawDetail && typeof rawDetail === 'object' ? { ...rawDetail } : rawDetail;
+        if (!detail || typeof detail !== 'object') {
+          return rawDetail;
+        }
+
+        const candidates = this.buildDetailCandidates(detail);
+        const uniqueMatchedRows = new Map<string, AssetUsageSummaryRow>();
+
+        for (const candidate of candidates) {
+          const normalizedCandidate = this.normalizeDetailIdentifier(candidate);
+          if (!normalizedCandidate) continue;
+
+          const idRows = detailIdMap.get(normalizedCandidate) || [];
+          const codeRows = detailCodeMap.get(normalizedCandidate) || [];
+
+          for (const usageRow of [...idRows, ...codeRows]) {
+            const dedupeKey = `${usageRow.asset_detail_id || ''}|${usageRow.asset_detail_code || ''}|${usageRow.source_type || ''}`;
+            uniqueMatchedRows.set(dedupeKey, usageRow);
+          }
+        }
+
+        let matchedRows = Array.from(uniqueMatchedRows.values());
+        if (matchedRows.length === 0 && details.length === 1 && noDetailRows.length > 0) {
+          matchedRows = noDetailRows;
+        }
+
+        return {
+          ...detail,
+          usageSummary: this.summarizeUsageRows(matchedRows),
+        };
+      });
+
+      row.specifications = {
+        ...specifications,
+        details: updatedDetails,
+      };
+    }
+  }
+
   private async tableExists(connection: any, tableName: string): Promise<boolean> {
     const [rows] = (await connection.query(
       `SELECT COUNT(*) AS table_exists
@@ -315,6 +483,7 @@ export class AssetService {
     const [dataRows] = await pool.query<AssetRow[]>(query, params);
     const [countRows] = await pool.query<CountRow[]>(countQuery, countParams);
     await this.reconcileStaleUsageDetailStatuses(dataRows, type);
+    await this.attachUsageSummaries(dataRows, type);
 
     const total = countRows[0].count;
 
@@ -342,6 +511,7 @@ export class AssetService {
     }
 
     await this.reconcileStaleUsageDetailStatuses(rows, type);
+    await this.attachUsageSummaries(rows, type);
 
     return {
       success: true,

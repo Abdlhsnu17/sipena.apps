@@ -1,4 +1,4 @@
-import type { NonMedicalAssetType } from "@/constants/non-medical-asset-types"
+import type { NonMedicalAssetType } from "@/constants/non-medical-asset-types";
 
 export interface NonMedicalRoom {
   id: string
@@ -35,6 +35,11 @@ export interface NonMedicalAsset {
     | "Dipinjam"
   notes: string
   usagePurpose: string
+  usageSummary?: {
+    total: number
+    manual: number
+    borrowing: number
+  }
 }
 
-export type { NonMedicalAssetType }
+export type { NonMedicalAssetType };

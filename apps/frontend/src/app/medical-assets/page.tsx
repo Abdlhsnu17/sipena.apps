@@ -33,6 +33,13 @@ const getInventoryStatusLabel = (status?: string) => {
   return status || "Tersedia"
 }
 
+const formatUsageSummary = (summary?: { total?: number; manual?: number; borrowing?: number }) => {
+  const total = Number(summary?.total || 0)
+  const manual = Number(summary?.manual || 0)
+  const borrowing = Number(summary?.borrowing || 0)
+  return `Total ${total}x | Manual ${manual}x | Peminjaman ${borrowing}x`
+}
+
 export default function MedicalAssetsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -792,6 +799,7 @@ export default function MedicalAssetsPage() {
                                   MEDICAL_USAGE_OPTIONS,
                                   MEDICAL_USAGE_ALIASES,
                                 )}
+                                usageSummaryText={formatUsageSummary(asset.usageSummary)}
                                 notes={asset.notes}
                                 onShowQr={() => setQrTarget({ noId, asset, location: room.roomName })}
                                 onDownloadLabel={() =>

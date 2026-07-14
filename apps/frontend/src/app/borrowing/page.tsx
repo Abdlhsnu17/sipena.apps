@@ -1727,6 +1727,7 @@ export default function BorrowingPage() {
         filePrefix: "daftar-peminjaman",
         buildSections: buildBorrowingNarrativeSections(selectedBorrowingExportColumns),
         emptyMessage: "Tidak ada data peminjaman yang dipilih.",
+        showEntryHeader: false,
       })
     } else {
       void exportFormularReport(format, {

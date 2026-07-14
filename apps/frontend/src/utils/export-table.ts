@@ -819,7 +819,7 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
     filePrefix,
     buildSections,
     emptyMessage = 'Tidak ada data yang dipilih.',
-    showEntryHeader = true,
+    showEntryHeader = false,
   } = options
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
