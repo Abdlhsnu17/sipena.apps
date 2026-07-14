@@ -2,7 +2,7 @@
 
 import { Bell, ScanLine, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { assetUsageService } from "@/services/asset-usage.service";
 import { borrowingService } from "@/services/borrowing.service";
@@ -269,7 +269,7 @@ export default function Topbar() {
     window.localStorage.setItem("notification-density", notificationDensity)
   }, [notificationDensity])
 
-  const handleBarcodeDetected = (rawValue: string) => {
+  const handleBarcodeDetected = useCallback((rawValue: string) => {
     const parsed = parseScannedBarcode(rawValue)
     if (!parsed.query) {
       window.alert("Hasil scan kosong. Silakan coba lagi.")
@@ -289,7 +289,7 @@ export default function Topbar() {
     }
 
     router.push(`/medical-assets?scan=${encodedQuery}`)
-  }
+  }, [router])
 
   const dateFormatter = useMemo(() => {
     return new Intl.DateTimeFormat("id-ID", {
