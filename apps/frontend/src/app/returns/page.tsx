@@ -1156,6 +1156,7 @@ export default function ReturnsPage() {
       filePrefix: `${slug}-${borrowing.id}`,
       buildSections: buildReturnNarrativeSections(columnKeys),
       emptyMessage: "Tidak ada data pengembalian yang dipilih.",
+      showEntryHeader: false,
     })
   }
 
@@ -1194,6 +1195,7 @@ export default function ReturnsPage() {
       filePrefix: "pengembalian-aktif",
       buildSections: buildReturnNarrativeSections(activeSelectedReturnColumns),
       emptyMessage: "Tidak ada pengembalian aktif yang dipilih.",
+      showEntryHeader: false,
     })
   }
 
@@ -1206,6 +1208,7 @@ export default function ReturnsPage() {
       filePrefix: "riwayat-pengembalian",
       buildSections: buildReturnNarrativeSections(historySelectedReturnColumns),
       emptyMessage: "Tidak ada riwayat pengembalian yang dipilih.",
+      showEntryHeader: false,
     })
   }
 

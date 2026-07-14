@@ -492,10 +492,17 @@ const buildNarrativeSignatureHtml = <T>(entry: T) => {
   `
 }
 
-const buildNarrativeEntryHtml = <T>(entry: T, index: number, total: number, buildSections: SectionBuilder<T>) => {
+const buildNarrativeEntryHtml = <T>(
+  entry: T,
+  index: number,
+  buildSections: SectionBuilder<T>,
+  showEntryHeader: boolean
+) => {
   const sections = buildSections(entry)
   if (!sections.length) return ''
-  const entryHeader = `<div class="entry-card__heading">${escapeHtml(buildEntryHeaderLabel(entry, index))}</div>`
+  const entryHeader = showEntryHeader
+    ? `<div class="entry-card__heading">${escapeHtml(buildEntryHeaderLabel(entry, index))}</div>`
+    : ''
   return `
     <article class="entry-card">
       ${entryHeader}
@@ -513,7 +520,8 @@ const buildNarrativeHtml = <T>(
   subtitle: string,
   buildSections: SectionBuilder<T>,
   emptyMessage: string,
-  mode: ExportColorMode
+  mode: ExportColorMode,
+  showEntryHeader: boolean
 ) => {
   const isMonochrome = mode === 'monochrome'
   const pageBg = '#ffffff'
@@ -527,7 +535,7 @@ const buildNarrativeHtml = <T>(
   const entriesHtml =
     entries.length > 0
       ? `<div class="entries">${entries
-          .map((entry, index) => buildNarrativeEntryHtml(entry, index, entries.length, buildSections))
+          .map((entry, index) => buildNarrativeEntryHtml(entry, index, buildSections, showEntryHeader))
           .join('')}</div>`
       : `<p class="muted">${escapeHtml(emptyMessage)}</p>`
 
@@ -748,7 +756,8 @@ const buildNarrativeRows = <T>(
   title: string,
   subtitle: string,
   buildSections: SectionBuilder<T>,
-  emptyMessage: string
+  emptyMessage: string,
+  showEntryHeader: boolean
 ): [string, string][] => {
   const rows: [string, string][] = []
   rows.push([normalizeCapsText(title), ''])
@@ -762,9 +771,11 @@ const buildNarrativeRows = <T>(
   entries.forEach((entry, index) => {
     const sections = buildSections(entry)
     if (!sections.length) return
-    const headerLabel = buildEntryHeaderLabel(entry, index)
-    const headerMeta = entries.length > 1 ? ` (${index + 1}/${entries.length})` : ''
-    rows.push([`${headerLabel}${headerMeta}`, ''])
+    if (showEntryHeader) {
+      const headerLabel = buildEntryHeaderLabel(entry, index)
+      const headerMeta = entries.length > 1 ? ` (${index + 1}/${entries.length})` : ''
+      rows.push([`${headerLabel}${headerMeta}`, ''])
+    }
     sections.forEach((section) => {
       rows.push([normalizeCapsText(section.title), ''])
       section.lines.forEach((line) => {
@@ -797,6 +808,7 @@ export interface NarrativeReportOptions<T> {
   filePrefix?: string
   buildSections: SectionBuilder<T>
   emptyMessage?: string
+  showEntryHeader?: boolean
 }
 
 export async function exportNarrativeReport<T>(format: ExportFormat, options: NarrativeReportOptions<T>) {
@@ -807,10 +819,11 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
     filePrefix,
     buildSections,
     emptyMessage = 'Tidak ada data yang dipilih.',
+    showEntryHeader = true,
   } = options
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
-  const html = buildNarrativeHtml(title, entries, subtitle, buildSections, emptyMessage, colorMode)
+  const html = buildNarrativeHtml(title, entries, subtitle, buildSections, emptyMessage, colorMode, showEntryHeader)
 
   if (format === 'pdf') {
     const printWindow = window.open('', '_blank', 'width=900,height=700')
@@ -833,7 +846,7 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
     const workbook = new Workbook()
     const sheet = workbook.addWorksheet(title)
     sheet.columns = [{}, {}]
-    const rows = buildNarrativeRows(entries, title, subtitle, buildSections, emptyMessage)
+    const rows = buildNarrativeRows(entries, title, subtitle, buildSections, emptyMessage, showEntryHeader)
     rows.forEach((row) => sheet.addRow(row))
 
     sheet.eachRow((row, rowNumber) => {
@@ -932,6 +945,7 @@ export async function exportMaintenanceHistory(format: ExportFormat, options: Ma
     filePrefix: options.filePrefix,
     buildSections: buildMaintenanceHistorySections,
     emptyMessage: 'Tidak ada riwayat pemeliharaan yang dipilih.',
+    showEntryHeader: false,
   })
 }
 

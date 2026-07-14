@@ -254,15 +254,24 @@ export default function MaintenanceForm({
   }, [defaultRepairNote, maintenance])
 
   useEffect(() => {
-    if (maintenance) return
+    const animationFrame = window.requestAnimationFrame(() => {
+      formCardRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      })
 
-    const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
-      'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
-    )
-    if (!pickerButton) return
+      if (maintenance) return
 
-    // Open picker right away so users can type in the search field without an extra click.
-    pickerButton.click()
+      const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
+      )
+
+      // Open and focus the inventory search immediately for a new submission.
+      pickerButton?.click()
+    })
+
+    return () => window.cancelAnimationFrame(animationFrame)
   }, [maintenance])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
