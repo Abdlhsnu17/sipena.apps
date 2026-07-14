@@ -72,6 +72,17 @@ const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
 
+const getRoleLabel = (role?: string | null): string => {
+  switch (String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')) {
+    case 'admin': return 'Administrator';
+    case 'leader': return 'Leader';
+    case 'staff': return 'Staff Pelayanan';
+    case 'staff_pj': return 'Staff PJ';
+    case 'teknisi': return 'Teknisi';
+    default: return 'Pengguna';
+  }
+};
+
 const borrowingDateFields = [
   'borrow_date',
   'due_date',
@@ -121,6 +132,15 @@ interface CountRow extends RowDataPacket {
   count: number;
 }
 
+interface OwnerAccountRow extends RowDataPacket {
+  id: number;
+  nip: string;
+  name: string;
+  role: string;
+  work_unit: string | null;
+  sub_work_unit: string | null;
+}
+
 interface ColumnCountRow extends RowDataPacket {
   count: number;
 }
@@ -131,6 +151,64 @@ interface ActiveUsageRow extends RowDataPacket {
 }
 
 export class BorrowingService {
+  async getOwnerCandidates(search = '', limit = 20): Promise<ApiResponse<Array<{
+    id: number;
+    nip: string;
+    name: string;
+    role: string;
+    workUnit: string | null;
+    subWorkUnit: string | null;
+  }>>> {
+    const normalizedSearch = search.trim();
+    const safeLimit = Math.min(Math.max(limit, 1), 50);
+    const params: Array<string | number> = [];
+    let searchClause = '';
+
+    if (normalizedSearch) {
+      searchClause = ' AND (name LIKE ? OR nip LIKE ? OR work_unit LIKE ?)';
+      const keyword = `%${normalizedSearch}%`;
+      params.push(keyword, keyword, keyword);
+    }
+
+    params.push(safeLimit);
+    const [rows] = await pool.query<OwnerAccountRow[]>(
+      `SELECT id, nip, name, role, work_unit, sub_work_unit
+       FROM users
+       WHERE deleted_at IS NULL
+         AND COALESCE(account_status, 'active') = 'active'
+         ${searchClause}
+       ORDER BY name ASC
+       LIMIT ?`,
+      params
+    );
+
+    return {
+      success: true,
+      message: 'Daftar akun pemilik inventaris berhasil dimuat',
+      data: rows.map((row) => ({
+        id: row.id,
+        nip: row.nip,
+        name: row.name,
+        role: row.role,
+        workUnit: row.work_unit,
+        subWorkUnit: row.sub_work_unit,
+      })),
+    };
+  }
+
+  private async getActiveOwnerAccount(ownerUserId: number): Promise<OwnerAccountRow | null> {
+    const [rows] = await pool.query<OwnerAccountRow[]>(
+      `SELECT id, nip, name, role, work_unit, sub_work_unit
+       FROM users
+       WHERE id = ?
+         AND deleted_at IS NULL
+         AND COALESCE(account_status, 'active') = 'active'
+       LIMIT 1`,
+      [ownerUserId]
+    );
+    return rows[0] ?? null;
+  }
+
   private assetService: AssetService;
   private readonly activeBorrowingStatuses = ['pending', 'approved', 'borrowed', 'overdue'] as const;
   private readonly activeMaintenanceStatuses = ['requested', 'scheduled', 'in_progress'] as const;
@@ -963,6 +1041,14 @@ export class BorrowingService {
   async create(data: CreateBorrowingDTO): Promise<ApiResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
 
+    let ownerAccount: OwnerAccountRow | null = null;
+    if (data.ownerUserId !== undefined) {
+      ownerAccount = await this.getActiveOwnerAccount(Number(data.ownerUserId));
+      if (!ownerAccount) {
+        return { success: false, message: 'Akun pemilik/PJ inventaris tidak ditemukan atau tidak aktif' };
+      }
+    }
+
     const blockingBorrowing = await this.getBlockingBorrowing(data.userId);
     if (blockingBorrowing) {
       return {
@@ -1157,7 +1243,9 @@ export class BorrowingService {
          user_id,
          borrower_position,
          borrower_work_unit,
+         owner_user_id,
          owner_name,
+         owner_nip,
          owner_position,
          owner_work_unit,
          borrow_date,
@@ -1172,7 +1260,7 @@ export class BorrowingService {
          status,
          created_at
        )
-	      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+	      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
       [
         borrowingCode,
         data.assetId,
@@ -1183,9 +1271,13 @@ export class BorrowingService {
         data.userId,
         normalizeOptionalText(data.borrowerPosition),
         normalizeOptionalText(data.borrowerWorkUnit),
-        normalizeOptionalText(data.ownerName),
-        normalizeOptionalText(data.ownerPosition),
-        normalizeOptionalText(data.ownerWorkUnit),
+        ownerAccount?.id ?? data.ownerUserId ?? null,
+        ownerAccount?.name ?? normalizeOptionalText(data.ownerName),
+        ownerAccount?.nip ?? normalizeOptionalText(data.ownerNip),
+        ownerAccount ? getRoleLabel(ownerAccount.role) : normalizeOptionalText(data.ownerPosition),
+        ownerAccount
+          ? ownerAccount.work_unit ?? ownerAccount.sub_work_unit
+          : normalizeOptionalText(data.ownerWorkUnit),
         borrowDateValue,
         dueDateValue,
         data.purpose,
@@ -1649,7 +1741,9 @@ export class BorrowingService {
       data.purpose !== undefined,
       data.borrowerPosition !== undefined,
       data.borrowerWorkUnit !== undefined,
+      data.ownerUserId !== undefined,
       data.ownerName !== undefined,
+      data.ownerNip !== undefined,
       data.ownerPosition !== undefined,
       data.ownerWorkUnit !== undefined,
       data.purposeType !== undefined,
@@ -1696,13 +1790,27 @@ export class BorrowingService {
       if (data.borrowerWorkUnit !== undefined) {
         rowsToUpdate.push({ field: 'borrower_work_unit', value: normalizeOptionalText(data.borrowerWorkUnit) });
       }
-      if (data.ownerName !== undefined) {
+      if (data.ownerUserId !== undefined) {
+        const ownerAccount = await this.getActiveOwnerAccount(Number(data.ownerUserId));
+        if (!ownerAccount) {
+          return { success: false, message: 'Akun pemilik/PJ inventaris tidak ditemukan atau tidak aktif' };
+        }
+        rowsToUpdate.push({ field: 'owner_user_id', value: ownerAccount.id });
+        rowsToUpdate.push({ field: 'owner_name', value: ownerAccount.name });
+        rowsToUpdate.push({ field: 'owner_nip', value: ownerAccount.nip });
+        rowsToUpdate.push({ field: 'owner_position', value: getRoleLabel(ownerAccount.role) });
+        rowsToUpdate.push({ field: 'owner_work_unit', value: ownerAccount.work_unit ?? ownerAccount.sub_work_unit });
+      }
+      if (data.ownerUserId === undefined && data.ownerName !== undefined) {
         rowsToUpdate.push({ field: 'owner_name', value: normalizeOptionalText(data.ownerName) });
       }
-      if (data.ownerPosition !== undefined) {
+      if (data.ownerUserId === undefined && data.ownerNip !== undefined) {
+        rowsToUpdate.push({ field: 'owner_nip', value: normalizeOptionalText(data.ownerNip) });
+      }
+      if (data.ownerUserId === undefined && data.ownerPosition !== undefined) {
         rowsToUpdate.push({ field: 'owner_position', value: normalizeOptionalText(data.ownerPosition) });
       }
-      if (data.ownerWorkUnit !== undefined) {
+      if (data.ownerUserId === undefined && data.ownerWorkUnit !== undefined) {
         rowsToUpdate.push({ field: 'owner_work_unit', value: normalizeOptionalText(data.ownerWorkUnit) });
       }
       if (data.purposeType !== undefined) {

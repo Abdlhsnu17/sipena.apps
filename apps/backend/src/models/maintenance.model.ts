@@ -28,6 +28,9 @@ export interface Maintenance {
   description: string;
   technician?: string;
   technicianUserId?: number;
+  technicianNip?: string;
+  technicianRole?: string;
+  technicianWorkUnit?: string;
   vendorName?: string;
   vendorReference?: string;
   warrantyUntil?: Date | string;

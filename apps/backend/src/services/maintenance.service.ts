@@ -25,6 +25,18 @@ interface MaintenanceRow extends RowDataPacket, Maintenance {
   requester_sub_work_unit?: string | null;
   validator_name?: string | null;
   validator_nip?: string | null;
+  technician_nip?: string | null;
+  technician_role?: string | null;
+  technician_work_unit?: string | null;
+}
+
+interface TechnicianAccountRow extends RowDataPacket {
+  id: number;
+  nip: string;
+  name: string;
+  role: string;
+  work_unit: string | null;
+  sub_work_unit: string | null;
 }
 
 const normalizeComparableText = (value?: string | null): string => {
@@ -70,6 +82,63 @@ interface UserNotificationRow extends RowDataPacket {
 type MaintenanceSlaStatus = 'no_target' | 'on_track' | 'at_risk' | 'overdue' | 'met' | 'met_late';
 
 export class MaintenanceService {
+  async getTechnicianCandidates(search = '', limit = 20): Promise<ApiResponse<Array<{
+    id: number;
+    nip: string;
+    name: string;
+    role: string;
+    workUnit: string | null;
+    subWorkUnit: string | null;
+  }>>> {
+    const normalizedSearch = search.trim();
+    const safeLimit = Math.min(Math.max(limit, 1), 50);
+    const params: Array<string | number> = [];
+    let searchClause = '';
+
+    if (normalizedSearch) {
+      searchClause = ' AND (name LIKE ? OR nip LIKE ? OR work_unit LIKE ?)';
+      const keyword = `%${normalizedSearch}%`;
+      params.push(keyword, keyword, keyword);
+    }
+
+    params.push(safeLimit);
+    const [rows] = await pool.query<TechnicianAccountRow[]>(
+      `SELECT id, nip, name, role, work_unit, sub_work_unit
+       FROM users
+       WHERE deleted_at IS NULL
+         AND COALESCE(account_status, 'active') = 'active'
+         ${searchClause}
+       ORDER BY name ASC
+       LIMIT ?`,
+      params
+    );
+
+    return {
+      success: true,
+      message: 'Daftar akun teknisi/PJ berhasil dimuat',
+      data: rows.map((row) => ({
+        id: row.id,
+        nip: row.nip,
+        name: row.name,
+        role: row.role,
+        workUnit: row.work_unit,
+        subWorkUnit: row.sub_work_unit,
+      })),
+    };
+  }
+
+  private async getActiveTechnicianAccount(userId: number): Promise<TechnicianAccountRow | null> {
+    const [rows] = await pool.query<TechnicianAccountRow[]>(
+      `SELECT id, nip, name, role, work_unit, sub_work_unit
+       FROM users
+       WHERE id = ?
+         AND deleted_at IS NULL
+         AND COALESCE(account_status, 'active') = 'active'
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] ?? null;
+  }
   private assetService: AssetService;
   private readonly activeStatuses = ['scheduled', 'in_progress', 'completed'];
   private readonly detailActiveStatuses = ['requested', 'scheduled', 'in_progress', 'completed'];
@@ -187,6 +256,9 @@ export class MaintenanceService {
       requesterNip: row.requester_nip || undefined,
       requesterWorkUnit: row.requester_work_unit || undefined,
       requesterSubWorkUnit: row.requester_sub_work_unit || undefined,
+      technicianNip: row.technician_nip || undefined,
+      technicianRole: row.technician_role || undefined,
+      technicianWorkUnit: row.technician_work_unit || undefined,
       validatorName: row.validator_name || undefined,
       validatorNip: row.validator_nip || undefined,
       ...this.buildSlaInsight(row)
@@ -825,12 +897,16 @@ export class MaintenanceService {
         u.work_unit as requester_work_unit,
         u.sub_work_unit as requester_sub_work_unit,
         v.name as validator_name,
-        v.nip as validator_nip
+        v.nip as validator_nip,
+        t.nip as technician_nip,
+        t.role as technician_role,
+        t.work_unit as technician_work_unit
       FROM maintenance_records m
       LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
       LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
       LEFT JOIN users u ON m.created_by = u.id
       LEFT JOIN users v ON m.completed_by = v.id
+      LEFT JOIN users t ON m.technician_user_id = t.id
       WHERE m.deleted_at IS NULL
     `;
     let countQuery = 'SELECT COUNT(*) as count FROM maintenance_records WHERE deleted_at IS NULL';
@@ -908,12 +984,16 @@ export class MaintenanceService {
         u.work_unit as requester_work_unit,
         u.sub_work_unit as requester_sub_work_unit,
         v.name as validator_name,
-        v.nip as validator_nip
+        v.nip as validator_nip,
+        t.nip as technician_nip,
+        t.role as technician_role,
+        t.work_unit as technician_work_unit
        FROM maintenance_records m
        LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
        LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
        LEFT JOIN users u ON m.created_by = u.id
        LEFT JOIN users v ON m.completed_by = v.id
+       LEFT JOIN users t ON m.technician_user_id = t.id
       WHERE m.id = ?
         AND m.deleted_at IS NULL`,
       [id]
@@ -986,6 +1066,12 @@ export class MaintenanceService {
     }
 
     const descriptionValue = data.description || '';
+    const technicianAccount = data.technicianUserId
+      ? await this.getActiveTechnicianAccount(Number(data.technicianUserId))
+      : null;
+    if (data.technicianUserId && !technicianAccount) {
+      return { success: false, message: 'Akun teknisi/PJ tidak ditemukan atau sudah tidak aktif' };
+    }
 
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO maintenance_records (
@@ -1027,7 +1113,7 @@ export class MaintenanceService {
         scheduledDateValue,
         dueAtValue,
         descriptionValue,
-        data.technician || null,
+        technicianAccount?.name ?? data.technician ?? null,
         data.technicianUserId || null,
         data.vendorName || null,
         data.vendorReference || null,
@@ -1159,6 +1245,14 @@ export class MaintenanceService {
       if (borrowingLockError) {
         return borrowingLockError;
       }
+    }
+
+    if (data.technicianUserId !== undefined) {
+      const technicianAccount = await this.getActiveTechnicianAccount(Number(data.technicianUserId));
+      if (!technicianAccount) {
+        return { success: false, message: 'Akun teknisi/PJ tidak ditemukan atau sudah tidak aktif' };
+      }
+      data.technician = technicianAccount.name;
     }
 
     const fields: string[] = [];

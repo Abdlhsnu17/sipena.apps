@@ -28,6 +28,23 @@ export class BorrowingController {
     this.borrowingService = new BorrowingService();
   }
 
+  getOwnerCandidates = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Parameter pencarian akun tidak valid', errors: errors.array() });
+        return;
+      }
+      const search = typeof req.query.search === 'string' ? req.query.search : '';
+      const limit = Number(req.query.limit) || 20;
+      const result = await this.borrowingService.getOwnerCandidates(search, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Get borrowing owner candidates error:', error);
+      res.status(500).json({ success: false, message: 'Daftar akun pemilik inventaris gagal dimuat' });
+    }
+  };
+
   /**
    * Get all borrowings with pagination and filters
    * GET /api/borrowing
@@ -213,7 +230,9 @@ export class BorrowingController {
         room,
         borrowerPosition,
         borrowerWorkUnit,
+        ownerUserId,
         ownerName,
+        ownerNip,
         ownerPosition,
         ownerWorkUnit,
         purposeType,
@@ -233,7 +252,9 @@ export class BorrowingController {
         purpose: effectivePurpose,
         borrowerPosition,
         borrowerWorkUnit,
+        ownerUserId,
         ownerName,
+        ownerNip,
         ownerPosition,
         ownerWorkUnit,
         purposeType,

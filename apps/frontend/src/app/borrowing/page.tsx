@@ -38,6 +38,7 @@ import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTe
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
 import InventoryPicker from "@/components/inventory-picker";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
@@ -226,9 +227,6 @@ const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnV
   ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
   (borrowing.status === "returned" && !borrowing.returnValidatedAt)
 
-const resolveOwnerWorkUnitForAsset = (asset?: BorrowableAsset | null) =>
-  asset?.roomName || asset?.assetLocation || asset?.assetName || ""
-
 const resolveDefaultDestinationRoom = (currentUser?: User | null) => {
   const subWorkUnit = currentUser?.subWorkUnit?.trim()
   if (subWorkUnit) return subWorkUnit
@@ -248,7 +246,9 @@ const getDefaultFormData = (currentUser?: User | null) => ({
   durationType: "day" as "day" | "month" | "year",
   borrowerPosition: currentUser ? getUserRoleLabel(currentUser.role) : "",
   borrowerWorkUnit: currentUser?.workUnit ?? "",
+  ownerUserId: "",
   ownerName: "",
+  ownerNip: "",
   ownerPosition: "",
   ownerWorkUnit: "",
   purposeType: "inside_hospital" as "inside_hospital" | "outside_hospital",
@@ -341,6 +341,12 @@ const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
     key: "pemilikAlat",
     label: "Pemilik Inventaris",
     getValue: (borrowing) => borrowing.ownerName || "-",
+    defaultSelected: true,
+  },
+  {
+    key: "nipPemilikAlat",
+    label: "NIP Pemilik Inventaris",
+    getValue: (borrowing) => borrowing.ownerNip || "-",
     defaultSelected: true,
   },
   {
@@ -463,7 +469,9 @@ export default function BorrowingPage() {
     purpose: "",
     borrowerPosition: "",
     borrowerWorkUnit: "",
+    ownerUserId: "",
     ownerName: "",
+    ownerNip: "",
     ownerPosition: "",
     ownerWorkUnit: "",
     purposeType: "inside_hospital" as "inside_hospital" | "outside_hospital",
@@ -835,15 +843,12 @@ export default function BorrowingPage() {
       return
     }
 
-    const effectiveOwnerWorkUnit = (derivedOwnerWorkUnitLabel || formData.ownerWorkUnit).trim()
     const missingRequiredFields = [
       selectedBorrowableAssets.length === 0 ? "Inventaris" : "",
       !formData.borrowDate ? "Tanggal Pinjam" : "",
       !formData.borrowerPosition.trim() ? "Jabatan Peminjam" : "",
       !formData.borrowerWorkUnit.trim() ? "Unit Kerja Peminjam" : "",
-      !formData.ownerName.trim() ? "Nama Pemilik Inventaris" : "",
-      !formData.ownerPosition.trim() ? "Jabatan Pemilik Inventaris" : "",
-      !effectiveOwnerWorkUnit ? "Unit Kerja Pemilik Inventaris" : "",
+      !formData.ownerUserId ? "Akun Pemilik/PJ Inventaris" : "",
       !formData.destinationRoom.trim()
         ? formData.purposeType === "inside_hospital"
           ? "Ruang / Instalasi Tujuan"
@@ -908,9 +913,11 @@ export default function BorrowingPage() {
             dueDate: toLocalInputValue(formData.dueDate),
             borrowerPosition: formData.borrowerPosition.trim(),
             borrowerWorkUnit: formData.borrowerWorkUnit.trim(),
+            ownerUserId: Number(formData.ownerUserId),
             ownerName: formData.ownerName.trim(),
+            ownerNip: formData.ownerNip.trim(),
             ownerPosition: formData.ownerPosition.trim(),
-            ownerWorkUnit: resolveOwnerWorkUnitForAsset(selectedAsset) || effectiveOwnerWorkUnit,
+            ownerWorkUnit: formData.ownerWorkUnit.trim(),
             purposeType: formData.purposeType,
             destinationRoom: formData.destinationRoom.trim(),
             purpose: formData.purpose.trim(),
@@ -1204,7 +1211,9 @@ export default function BorrowingPage() {
       purpose: borrowing.purpose || "",
       borrowerPosition: borrowing.borrowerPosition || "",
       borrowerWorkUnit: borrowing.borrowerWorkUnit || "",
+      ownerUserId: borrowing.ownerUserId ? String(borrowing.ownerUserId) : "",
       ownerName: borrowing.ownerName || "",
+      ownerNip: borrowing.ownerNip || "",
       ownerPosition: borrowing.ownerPosition || "",
       ownerWorkUnit: borrowing.ownerWorkUnit || "",
       purposeType: borrowing.purposeType || "inside_hospital",
@@ -1226,7 +1235,9 @@ export default function BorrowingPage() {
       purpose: "",
       borrowerPosition: "",
       borrowerWorkUnit: "",
+      ownerUserId: "",
       ownerName: "",
+      ownerNip: "",
       ownerPosition: "",
       ownerWorkUnit: "",
       purposeType: "inside_hospital",
@@ -1244,9 +1255,7 @@ export default function BorrowingPage() {
       !editForm.purpose.trim() ||
       !editForm.borrowerPosition.trim() ||
       !editForm.borrowerWorkUnit.trim() ||
-      !editForm.ownerName.trim() ||
-      !editForm.ownerPosition.trim() ||
-      !editForm.ownerWorkUnit.trim() ||
+      !editForm.ownerUserId ||
       !editForm.destinationRoom.trim()
     ) {
       toast({
@@ -1264,7 +1273,9 @@ export default function BorrowingPage() {
         purpose: editForm.purpose.trim(),
         borrowerPosition: editForm.borrowerPosition.trim(),
         borrowerWorkUnit: editForm.borrowerWorkUnit.trim(),
+        ownerUserId: editForm.ownerUserId ? Number(editForm.ownerUserId) : undefined,
         ownerName: editForm.ownerName.trim(),
+        ownerNip: editForm.ownerNip.trim(),
         ownerPosition: editForm.ownerPosition.trim(),
         ownerWorkUnit: editForm.ownerWorkUnit.trim(),
         purposeType: editForm.purposeType,
@@ -1508,6 +1519,7 @@ export default function BorrowingPage() {
       const borrowerPosition = borrowing.borrowerPosition || "-"
       const borrowerWorkUnit = borrowing.borrowerWorkUnit || "-"
       const ownerName = borrowing.ownerName || "-"
+      const ownerNip = borrowing.ownerNip || "-"
       const ownerPosition = borrowing.ownerPosition || "-"
       const ownerWorkUnit = borrowing.ownerWorkUnit || "-"
       const purposeTypeLabel = formatBorrowingPurposeType(borrowing.purposeType)
@@ -1584,6 +1596,9 @@ export default function BorrowingPage() {
       if (columnSet.has("pemilikAlat")) {
         appendLine(ownerLines, "Nama Pemilik Inventaris", ownerName)
       }
+      if (columnSet.has("nipPemilikAlat")) {
+        appendLine(ownerLines, "NIP Pemilik Inventaris", ownerNip)
+      }
       if (columnSet.has("jabatanPemilikAlat") && ownerPosition !== "-") {
         appendLine(ownerLines, "Jabatan Pemilik Inventaris", ownerPosition)
       }
@@ -1652,6 +1667,7 @@ export default function BorrowingPage() {
           title: "Identitas Pemilik Alat",
           fields: [
             { label: "Nama", value: borrowing.ownerName || "-" },
+            { label: "NIP", value: borrowing.ownerNip || "-" },
             { label: "Jabatan", value: borrowing.ownerPosition || "-" },
             { label: "Unit Kerja", value: borrowing.ownerWorkUnit || "-" },
           ],
@@ -1909,30 +1925,6 @@ export default function BorrowingPage() {
     selectedBorrowableAssetIds.includes(asset.detailId)
   )
 
-  const derivedOwnerWorkUnitLabel = useMemo(() => {
-    if (selectedBorrowableAssets.length === 0) {
-      return formData.ownerWorkUnit
-    }
-
-    const labels = Array.from(
-      new Set(
-        selectedBorrowableAssets
-          .map((asset) => resolveOwnerWorkUnitForAsset(asset))
-          .filter(Boolean)
-      )
-    )
-
-    if (labels.length === 0) {
-      return formData.ownerWorkUnit
-    }
-
-    if (labels.length === 1) {
-      return labels[0]
-    }
-
-    return "Mengikuti ruangan masing-masing inventaris terpilih"
-  }, [formData.ownerWorkUnit, selectedBorrowableAssets])
-
   const handleToggleBorrowableAsset = (asset: BorrowableAsset) => {
     const isSelectingAsset = !selectedBorrowableAssetIds.includes(asset.detailId)
 
@@ -1941,11 +1933,6 @@ export default function BorrowingPage() {
         ? prev.filter((item) => item !== asset.detailId)
         : [...prev, asset.detailId]
     )
-
-    setFormData((prev) => ({
-      ...prev,
-      ownerWorkUnit: resolveOwnerWorkUnitForAsset(asset) || prev.ownerWorkUnit,
-    }))
 
     if (!isSelectingAsset) {
       return
@@ -2252,36 +2239,48 @@ export default function BorrowingPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-[14px] font-medium mb-1">Nama Pemilik Inventaris</label>
-                    <Input
-                      value={formData.ownerName}
-                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                      className="rounded-2xl"
-                      placeholder="Nama penanggung jawab alat"
+                    <label className="block text-[14px] font-medium mb-1">Akun Pemilik / PJ Inventaris</label>
+                    <BorrowingOwnerPicker
+                      value={formData.ownerUserId ? Number(formData.ownerUserId) : null}
+                      selected={formData.ownerUserId ? {
+                        id: Number(formData.ownerUserId),
+                        nip: formData.ownerNip,
+                        name: formData.ownerName,
+                        role: formData.ownerPosition,
+                        workUnit: formData.ownerWorkUnit,
+                      } : null}
+                      onSelect={(owner) => setFormData((prev) => ({
+                        ...prev,
+                        ownerUserId: String(owner.id),
+                        ownerName: owner.name,
+                        ownerNip: owner.nip,
+                        ownerPosition: getUserRoleLabel(owner.role),
+                        ownerWorkUnit: owner.workUnit || owner.subWorkUnit || "",
+                      }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-[14px] font-medium mb-1">Jabatan Pemilik Inventaris</label>
-                    <Input
-                      value={formData.ownerPosition}
-                      onChange={(e) => setFormData({ ...formData, ownerPosition: e.target.value })}
-                      className="rounded-2xl"
-                      placeholder="Contoh: Kepala Unit"
-                    />
+                    <label className="block text-[14px] font-medium mb-1">NIP Pemilik / PJ</label>
+                    <Input value={formData.ownerNip} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
+                  </div>
+                  <div>
+                    <label className="block text-[14px] font-medium mb-1">Nama Pemilik / PJ</label>
+                    <Input value={formData.ownerName} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
+                  </div>
+                  <div>
+                    <label className="block text-[14px] font-medium mb-1">Jabatan Pemilik / PJ</label>
+                    <Input value={formData.ownerPosition} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[14px] font-medium mb-1">Unit Kerja Pemilik Inventaris</label>
                     <Input
-                      value={derivedOwnerWorkUnitLabel}
-                      onChange={(e) => setFormData({ ...formData, ownerWorkUnit: e.target.value })}
-                      className="rounded-2xl"
-                      placeholder="Otomatis mengikuti ruangan inventaris"
-                      readOnly={selectedBorrowableAssets.length > 0}
+                      value={formData.ownerWorkUnit}
+                      readOnly
+                      className="rounded-2xl bg-muted/50"
+                      placeholder="Terisi dari akun"
                     />
                     <p className="mt-1 text-[12px] text-muted-foreground">
-                      {selectedBorrowableAssets.length > 0
-                        ? "Nilai ini otomatis mengikuti ruangan/lokasi inventaris yang dipilih agar data peminjaman tetap sinkron."
-                        : "Pilih inventaris terlebih dahulu agar unit kerja pemilik inventaris terisi otomatis."}
+                      Identitas ini terhubung ke akun aktif yang sudah tersimpan di database.
                     </p>
                   </div>
                   <div>
@@ -2849,25 +2848,41 @@ export default function BorrowingPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Nama Pemilik Inventaris</label>
-                  <Input
-                    value={editForm.ownerName}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, ownerName: event.target.value }))}
+                  <label className="text-[13px] font-medium text-muted-foreground">Akun Pemilik / PJ Inventaris</label>
+                  <BorrowingOwnerPicker
+                    value={editForm.ownerUserId ? Number(editForm.ownerUserId) : null}
+                    selected={editForm.ownerUserId ? {
+                      id: Number(editForm.ownerUserId),
+                      nip: editForm.ownerNip,
+                      name: editForm.ownerName,
+                      role: editForm.ownerPosition,
+                      workUnit: editForm.ownerWorkUnit,
+                    } : null}
+                    onSelect={(owner) => setEditForm((prev) => ({
+                      ...prev,
+                      ownerUserId: String(owner.id),
+                      ownerName: owner.name,
+                      ownerNip: owner.nip,
+                      ownerPosition: getUserRoleLabel(owner.role),
+                      ownerWorkUnit: owner.workUnit || owner.subWorkUnit || "",
+                    }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Jabatan Pemilik Inventaris</label>
-                  <Input
-                    value={editForm.ownerPosition}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, ownerPosition: event.target.value }))}
-                  />
+                  <label className="text-[13px] font-medium text-muted-foreground">NIP Pemilik / PJ</label>
+                  <Input value={editForm.ownerNip} readOnly className="bg-muted/50" />
                 </div>
                 <div>
-                  <label className="text-[13px] font-medium text-muted-foreground">Unit Kerja Pemilik Inventaris</label>
-                  <Input
-                    value={editForm.ownerWorkUnit}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, ownerWorkUnit: event.target.value }))}
-                  />
+                  <label className="text-[13px] font-medium text-muted-foreground">Nama Pemilik / PJ</label>
+                  <Input value={editForm.ownerName} readOnly className="bg-muted/50" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-muted-foreground">Jabatan Pemilik / PJ</label>
+                  <Input value={editForm.ownerPosition} readOnly className="bg-muted/50" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-muted-foreground">Unit Kerja Pemilik / PJ</label>
+                  <Input value={editForm.ownerWorkUnit} readOnly className="bg-muted/50" />
                 </div>
                 <div>
                   <label className="text-[13px] font-medium text-muted-foreground">Jenis Keperluan</label>

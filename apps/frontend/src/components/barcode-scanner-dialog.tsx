@@ -23,6 +23,8 @@ type CameraDevice = {
   label: string
 }
 
+type CameraConfig = string | { facingMode?: string | { exact: string }; deviceId?: string | { exact: string } }
+
 const pickBackCamera = (cameras: CameraDevice[]): CameraDevice | null => {
   if (cameras.length === 0) return null
 
@@ -30,9 +32,39 @@ const pickBackCamera = (cameras: CameraDevice[]): CameraDevice | null => {
   return preferred || cameras[0]
 }
 
+const getAdaptiveQrbox = () => {
+  if (typeof window === "undefined") {
+    return { width: 240, height: 240 }
+  }
+
+  const mobileSize = Math.floor(Math.min(window.innerWidth * 0.72, 280))
+  const size = Math.max(180, mobileSize)
+
+  return { width: size, height: size }
+}
+
+const buildCameraConfigs = (selectedCamera: CameraDevice | null, cameras: CameraDevice[]): CameraConfig[] => {
+  const configs: CameraConfig[] = [
+    { facingMode: { exact: "environment" } },
+    { facingMode: "environment" },
+  ]
+
+  if (selectedCamera) {
+    configs.push({ deviceId: { exact: selectedCamera.id } })
+    configs.push({ deviceId: selectedCamera.id })
+  }
+
+  if (cameras.length > 0) {
+    configs.push(cameras[0].id)
+  }
+
+  return configs
+}
+
 export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: BarcodeScannerDialogProps) {
   const elementId = useId().replace(/:/g, "")
   const scannerRef = useRef<ScannerInstance | null>(null)
+  const hasDetectedRef = useRef(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isActive, setIsActive] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
@@ -66,6 +98,7 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
 
   useEffect(() => {
     if (!open) {
+      hasDetectedRef.current = false
       void stopScanner()
       return
     }
@@ -102,27 +135,43 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
         }
 
         const selectedCamera = pickBackCamera(cameras as CameraDevice[])
-        const cameraConfig = selectedCamera ? { deviceId: { exact: selectedCamera.id } } : { facingMode: "environment" }
+        const cameraConfigs = buildCameraConfigs(selectedCamera, cameras as CameraDevice[])
 
-        await scanner.start(
-          cameraConfig,
-          {
-            fps: 10,
-            qrbox: { width: 260, height: 260 },
-            aspectRatio: 1.777,
-          },
-          async (decodedText: string) => {
-            const normalized = decodedText.trim()
-            if (!normalized || cancelled) return
+        let startError: unknown = null
+        for (const cameraConfig of cameraConfigs) {
+          try {
+            await scanner.start(
+              cameraConfig,
+              {
+                fps: 12,
+                qrbox: getAdaptiveQrbox(),
+                aspectRatio: typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 1.777,
+                disableFlip: false,
+              },
+              async (decodedText: string) => {
+                const normalized = decodedText.trim()
+                if (!normalized || cancelled || hasDetectedRef.current) return
 
-            onDetected(normalized)
-            onOpenChange(false)
-            await stopScanner()
-          },
-          () => {
-            // Suppress per-frame decode errors to keep UI quiet.
-          },
-        )
+                hasDetectedRef.current = true
+                onDetected(normalized)
+                onOpenChange(false)
+                await stopScanner()
+              },
+              () => {
+                // Suppress per-frame decode errors to keep UI quiet.
+              },
+            )
+
+            startError = null
+            break
+          } catch (error) {
+            startError = error
+          }
+        }
+
+        if (startError) {
+          throw startError
+        }
 
         if (cancelled) {
           await stopScanner()
@@ -163,6 +212,7 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
+          hasDetectedRef.current = false
           setManualValue("")
           setErrorMessage("")
         }

@@ -107,7 +107,9 @@ CREATE TABLE `borrowing_records` (
   `user_id` int(11) NOT NULL,
   `borrower_position` varchar(100) DEFAULT NULL,
   `borrower_work_unit` varchar(150) DEFAULT NULL,
+  `owner_user_id` int(11) DEFAULT NULL,
   `owner_name` varchar(150) DEFAULT NULL,
+  `owner_nip` varchar(30) DEFAULT NULL,
   `owner_position` varchar(100) DEFAULT NULL,
   `owner_work_unit` varchar(150) DEFAULT NULL,
   `borrow_date` datetime NOT NULL,
@@ -517,6 +519,7 @@ ALTER TABLE `borrowing_records`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_borrowing_code` (`borrowing_code`),
   ADD KEY `idx_borrowing_user` (`user_id`),
+  ADD KEY `idx_borrowing_owner_user` (`owner_user_id`),
   ADD KEY `idx_borrowing_asset` (`asset_id`),
   ADD KEY `idx_borrowing_asset_type` (`asset_type`),
   ADD KEY `idx_borrowing_approved_by` (`approved_by`),
@@ -772,6 +775,7 @@ ALTER TABLE `user_activity_logs`
 -- Ketidakleluasaan untuk tabel `borrowing_records`
 --
 ALTER TABLE `borrowing_records`
+  ADD CONSTRAINT `fk_borrowing_owner_user` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_borrowing_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_borrowing_rejected_by` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_borrowing_return_validated_by` FOREIGN KEY (`return_validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,

@@ -27,6 +27,9 @@ export interface Maintenance {
   description: string;
   technician?: string;
   technicianUserId?: number;
+  technicianNip?: string;
+  technicianRole?: string;
+  technicianWorkUnit?: string;
   vendorName?: string;
   vendorReference?: string;
   warrantyUntil?: string;
@@ -72,6 +75,21 @@ export interface SingleMaintenanceResponse {
   data?: Maintenance;
 }
 
+export interface MaintenanceTechnicianCandidate {
+  id: number;
+  nip: string;
+  name: string;
+  role: string;
+  workUnit: string | null;
+  subWorkUnit?: string | null;
+}
+
+export interface MaintenanceTechnicianCandidatesResponse {
+  success: boolean;
+  message: string;
+  data: MaintenanceTechnicianCandidate[];
+}
+
 const normalizeMaintenance = (maintenance: any): Maintenance => {
   const normalizedScheduledDate = toLocalDateTimeString(
     maintenance.scheduledDate ?? maintenance.scheduled_date
@@ -102,6 +120,9 @@ const normalizeMaintenance = (maintenance: any): Maintenance => {
     description: maintenance.description,
     technician: maintenance.technician,
     technicianUserId: maintenance.technicianUserId ?? maintenance.technician_user_id,
+    technicianNip: maintenance.technicianNip ?? maintenance.technician_nip,
+    technicianRole: maintenance.technicianRole ?? maintenance.technician_role,
+    technicianWorkUnit: maintenance.technicianWorkUnit ?? maintenance.technician_work_unit,
     vendorName: maintenance.vendorName ?? maintenance.vendor_name,
     vendorReference: maintenance.vendorReference ?? maintenance.vendor_reference,
     warrantyUntil: maintenance.warrantyUntil ?? maintenance.warranty_until,
@@ -184,6 +205,11 @@ const emitNotificationsRefresh = () => {
 };
 
 class MaintenanceService {
+  async getTechnicianCandidates(search = '', limit = 20): Promise<MaintenanceTechnicianCandidatesResponse> {
+    const params = new URLSearchParams({ search, limit: String(limit) });
+    return apiService.get<MaintenanceTechnicianCandidatesResponse>(`/maintenance/technician-candidates?${params.toString()}`);
+  }
+
   async getAll(filters: MaintenanceFilters = {}): Promise<MaintenanceResponse> {
     const params = new URLSearchParams();
     

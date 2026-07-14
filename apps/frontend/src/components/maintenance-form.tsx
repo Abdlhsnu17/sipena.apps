@@ -3,6 +3,7 @@
 import type React from "react";
 
 import InventoryPicker from "@/components/inventory-picker";
+import MaintenanceTechnicianPicker from "@/components/maintenance-technician-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetUsageService } from "@/services/asset-usage.service";
@@ -110,6 +111,10 @@ export default function MaintenanceForm({
     description: "",
 
     technician: "",
+    technicianUserId: "",
+    technicianNip: "",
+    technicianRole: "",
+    technicianWorkUnit: "",
     vendorName: "",
     vendorReference: "",
     warrantyUntil: "",
@@ -200,6 +205,10 @@ export default function MaintenanceForm({
       scheduledDate: toLocalDateTimeString(maintenance.scheduledDate ?? maintenance.scheduled_date) ?? "",
       description: maintenance.description ?? buildRepairNoteTemplate(resolvedAsset),
       technician: maintenance.technician || "",
+      technicianUserId: maintenance.technicianUserId ? String(maintenance.technicianUserId) : "",
+      technicianNip: maintenance.technicianNip || "",
+      technicianRole: maintenance.technicianRole || "",
+      technicianWorkUnit: maintenance.technicianWorkUnit || "",
       vendorName: maintenance.vendorName || "",
       vendorReference: maintenance.vendorReference || "",
       warrantyUntil: maintenance.warrantyUntil ? String(maintenance.warrantyUntil).slice(0, 10) : "",
@@ -430,16 +439,25 @@ export default function MaintenanceForm({
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Teknisi/Penanggung Jawab</label>
-              <input
-                type="text"
-                name="technician"
-                value={formData.technician}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                placeholder="Opsional"
+              <MaintenanceTechnicianPicker
+                value={formData.technicianUserId ? Number(formData.technicianUserId) : null}
+                selected={formData.technicianUserId ? {
+                  id: Number(formData.technicianUserId),
+                  nip: formData.technicianNip,
+                  name: formData.technician,
+                  role: formData.technicianRole,
+                  workUnit: formData.technicianWorkUnit,
+                } : null}
+                onSelect={(technician) => setFormData((prev) => ({
+                  ...prev,
+                  technician: technician.name,
+                  technicianUserId: String(technician.id),
+                  technicianNip: technician.nip,
+                  technicianRole: technician.role,
+                  technicianWorkUnit: technician.workUnit || technician.subWorkUnit || "",
+                }))}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Nama dan NIP terisi dari akun aktif yang tertaut.</p>
             </div>
 
             <div>

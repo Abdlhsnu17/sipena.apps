@@ -25,6 +25,24 @@ export class MaintenanceController {
     this.maintenanceService = new MaintenanceService();
   }
 
+  getTechnicianCandidates = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Parameter pencarian akun tidak valid', errors: errors.array() });
+        return;
+      }
+
+      const search = typeof req.query.search === 'string' ? req.query.search : '';
+      const limit = Number(req.query.limit) || 20;
+      const result = await this.maintenanceService.getTechnicianCandidates(search, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Get maintenance technician candidates error:', error);
+      res.status(500).json({ success: false, message: 'Daftar akun teknisi/PJ gagal dimuat' });
+    }
+  };
+
   /**
    * Get all maintenance records
    * GET /api/maintenance

@@ -23,6 +23,15 @@ router.get(
   maintenanceController.getAll
 );
 
+router.get(
+  '/technician-candidates',
+  [
+    query('search').optional().trim().isLength({ max: 100 }),
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
+  ],
+  maintenanceController.getTechnicianCandidates
+);
+
 router.get('/:id', [param('id').isInt({ min: 1 })], maintenanceController.getById);
 
 router.post(

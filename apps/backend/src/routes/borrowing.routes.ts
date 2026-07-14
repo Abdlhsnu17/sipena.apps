@@ -46,6 +46,15 @@ router.get(
   borrowingController.getAll
 );
 
+router.get(
+  '/owner-candidates',
+  [
+    query('search').optional().trim().isLength({ max: 100 }),
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
+  ],
+  borrowingController.getOwnerCandidates
+);
+
 router.get('/:id', [param('id').isInt({ min: 1 })], borrowingController.getById);
 
 router.post(
@@ -62,7 +71,9 @@ router.post(
     body('purpose').trim().notEmpty().withMessage('Keperluan peminjaman wajib diisi'),
     body('borrowerPosition').optional().trim(),
     body('borrowerWorkUnit').optional().trim(),
+    body('ownerUserId').optional().isInt({ min: 1 }).toInt(),
     body('ownerName').optional().trim(),
+    body('ownerNip').optional().trim(),
     body('ownerPosition').optional().trim(),
     body('ownerWorkUnit').optional().trim(),
     body('purposeType').optional().isIn(BORROWING_PURPOSE_TYPES),
@@ -85,7 +96,9 @@ router.patch(
     body('purpose').optional().trim(),
     body('borrowerPosition').optional().trim(),
     body('borrowerWorkUnit').optional().trim(),
+    body('ownerUserId').optional().isInt({ min: 1 }).toInt(),
     body('ownerName').optional().trim(),
+    body('ownerNip').optional().trim(),
     body('ownerPosition').optional().trim(),
     body('ownerWorkUnit').optional().trim(),
     body('purposeType').optional().isIn(BORROWING_PURPOSE_TYPES),

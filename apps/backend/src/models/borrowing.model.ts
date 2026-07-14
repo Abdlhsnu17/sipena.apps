@@ -19,7 +19,9 @@ export interface Borrowing {
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   borrowerCurrentWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   borrowDate: Date;
@@ -79,7 +81,9 @@ export interface CreateBorrowingDTO {
   assetDetailCode?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   purposeType?: BorrowingPurposeType;
@@ -96,7 +100,9 @@ export interface UpdateBorrowingDTO {
   purpose?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   purposeType?: BorrowingPurposeType;

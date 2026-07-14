@@ -953,12 +953,20 @@ export async function ensureBorrowingWorkflowColumns(): Promise<void> {
       sql: 'ALTER TABLE borrowing_records ADD COLUMN borrower_work_unit VARCHAR(150) DEFAULT NULL AFTER borrower_position',
     },
     {
+      name: 'owner_user_id',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_user_id INT(11) DEFAULT NULL AFTER borrower_work_unit',
+    },
+    {
       name: 'owner_name',
-      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_name VARCHAR(150) DEFAULT NULL AFTER borrower_work_unit',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_name VARCHAR(150) DEFAULT NULL AFTER owner_user_id',
+    },
+    {
+      name: 'owner_nip',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_nip VARCHAR(30) DEFAULT NULL AFTER owner_name',
     },
     {
       name: 'owner_position',
-      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_position VARCHAR(100) DEFAULT NULL AFTER owner_name',
+      sql: 'ALTER TABLE borrowing_records ADD COLUMN owner_position VARCHAR(100) DEFAULT NULL AFTER owner_nip',
     },
     {
       name: 'owner_work_unit',
@@ -1059,6 +1067,10 @@ export async function ensureBorrowingWorkflowColumns(): Promise<void> {
 
   if (!(await hasIndex('borrowing_records', 'idx_user_extension_status'))) {
     await pool.query('CREATE INDEX idx_user_extension_status ON borrowing_records (user_id, sanction_status, is_extension_blocked)');
+  }
+
+  if (!(await hasIndex('borrowing_records', 'idx_borrowing_owner_user'))) {
+    await pool.query('CREATE INDEX idx_borrowing_owner_user ON borrowing_records (owner_user_id)');
   }
 
   ensuredBorrowingWorkflowColumns = true;

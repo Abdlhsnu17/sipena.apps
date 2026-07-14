@@ -19,7 +19,9 @@ export interface Borrowing {
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   borrowerCurrentWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   borrowDate: string;
@@ -86,6 +88,21 @@ export interface SingleBorrowingResponse {
   data?: Borrowing;
 }
 
+export interface BorrowingOwnerCandidate {
+  id: number;
+  nip: string;
+  name: string;
+  role: string;
+  workUnit?: string | null;
+  subWorkUnit?: string | null;
+}
+
+interface BorrowingOwnerCandidatesResponse {
+  success: boolean;
+  message: string;
+  data: BorrowingOwnerCandidate[];
+}
+
 const normalizeBorrowing = (borrowing: any): Borrowing => ({
   id: borrowing.id,
   borrowingCode: borrowing.borrowingCode ?? borrowing.borrowing_code,
@@ -105,7 +122,9 @@ const normalizeBorrowing = (borrowing: any): Borrowing => ({
   borrowerPosition: borrowing.borrowerPosition ?? borrowing.borrower_position,
   borrowerWorkUnit: borrowing.borrowerWorkUnit ?? borrowing.borrower_work_unit,
   borrowerCurrentWorkUnit: borrowing.borrowerCurrentWorkUnit ?? borrowing.borrower_current_work_unit,
+  ownerUserId: borrowing.ownerUserId ?? borrowing.owner_user_id,
   ownerName: borrowing.ownerName ?? borrowing.owner_name,
+  ownerNip: borrowing.ownerNip ?? borrowing.owner_nip,
   ownerPosition: borrowing.ownerPosition ?? borrowing.owner_position,
   ownerWorkUnit: borrowing.ownerWorkUnit ?? borrowing.owner_work_unit,
   borrowDate: borrowing.borrowDate ?? borrowing.borrow_date,
@@ -161,7 +180,9 @@ export interface CreateBorrowingData {
   purpose: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   purposeType?: 'inside_hospital' | 'outside_hospital';
@@ -178,7 +199,9 @@ export interface UpdateBorrowingData {
   purpose?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
+  ownerUserId?: number;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   purposeType?: 'inside_hospital' | 'outside_hospital';
@@ -192,6 +215,12 @@ export interface UpdateBorrowingData {
 }
 
 class BorrowingService {
+  async getOwnerCandidates(search = '', limit = 20): Promise<BorrowingOwnerCandidatesResponse> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (search.trim()) params.set('search', search.trim());
+    return apiService.get<BorrowingOwnerCandidatesResponse>(`/borrowing/owner-candidates?${params.toString()}`);
+  }
+
   async getAll(filters: BorrowingFilters = {}): Promise<BorrowingResponse> {
     const params = new URLSearchParams();
     

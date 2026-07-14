@@ -573,6 +573,7 @@ export default function MaintenancePage() {
           scheduledDate: data.scheduledDate,
           description: data.description || '',
           technician: data.technician || undefined,
+          technicianUserId: data.technicianUserId ? Number(data.technicianUserId) : undefined,
           cost: data.cost ? Number(data.cost) : undefined,
           notes: data.notes || undefined,
           status: data.status,
@@ -610,6 +611,7 @@ export default function MaintenancePage() {
           scheduledDate: data.scheduledDate,
           description: data.description || '',
           technician: data.technician || undefined,
+          technicianUserId: data.technicianUserId ? Number(data.technicianUserId) : undefined,
           cost: data.cost ? Number(data.cost) : undefined,
           notes: data.notes || undefined,
           cancellationReason: data.cancellationReason?.trim() || undefined,
@@ -1262,6 +1264,7 @@ export default function MaintenancePage() {
           title: "Pelaksanaan Pemeliharaan",
           fields: [
             { label: "Teknisi Pelaksana", value: item.technician || "-" },
+            { label: "NIP Teknisi/PJ", value: item.technicianNip || "-" },
             { label: "Waktu Selesai", value: formatDayTimeLabel(item.completedDate, { showWeekday: false }) || "-" },
             { label: "Biaya Pemeliharaan", value: item.cost ? formatCostLabel(item.cost) : "-" },
             { label: "Catatan Hasil", value: item.notes || "-" },
@@ -1828,7 +1831,7 @@ export default function MaintenancePage() {
                         personValue={`${m.requesterName || "-"} • ${m.requesterNip || "-"}`}
                         unitLabel="Ruangan pemohon"
                         unitValue={requesterRoomLabel}
-                        unitExtra={`Teknisi: ${m.technician || "-"}`}
+                        unitExtra={`Teknisi: ${m.technician || "-"}${m.technicianNip ? ` • ${m.technicianNip}` : ""}`}
                         timeLabel="Jadwal Pemeliharaan"
                         timeValue={scheduledLabel}
                         badges={(
@@ -1890,6 +1893,7 @@ export default function MaintenancePage() {
                             <SectionHeader label="Pelaksanaan & Biaya" />
                             <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
                               <InfoRow label="Teknisi Pelaksana">{m.technician || "-"}</InfoRow>
+                              <InfoRow label="NIP Teknisi/PJ">{m.technicianNip || "-"}</InfoRow>
                               <InfoRow label="Vendor/Penyedia Jasa">{m.vendorName || "-"}</InfoRow>
                               <InfoRow label="Referensi Vendor">{m.vendorReference || "-"}</InfoRow>
                               <InfoRow label="Waktu Selesai">{completionLabel}</InfoRow>
