@@ -224,6 +224,7 @@ const exportColumnLabels: Record<string, string> = {
   borrower_position: 'Jabatan Peminjam',
   borrower_work_unit: 'Unit Kerja Peminjam',
   owner_name: 'Nama Pemilik',
+  owner_nip: 'NIP Pemilik',
   owner_position: 'Jabatan Pemilik',
   owner_work_unit: 'Unit Kerja Pemilik',
   purpose: 'Tujuan',

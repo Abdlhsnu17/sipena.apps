@@ -1707,11 +1707,11 @@ export default function BorrowingPage() {
         },
       ],
       signatureDate: `Jakarta, ..................... 20.....`,
-      signatureLeft: { title: "Yang Menyerahkan", name: borrowing.ownerName || "(.....)" },
-      signatureRight: { title: "Yang Menerima", name: borrowing.userName || "(.....)" },
+      signatureLeft: { title: "Yang Menyerahkan", name: borrowing.ownerName || "(.....)", nip: borrowing.ownerNip || undefined },
+      signatureRight: { title: "Yang Menerima", name: borrowing.userName || "(.....)", nip: borrowing.userNip || undefined },
       approverLabel: "MENGETAHUI",
-      approverLeft: { title: "Kepala Unit (Pemilik Alat)", name: borrowing.ownerName || "(.....)" },
-      approverRight: { title: "Kepala Unit (Peminjam Alat)", name: borrowing.userName || "(.....)" },
+      approverLeft: { title: "Kepala Unit (Pemilik Alat)", name: borrowing.ownerName || "(.....)", nip: borrowing.ownerNip || undefined },
+      approverRight: { title: "Kepala Unit (Peminjam Alat)", name: borrowing.userName || "(.....)", nip: borrowing.userNip || undefined },
       notes: ["Formulir ini wajib diisi lengkap sebelum alat dipinjam.", "Peminjam bertanggung jawab atas keselamatan alat selama masa peminjaman."],
     }
   }

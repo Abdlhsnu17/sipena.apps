@@ -459,6 +459,7 @@ const buildNarrativeSignatureHtml = <T>(entry: T) => {
   const submitterName = getEntryText(entry, ['userName', 'operatorName', 'requesterName', 'createdByName']) || '................................'
   const submitterNip = getEntryText(entry, ['userNip', 'operatorNip', 'requesterNip'])
   const reviewerName = getEntryText(entry, ['ownerName', 'validatorName', 'technician', 'approvedByName', 'returnValidatorName']) || '................................'
+  const reviewerNip = getEntryText(entry, ['ownerNip', 'validatorNip', 'technicianNip', 'approvedByNip', 'returnValidatorNip'])
   const submitterRole = getEntryText(entry, ['userName'])
     ? 'Peminjam / Pengguna'
     : getEntryText(entry, ['operatorName'])
@@ -484,6 +485,7 @@ const buildNarrativeSignatureHtml = <T>(entry: T) => {
           <div class="signature-block__role">${escapeHtml(reviewerRole)}</div>
           <div class="signature-block__space"></div>
           <div class="signature-block__name">${escapeHtml(reviewerName)}</div>
+          ${reviewerNip ? `<div class="signature-block__nip">NIP. ${escapeHtml(reviewerNip)}</div>` : ''}
         </div>
       </div>
     </div>
@@ -1177,7 +1179,9 @@ export async function exportFormularReport<T>(format: ExportFormat, options: For
       }
       sheet.addRow(['Tanggal', data.signatureDate || ''])
       sheet.addRow([data.signatureLeft.title, data.signatureLeft.name])
+      if (data.signatureLeft.nip) sheet.addRow(['NIP', data.signatureLeft.nip])
       sheet.addRow([data.signatureRight.title, data.signatureRight.name])
+      if (data.signatureRight.nip) sheet.addRow(['NIP', data.signatureRight.nip])
       sheet.eachRow(row => {
         row.eachCell(cell => {
           cell.font = { name: 'Arial', size: BASE_EXPORT_FONT_SIZE, color: { argb: 'FF111111' } }

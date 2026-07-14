@@ -11,6 +11,7 @@ export interface Borrowing {
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   borrowDate: string;
@@ -61,6 +62,7 @@ export interface BorrowingFormData {
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   ownerName?: string;
+  ownerNip?: string;
   ownerPosition?: string;
   ownerWorkUnit?: string;
   purposeType?: "inside_hospital" | "outside_hospital";

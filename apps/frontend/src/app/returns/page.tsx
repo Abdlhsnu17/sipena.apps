@@ -161,6 +161,10 @@ export default function ReturnsPage() {
     "peminjam",
     "jabatanPeminjam",
     "unitKerjaPeminjam",
+    "pemilikAlat",
+    "nipPemilikAlat",
+    "jabatanPemilikAlat",
+    "unitPemilikAlat",
     "pengembali",
     "nip",
     "tanggalPinjam",
@@ -189,6 +193,7 @@ export default function ReturnsPage() {
     "jabatanPeminjam",
     "unitKerjaPeminjam",
     "pemilikAlat",
+    "nipPemilikAlat",
     "jabatanPemilikAlat",
     "unitPemilikAlat",
     "nip",
@@ -559,6 +564,7 @@ export default function ReturnsPage() {
       b.borrowerPosition,
       b.borrowerWorkUnit,
       b.ownerName,
+      b.ownerNip,
       b.ownerPosition,
       b.ownerWorkUnit,
       assetSource,
@@ -621,6 +627,7 @@ export default function ReturnsPage() {
       b.borrowerPosition,
       b.borrowerWorkUnit,
       b.ownerName,
+      b.ownerNip,
       b.ownerPosition,
       b.ownerWorkUnit,
       assetSource,
@@ -875,6 +882,11 @@ export default function ReturnsPage() {
         getValue: (borrowing) => borrowing.ownerName || "-",
       },
       {
+        key: "nipPemilikAlat",
+        label: "NIP Pemilik / PJ",
+        getValue: (borrowing) => borrowing.ownerNip || "-",
+      },
+      {
         key: "jabatanPemilikAlat",
         label: "Jabatan Pemilik / PJ",
         getValue: (borrowing) => borrowing.ownerPosition || "-",
@@ -986,6 +998,7 @@ export default function ReturnsPage() {
       const borrowerPosition = borrowing.borrowerPosition || "-"
       const borrowerWorkUnit = borrowing.borrowerWorkUnit || "-"
       const ownerName = borrowing.ownerName || "-"
+      const ownerNip = borrowing.ownerNip || "-"
       const ownerPosition = borrowing.ownerPosition || "-"
       const ownerWorkUnit = borrowing.ownerWorkUnit || "-"
       const borrowPurposeType = formatBorrowingPurposeType(borrowing.purposeType)
@@ -1063,6 +1076,9 @@ export default function ReturnsPage() {
       const ownerLines: SectionLine[] = []
       if (columnSet.has("pemilikAlat")) {
         appendLine(ownerLines, "Nama Pemilik / PJ", ownerName)
+      }
+      if (columnSet.has("nipPemilikAlat")) {
+        appendLine(ownerLines, "NIP Pemilik / PJ", ownerNip)
       }
       if (columnSet.has("jabatanPemilikAlat")) {
         appendLine(ownerLines, "Jabatan Pemilik / PJ", ownerPosition)
