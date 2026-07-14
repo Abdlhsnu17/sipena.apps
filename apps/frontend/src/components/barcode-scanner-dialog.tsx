@@ -64,22 +64,20 @@ const buildCameraConfigs = (selectedCamera: CameraDevice | null, cameras: Camera
 export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: BarcodeScannerDialogProps) {
   const elementId = useId().replace(/:/g, "")
   const scannerRef = useRef<ScannerInstance | null>(null)
+  const lifecycleRef = useRef<Promise<void>>(Promise.resolve())
+  const sessionRef = useRef(0)
   const hasDetectedRef = useRef(false)
+  const onDetectedRef = useRef(onDetected)
+  const onOpenChangeRef = useRef(onOpenChange)
   const [isStarting, setIsStarting] = useState(false)
   const [isActive, setIsActive] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [manualValue, setManualValue] = useState("")
 
-  const stopScanner = useCallback(async () => {
-    const scanner = scannerRef.current
-    if (!scanner) {
-      setIsActive(false)
-      setIsStarting(false)
-      return
-    }
+  onDetectedRef.current = onDetected
+  onOpenChangeRef.current = onOpenChange
 
-    scannerRef.current = null
-
+  const destroyScanner = useCallback(async (scanner: ScannerInstance) => {
     try {
       await scanner.stop()
     } catch {
@@ -91,10 +89,27 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
     } catch {
       // Ignore clear errors when the scanner view is already detached.
     }
-
-    setIsActive(false)
-    setIsStarting(false)
   }, [])
+
+  const stopScanner = useCallback(async () => {
+    const stopSession = ++sessionRef.current
+
+    const stopTask = lifecycleRef.current.catch(() => undefined).then(async () => {
+      const scanner = scannerRef.current
+      if (scanner) {
+        scannerRef.current = null
+        await destroyScanner(scanner)
+      }
+
+      if (sessionRef.current === stopSession) {
+        setIsActive(false)
+        setIsStarting(false)
+      }
+    })
+
+    lifecycleRef.current = stopTask
+    await stopTask
+  }, [destroyScanner])
 
   useEffect(() => {
     if (!open) {
@@ -103,7 +118,10 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
       return
     }
 
-    let cancelled = false
+    const session = ++sessionRef.current
+    let disposed = false
+
+    const isStale = () => disposed || sessionRef.current !== session
 
     const startScanner = async () => {
       setErrorMessage("")
@@ -111,7 +129,7 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
 
       try {
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode")
-        if (cancelled) return
+        if (isStale()) return
 
         const scanner = new Html5Qrcode(elementId, {
           verbose: false,
@@ -128,60 +146,74 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
 
         scannerRef.current = scanner
 
-        const cameras = await Html5Qrcode.getCameras()
-        if (cancelled) {
+        // Start directly with the rear-facing constraint. Calling getCameras()
+        // first may briefly open and close a temporary permission stream.
+        const scannerConfig = {
+          fps: 12,
+          qrbox: getAdaptiveQrbox(),
+          aspectRatio: typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 1.777,
+          disableFlip: false,
+        }
+        const handleDecoded = async (decodedText: string) => {
+          const normalized = decodedText.trim()
+          if (!normalized || isStale() || hasDetectedRef.current) return
+
+          hasDetectedRef.current = true
+          onDetectedRef.current(normalized)
+          onOpenChangeRef.current(false)
           await stopScanner()
-          return
+        }
+        const tryCameraConfigs = async (cameraConfigs: CameraConfig[]): Promise<unknown> => {
+          let lastError: unknown = null
+
+          for (const cameraConfig of cameraConfigs) {
+            if (isStale()) break
+
+            try {
+              await scanner.start(
+                cameraConfig,
+                scannerConfig,
+                handleDecoded,
+                () => {
+                  // Suppress per-frame decode errors to keep UI quiet.
+                },
+              )
+              return null
+            } catch (error) {
+              lastError = error
+            }
+          }
+
+          return lastError
         }
 
-        const selectedCamera = pickBackCamera(cameras as CameraDevice[])
-        const cameraConfigs = buildCameraConfigs(selectedCamera, cameras as CameraDevice[])
+        let startError = await tryCameraConfigs([{ facingMode: "environment" }])
 
-        let startError: unknown = null
-        for (const cameraConfig of cameraConfigs) {
-          try {
-            await scanner.start(
-              cameraConfig,
-              {
-                fps: 12,
-                qrbox: getAdaptiveQrbox(),
-                aspectRatio: typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 1.777,
-                disableFlip: false,
-              },
-              async (decodedText: string) => {
-                const normalized = decodedText.trim()
-                if (!normalized || cancelled || hasDetectedRef.current) return
-
-                hasDetectedRef.current = true
-                onDetected(normalized)
-                onOpenChange(false)
-                await stopScanner()
-              },
-              () => {
-                // Suppress per-frame decode errors to keep UI quiet.
-              },
-            )
-
-            startError = null
-            break
-          } catch (error) {
-            startError = error
-          }
+        // Some browsers/devices do not honor facingMode. Enumerate cameras only
+        // as a fallback, after the stable rear-camera constraint has failed.
+        if (startError && !isStale()) {
+          const cameras = await Html5Qrcode.getCameras() as CameraDevice[]
+          const selectedCamera = pickBackCamera(cameras)
+          const cameraConfigs = buildCameraConfigs(selectedCamera, cameras).filter(
+            (config) => typeof config === "string" || "deviceId" in config,
+          )
+          startError = await tryCameraConfigs(cameraConfigs)
         }
 
         if (startError) {
           throw startError
         }
 
-        if (cancelled) {
-          await stopScanner()
+        if (isStale()) {
+          if (scannerRef.current === scanner) scannerRef.current = null
+          await destroyScanner(scanner)
           return
         }
 
         setIsActive(true)
         setIsStarting(false)
       } catch (error) {
-        if (cancelled) return
+        if (isStale()) return
 
         const message = error instanceof Error ? error.message : "Gagal mengakses kamera"
         setErrorMessage(message)
@@ -190,13 +222,14 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
       }
     }
 
-    void startScanner()
+    const startTask = lifecycleRef.current.catch(() => undefined).then(startScanner)
+    lifecycleRef.current = startTask
 
     return () => {
-      cancelled = true
+      disposed = true
       void stopScanner()
     }
-  }, [elementId, onDetected, onOpenChange, open, stopScanner])
+  }, [destroyScanner, elementId, open, stopScanner])
 
   const handleManualSubmit = () => {
     const value = manualValue.trim()
