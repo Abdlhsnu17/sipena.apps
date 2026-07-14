@@ -1,12 +1,11 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { maintenanceService, type MaintenanceTechnicianCandidate } from "@/services/maintenance.service"
-import { getUserRoleLabel } from "@/utils/role"
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { maintenanceService, type MaintenanceTechnicianCandidate } from "@/services/maintenance.service";
+import { getUserRoleLabel } from "@/utils/role";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Props {
   value?: number | null
@@ -19,6 +18,9 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
   const [query, setQuery] = useState("")
   const [options, setOptions] = useState<MaintenanceTechnicianCandidate[]>([])
   const [loading, setLoading] = useState(false)
+  const selectedLabel = selected
+    ? `${selected.name} — NIP ${selected.nip}`
+    : "Cari nama atau NIP teknisi/PJ"
 
   useEffect(() => {
     if (!open) return
@@ -42,21 +44,35 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
   }, [open, query])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) setQuery("")
+      }}
+    >
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="h-10 w-full justify-between rounded-2xl px-3 font-normal">
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className="flex h-12 w-full items-center justify-between rounded-lg border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 hover:bg-background"
+        >
           <span className={selected ? "truncate" : "truncate text-muted-foreground"}>
-            {selected ? `${selected.name} — NIP ${selected.nip}` : "Cari nama atau NIP teknisi/PJ"}
+            {selectedLabel}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+      <PopoverContent
+        align="start"
+        className="max-h-[min(420px,calc(100vh-8rem))] w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+      >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Ketik nama, NIP, atau unit kerja..." value={query} onValueChange={setQuery} />
-          <CommandList>
+          <CommandList className="max-h-80 min-h-55">
             {loading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+              <div className="flex min-h-55 items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Memuat akun...
               </div>
             ) : (

@@ -348,7 +348,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       window.cancelAnimationFrame(animationFrameId)
       window.clearTimeout(timeoutId)
     }
-  }, [pathname, isCollapsed])
+  }, [pathname, isCollapsed, isMobileMenuOpen])
 
   const loadActivities = useCallback(async () => {
     if (!currentUser?.id) {
@@ -585,7 +585,9 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   }, [])
 
   const handleLinkClick = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
-    const navElement = event?.currentTarget.closest<HTMLElement>("[data-sidebar-nav]")
+    const navElement =
+      event?.currentTarget.closest<HTMLElement>("[data-sidebar-nav]") ??
+      getVisibleSidebarNavElements()[0]
     if (navElement && isVisibleElement(navElement)) {
       saveSidebarScrollTop(navElement.scrollTop)
     }
@@ -766,6 +768,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
               </div>
               <Link
                 href="/activity-archive"
+                scroll={false}
                 onClick={handleLinkClick}
                 className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300"
               >

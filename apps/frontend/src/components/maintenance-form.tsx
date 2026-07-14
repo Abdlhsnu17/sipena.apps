@@ -95,7 +95,6 @@ export default function MaintenanceForm({
   const prevAutoRepairNoteRef = useRef(defaultRepairNote)
   const appliedPrefillRef = useRef(false)
   const formCardRef = useRef<HTMLDivElement | null>(null)
-  const inventoryPickerRef = useRef<HTMLDivElement | null>(null)
   const scheduledDateInputRef = useRef<HTMLInputElement | null>(null)
 
   const [formData, setFormData] = useState(() => ({
@@ -261,19 +260,10 @@ export default function MaintenanceForm({
         block: "start",
         inline: "nearest",
       })
-
-      if (maintenance) return
-
-      const pickerButton = inventoryPickerRef.current?.querySelector<HTMLButtonElement>(
-        'button[aria-label="Pilih inventaris untuk pemeliharaan"]'
-      )
-
-      // Open and focus the inventory search immediately for a new submission.
-      pickerButton?.click()
     })
 
     return () => window.cancelAnimationFrame(animationFrame)
-  }, [maintenance])
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -385,7 +375,7 @@ export default function MaintenanceForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid mobile-form-grid gap-4">
-            <div ref={inventoryPickerRef}>
+            <div>
               <label className="block text-sm font-medium text-foreground mb-2">Pilih Inventaris</label>
               <InventoryPicker
                 assets={assets}
