@@ -168,6 +168,7 @@ export class AssetService {
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
          AND ended_at IS NULL
+         AND deleted_at IS NULL
          AND (
            ${treatNullDetailAsMatch ? 'asset_detail_id IS NULL' : '0'}
            ${allCandidates.length > 0 ? `OR asset_detail_id IN (${candidatePlaceholders}) OR asset_detail_code IN (${candidatePlaceholders})` : ''}

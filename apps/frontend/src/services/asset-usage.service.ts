@@ -138,6 +138,50 @@ class AssetUsageService {
     };
   }
 
+  async getAllPages(filters: Omit<AssetUsageFilters, "page" | "limit"> = {}): Promise<AssetUsageResponse> {
+    const pageSize = 500;
+    const firstPage = await this.getAll({ ...filters, page: 1, limit: pageSize });
+    if (!firstPage.success || !firstPage.pagination || firstPage.pagination.totalPages <= 1) {
+      return firstPage;
+    }
+
+    const remainingPages = Array.from(
+      { length: firstPage.pagination.totalPages - 1 },
+      (_, index) => index + 2
+    );
+    const pageResponses: AssetUsageResponse[] = [];
+    const concurrentPageLimit = 4;
+    for (let index = 0; index < remainingPages.length; index += concurrentPageLimit) {
+      const pageBatch = remainingPages.slice(index, index + concurrentPageLimit);
+      pageResponses.push(
+        ...(await Promise.all(
+          pageBatch.map((page) => this.getAll({ ...filters, page, limit: pageSize }))
+        ))
+      );
+    }
+    const failedPage = pageResponses.find((response) => !response.success);
+    if (failedPage) return failedPage;
+
+    const recordsById = new Map<number, AssetUsageLog>();
+    [firstPage, ...pageResponses].forEach((response) => {
+      response.data.forEach((record) => recordsById.set(record.id, record));
+    });
+    const data = Array.from(recordsById.values()).sort(
+      (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime()
+    );
+
+    return {
+      ...firstPage,
+      data,
+      pagination: {
+        page: 1,
+        limit: data.length,
+        total: firstPage.pagination.total,
+        totalPages: 1,
+      },
+    };
+  }
+
   async create(data: CreateAssetUsageData): Promise<SingleAssetUsageResponse> {
     const response = await apiService.post<SingleAssetUsageResponse>("/asset-usage", data);
     const normalized = response.data ? { ...response, data: normalizeUsage(response.data) } : response;

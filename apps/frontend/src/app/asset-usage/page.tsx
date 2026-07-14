@@ -34,6 +34,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,16 @@ const usageContextLabels: Record<AssetUsageContext, string> = {
   rounding: "Antar Instalasi",
   other: "Lainnya",
 };
+
+const usageContextOptions: Array<{ value: AssetUsageContext; label: string }> = [
+  { value: "own_room", label: "Ruangan sendiri" },
+  { value: "same_unit_cross_room", label: "Antar sub ruangan" },
+  { value: "cross_room", label: "Antar instalasi" },
+  { value: "emergency", label: "Emergency" },
+  { value: "procedure", label: "Tindakan/prosedur" },
+  { value: "rounding", label: "Rounding" },
+  { value: "other", label: "Lainnya" },
+];
 
 const HISTORY_ROWS_PER_PAGE = 2;
 const usageExportColumnDefinitions = [
@@ -235,7 +246,8 @@ const getEffectiveAvailability = (
   item: DetailInventoryItem,
   activeUsageLocks: Set<string>,
   activeMaintenanceLocks: Set<string>,
-  activeBorrowingLocks: Set<string>
+  activeBorrowingLocks: Set<string>,
+  options: { ignoreBorrowing?: boolean } = {}
 ) => {
   const baseKey = getInventoryLockKey(item.assetType, item.assetId);
   const detailKey = getInventoryLockKey(item.assetType, item.assetId, item.detailId);
@@ -247,14 +259,16 @@ const getEffectiveAvailability = (
     return "maintenance";
   }
   if (item.availability === "in_use") return "in_use";
-  if (activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey)) return "borrowed";
+  if (!options.ignoreBorrowing && (activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey))) return "borrowed";
 
   if (isFallbackAssetItem) {
     if (item.assetStatus === "disposed") return "disposed";
     if (item.assetStatus === "maintenance") return "maintenance";
     if (item.assetStatus === "in_use") return "in_use";
-    if (item.assetStatus === "borrowed") return "borrowed";
+    if (!options.ignoreBorrowing && item.assetStatus === "borrowed") return "borrowed";
   }
+
+  if (!options.ignoreBorrowing && item.availability === "borrowed") return "borrowed";
 
   return "available";
 };
@@ -350,16 +364,38 @@ const isBorrowingUsageLog = (log: AssetUsageLog): boolean => {
   return log.sourceType === "borrowing_sync" || Boolean(log.borrowingId);
 };
 
-const canCompleteUsage = (actor: User | null, log: AssetUsageLog): boolean => {
-  if (isBorrowingUsageLog(log)) return false;
+const normalizeRole = (role?: string | null) =>
+  (role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+
+const canManageUsageRecord = (actor: User | null, log: AssetUsageLog): boolean => {
   if (!actor) return false;
-  const role = actor.role.toLowerCase().replace(/[\s-]+/g, "_");
+  const role = normalizeRole(actor.role);
   if (role === "admin" || role === "leader") return true;
 
   const actorId = Number(actor.id);
   if (!Number.isFinite(actorId) || actorId <= 0) return false;
 
   return [log.operatorUserId, log.createdBy].some((value) => Number(value) === actorId);
+};
+
+const canCompleteUsage = (actor: User | null, log: AssetUsageLog): boolean =>
+  !isBorrowingUsageLog(log) && canManageUsageRecord(actor, log);
+
+const borrowingMatchesInventory = (borrowing: Borrowing, item: DetailInventoryItem) => {
+  const borrowingType = borrowing.assetType === "non_medical" ? "non_medical" : "medical";
+  if (borrowing.assetId !== item.assetId || borrowingType !== item.assetType) return false;
+
+  const borrowingDetailId = normalizeDetailIdentifier(borrowing.assetDetailId);
+  if (!borrowingDetailId || isAssetFallbackDetailId(borrowingDetailId, borrowing.assetId, borrowingType)) return true;
+  return borrowingDetailId === normalizeDetailIdentifier(item.detailId);
+};
+
+const canUseOverdueAssetForEmergency = (actor: User | null, borrowing?: Borrowing) => {
+  if (!actor || !borrowing) return false;
+  const actorRole = normalizeRole(actor.role);
+  if (actorRole === "admin" || actorRole === "leader") return true;
+  if (Number(actor.id) === Number(borrowing.userId)) return true;
+  return Boolean(borrowing.borrowerRole) && actorRole === normalizeRole(borrowing.borrowerRole);
 };
 
 const dispatchInventoryRefresh = () => {
@@ -424,7 +460,7 @@ export default function AssetUsagePage() {
       const [medicalAssetResponse, nonMedicalAssetResponse, usageResponse, maintenanceResponse, borrowingResponse] = await Promise.all([
         assetService.getAll({ page: 1, limit: 1000, type: "medical" }),
         assetService.getAll({ page: 1, limit: 1000, type: "non_medical" }),
-        assetUsageService.getAll({ page: 1, limit: 1000 }),
+        assetUsageService.getAllPages(),
         maintenanceService.getAll({ page: 1, limit: 1000 }),
         borrowingService.getAll({ page: 1, limit: 1000 }),
       ]);
@@ -559,17 +595,32 @@ export default function AssetUsagePage() {
     [assets, form.inventoryKey]
   );
 
-  const availableAssets = useMemo(() => {
-    return assets.filter((item) => {
-      if (item.assetStatus === "disposed") return false;
-      if (item.condition === "damaged") return false;
-      return getEffectiveAvailability(item, activeUsageLocks, activeMaintenanceLocks, activeBorrowingLocks) === "available";
-    });
-  }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets]);
-
   const selectableAssets = useMemo(() => {
-    return availableAssets.filter((item) => isAssetInUserSubRoom(item, currentUser));
-  }, [availableAssets, currentUser]);
+    return assets.filter((item) => {
+      if (item.assetStatus === "disposed" || item.condition === "damaged") return false;
+      if (!isAssetInUserSubRoom(item, currentUser)) return false;
+
+      const regularAvailability = getEffectiveAvailability(
+        item,
+        activeUsageLocks,
+        activeMaintenanceLocks,
+        activeBorrowingLocks
+      );
+      if (regularAvailability === "available") return true;
+      if (form.usageContext !== "emergency") return false;
+
+      const overdueBorrowing = overdueBorrowings.find((borrowing) => borrowingMatchesInventory(borrowing, item));
+      if (!canUseOverdueAssetForEmergency(currentUser, overdueBorrowing)) return false;
+
+      return getEffectiveAvailability(
+        item,
+        activeUsageLocks,
+        activeMaintenanceLocks,
+        activeBorrowingLocks,
+        { ignoreBorrowing: true }
+      ) === "available";
+    });
+  }, [activeBorrowingLocks, activeMaintenanceLocks, activeUsageLocks, assets, currentUser, form.usageContext, overdueBorrowings]);
 
   const noSelectableAssetMessage = currentUser?.subWorkUnit?.trim()
     ? "Tidak ada alat inventaris yang tersedia"
@@ -577,15 +628,9 @@ export default function AssetUsagePage() {
 
   const overdueEmergencyWarning = useMemo(() => {
     if (!selectedAsset || form.usageContext !== "emergency") return null;
-    const assetId = selectedAsset.assetId;
-    const assetType = selectedAsset.assetType === "non_medical" ? "non_medical" : "medical";
-    const overdue = overdueBorrowings.find(
-      (b) => b.assetId === assetId && (b.assetType ?? "medical") === assetType
-    );
+    const overdue = overdueBorrowings.find((borrowing) => borrowingMatchesInventory(borrowing, selectedAsset));
     if (!overdue) return null;
-    const actorRole = currentUser?.role;
-    const isAllowed =
-      actorRole === "admin" || actorRole === "leader";
+    const isAllowed = canUseOverdueAssetForEmergency(currentUser, overdue);
     return { overdue, isAllowed };
   }, [selectedAsset, form.usageContext, overdueBorrowings, currentUser]);
 
@@ -696,7 +741,7 @@ export default function AssetUsagePage() {
       ...prev,
       inventoryKey,
       roomName: nextRoomName || prev.roomName,
-      usageContext: nextUsageContext,
+      usageContext: prev.usageContext === "emergency" ? "emergency" : nextUsageContext,
     }));
   };
 
@@ -705,11 +750,12 @@ export default function AssetUsagePage() {
     const nextRoomName = getAutoUsageRoom(selectedAsset, currentUser);
     const nextUsageContext = deriveUsageContextFromProfile(selectedAsset, currentUser);
     setForm((prev) => {
-      if (prev.roomName === nextRoomName && prev.usageContext === nextUsageContext) return prev;
+      const resolvedUsageContext = prev.usageContext === "emergency" ? "emergency" : nextUsageContext;
+      if (prev.roomName === nextRoomName && prev.usageContext === resolvedUsageContext) return prev;
       return {
         ...prev,
         roomName: nextRoomName || prev.roomName,
-        usageContext: nextUsageContext,
+        usageContext: resolvedUsageContext,
       };
     });
   }, [currentUser, selectedAsset]);
@@ -1183,6 +1229,24 @@ export default function AssetUsagePage() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Jenis Pemakaian</label>
+                    <Select
+                      value={form.usageContext}
+                      onValueChange={(value) => setForm((prev) => ({ ...prev, usageContext: value as AssetUsageContext }))}
+                    >
+                      <SelectTrigger className="mt-1 h-12">
+                        <SelectValue placeholder="Pilih jenis pemakaian" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {usageContextOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
                     <label className="text-sm font-medium">Alat</label>
                     <div className="mt-1">
                       <InventoryPicker
@@ -1246,7 +1310,7 @@ export default function AssetUsagePage() {
                     </p>
                     <p className="mt-0.5">
                       {overdueEmergencyWarning.isAllowed
-                        ? "Penggunaan darurat pada alat overdue diizinkan karena Anda memiliki akses admin/leader."
+                        ? "Penggunaan darurat pada alat overdue diizinkan sesuai hak akses pengguna."
                         : "Penggunaan darurat pada alat yang melebihi batas waktu peminjaman hanya dapat dilakukan oleh admin, leader, atau pengguna dengan role yang sama dengan peminjam asal."}
                     </p>
                   </div>
@@ -1462,16 +1526,18 @@ export default function AssetUsagePage() {
                                   </span>
                                 );
                               })()}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-400/10"
-                                onClick={() => openEditDialog(log)}
-                                aria-label="Edit log penggunaan"
-                                title="Edit"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              {canManageUsageRecord(currentUser, log) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-400/10"
+                                  onClick={() => openEditDialog(log)}
+                                  aria-label="Edit log penggunaan"
+                                  title="Edit"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button

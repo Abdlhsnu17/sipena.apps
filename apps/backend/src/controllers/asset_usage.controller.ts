@@ -151,6 +151,12 @@ export class AssetUsageController {
 
   delete = async (req: Request, res: Response): Promise<void> => {
     try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
+        return;
+      }
+
       const actorId = getActorUserId(req);
       const existing = await this.assetUsageService.getById(req.params.id);
       const result = await this.assetUsageService.delete(req.params.id, actorId ?? undefined, req.body?.deleteReason);

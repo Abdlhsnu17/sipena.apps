@@ -409,15 +409,19 @@ export class AssetUsageService {
       : '';
     const detailParams = hasSpecificDetail ? [normalizedDetailId, fallbackIds[0], fallbackIds[1]] : [];
 
+    const blockingBorrowingStatuses = data.usageContext === 'emergency'
+      ? ['pending', 'approved', 'borrowed']
+      : ['pending', 'approved', 'borrowed', 'overdue'];
+    const borrowingStatusPlaceholders = blockingBorrowingStatuses.map(() => '?').join(', ');
     const [borrowingRows] = await pool.query<RowDataPacket[]>(
       `SELECT id FROM borrowing_records
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
-         AND status IN ('approved', 'borrowed', 'overdue')
+         AND status IN (${borrowingStatusPlaceholders})
          AND deleted_at IS NULL
          ${detailClause}
        LIMIT 1`,
-      [data.assetId, assetType, ...detailParams]
+      [data.assetId, assetType, ...blockingBorrowingStatuses, ...detailParams]
     );
     if (borrowingRows.length > 0) {
       return {
@@ -440,6 +444,13 @@ export class AssetUsageService {
       return {
         success: false,
         message: 'Alat sedang dalam proses pemeliharaan sehingga tidak dapat dicatat penggunaannya.'
+      };
+    }
+
+    if (await this.hasActiveUsageForAssetDetail(data.assetId, assetType, normalizedDetailId || null)) {
+      return {
+        success: false,
+        message: 'Alat masih memiliki penggunaan aktif dan belum dapat digunakan kembali.'
       };
     }
 
@@ -945,10 +956,8 @@ export class AssetUsageService {
     const overdueEmergencyValidation = await this.validateOverdueEmergencyAccess(data);
     if (overdueEmergencyValidation) return overdueEmergencyValidation;
 
-    if (data.usageContext !== 'emergency') {
-      const lockValidation = await this.validateAssetNotLocked(data);
-      if (lockValidation) return lockValidation;
-    }
+    const lockValidation = await this.validateAssetNotLocked(data);
+    if (lockValidation) return lockValidation;
 
     const generatedNo = data.no || generateUsageNumber(data.startedAt);
 
@@ -1009,6 +1018,19 @@ export class AssetUsageService {
     }
 
     const isCompleting = data.endedAt !== undefined && data.endedAt !== null && !existingLog.data.endedAt;
+    const hasActorContext = data.actorId !== undefined || data.actorRole !== undefined;
+
+    if (
+      hasActorContext &&
+      !canCompleteUsage(data.actorRole, data.actorId, existingLog.data.operatorUserId, existingLog.data.createdBy)
+    ) {
+      return {
+        success: false,
+        message: isCompleting
+          ? 'Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik riwayat pemakaian.'
+          : 'Mengubah penggunaan hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik riwayat pemakaian.'
+      };
+    }
 
     if (isCompleting && existingLog.data.borrowingId && !options.allowBorrowingCompletion) {
       return {
@@ -1017,14 +1039,18 @@ export class AssetUsageService {
       };
     }
 
-    const hasActorContext = data.actorId !== undefined || data.actorRole !== undefined;
-    if (isCompleting && hasActorContext) {
-      if (!canCompleteUsage(data.actorRole, data.actorId, existingLog.data.operatorUserId, existingLog.data.createdBy)) {
-        return {
-          success: false,
-          message: 'Menyelesaikan penggunaan hanya dapat dilakukan oleh admin, leader, atau pengguna pemilik riwayat pemakaian.'
-        };
-      }
+    const nextStartedAt = formatDateTimeForMySQL(data.startedAt ?? existingLog.data.startedAt);
+    const nextEndedAt = data.endedAt === undefined
+      ? formatDateTimeForMySQL(existingLog.data.endedAt)
+      : formatDateTimeForMySQL(data.endedAt);
+    if (!nextStartedAt) {
+      return { success: false, message: 'Tanggal mulai penggunaan tidak valid' };
+    }
+    if (data.endedAt && !nextEndedAt) {
+      return { success: false, message: 'Tanggal selesai penggunaan tidak valid' };
+    }
+    if (nextEndedAt && nextEndedAt < nextStartedAt) {
+      return { success: false, message: 'Waktu selesai tidak boleh lebih awal dari waktu mulai' };
     }
 
     if (
@@ -1100,6 +1126,14 @@ export class AssetUsageService {
   }
 
   async delete(id: string, deletedBy?: number, deleteReason?: string): Promise<ApiResponse> {
+    const existingLog = await this.getById(id);
+    if (!existingLog.success || !existingLog.data) {
+      return existingLog;
+    }
+    if (!deleteReason?.trim()) {
+      return { success: false, message: 'Alasan pengarsipan wajib diisi' };
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       `UPDATE asset_usage_logs
        SET deleted_at = NOW(), deleted_by = ?, delete_reason = ?, updated_at = NOW()
@@ -1108,6 +1142,17 @@ export class AssetUsageService {
     );
     if (result.affectedRows === 0) {
       return { success: false, message: 'Asset usage log not found' };
+    }
+
+    if (!existingLog.data.endedAt && !existingLog.data.borrowingId) {
+      await this.syncAssetStateAfterUsage(existingLog.data.assetId, existingLog.data.assetType, {
+        usageId: existingLog.data.id,
+        detailId: existingLog.data.assetDetailId,
+        detailName: existingLog.data.assetDetailName,
+        detailCode: existingLog.data.assetDetailCode,
+        conditionAfter: existingLog.data.conditionAfter || existingLog.data.conditionBefore,
+        endedAt: new Date()
+      });
     }
     return { success: true, message: 'Riwayat penggunaan aset diarsipkan' };
   }

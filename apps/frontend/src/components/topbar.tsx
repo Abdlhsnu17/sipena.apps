@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search } from "lucide-react";
+import { Bell, ScanLine, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,6 +18,7 @@ import {
 import { formatDateId } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
 
+import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -152,6 +153,31 @@ const saveDismissedNotificationKeys = (keys: Set<string>) => {
   window.localStorage.setItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(Array.from(keys)))
 }
 
+type ScanSourceType = "medical" | "non-medical" | "unknown"
+
+const parseScannedBarcode = (raw: string): { query: string; source: ScanSourceType } => {
+  const normalized = raw.trim()
+  if (!normalized) {
+    return { query: "", source: "unknown" }
+  }
+
+  const noId = normalized.match(/NO\s*ID\s*:\s*([^\n\r]+)/i)?.[1]?.trim() || ""
+  const code = normalized.match(/KODE\s*:\s*([^\n\r]+)/i)?.[1]?.trim() || ""
+  const sourceRaw = normalized.match(/SUMBER\s*:\s*([^\n\r]+)/i)?.[1]?.trim().toLowerCase() || ""
+  const firstLine = normalized.split(/\r?\n/)[0]?.trim() || ""
+
+  const source: ScanSourceType = sourceRaw.includes("non")
+    ? "non-medical"
+    : sourceRaw.includes("med")
+      ? "medical"
+      : "unknown"
+
+  return {
+    query: noId || code || firstLine,
+    source,
+  }
+}
+
 export default function Topbar() {
   const topbarAnnouncement =
     "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat. Terima Kasih"
@@ -164,6 +190,7 @@ export default function Topbar() {
   const dismissedNotificationKeysRef = useRef<Set<string>>(new Set())
   const [notificationQuery, setNotificationQuery] = useState("")
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const isCompactNotification = notificationDensity === "compact"
 
   // Real-time in-app notifications from the backend (delivered via SSE, with a
@@ -241,6 +268,28 @@ export default function Topbar() {
   useEffect(() => {
     window.localStorage.setItem("notification-density", notificationDensity)
   }, [notificationDensity])
+
+  const handleBarcodeDetected = (rawValue: string) => {
+    const parsed = parseScannedBarcode(rawValue)
+    if (!parsed.query) {
+      window.alert("Hasil scan kosong. Silakan coba lagi.")
+      return
+    }
+
+    const encodedQuery = encodeURIComponent(parsed.query)
+
+    if (parsed.source === "non-medical") {
+      router.push(`/non-medical-assets?scan=${encodedQuery}`)
+      return
+    }
+
+    if (parsed.source === "medical") {
+      router.push(`/medical-assets?scan=${encodedQuery}`)
+      return
+    }
+
+    router.push(`/medical-assets?scan=${encodedQuery}`)
+  }
 
   const dateFormatter = useMemo(() => {
     return new Intl.DateTimeFormat("id-ID", {
@@ -906,6 +955,15 @@ export default function Topbar() {
           <p className="hidden min-w-0 truncate text-[16px] font-bold sm:block">{formattedDate}</p>
         </div>
         <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setScanDialogOpen(true)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            aria-label="Scan barcode"
+            title="Scan barcode"
+          >
+            <ScanLine className="size-4.5" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
@@ -1106,6 +1164,12 @@ export default function Topbar() {
           </div>
         </div>
       </div>
+
+      <BarcodeScannerDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        onDetected={handleBarcodeDetected}
+      />
     </header>
   )
 }

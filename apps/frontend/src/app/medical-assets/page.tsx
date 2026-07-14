@@ -24,7 +24,7 @@ import { AssetQrDialog } from "@/components/asset-qr-dialog";
 import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
 import { InventoryDetailCard } from "@/components/inventory-detail-card";
 import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const getInventoryStatusLabel = (status?: string) => {
@@ -35,6 +35,7 @@ const getInventoryStatusLabel = (status?: string) => {
 
 export default function MedicalAssetsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -51,6 +52,13 @@ export default function MedicalAssetsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("Semua")
   const [isResettingInventory, setIsResettingInventory] = useState(false)
+
+  useEffect(() => {
+    const scannedQuery = searchParams.get("scan")?.trim()
+    if (!scannedQuery) return
+
+    setSearchTerm(scannedQuery)
+  }, [searchParams])
 
   const categoryOptions = ["Medis"]
   const defaultCategory = "Medis"

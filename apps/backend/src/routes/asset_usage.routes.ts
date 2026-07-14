@@ -69,7 +69,10 @@ router.patch(
 
 router.delete(
   '/:id',
-  [param('id').isInt({ min: 1 }), body('deleteReason').optional().trim()],
+  [
+    param('id').isInt({ min: 1 }),
+    body('deleteReason').trim().notEmpty().withMessage('Alasan pengarsipan wajib diisi')
+  ],
   requireRole(['admin', 'leader']),
   assetUsageController.delete
 );

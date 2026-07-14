@@ -846,7 +846,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type, 
-        u.name as user_name, u.nip as user_nip, u.email as user_email, u.work_unit as borrower_current_work_unit,
+        u.name as user_name, u.nip as user_nip, u.email as user_email, u.role as borrower_role, u.work_unit as borrower_current_work_unit,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
       FROM borrowing_records b
@@ -931,7 +931,7 @@ export class BorrowingService {
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
         COALESCE(ma.location, na.location) as asset_location,
         COALESCE(b.asset_type, 'medical') as asset_type,
-        u.name as user_name, u.nip as user_nip, u.email as user_email, u.work_unit as borrower_current_work_unit,
+        u.name as user_name, u.nip as user_nip, u.email as user_email, u.role as borrower_role, u.work_unit as borrower_current_work_unit,
         v.name as return_validator_name, v.nip as return_validator_nip,
         r.name as returned_by_name, r.nip as returned_by_nip
        FROM borrowing_records b

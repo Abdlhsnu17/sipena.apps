@@ -15,6 +15,7 @@ export interface Borrowing {
   userName?: string;
   userNip?: string;
   userEmail?: string;
+  borrowerRole?: string;
   borrowerPosition?: string;
   borrowerWorkUnit?: string;
   borrowerCurrentWorkUnit?: string;
