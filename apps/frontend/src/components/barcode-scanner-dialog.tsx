@@ -32,17 +32,6 @@ const pickBackCamera = (cameras: CameraDevice[]): CameraDevice | null => {
   return preferred || cameras[0]
 }
 
-const getAdaptiveQrbox = () => {
-  if (typeof window === "undefined") {
-    return { width: 240, height: 240 }
-  }
-
-  const mobileSize = Math.floor(Math.min(window.innerWidth * 0.72, 280))
-  const size = Math.max(180, mobileSize)
-
-  return { width: size, height: size }
-}
-
 const buildCameraConfigs = (selectedCamera: CameraDevice | null, cameras: CameraDevice[]): CameraConfig[] => {
   const configs: CameraConfig[] = [
     { facingMode: { exact: "environment" } },
@@ -133,6 +122,11 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
 
         const scanner = new Html5Qrcode(elementId, {
           verbose: false,
+          experimentalFeatures: {
+            // The native BarcodeDetector implementation varies by browser and
+            // can leave the preview active without decoding dense QR labels.
+            useBarCodeDetectorIfSupported: false,
+          },
           formatsToSupport: [
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.CODE_128,
@@ -149,9 +143,9 @@ export function BarcodeScannerDialog({ open, onOpenChange, onDetected }: Barcode
         // Start directly with the rear-facing constraint. Calling getCameras()
         // first may briefly open and close a temporary permission stream.
         const scannerConfig = {
-          fps: 12,
-          qrbox: getAdaptiveQrbox(),
-          aspectRatio: typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 1.777,
+          // Scan the complete camera frame. A fixed qrbox/aspectRatio crops the
+          // source image and can prevent codes near the edge from being read.
+          fps: 10,
           disableFlip: false,
         }
         const handleDecoded = async (decodedText: string) => {
