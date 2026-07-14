@@ -211,7 +211,7 @@ export class BorrowingService {
 
   private assetService: AssetService;
   private readonly activeBorrowingStatuses = ['pending', 'approved', 'borrowed', 'overdue'] as const;
-  private readonly activeMaintenanceStatuses = ['requested', 'scheduled', 'in_progress'] as const;
+  private readonly activeMaintenanceStatuses = ['requested', 'scheduled', 'in_progress', 'completed'] as const;
   private sanctionColumnsAvailable: boolean | null = null;
 
   constructor() {
@@ -817,7 +817,7 @@ export class BorrowingService {
        WHERE asset_id = ?
          AND COALESCE(asset_type, 'medical') = ?
          AND deleted_at IS NULL
-         AND status IN (?, ?, ?)`,
+         AND status IN (?, ?, ?, ?)`,
       [assetId, normalizedAssetType, ...this.activeMaintenanceStatuses]
     );
 
@@ -1123,17 +1123,18 @@ export class BorrowingService {
       };
     }
 
-    // Hard lock from maintenance workflow: while status is requested/scheduled/in_progress,
-    // asset cannot be borrowed until maintenance is completed/cancelled.
+    // Hard lock from maintenance workflow until the work is validated or cancelled.
+    // Archived records must not keep an asset locked.
     if (detailId && !isAssetFallbackDetail) {
       const [activeMaintenanceRows] = await pool.query<RowDataPacket[]>(
         `SELECT id FROM maintenance_records
          WHERE asset_id = ?
            AND COALESCE(asset_type, 'medical') = ?
-           AND status IN ('requested', 'scheduled', 'in_progress')
+           AND deleted_at IS NULL
+           AND status IN (?, ?, ?, ?)
            AND (asset_detail_id = ? OR asset_detail_id IS NULL)
          LIMIT 1`,
-        [data.assetId, assetType, detailId]
+        [data.assetId, assetType, ...this.activeMaintenanceStatuses, detailId]
       );
 
       if (activeMaintenanceRows.length > 0) {
@@ -1147,9 +1148,10 @@ export class BorrowingService {
         `SELECT id FROM maintenance_records
          WHERE asset_id = ?
            AND COALESCE(asset_type, 'medical') = ?
-           AND status IN ('requested', 'scheduled', 'in_progress')
+           AND deleted_at IS NULL
+           AND status IN (?, ?, ?, ?)
          LIMIT 1`,
-        [data.assetId, assetType]
+        [data.assetId, assetType, ...this.activeMaintenanceStatuses]
       );
 
       if (activeMaintenanceRows.length > 0) {

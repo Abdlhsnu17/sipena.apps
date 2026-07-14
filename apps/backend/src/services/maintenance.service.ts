@@ -140,7 +140,7 @@ export class MaintenanceService {
     return rows[0] ?? null;
   }
   private assetService: AssetService;
-  private readonly activeStatuses = ['scheduled', 'in_progress', 'completed'];
+  private readonly activeStatuses = ['requested', 'scheduled', 'in_progress', 'completed'];
   private readonly detailActiveStatuses = ['requested', 'scheduled', 'in_progress', 'completed'];
   private readonly releasableStatuses = ['validated', 'cancelled'];
   private readonly listViewStatuses: Record<'active' | 'history', string[]> = {
@@ -616,7 +616,7 @@ export class MaintenanceService {
       FROM maintenance_records
       WHERE asset_id = ?
         AND COALESCE(asset_type, 'medical') = ?
-        AND status IN (?, ?, ?)
+        AND status IN (?, ?, ?, ?)
         AND deleted_at IS NULL
     `;
 

@@ -1274,7 +1274,11 @@ export default function MaintenancePage() {
       ],
       signatureDate: "Jakarta, ..................... 20.....",
       signatureLeft: { title: "Yang Mengajukan", name: requesterName, nip: item.requesterNip || undefined },
-      signatureRight: { title: "Teknisi / Pelaksana", name: technicianName },
+      signatureRight: {
+        title: "Teknisi / Pelaksana",
+        name: technicianName,
+        nip: item.technicianNip || undefined,
+      },
       approverLabel: "MENGETAHUI",
       approverLeft: { title: "Penanggung Jawab Unit", name: requesterName },
       approverRight: { title: "Validator", name: validatorName, nip: item.validatorNip || undefined },

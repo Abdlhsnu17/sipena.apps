@@ -37,8 +37,8 @@ import { formatNoId } from "@/utils/record-id";
 import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import InventoryPicker from "@/components/inventory-picker";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
@@ -935,7 +935,11 @@ export default function BorrowingPage() {
         } catch (error: any) {
           console.error("Error creating borrowing item:", error)
           failedAssets.push(selectedAsset)
-          failureMessages.push(`${formatInventoryLabel(selectedAsset)}: peminjaman belum dapat dibuat.`)
+          const errorMessage =
+            error instanceof Error && error.message.trim()
+              ? error.message.trim()
+              : "Peminjaman belum dapat dibuat."
+          failureMessages.push(`${formatInventoryLabel(selectedAsset)}: ${errorMessage}`)
         }
       }
 
@@ -2235,7 +2239,6 @@ export default function BorrowingPage() {
                       className="rounded-2xl"
                     />
                     <p className="mt-1 text-[12px] text-muted-foreground">
-                      Nilai ini diterapkan ke setiap inventaris yang dipilih.
                     </p>
                   </div>
                   <div>
@@ -2280,7 +2283,6 @@ export default function BorrowingPage() {
                       placeholder="Terisi dari akun"
                     />
                     <p className="mt-1 text-[12px] text-muted-foreground">
-                      Identitas ini terhubung ke akun aktif yang sudah tersimpan di database.
                     </p>
                   </div>
                   <div>
