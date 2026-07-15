@@ -4,6 +4,12 @@ Sistem Inventaris, Peminjaman, dan Pemeliharaan Sarana (SIPENA) adalah aplikasi 
 
 Dokumen kebutuhan produk dan baseline perilaku aplikasi tersedia di [`docs/PRD.md`](docs/PRD.md).
 
+| Metadata | Nilai |
+| --- | --- |
+| Versi aplikasi | 2.5.0 |
+| Baseline dokumentasi | Implementasi aktif per 15 Juli 2026 |
+| PRD | Versi 1.1 (as-built) |
+
 ## Ringkasan Kegunaan
 
 SIPENA berfungsi sebagai pusat pengelolaan digital untuk sarana dan prasarana rumah sakit. Aplikasi ini membantu petugas dan admin mengelola aset, memantau peminjaman dan pengembalian, mencatat penggunaan aset, mengatur pemeliharaan, menentukan prioritas aset dengan SPK, serta menyusun laporan dalam satu sistem yang terhubung.
@@ -11,12 +17,15 @@ SIPENA berfungsi sebagai pusat pengelolaan digital untuk sarana dan prasarana ru
 Secara praktis, SIPENA digunakan untuk:
 
 - Menyimpan data aset medis dan non-medis secara terstruktur agar mudah dicari, diperbarui, dan diaudit.
-- Mengatur alur peminjaman, persetujuan, pengembalian, dan status keterlambatan alat.
-- Mencatat penggunaan aset berdasarkan ruangan, operator, waktu pemakaian, kondisi, dan catatan operasional.
-- Menjadwalkan dan memantau pemeliharaan aset agar kondisi peralatan tetap terjaga.
+- Mengatur alur peminjaman, persetujuan, pengembalian, status keterlambatan, serta penautan Pemilik/PJ inventaris ke akun aktif berdasarkan nama atau NIP.
+- Mencatat penggunaan aset berdasarkan ruangan, operator, waktu pemakaian, kondisi, sumber pencatatan, dan catatan operasional.
+- Memantau frekuensi penggunaan per detail inventaris, memberi peringatan setelah lebih dari 10 kali penggunaan, dan membuat tiket cek rutin otomatis saat mencapai 25 kali penggunaan.
+- Menjadwalkan dan memantau pemeliharaan aset, termasuk penautan Teknisi/PJ ke akun aktif dan pemisahan tiket manual dari tiket otomatis.
 - Membantu penentuan prioritas aset melalui modul SPK Prioritas Aset.
 - Mencatat riwayat pemeliharaan dan aktivitas pengguna sebagai bahan evaluasi dan kontrol.
 - Mengelola laporan operasional, dokumen pendukung, dan dokumentasi sistem agar lebih mudah ditinjau kembali.
+- Memindai QR/barcode melalui kamera atau gambar untuk mencari aset dan membuka inventaris yang sesuai.
+- Menelusuri riwayat aktivitas, penggunaan, dan peminjaman dari satu halaman Arsip & Riwayat.
 
 ## Gambaran Umum
 
@@ -75,16 +84,18 @@ Database utama menggunakan MySQL. Skema lokal dan artefak database disimpan terp
 Isi paket database:
 
 - `seeds/schema.sql` sebagai skema utama lokal.
-- `migrations/` untuk perubahan tabel tambahan, termasuk kolom keamanan pengguna, ekstensi peminjaman, sanksi, penggunaan aset, dan kontrol akses.
+- `migrations/` untuk perubahan tabel tambahan, termasuk keamanan pengguna, ekstensi peminjaman, penyelesaian sanksi, audit penggunaan aset, kontrol akses, notifikasi, operasi pemeliharaan, dan penautan akun Pemilik/PJ.
 - `seeds/` untuk skema seed dan dokumentasi penggunaan MySQL/phpMyAdmin lokal.
 
 
 ## Fitur Utama
 
 - Inventaris aset medis dan non-medis dengan pencarian, filter, tambah, ubah, dan hapus.
-- Peminjaman dan pengembalian aset dengan alur persetujuan, penolakan, validasi pengembalian, dan status keterlambatan.
-- Penggunaan aset untuk mencatat ruangan pemakaian, operator, konteks penggunaan, waktu mulai/selesai, jumlah penggunaan, kondisi sebelum/sesudah, dan catatan tambahan.
-- Pemeliharaan aset dengan status request, jadwal, proses, selesai, validasi, dan riwayat pemeliharaan.
+- Peminjaman dan pengembalian aset dengan alur persetujuan, penolakan, validasi pengembalian, status keterlambatan, serta Pemilik/PJ tertaut ke akun aktif dengan tampilan nama, NIP, jabatan, dan unit kerja.
+- Penggunaan aset untuk mencatat ruangan, operator, konteks, waktu mulai/selesai, jumlah penggunaan, kondisi sebelum/sesudah, sumber manual atau sinkron peminjaman, dan alasan pengarsipan.
+- Ringkasan frekuensi penggunaan pada setiap detail inventaris dan halaman riwayat yang dapat difilter berdasarkan alat, detail, kata kunci, serta rentang tanggal.
+- Otomasi ambang penggunaan: status peringatan pada total lebih dari 10 kali dan wajib cek rutin pada total minimal 25 kali, disertai notifikasi dan pembuatan tiket pemeliharaan preventif otomatis.
+- Pemeliharaan aset dengan status request, jadwal, proses, selesai, validasi, riwayat, filter sumber manual/otomatis, serta Teknisi/PJ tertaut ke akun aktif.
 - Jadwal pemeliharaan terpisah yang tersinkron ke record pemeliharaan.
 - SPK Prioritas Aset untuk membantu pemeringkatan aset berdasarkan bobot dan matriks penilaian.
 - Penghapusan aset (disposal) dengan pengajuan, persetujuan/penolakan, serta sinkronisasi otomatis status aset atau detail aset yang dihapuskan.
@@ -92,8 +103,31 @@ Isi paket database:
 - Manajemen sanksi atas keterlambatan pengembalian aset: daftar sanksi aktif/selesai, penyelesaian sanksi, pembebasan sanksi dengan catatan, dan statistik ringkas.
 - Kontrol akses berbasis menu (access control) untuk mengatur menu apa saja yang dapat diakses tiap role, termasuk matriks role-menu yang dapat diubah admin.
 - Autentikasi lengkap: login, register, reset password, profil, dan unggah foto profil.
+- Reset password multikanal dengan prioritas WhatsApp, fallback SMS, lalu email bila kanal telepon gagal; preview kode hanya tersedia pada mode pengembangan.
+- Scanner QR/barcode responsif melalui kamera atau unggah gambar, dengan hasil diarahkan ke pencarian inventaris medis/non-medis.
 - Dashboard dan laporan aset, peminjaman, pemeliharaan, export PDF/Excel, serta unggah dokumen pendukung.
-- Riwayat aktivitas pengguna dan endpoint dokumentasi sistem.
+- Dashboard ambang penggunaan dan kategori frekuensi yang juga tersedia pada hasil SPK Prioritas Aset.
+- Arsip & Riwayat untuk detail aktivitas pengguna, riwayat penggunaan, dan riwayat peminjaman; serta endpoint dokumentasi sistem.
+
+## Pembaruan Implementasi Terbaru
+
+Baseline 15 Juli 2026 mencakup pembaruan berikut:
+
+- Pemilik/PJ pada peminjaman dipilih dari akun aktif melalui pencarian nama, NIP, atau unit kerja. Sistem menyimpan `owner_user_id` beserta snapshot nama, NIP, jabatan, dan unit kerja agar dokumen transaksi tetap dapat ditelusuri.
+- Teknisi/PJ pada pemeliharaan menggunakan pola penautan akun yang sama dan menampilkan nama serta NIP pada ringkasan maupun detail.
+- Peminjaman aktif disinkronkan ke Penggunaan dengan sumber `borrowing_sync`; pencatatan langsung menggunakan sumber `manual`.
+- Penghapusan catatan Penggunaan menjadi pengarsipan lunak dan mewajibkan alasan, identitas pelaksana, serta waktu pengarsipan.
+- Frekuensi penggunaan tersedia pada kartu detail inventaris dan dibagi menjadi total, manual, serta peminjaman. Riwayat lengkap dapat dibuka langsung dari detail inventaris.
+- Dashboard menampilkan aset yang melewati ambang penggunaan. Total lebih dari 10 kali berstatus peringatan; total minimal 25 kali berstatus wajib cek rutin dan dapat menghasilkan tiket pemeliharaan preventif otomatis.
+- Topbar menyediakan pemindaian QR/barcode dari kamera atau gambar. Callback scanner distabilkan agar kamera seluler tidak terus membuka dan menutup saat topbar memperbarui waktu.
+- Halaman Arsip & Riwayat menyatukan audit aktivitas dengan riwayat penggunaan dan peminjaman yang dapat dicari, difilter, dan dibuka rinciannya.
+- Konfigurasi reset password mendukung WhatsApp, SMS, dan Gmail SMTP, serta halaman Pengaturan menampilkan status kanal tanpa mengekspos kredensial.
+
+Perubahan skema yang menjadi bagian dari baseline ini antara lain:
+
+- `20260621_add_borrowing_sanction_resolution_columns.sql` menambahkan waktu, aktor, dan catatan penyelesaian/pembebasan sanksi.
+- `20260622_add_asset_usage_audit_columns.sql` menambahkan metadata arsip lunak dan sumber pencatatan Penggunaan, termasuk penandaan data yang berasal dari peminjaman.
+- `20260714_link_borrowing_owner_accounts.sql` menautkan Pemilik/PJ peminjaman ke akun pengguna dan menyimpan snapshot NIP.
 
 ## Arsitektur
 
@@ -150,9 +184,12 @@ Endpoint utama yang aktif mencakup:
 - `/api/users` untuk manajemen data pengguna.
 - `/api/assets` untuk aset medis dan non-medis.
 - `/api/asset-usage` untuk pencatatan dan pengelolaan penggunaan aset.
-- `/api/borrowing` untuk peminjaman, approval, reject, return, dan validasi return.
+- `/api/asset-usage/threshold-overview` untuk ringkasan aset yang melewati ambang frekuensi penggunaan.
+- `/api/borrowing` untuk peminjaman, approval, reject, return, validasi return, dan data Pemilik/PJ tertaut.
+- `/api/borrowing/owner-candidates` untuk pencarian akun aktif calon Pemilik/PJ.
 - `/api/dss` untuk SPK Prioritas Aset dan pemeringkatan aset.
-- `/api/maintenance` untuk pemeliharaan aset.
+- `/api/maintenance` untuk pemeliharaan aset, termasuk filter sumber manual atau `usage_threshold`.
+- `/api/maintenance/technician-candidates` untuk pencarian akun aktif calon Teknisi/PJ.
 - `/api/maintenance-history` untuk riwayat pemeliharaan.
 - `/api/maintenance-schedule` untuk jadwal pemeliharaan.
 - `/api/asset-disposal` untuk pengajuan, persetujuan, penolakan, dan pembatalan penghapusan aset.
@@ -162,6 +199,16 @@ Endpoint utama yang aktif mencakup:
 - `/api/reports` untuk dashboard, laporan, unggah dokumen, dan ekspor.
 - `/api/user-activities` untuk riwayat aktivitas pengguna.
 - `/api/uml` untuk akses dokumentasi sistem.
+
+## Konfigurasi Kanal Reset Password
+
+Template variabel tersedia di `.env.example` dan `apps/backend/.env.example`. Untuk konfigurasi Docker secara interaktif, jalankan:
+
+```bash
+npm run configure:notifications
+```
+
+Script menyimpan rahasia ke `docker/.env`, memvalidasi URL webhook WhatsApp/SMS, mengatur Gmail SMTP bila dipakai, lalu membuat ulang service backend. Kredensial asli tidak boleh dimasukkan ke repository.
 
 ## Hak Akses
 

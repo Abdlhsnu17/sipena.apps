@@ -4,10 +4,10 @@
 | --- | --- |
 | Produk | SIPENA — Sistem Inventaris, Peminjaman, dan Pemeliharaan Sarana |
 | Jenis dokumen | As-built PRD |
-| Versi dokumen | 1.0 |
+| Versi dokumen | 1.1 |
 | Versi aplikasi | 2.5.0 |
 | Status | Baseline implementasi aktif |
-| Terakhir diperbarui | 12 Juli 2026 |
+| Terakhir diperbarui | 15 Juli 2026 |
 | Sumber kebenaran teknis | Implementasi di `apps/frontend`, `apps/backend`, dan `packages/database` |
 
 ## 1. Tujuan Dokumen
@@ -34,8 +34,9 @@ SIPENA adalah aplikasi web terpusat untuk mengelola sarana dan prasarana rumah s
 - Menyediakan satu sumber data operasional aset.
 - Menjaga kesinambungan riwayat aset dari inventaris hingga penghapusan.
 - Memisahkan pengajuan, pelaksanaan, persetujuan, dan validasi berdasarkan role.
-- Mempermudah pemantauan kondisi, lokasi, peminjam, penggunaan, dan pekerjaan pemeliharaan.
+- Mempermudah pemantauan kondisi, lokasi, peminjam, penggunaan, frekuensi pemakaian, dan pekerjaan pemeliharaan.
 - Menyediakan laporan, ekspor, notifikasi, dan jejak aktivitas untuk pengawasan.
+- Menjaga keterlacakan identitas Pemilik/PJ inventaris dan Teknisi/PJ melalui akun pengguna aktif, dengan snapshot identitas pada transaksi peminjaman.
 
 ## 3. Tujuan dan Ukuran Keberhasilan
 
@@ -56,6 +57,7 @@ Implementasi saat ini belum mendefinisikan target KPI bisnis formal. Baseline be
 - Jumlah transaksi melewati jatuh tempo dan rata-rata waktu penyelesaiannya.
 - Persentase pemeliharaan selesai sesuai jadwal.
 - Persentase penggunaan aset yang ditutup dengan kondisi akhir tercatat.
+- Jumlah aset yang melewati ambang peringatan dan wajib cek rutin berdasarkan frekuensi penggunaan.
 - Waktu rata-rata dari pengajuan menuju persetujuan atau penolakan.
 - Jumlah tindakan sensitif yang memiliki jejak audit lengkap.
 
@@ -93,6 +95,8 @@ SIPENA memiliki enam role aktif. Nama role disimpan sebagai `admin`, `leader`, `
 - Impor data inventaris.
 - Peminjaman, persetujuan, penolakan, perpanjangan, pengembalian, dan validasi pengembalian.
 - Pencatatan penggunaan aset.
+- Pemindaian QR/barcode inventaris melalui kamera atau gambar.
+- Arsip terpadu untuk aktivitas, penggunaan, dan peminjaman.
 - Pemeliharaan, riwayat, dan jadwal pemeliharaan.
 - SPK prioritas aset.
 - Penghapusan aset.
@@ -129,6 +133,8 @@ Status yang digunakan: **Implemented**, **Partial**, **Planned**, atau **Out of 
 | AUTH-05 | Pengguna terautentikasi dapat logout dan melihat profil sendiri. | Implemented |
 | AUTH-06 | Pengguna dapat memperbarui profil dan mengunggah foto JPG, JPEG, PNG, atau WebP maksimal 5 MB. | Implemented |
 | AUTH-07 | Sistem menerapkan status akun dan dukungan kewajiban mengganti password. | Implemented |
+| AUTH-08 | Reset password memprioritaskan WhatsApp, menggunakan SMS sebagai fallback telepon, lalu email bila pengiriman telepon tidak berhasil; preview lokal hanya digunakan pada lingkungan pengembangan. | Implemented |
+| AUTH-09 | Pengaturan menampilkan status kanal notifikasi/reset password tanpa menampilkan kredensial. | Implemented |
 
 ### 6.2 Manajemen pengguna dan akses
 
@@ -151,6 +157,8 @@ Status yang digunakan: **Implemented**, **Partial**, **Planned**, atau **Out of 
 | AST-04 | Data aset mencakup identitas, tipe, kategori, jumlah, kondisi, lokasi, dan rincian spesifik sesuai jenis aset. | Implemented |
 | AST-05 | Sistem membatasi hasil inventaris sesuai `staffAccessType` dan konteks pengguna bila berlaku. | Implemented |
 | AST-06 | Sistem menyediakan template impor inventaris. | Implemented |
+| AST-07 | Pengguna dapat memindai QR/barcode melalui kamera atau gambar dan diarahkan ke pencarian inventaris medis/non-medis yang sesuai. | Implemented |
+| AST-08 | Detail inventaris menampilkan frekuensi penggunaan total, manual, dan hasil sinkron peminjaman serta menyediakan tautan ke riwayat terkait. | Implemented |
 
 ### 6.4 Peminjaman dan pengembalian
 
@@ -164,6 +172,8 @@ Status yang digunakan: **Implemented**, **Partial**, **Planned**, atau **Out of 
 | BRW-06 | Peminjaman aktif dapat diajukan untuk perpanjangan tanggal jatuh tempo sesuai validasi bisnis. | Implemented |
 | BRW-07 | Sistem menandai dan menampilkan transaksi yang melewati jatuh tempo. | Implemented |
 | BRW-08 | Admin dapat menghapus record; leader menggunakan mekanisme permintaan arsip bila tersedia pada konteks transaksi. | Implemented |
+| BRW-09 | Pemilik/PJ inventaris dipilih dari akun aktif melalui pencarian nama, NIP, atau unit kerja, lalu sistem menyimpan tautan akun dan snapshot nama, NIP, jabatan, serta unit kerja. | Implemented |
+| BRW-10 | Peminjaman aktif disinkronkan ke catatan Penggunaan dengan sumber `borrowing_sync` dan tetap terhubung melalui identitas transaksi peminjaman. | Implemented |
 
 Alur utama:
 
@@ -182,7 +192,11 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | USE-03 | Sistem menghubungkan penggunaan dengan aset dan, bila relevan, transaksi peminjaman. | Implemented |
 | USE-04 | Penggunaan aset yang berasal dari peminjaman mengikuti pembatasan pengguna dan unit kerja. | Implemented |
 | USE-05 | Penggunaan darurat atas peminjaman overdue hanya dapat dikelola admin, leader, atau role yang sama dengan peminjam asal. | Implemented |
-| USE-06 | Admin dan leader dapat menghapus catatan penggunaan. | Implemented |
+| USE-06 | Admin dan leader dapat mengarsipkan catatan penggunaan dengan alasan wajib, identitas pelaksana, dan waktu pengarsipan. | Implemented |
+| USE-07 | Sistem membedakan sumber pencatatan penggunaan `manual` dan `borrowing_sync`. | Implemented |
+| USE-08 | Sistem menyediakan riwayat penggunaan yang dapat dicari dan difilter berdasarkan aset, detail inventaris, tipe aset, dan rentang tanggal. | Implemented |
+| USE-09 | Sistem mengagregasi frekuensi penggunaan per detail inventaris; total lebih dari 10 kali menjadi peringatan dan total minimal 25 kali menjadi wajib cek rutin. | Implemented |
+| USE-10 | Ketika ambang wajib cek rutin tercapai, sistem mengirim notifikasi kepada admin, leader, dan teknisi serta membuat tiket pemeliharaan preventif otomatis bila belum ada tiket aktif yang setara. | Implemented |
 
 ### 6.6 Pemeliharaan dan jadwal
 
@@ -195,6 +209,8 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | MNT-05 | Sistem menyediakan jadwal terpisah yang dapat dibuat, dilihat, diubah, dan diperbarui statusnya oleh role operasional yang diizinkan. | Implemented |
 | MNT-06 | Admin dapat menghapus record dan jadwal pemeliharaan. | Implemented |
 | MNT-07 | Sistem mendukung penyelesaian, validasi, dan pembatalan disertai alasan bila diperlukan. | Implemented |
+| MNT-08 | Teknisi/PJ dapat dipilih dari akun aktif melalui pencarian nama, NIP, atau unit kerja; sistem menyimpan tautan akun dan menampilkan identitas akun terkait. | Implemented |
+| MNT-09 | Daftar pemeliharaan dapat memisahkan tiket manual dari tiket otomatis yang berasal dari ambang penggunaan. | Implemented |
 
 ### 6.7 SPK Prioritas Aset
 
@@ -203,6 +219,7 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | DSS-01 | Pengguna yang memiliki akses menu dapat menjalankan perhitungan prioritas aset. | Implemented |
 | DSS-02 | Sistem menerima bobot dan matriks penilaian sebagai masukan pemeringkatan. | Implemented |
 | DSS-03 | Sistem menampilkan hasil peringkat sebagai bahan pendukung keputusan, bukan keputusan otomatis final. | Implemented |
+| DSS-04 | Hasil peringkat menyertakan frekuensi penggunaan dan kategori integrasi `normal`, `warning`, atau `mandatory_check` dengan ambang yang sama seperti modul Penggunaan. | Implemented |
 
 ### 6.8 Penghapusan aset
 
@@ -240,6 +257,7 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | RPT-04 | Admin dapat menghapus dokumen unggahan. | Implemented |
 | RPT-05 | Sistem mencatat dan menampilkan riwayat aktivitas; cakupan melihat aktivitas orang lain bergantung pada role. | Implemented |
 | RPT-06 | Sistem menyediakan dokumentasi UML melalui endpoint dan halaman khusus. | Implemented |
+| RPT-07 | Halaman Arsip & Riwayat menyatukan detail audit aktivitas dengan riwayat penggunaan dan peminjaman yang dapat dicari, difilter, dan dilihat rinciannya. | Implemented |
 
 ### 6.12 Notifikasi
 
@@ -249,6 +267,7 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | NTF-02 | Pengguna dapat melihat jumlah belum dibaca, menandai satu/semua notifikasi telah dibaca, dan menghapus notifikasi. | Implemented |
 | NTF-03 | Sistem menyediakan pembaruan real-time melalui Server-Sent Events. | Implemented |
 | NTF-04 | Sistem dapat melaporkan status kanal pengiriman notifikasi yang dikonfigurasi. | Implemented |
+| NTF-05 | Sistem memberi notifikasi ambang penggunaan dan pembuatan tiket cek rutin otomatis kepada role operasional yang relevan. | Implemented |
 
 ## 7. Matriks Kemampuan Role
 
@@ -267,6 +286,7 @@ Tabel berikut merangkum kemampuan utama. Detail endpoint backend tetap menjadi o
 | Mencatat pengembalian | Ya | Ya | Ya | Ya | — | Ya |
 | Memvalidasi pengembalian | Ya | Ya | — | Ya | — | — |
 | Mencatat penggunaan | Ya | Ya | Ya | Ya | — | Ya |
+| Melihat arsip dan riwayat inventaris | Ya | Ya | Ya | Ya | Ya | Ya |
 | Membuat permintaan pemeliharaan | Ya | Ya | Ya | Ya | — | — |
 | Mengelola status pemeliharaan | Ya | Ya | Terbatas | Terbatas | Ya | — |
 | Mengajukan penghapusan aset | Ya | Ya | Ya | Ya | — | — |
@@ -288,6 +308,11 @@ Catatan: menu dapat dinonaktifkan oleh admin melalui matriks akses. Karena itu, 
 7. Leader tidak melakukan penghapusan data sensitif secara langsung, tetapi menggunakan permintaan arsip untuk ditinjau admin pada entitas yang didukung.
 8. Tindakan pengguna harus menggunakan identitas aktor terautentikasi dan dicatat pada aktivitas yang relevan.
 9. Pembatasan backend tetap berlaku walaupun sebuah menu terlihat di frontend.
+10. Pemilik/PJ inventaris dan Teknisi/PJ yang ditautkan harus berasal dari akun aktif; transaksi peminjaman menyimpan snapshot identitas Pemilik/PJ untuk menjaga konteks dokumen.
+11. Catatan Penggunaan yang berasal dari peminjaman menggunakan sumber `borrowing_sync`; catatan langsung menggunakan sumber `manual`.
+12. Frekuensi penggunaan dihitung per aset/detail dari catatan yang belum diarsipkan. Lebih dari 10 kali memicu peringatan, sedangkan minimal 25 kali mewajibkan cek rutin.
+13. Tiket cek rutin otomatis hanya dibuat jika belum ada pemeliharaan preventif aktif yang setara untuk aset/detail tersebut.
+14. Catatan Penggunaan tidak dihapus permanen melalui alur operasional; pengarsipan wajib menyimpan alasan dan aktor.
 
 ## 9. Kebutuhan Nonfungsional
 
@@ -314,6 +339,7 @@ Catatan: menu dapat dinonaktifkan oleh admin melalui matriks akses. Karena itu, 
 - Startup backend memverifikasi koneksi database, Redis, dan kesiapan skema.
 - Redis dapat digunakan untuk kebutuhan runtime; konfigurasi produksi mengharuskannya tersedia.
 - Perubahan skema dijalankan melalui migrasi dan pemeriksaan startup yang terkendali.
+- Konfigurasi kanal reset password mendukung webhook WhatsApp/SMS dan SMTP email, dengan rahasia disimpan di environment runtime.
 
 ### 9.4 Audit dan observabilitas
 
@@ -362,19 +388,23 @@ Baseline rilis dinyatakan memenuhi PRD bila:
 3. Aset medis dan non-medis dapat dicari, ditambah, diubah, dan diproses sesuai otorisasi.
 4. Satu alur peminjaman dapat berjalan dari pengajuan sampai pengembalian tervalidasi, termasuk jalur penolakan dan overdue.
 5. Penggunaan aset dapat dicatat dan diselesaikan dengan jejak operator, waktu, lokasi, dan kondisi.
-6. Pemeliharaan dapat dibuat, dijadwalkan, diproses, diselesaikan, serta ditelusuri riwayatnya.
-7. Penghapusan aset dan arsip data mengikuti mekanisme pengajuan-review yang berlaku.
-8. Notifikasi relevan muncul kepada pengguna dan status baca dapat dikelola.
-9. Laporan utama dapat dimuat dan ekspor yang tersedia dapat dihasilkan.
-10. Tindakan kritis yang tidak diizinkan ditolak oleh backend walaupun request dibuat langsung.
-11. `npm run verify` berhasil pada kode yang akan dirilis.
-12. Konfigurasi Docker valid dan health check produksi menunjukkan layanan beserta dependensi utama siap.
+6. Penggunaan hasil sinkron peminjaman dapat dibedakan dari penggunaan manual dan frekuensinya terlihat pada detail inventaris serta Arsip & Riwayat.
+7. Aset yang melewati ambang penggunaan menampilkan status yang tepat; ambang wajib cek rutin menghasilkan notifikasi dan tiket preventif otomatis tanpa duplikasi aktif.
+8. Pemeliharaan dapat dibuat, dijadwalkan, diproses, diselesaikan, serta ditelusuri riwayatnya; Teknisi/PJ tertaut menampilkan nama dan NIP akun.
+9. Penghapusan aset dan arsip data mengikuti mekanisme pengajuan-review yang berlaku.
+10. Notifikasi relevan muncul kepada pengguna dan status baca dapat dikelola.
+11. Scanner QR/barcode dapat membaca dari kamera atau gambar dan mengarahkan pengguna ke pencarian inventaris yang sesuai tanpa siklus kamera berulang.
+12. Laporan utama dapat dimuat dan ekspor yang tersedia dapat dihasilkan.
+13. Tindakan kritis yang tidak diizinkan ditolak oleh backend walaupun request dibuat langsung.
+14. `npm run verify` berhasil pada kode yang akan dirilis.
+15. Konfigurasi Docker valid dan health check produksi menunjukkan layanan beserta dependensi utama siap.
 
 ## 12. Asumsi, Risiko, dan Keputusan Terbuka
 
 ### 12.1 Asumsi
 
 - Rumah sakit memiliki struktur NIP, unit kerja, subunit, dan penanggung jawab yang dapat dipetakan ke akun SIPENA.
+- Akun Pemilik/PJ inventaris dan Teknisi/PJ dipelihara tetap aktif serta memiliki NIP dan unit kerja yang benar.
 - MySQL merupakan sumber data utama dan tersedia pada lingkungan produksi.
 - Setiap pengguna memakai akun individual; akun bersama tidak direkomendasikan.
 - Klasifikasi medis/non-medis cukup untuk pembatasan inventaris tingkat awal.
@@ -425,3 +455,9 @@ Baseline rilis dinyatakan memenuhi PRD bila:
 - `apps/backend/src/services` — aturan bisnis modul.
 - `packages/database` — skema, seed, dan migrasi database.
 - `docker` — konfigurasi runtime container.
+
+Migrasi penting untuk baseline 1.1:
+
+- `packages/database/migrations/20260621_add_borrowing_sanction_resolution_columns.sql` — audit penyelesaian dan pembebasan sanksi.
+- `packages/database/migrations/20260622_add_asset_usage_audit_columns.sql` — arsip lunak serta sumber manual/sinkron peminjaman pada Penggunaan.
+- `packages/database/migrations/20260714_link_borrowing_owner_accounts.sql` — relasi akun dan snapshot identitas Pemilik/PJ peminjaman.

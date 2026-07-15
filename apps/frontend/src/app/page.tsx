@@ -211,6 +211,10 @@ export default function DashboardPage() {
   const [thresholdSearchTerm, setThresholdSearchTerm] = useState("")
   const [isThresholdLoading, setIsThresholdLoading] = useState(false)
 
+  const isThresholdAlertState = (state: string): state is "warning" | "mandatory_check" => (
+    state === "warning" || state === "mandatory_check"
+  )
+
   const mapThresholdOverview = useCallback((response: Awaited<ReturnType<typeof assetUsageService.getThresholdOverview>>) => {
     if (!response.success || !response.data) {
       setUsageThresholdOverview(null)
@@ -219,7 +223,7 @@ export default function DashboardPage() {
 
     const thresholdItems = Array.isArray(response.data.items)
       ? response.data.items
-          .filter((item) => item.thresholdState === "warning" || item.thresholdState === "mandatory_check")
+          .filter((item): item is typeof item & { thresholdState: "warning" | "mandatory_check" } => isThresholdAlertState(item.thresholdState))
           .slice(0, 8)
           .map((item) => ({
             assetName: item.assetDetailName || item.assetName || "-",
