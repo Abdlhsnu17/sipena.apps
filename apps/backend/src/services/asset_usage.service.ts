@@ -13,6 +13,8 @@ import { formatDateTimeForMySQL } from '../utils/helpers';
 import { createScopedLogger } from '../utils/logger';
 import { canCompleteUsage, canManageOverdueEmergencyUsage } from '../utils/role';
 import { AssetService } from './asset.service';
+import { MaintenanceService } from './maintenance.service';
+import notificationService from './notification.service';
 
 const logger = createScopedLogger('service:asset-usage');
 
@@ -45,6 +47,25 @@ interface AssetUsageRow extends RowDataPacket, AssetUsageLog {
 
 interface CountRow extends RowDataPacket {
   count: number;
+}
+
+interface UsageThresholdOverviewRow extends RowDataPacket {
+  asset_id: number;
+  asset_type: AssetType;
+  asset_detail_id?: string | null;
+  asset_detail_name?: string | null;
+  asset_detail_code?: string | null;
+  asset_name?: string | null;
+  asset_code?: string | null;
+  asset_location?: string | null;
+  total_usage: number;
+  last_used_at?: Date | string | null;
+}
+
+interface UsageThresholdSummaryRow extends RowDataPacket {
+  mandatory_count: number;
+  warning_count: number;
+  threshold_count: number;
 }
 
 interface ActiveBorrowingRow extends RowDataPacket {
@@ -87,6 +108,18 @@ type CreateAssetUsageOptions = {
 
 type UpdateAssetUsageOptions = {
   allowBorrowingCompletion?: boolean;
+};
+
+type UsageThresholdState = 'normal' | 'warning' | 'mandatory_check';
+
+type UsageThresholdFilterState = 'all' | 'warning' | 'mandatory_check';
+
+type UsageThresholdOverviewFilters = {
+  page: number;
+  limit: number;
+  assetType?: AssetType;
+  state?: UsageThresholdFilterState;
+  keyword?: string;
 };
 
 const toLocalIsoDateTime = (value?: string | Date | null): string => {
@@ -145,9 +178,268 @@ const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => {
 
 export class AssetUsageService {
   private assetService: AssetService;
+  private maintenanceService: MaintenanceService;
+  private readonly warningThreshold = 10;
+  private readonly mandatoryCheckThreshold = 25;
 
   constructor() {
     this.assetService = new AssetService();
+    this.maintenanceService = new MaintenanceService();
+  }
+
+  private resolveUsageThresholdState(totalUsage: number): UsageThresholdState {
+    if (totalUsage >= this.mandatoryCheckThreshold) return 'mandatory_check';
+    if (totalUsage > this.warningThreshold) return 'warning';
+    return 'normal';
+  }
+
+  private async getTotalUsageCountByTarget(
+    assetId: number,
+    assetType: AssetType,
+    detailId?: string | null,
+    detailCode?: string | null
+  ): Promise<number> {
+    const normalizedAssetType = this.normalizeAssetType(assetType);
+    const normalizedDetailId = this.normalizeDetailIdentifier(detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, assetId, normalizedAssetType);
+    const hasSpecificDetail = Boolean((normalizedDetailId && !isFallbackDetail) || normalizedDetailCode);
+
+    if (!hasSpecificDetail) {
+      const [rows] = await pool.query<CountRow[]>(
+        `SELECT COALESCE(SUM(COALESCE(usage_count, 1)), 0) as count
+         FROM asset_usage_logs
+         WHERE asset_id = ?
+           AND COALESCE(asset_type, 'medical') = ?
+           AND deleted_at IS NULL`,
+        [assetId, normalizedAssetType]
+      );
+      return Number(rows[0]?.count || 0);
+    }
+
+    const fallbackIds = [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`];
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COALESCE(SUM(COALESCE(usage_count, 1)), 0) as count
+       FROM asset_usage_logs
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND deleted_at IS NULL
+         AND (
+           asset_detail_id = ?
+           OR asset_detail_code = ?
+           OR (asset_detail_id IS NULL AND asset_detail_code = ?)
+           OR asset_detail_id IN (?, ?)
+         )`,
+      [
+        assetId,
+        normalizedAssetType,
+        normalizedDetailId || '__none__',
+        normalizedDetailCode || '__none__',
+        normalizedDetailCode || '__none__',
+        fallbackIds[0],
+        fallbackIds[1]
+      ]
+    );
+
+    return Number(rows[0]?.count || 0);
+  }
+
+  private async getThresholdNotificationRecipients(): Promise<number[]> {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id
+       FROM users
+       WHERE deleted_at IS NULL
+         AND COALESCE(account_status, 'active') = 'active'
+         AND role IN ('admin', 'leader', 'teknisi')`
+    );
+
+    return rows
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+  }
+
+  private async hasRecentUsageThresholdNotification(params: {
+    type: string;
+    assetId: number;
+    assetType: AssetType;
+    detailId?: string | null;
+    detailCode?: string | null;
+  }): Promise<boolean> {
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM notifications
+       WHERE type = ?
+         AND reference_type = 'asset'
+         AND reference_id = ?
+         AND link = '/maintenance'
+         AND created_at >= (NOW() - INTERVAL 1 DAY)
+         AND (
+           message LIKE ?
+           OR message LIKE ?
+         )`,
+      [
+        params.type,
+        params.assetId,
+        `%${this.normalizeDetailIdentifier(params.detailId) || '-'}%`,
+        `%${this.normalizeDetailIdentifier(params.detailCode) || '-'}%`
+      ]
+    );
+
+    return (rows[0]?.count || 0) > 0;
+  }
+
+  private async hasActiveThresholdMaintenance(params: {
+    assetId: number;
+    assetType: AssetType;
+    detailId?: string | null;
+    detailCode?: string | null;
+  }): Promise<boolean> {
+    const normalizedAssetType = this.normalizeAssetType(params.assetType);
+    const normalizedDetailId = this.normalizeDetailIdentifier(params.detailId);
+    const normalizedDetailCode = this.normalizeDetailIdentifier(params.detailCode);
+    const isFallbackDetail = this.isAssetFallbackDetailId(normalizedDetailId, params.assetId, normalizedAssetType);
+    const hasSpecificDetail = Boolean((normalizedDetailId && !isFallbackDetail) || normalizedDetailCode);
+
+    const detailClause = hasSpecificDetail
+      ? `AND (
+           asset_detail_id = ?
+           OR asset_detail_code = ?
+           OR (asset_detail_id IS NULL AND asset_detail_code = ?)
+         )`
+      : 'AND (asset_detail_id IS NULL OR asset_detail_id IN (?, ?))';
+
+    const detailParams = hasSpecificDetail
+      ? [normalizedDetailId || '__none__', normalizedDetailCode || '__none__', normalizedDetailCode || '__none__']
+      : [`asset-${params.assetId}`, `asset-${normalizedAssetType}-${params.assetId}`];
+
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM maintenance_records
+       WHERE asset_id = ?
+         AND COALESCE(asset_type, 'medical') = ?
+         AND type = 'preventive'
+         AND status IN ('requested', 'scheduled', 'in_progress', 'completed')
+         AND deleted_at IS NULL
+         ${detailClause}`,
+      [params.assetId, normalizedAssetType, ...detailParams]
+    );
+
+    return (rows[0]?.count || 0) > 0;
+  }
+
+  private async notifyUsageThresholdWarning(params: {
+    assetId: number;
+    assetType: AssetType;
+    detailLabel: string;
+    totalUsage: number;
+    state: UsageThresholdState;
+  }): Promise<void> {
+    const notificationType = params.state === 'mandatory_check'
+      ? 'asset_usage_threshold_mandatory_check'
+      : 'asset_usage_threshold_warning';
+
+    const alreadyNotified = await this.hasRecentUsageThresholdNotification({
+      type: notificationType,
+      assetId: params.assetId,
+      assetType: params.assetType,
+      detailId: params.detailLabel,
+      detailCode: params.detailLabel
+    });
+    if (alreadyNotified) return;
+
+    const recipients = await this.getThresholdNotificationRecipients();
+    if (recipients.length === 0) return;
+
+    const title = params.state === 'mandatory_check'
+      ? 'Wajib cek rutin alat: ambang penggunaan tercapai'
+      : 'Warning penggunaan alat tinggi';
+    const message = params.state === 'mandatory_check'
+      ? `Penggunaan ${params.detailLabel} telah mencapai ${params.totalUsage}x (>= ${this.mandatoryCheckThreshold}). Alat harus diarahkan ke cek rutin.`
+      : `Penggunaan ${params.detailLabel} telah mencapai ${params.totalUsage}x (> ${this.warningThreshold}). Segera jadwalkan pemeriksaan.`;
+
+    await notificationService.createForUsers(recipients, {
+      type: notificationType,
+      category: 'maintenance',
+      title,
+      message,
+      link: '/maintenance',
+      referenceType: 'asset',
+      referenceId: params.assetId,
+    });
+  }
+
+  private async handleUsageThresholdAutomation(log: AssetUsageLog): Promise<void> {
+    const detailLabel = log.assetDetailName
+      || log.assetDetailCode
+      || log.assetName
+      || `Aset #${log.assetId}`;
+
+    const totalUsage = await this.getTotalUsageCountByTarget(
+      log.assetId,
+      log.assetType,
+      log.assetDetailId,
+      log.assetDetailCode
+    );
+    const state = this.resolveUsageThresholdState(totalUsage);
+    if (state === 'normal') return;
+
+    await this.notifyUsageThresholdWarning({
+      assetId: log.assetId,
+      assetType: log.assetType,
+      detailLabel,
+      totalUsage,
+      state,
+    });
+
+    if (state !== 'mandatory_check') return;
+
+    const hasActiveRoutineCheck = await this.hasActiveThresholdMaintenance({
+      assetId: log.assetId,
+      assetType: log.assetType,
+      detailId: log.assetDetailId,
+      detailCode: log.assetDetailCode,
+    });
+    if (hasActiveRoutineCheck) return;
+
+    const maintenanceResult = await this.maintenanceService.create({
+      assetId: log.assetId,
+      assetType: log.assetType,
+      type: 'preventive',
+      priority: 'high',
+      status: 'requested',
+      scheduledDate: new Date(),
+      description: `Auto-generated cek rutin karena penggunaan ${detailLabel} telah mencapai ${totalUsage}x (threshold ${this.mandatoryCheckThreshold}x).`,
+      assetDetailId: log.assetDetailId,
+      assetDetailName: log.assetDetailName,
+      assetDetailCode: log.assetDetailCode,
+      notes: 'AUTO_USAGE_THRESHOLD',
+      createdBy: log.createdBy,
+    });
+
+    if (!maintenanceResult.success) {
+      logger.warn('Failed to auto-create routine maintenance after usage threshold', {
+        assetId: log.assetId,
+        assetType: log.assetType,
+        detailId: log.assetDetailId,
+        detailCode: log.assetDetailCode,
+        totalUsage,
+        reason: maintenanceResult.message,
+      });
+      return;
+    }
+
+    const recipients = await this.getThresholdNotificationRecipients();
+    if (recipients.length > 0) {
+      await notificationService.createForUsers(recipients, {
+        type: 'asset_usage_threshold_maintenance_created',
+        category: 'maintenance',
+        title: 'Tiket cek rutin otomatis dibuat',
+        message: `Tiket pemeliharaan rutin untuk ${detailLabel} otomatis dibuat karena penggunaan telah mencapai ${totalUsage}x.`,
+        link: '/maintenance',
+        referenceType: 'maintenance',
+        referenceId: maintenanceResult.data?.id,
+      });
+    }
   }
 
   private normalizeAssetType(value?: string | null): AssetType {
@@ -822,6 +1114,170 @@ export class AssetUsageService {
     // If no specific detail matched or no details exist, mark master as borrowed so UI shows it's unavailable
     await this.assetService.updateStatus(String(assetId), 'borrowed', normalizedAssetType);
   }
+
+  async getThresholdOverview(
+    filters: UsageThresholdOverviewFilters
+  ): Promise<ApiResponse<{ items: Array<Record<string, any>>; summary: Record<string, number>; pagination: { page: number; limit: number; total: number; totalPages: number } }>> {
+    const page = Number.isFinite(filters.page) && filters.page > 0 ? filters.page : 1;
+    const limit = Number.isFinite(filters.limit) && filters.limit > 0 ? Math.min(filters.limit, 100) : 20;
+    const offset = (page - 1) * limit;
+    const state: UsageThresholdFilterState = filters.state === 'mandatory_check' || filters.state === 'warning'
+      ? filters.state
+      : 'all';
+    const keyword = String(filters.keyword || '').trim();
+
+    let whereClause = 'WHERE l.deleted_at IS NULL';
+    const whereParams: Array<string | number> = [];
+
+    if (filters.assetType) {
+      whereClause += " AND COALESCE(l.asset_type, 'medical') = ?";
+      whereParams.push(filters.assetType);
+    }
+
+    if (keyword) {
+      whereClause += `
+        AND (
+          COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) LIKE ?
+          OR COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) LIKE ?
+          OR COALESCE(ma.location, na.location, '') LIKE ?
+        )`;
+      const likeKeyword = `%${keyword}%`;
+      whereParams.push(likeKeyword, likeKeyword, likeKeyword);
+    }
+
+    let havingClause = 'HAVING SUM(COALESCE(l.usage_count, 1)) > ?';
+    const havingParams: Array<number> = [this.warningThreshold];
+
+    if (state === 'mandatory_check') {
+      havingClause = 'HAVING SUM(COALESCE(l.usage_count, 1)) >= ?';
+      havingParams[0] = this.mandatoryCheckThreshold;
+    }
+
+    if (state === 'warning') {
+      havingClause = 'HAVING SUM(COALESCE(l.usage_count, 1)) > ? AND SUM(COALESCE(l.usage_count, 1)) < ?';
+      havingParams.push(this.mandatoryCheckThreshold);
+    }
+
+    const groupedBaseQuery = `
+      SELECT
+        l.asset_id,
+        COALESCE(l.asset_type, 'medical') as asset_type,
+        NULLIF(l.asset_detail_id, '') as asset_detail_id,
+        NULLIF(l.asset_detail_name, '') as asset_detail_name,
+        NULLIF(l.asset_detail_code, '') as asset_detail_code,
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name) as asset_name,
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(ma.location, na.location) as asset_location,
+        COALESCE(SUM(COALESCE(l.usage_count, 1)), 0) as total_usage,
+        MAX(l.started_at) as last_used_at
+      FROM asset_usage_logs l
+      LEFT JOIN medical_assets ma ON COALESCE(l.asset_type, 'medical') = 'medical' AND l.asset_id = ma.id
+      LEFT JOIN non_medical_assets na ON l.asset_type = 'non_medical' AND l.asset_id = na.id
+      ${whereClause}
+      GROUP BY
+        l.asset_id,
+        COALESCE(l.asset_type, 'medical'),
+        NULLIF(l.asset_detail_id, ''),
+        NULLIF(l.asset_detail_name, ''),
+        NULLIF(l.asset_detail_code, ''),
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name),
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code),
+        COALESCE(ma.location, na.location)
+      ${havingClause}
+    `;
+
+    const [rows] = await pool.query<UsageThresholdOverviewRow[]>(
+      `${groupedBaseQuery}
+       ORDER BY total_usage DESC, last_used_at DESC
+       LIMIT ? OFFSET ?`,
+      [...whereParams, ...havingParams, limit, offset]
+    );
+
+    const [countRows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count
+       FROM (${groupedBaseQuery}) grouped_thresholds`,
+      [...whereParams, ...havingParams]
+    );
+
+    const summaryBaseQuery = `
+      SELECT
+        COALESCE(SUM(COALESCE(l.usage_count, 1)), 0) as total_usage
+      FROM asset_usage_logs l
+      LEFT JOIN medical_assets ma ON COALESCE(l.asset_type, 'medical') = 'medical' AND l.asset_id = ma.id
+      LEFT JOIN non_medical_assets na ON l.asset_type = 'non_medical' AND l.asset_id = na.id
+      ${whereClause}
+      GROUP BY
+        l.asset_id,
+        COALESCE(l.asset_type, 'medical'),
+        NULLIF(l.asset_detail_id, ''),
+        NULLIF(l.asset_detail_name, ''),
+        NULLIF(l.asset_detail_code, ''),
+        COALESCE(NULLIF(l.asset_detail_name, ''), ma.name, na.name),
+        COALESCE(NULLIF(l.asset_detail_code, ''), ma.asset_code, na.asset_code),
+        COALESCE(ma.location, na.location)
+      HAVING COALESCE(SUM(COALESCE(l.usage_count, 1)), 0) > ?
+    `;
+
+    const [summaryRows] = await pool.query<UsageThresholdSummaryRow[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN grouped.total_usage >= ? THEN 1 ELSE 0 END), 0) as mandatory_count,
+         COALESCE(SUM(CASE WHEN grouped.total_usage > ? AND grouped.total_usage < ? THEN 1 ELSE 0 END), 0) as warning_count,
+         COALESCE(COUNT(*), 0) as threshold_count
+       FROM (${summaryBaseQuery}) grouped`,
+      [
+        this.mandatoryCheckThreshold,
+        this.warningThreshold,
+        this.mandatoryCheckThreshold,
+        ...whereParams,
+        this.warningThreshold,
+      ]
+    );
+
+    const items = rows.map((row) => {
+      const totalUsage = Number(row.total_usage || 0);
+      const thresholdState = this.resolveUsageThresholdState(totalUsage);
+      return {
+        assetId: row.asset_id,
+        assetType: row.asset_type === 'non_medical' ? 'non_medical' : 'medical',
+        assetName: row.asset_name || '-',
+        assetCode: row.asset_code || '-',
+        assetLocation: row.asset_location || null,
+        assetDetailId: row.asset_detail_id || null,
+        assetDetailName: row.asset_detail_name || null,
+        assetDetailCode: row.asset_detail_code || null,
+        totalUsage,
+        thresholdState,
+        warningThreshold: this.warningThreshold,
+        mandatoryCheckThreshold: this.mandatoryCheckThreshold,
+        lastUsedAt: toLocalIsoDateTime(row.last_used_at),
+      };
+    });
+
+    const total = Number(countRows[0]?.count || 0);
+    const summary = summaryRows[0] || { mandatory_count: 0, warning_count: 0, threshold_count: 0 };
+
+    return {
+      success: true,
+      message: 'Ringkasan threshold penggunaan aset berhasil dimuat',
+      data: {
+        items,
+        summary: {
+          warningThreshold: this.warningThreshold,
+          mandatoryCheckThreshold: this.mandatoryCheckThreshold,
+          warningCount: Number(summary.warning_count || 0),
+          mandatoryCheckCount: Number(summary.mandatory_count || 0),
+          thresholdCount: Number(summary.threshold_count || 0),
+        },
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  }
+
   async getAll(filters: AssetUsageFilters): Promise<PaginatedResponse<AssetUsageLog>> {
     if (process.env.ASSET_USAGE_SYNC_ON_READ === 'true') {
       await this.syncActiveBorrowingUsageLogs();
@@ -1008,7 +1464,19 @@ export class AssetUsageService {
       });
     }
 
-    return this.getById(String(result.insertId));
+    const createdLog = await this.getById(String(result.insertId));
+    if (createdLog.success && createdLog.data) {
+      try {
+        await this.handleUsageThresholdAutomation(createdLog.data);
+      } catch (error) {
+        logger.warn('Failed to evaluate usage threshold automation after create', {
+          error,
+          usageId: createdLog.data.id,
+        });
+      }
+    }
+
+    return createdLog;
   }
 
   async update(id: string, data: UpdateAssetUsageLogDTO, options: UpdateAssetUsageOptions = {}): Promise<ApiResponse<AssetUsageLog>> {
@@ -1119,6 +1587,17 @@ export class AssetUsageService {
         } catch (error) {
           logger.warn('Failed to sync borrowing return after usage completion', { error });
         }
+      }
+    }
+
+    if (updatedLog.success && updatedLog.data) {
+      try {
+        await this.handleUsageThresholdAutomation(updatedLog.data);
+      } catch (error) {
+        logger.warn('Failed to evaluate usage threshold automation after update', {
+          error,
+          usageId: updatedLog.data.id,
+        });
       }
     }
 

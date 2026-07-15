@@ -876,7 +876,7 @@ export class MaintenanceService {
   }
 
   async getAll(filters: MaintenanceFilters): Promise<PaginatedResponse<Maintenance>> {
-    const { page, limit, status, view, assetId, assetType, type, actorUserId, actorRole, actorWorkUnit } = filters;
+    const { page, limit, status, view, assetId, assetType, type, automationSource, actorUserId, actorRole, actorWorkUnit } = filters;
     const offset = (page - 1) * limit;
     const scopedActorId = Number(actorUserId);
     const hasValidActorId = Number.isFinite(scopedActorId) && scopedActorId > 0;
@@ -942,6 +942,14 @@ export class MaintenanceService {
       query += ' AND m.type = ?';
       countQuery += ' AND type = ?';
       params.push(type);
+    }
+
+    if (automationSource === 'usage_threshold') {
+      query += " AND COALESCE(m.notes, '') LIKE 'AUTO_USAGE_THRESHOLD%'";
+      countQuery += " AND COALESCE(notes, '') LIKE 'AUTO_USAGE_THRESHOLD%'";
+    } else if (automationSource === 'manual') {
+      query += " AND COALESCE(m.notes, '') NOT LIKE 'AUTO_USAGE_THRESHOLD%'";
+      countQuery += " AND COALESCE(notes, '') NOT LIKE 'AUTO_USAGE_THRESHOLD%'";
     }
 
     if (shouldScopeToWorkUnit) {

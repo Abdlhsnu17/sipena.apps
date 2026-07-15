@@ -55,6 +55,7 @@ export interface MaintenanceFilters {
   assetId?: string;
   assetType?: 'medical' | 'non_medical';
   type?: string;
+  automationSource?: 'usage_threshold' | 'manual';
 }
 
 export interface MaintenanceResponse {

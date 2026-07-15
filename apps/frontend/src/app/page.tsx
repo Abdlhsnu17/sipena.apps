@@ -14,7 +14,7 @@ import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
 import { Archive, ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, ListChecks, RotateCcw, Settings, Shield, Stethoscope, Trash2, UploadCloud, Users, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 
 type IconComponent = ComponentType<{ className?: string }>
 
@@ -192,6 +192,89 @@ export default function DashboardPage() {
     borrowedAssets: 0,
     maintenanceAssets: 0,
   })
+  const [usageThresholdOverview, setUsageThresholdOverview] = useState<{
+    summary: {
+      warningThreshold: number;
+      mandatoryCheckThreshold: number;
+      warningCount: number;
+      mandatoryCheckCount: number;
+      thresholdCount: number;
+    };
+    items: Array<{
+      assetName: string;
+      assetCode: string;
+      assetLocation?: string | null;
+      totalUsage: number;
+      thresholdState: "warning" | "mandatory_check";
+    }>;
+  } | null>(null)
+  const [thresholdSearchTerm, setThresholdSearchTerm] = useState("")
+  const [isThresholdLoading, setIsThresholdLoading] = useState(false)
+
+  const mapThresholdOverview = useCallback((response: Awaited<ReturnType<typeof assetUsageService.getThresholdOverview>>) => {
+    if (!response.success || !response.data) {
+      setUsageThresholdOverview(null)
+      return
+    }
+
+    const thresholdItems = Array.isArray(response.data.items)
+      ? response.data.items
+          .filter((item) => item.thresholdState === "warning" || item.thresholdState === "mandatory_check")
+          .slice(0, 8)
+          .map((item) => ({
+            assetName: item.assetDetailName || item.assetName || "-",
+            assetCode: item.assetDetailCode || item.assetCode || "-",
+            assetLocation: item.assetLocation || null,
+            totalUsage: Number(item.totalUsage || 0),
+            thresholdState: item.thresholdState,
+          }))
+      : []
+
+    setUsageThresholdOverview({
+      summary: {
+        warningThreshold: Number(response.data.summary?.warningThreshold || 10),
+        mandatoryCheckThreshold: Number(response.data.summary?.mandatoryCheckThreshold || 25),
+        warningCount: Number(response.data.summary?.warningCount || 0),
+        mandatoryCheckCount: Number(response.data.summary?.mandatoryCheckCount || 0),
+        thresholdCount: Number(response.data.summary?.thresholdCount || 0),
+      },
+      items: thresholdItems,
+    })
+  }, [])
+
+  const loadUsageThresholdOverview = useCallback(async (keyword?: string) => {
+    if (isLocalAuthSession()) {
+      setUsageThresholdOverview(null)
+      return
+    }
+
+    try {
+      setIsThresholdLoading(true)
+      const response = await assetUsageService.getThresholdOverview({
+        page: 1,
+        limit: 8,
+        state: "all",
+        keyword: keyword?.trim() || undefined,
+      })
+      mapThresholdOverview(response)
+    } catch (error) {
+      console.error("Failed to load threshold overview:", error)
+      setUsageThresholdOverview(null)
+    } finally {
+      setIsThresholdLoading(false)
+    }
+  }, [mapThresholdOverview])
+
+  const openThresholdInMaintenance = (item?: { assetCode: string; assetName: string }) => {
+    const params = new URLSearchParams()
+    params.set("automationSource", "usage_threshold")
+    if (item?.assetCode) {
+      params.set("q", item.assetCode)
+    } else if (thresholdSearchTerm.trim()) {
+      params.set("q", thresholdSearchTerm.trim())
+    }
+    router.push(`/maintenance?${params.toString()}`)
+  }
 
   const loadStats = async () => {
     const user = currentUser
@@ -276,6 +359,7 @@ export default function DashboardPage() {
       ).size
 
       const totalRoomCount = new Set([...nonMedicalRoomSet, ...medicalRoomSet]).size
+
       setStats({
         totalNonMedicalAssets,
         activeNonMedicalAssets,
@@ -312,6 +396,7 @@ export default function DashboardPage() {
         return
       }
       console.error("Failed to load dashboard stats:", error)
+      setUsageThresholdOverview(null)
     }
   }
 
@@ -330,6 +415,16 @@ export default function DashboardPage() {
     const interval = setInterval(loadStats, 30000)
     return () => clearInterval(interval)
   }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser) return
+
+    const timeoutId = window.setTimeout(() => {
+      void loadUsageThresholdOverview(thresholdSearchTerm)
+    }, 250)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [currentUser, thresholdSearchTerm, loadUsageThresholdOverview])
 
   useEffect(() => {
     if (!currentUser?.id || isLocalAuthSession()) {
@@ -550,6 +645,73 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="rounded-[28px] border border-slate-200/70 bg-white/95 shadow-[0_18px_34px_rgba(15,23,42,0.07)] dark:border-slate-800/35 dark:bg-slate-900/60">
+          <CardHeader className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-base sm:text-lg">Monitoring Threshold Penggunaan Alat</CardTitle>
+              <button
+                type="button"
+                onClick={() => openThresholdInMaintenance()}
+                className="rounded-xl border border-border/80 px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-teal-500 hover:text-teal-600"
+              >
+                Lihat di Pemeliharaan
+              </button>
+            </div>
+            <div>
+              <input
+                type="text"
+                value={thresholdSearchTerm}
+                onChange={(event) => setThresholdSearchTerm(event.target.value)}
+                placeholder="Cari nama/kode alat..."
+                className="w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus:border-teal-500"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+                Warning &gt; {usageThresholdOverview?.summary.warningThreshold ?? 10}: {usageThresholdOverview?.summary.warningCount ?? 0}
+              </Badge>
+              <Badge variant="outline" className="border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300">
+                Wajib Cek &gt;= {usageThresholdOverview?.summary.mandatoryCheckThreshold ?? 25}: {usageThresholdOverview?.summary.mandatoryCheckCount ?? 0}
+              </Badge>
+              <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-500/30 dark:bg-slate-500/10 dark:text-slate-200">
+                Total Melewati Ambang: {usageThresholdOverview?.summary.thresholdCount ?? 0}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isThresholdLoading ? (
+              <p className="text-sm text-muted-foreground">Memuat data threshold penggunaan...</p>
+            ) : null}
+            {usageThresholdOverview?.items?.length ? (
+              <div className="space-y-2">
+                {usageThresholdOverview.items.map((item, index) => (
+                  <button
+                    type="button"
+                    key={`${item.assetCode}-${index}`}
+                    onClick={() => openThresholdInMaintenance({ assetCode: item.assetCode, assetName: item.assetName })}
+                    className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 px-3 py-2 text-left transition hover:border-teal-400/70"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{item.assetName}</p>
+                      <p className="truncate text-xs text-muted-foreground">{item.assetCode}{item.assetLocation ? ` · ${item.assetLocation}` : ""}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={item.thresholdState === "mandatory_check"
+                        ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300"
+                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"}>
+                        {item.thresholdState === "mandatory_check" ? "Wajib Cek" : "Warning"}
+                      </Badge>
+                      <span className="text-sm font-semibold text-foreground">{item.totalUsage}x</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Belum ada alat yang melewati ambang warning penggunaan.</p>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">

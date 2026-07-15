@@ -292,8 +292,8 @@ export default function SettingsPage() {
   const currentUser = getCurrentUser()
 
   return (
-    <div>
-      <div className="w-full space-y-6">
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="w-full space-y-5">
         <section className="rounded-2xl border border-slate-200/70 bg-white/90 panel-gutter shadow-sm backdrop-blur-sm dark:border-slate-800/35 dark:bg-slate-900/60">
           <div className="flex items-start gap-4">
             <div className="rounded-xl bg-linear-to-br from-teal-500 to-teal-700 p-2.5 shadow-sm">
@@ -311,22 +311,22 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profil Akun</CardTitle>
+        <div className="space-y-5">
+          <Card className="gap-4 py-5">
+            <CardHeader className="gap-1.5">
+              <CardTitle className="text-base">Profil Akun</CardTitle>
               <CardDescription>
                 Lengkapi NIP, jenis kelamin, unit kerja, alamat, dan foto profil agar identitas akun lengkap.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5">
               {profileLoading ? (
                 <p className="text-sm text-muted-foreground">Memuat informasi profil...</p>
               ) : (
                 <>
-                  <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between dark:border-slate-700/35 dark:bg-slate-900/40">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20 shrink-0 border border-white/70 shadow-sm dark:border-slate-700/35">
+                  <div className="flex flex-col gap-4 rounded-xl border border-slate-200/70 bg-slate-50/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/35 dark:bg-slate-900/40">
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <Avatar className="h-16 w-16 shrink-0 border border-white/70 shadow-sm dark:border-slate-700/35">
                         {profileImageSrc && !imageError ? (
                           <AvatarImage src={profileImageSrc} alt={`${profileForm.name || "Profil"} photo`} onError={handleImageError} />
                         ) : null}
@@ -334,15 +334,15 @@ export default function SettingsPage() {
                           {profileForm.name ? profileForm.name.slice(0, 1) : "P"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="space-y-2">
+                      <div className="min-w-0 space-y-1">
                         <p className="text-sm font-semibold text-foreground">Foto Profil</p>
-                        <p className="text-sm text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB).</p>
+                        <p className="text-xs leading-5 text-muted-foreground">Pilih foto profil (JPG/PNG hingga 5MB).</p>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 md:items-end">
+                    <div className="flex flex-col gap-2 sm:items-end">
                       <label
                         htmlFor="profilePhoto"
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 px-4 py-2 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
+                        className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-teal-200 px-3 text-xs font-semibold text-teal-700 hover:cursor-pointer hover:bg-teal-50 dark:border-teal-500/70 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/60"
                       >
                         <span>Pilih Foto</span>
                         <input
@@ -366,7 +366,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="profileNip">NIP</Label>
                       <Input
@@ -392,13 +392,13 @@ export default function SettingsPage() {
                         onChange={(event) => setProfileForm((prev) => ({ ...prev, email: event.target.value }))}
                       />
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <Label>Jenis Kelamin</Label>
                       <Select
                         value={profileForm.gender || undefined}
                         onValueChange={(value) => setProfileForm((prev) => ({ ...prev, gender: value }))}
                       >
-                        <SelectTrigger size="sm">
+                        <SelectTrigger className="w-full" size="default">
                           <SelectValue placeholder="Pilih jenis kelamin" />
                         </SelectTrigger>
                         <SelectContent>
@@ -408,56 +408,56 @@ export default function SettingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Nomor WhatsApp / SMS</Label>
+                      <div className="relative">
+                        <Smartphone className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phoneNumber"
+                          type="tel"
+                          placeholder="+628xxxxxxxxxx"
+                          value={profileForm.phoneNumber}
+                          onChange={(event) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
+                            }))
+                          }
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Nomor WhatsApp / SMS</Label>
-                    <div className="relative">
-                      <Smartphone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <Label htmlFor="workUnit">Unit Kerja / Instalasi</Label>
                       <Input
-                        id="phoneNumber"
-                        type="tel"
-                        placeholder="+628xxxxxxxxxx"
-                        value={profileForm.phoneNumber}
-                        onChange={(event) =>
-                          setProfileForm((prev) => ({
-                            ...prev,
-                            phoneNumber: event.target.value.replace(/[^\d+]/g, ""),
-                          }))
-                        }
-                        className="pl-10"
+                        id="workUnit"
+                        value={profileForm.workUnit}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, workUnit: event.target.value }))}
+                        placeholder="Contoh: Instalasi Rawat Inap"
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="workUnit">Unit Kerja / Instalasi</Label>
-                    <Input
-                      id="workUnit"
-                      value={profileForm.workUnit}
-                      onChange={(event) => setProfileForm((prev) => ({ ...prev, workUnit: event.target.value }))}
-                      placeholder="Contoh: Instalasi Rawat Inap"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subWorkUnit">Sub Ruangan</Label>
+                      <Input
+                        id="subWorkUnit"
+                        value={profileForm.subWorkUnit}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, subWorkUnit: event.target.value }))}
+                        placeholder="Contoh: Ranap Mawar / ICU / OK 1"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subWorkUnit">Sub Ruangan</Label>
-                    <Input
-                      id="subWorkUnit"
-                      value={profileForm.subWorkUnit}
-                      onChange={(event) => setProfileForm((prev) => ({ ...prev, subWorkUnit: event.target.value }))}
-                      placeholder="Contoh: Ranap Mawar / ICU / OK 1"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="homeAddress">Alamat Tempat Tinggal</Label>
-                    <Textarea
-                      id="homeAddress"
-                      rows={3}
-                      value={profileForm.homeAddress}
-                      onChange={(event) => setProfileForm((prev) => ({ ...prev, homeAddress: event.target.value }))}
-                    />
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="homeAddress">Alamat Tempat Tinggal</Label>
+                      <Textarea
+                        id="homeAddress"
+                        rows={2}
+                        className="min-h-20"
+                        value={profileForm.homeAddress}
+                        onChange={(event) => setProfileForm((prev) => ({ ...prev, homeAddress: event.target.value }))}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex justify-end">
@@ -476,13 +476,13 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ganti Sandi</CardTitle>
+          <div className="grid items-stretch gap-5 md:grid-cols-2">
+            <Card className="h-full gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="text-base">Ganti Sandi</CardTitle>
                 <CardDescription>Ubah password akun Anda untuk keamanan</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3.5">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Password Saat Ini</Label>
                   <div className="relative">
@@ -558,12 +558,13 @@ export default function SettingsPage() {
                 </Button>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Informasi Sistem</CardTitle>
+            <Card className="h-full gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="text-base">Informasi Sistem</CardTitle>
+                <CardDescription>Informasi aplikasi dan tanggal yang sedang berjalan.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700/35 dark:bg-slate-900/40">
+                <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 text-sm dark:border-slate-700/35 dark:bg-slate-900/40">
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-semibold text-foreground">Nama Sistem</p>
                     <p className="text-sm leading-6 text-muted-foreground">
@@ -571,7 +572,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-slate-700/35 dark:bg-slate-900/40">
+                <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 text-sm dark:border-slate-700/35 dark:bg-slate-900/40">
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-semibold text-foreground">Tanggal Hari Ini</p>
                     <p className="text-sm text-muted-foreground">24/5/2026</p>
@@ -580,9 +581,9 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="h-full gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="flex items-center gap-2 text-base">
                   {mounted && theme === "system" ? (
                     <Monitor className="h-5 w-5" />
                   ) : mounted && (theme === "dark" || resolvedTheme === "dark") ? (
@@ -595,10 +596,10 @@ export default function SettingsPage() {
                 <CardDescription>Pilih mode terang, gelap, atau otomatis mengikuti sistem.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2.5">
                   <button
                     onClick={() => setTheme("light")}
-                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
+                    className={`relative flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border p-2.5 text-center transition-all ${
                       mounted && theme === "light"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -613,7 +614,7 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
+                    className={`relative flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border p-2.5 text-center transition-all ${
                       mounted && theme === "dark"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -628,7 +629,7 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => setTheme("system")}
-                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center transition-all ${
+                    className={`relative flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border p-2.5 text-center transition-all ${
                       mounted && theme === "system"
                         ? "border-teal-500 bg-teal-50/80 shadow-sm dark:bg-teal-950/50"
                         : "border-gray-200 bg-white/70 hover:border-gray-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-slate-900/40 dark:hover:border-gray-600"
@@ -646,16 +647,30 @@ export default function SettingsPage() {
                   Mode sistem akan menyesuaikan tema perangkat Anda secara otomatis.
                 </p>
               </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Status Kanal Notifikasi</CardTitle><CardDescription>Status konfigurasi server tanpa menampilkan kredensial.</CardDescription></CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
-              {[['Dalam aplikasi', deliveryStatus?.inApp ? 'active' : 'unavailable'], ['WhatsApp', deliveryStatus?.whatsapp.mode], ['SMS', deliveryStatus?.sms.mode], ['Email reset password', deliveryStatus?.email.mode]].map(([label, mode]) => (
-                <div key={label} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"><span>{label}</span><span className={mode === 'active' ? 'text-emerald-600' : mode === 'preview' ? 'text-amber-600' : 'text-red-600'}>{mode === 'active' ? 'Aktif' : mode === 'preview' ? 'Pratinjau lokal' : 'Belum dikonfigurasi'}</span></div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+            </Card>
+
+            <Card className="h-full gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="text-base">Status Kanal Notifikasi</CardTitle>
+                <CardDescription>Status konfigurasi server tanpa menampilkan kredensial.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2">
+                {[
+                  ['Dalam aplikasi', deliveryStatus?.inApp ? 'active' : 'unavailable'],
+                  ['WhatsApp', deliveryStatus?.whatsapp.mode],
+                  ['SMS', deliveryStatus?.sms.mode],
+                  ['Email reset password', deliveryStatus?.email.mode],
+                ].map(([label, mode]) => (
+                  <div key={label} className="flex min-h-10 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
+                    <span>{label}</span>
+                    <span className={`shrink-0 text-xs font-medium ${mode === 'active' ? 'text-emerald-600' : mode === 'preview' ? 'text-amber-600' : 'text-red-600'}`}>
+                      {mode === 'active' ? 'Aktif' : mode === 'preview' ? 'Pratinjau lokal' : 'Belum dikonfigurasi'}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-border text-center">

@@ -47,6 +47,53 @@ export interface AssetUsageFilters {
   dateTo?: string;
 }
 
+export type UsageThresholdState = "normal" | "warning" | "mandatory_check";
+
+export interface AssetUsageThresholdOverviewItem {
+  assetId: number;
+  assetType: "medical" | "non_medical";
+  assetName: string;
+  assetCode: string;
+  assetLocation?: string | null;
+  assetDetailId?: string | null;
+  assetDetailName?: string | null;
+  assetDetailCode?: string | null;
+  totalUsage: number;
+  thresholdState: UsageThresholdState;
+  warningThreshold: number;
+  mandatoryCheckThreshold: number;
+  lastUsedAt?: string;
+}
+
+export interface AssetUsageThresholdOverviewFilters {
+  page?: number;
+  limit?: number;
+  assetType?: "medical" | "non_medical";
+  state?: "all" | "warning" | "mandatory_check";
+  keyword?: string;
+}
+
+export interface AssetUsageThresholdOverviewResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    items: AssetUsageThresholdOverviewItem[];
+    summary: {
+      warningThreshold: number;
+      mandatoryCheckThreshold: number;
+      warningCount: number;
+      mandatoryCheckCount: number;
+      thresholdCount: number;
+    };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+}
+
 export interface AssetUsageResponse {
   success: boolean;
   message: string;
@@ -180,6 +227,15 @@ class AssetUsageService {
         totalPages: 1,
       },
     };
+  }
+
+  async getThresholdOverview(filters: AssetUsageThresholdOverviewFilters = {}): Promise<AssetUsageThresholdOverviewResponse> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") params.append(key, String(value));
+    });
+    const queryString = params.toString();
+    return apiService.get<AssetUsageThresholdOverviewResponse>(`/asset-usage/threshold-overview${queryString ? `?${queryString}` : ""}`);
   }
 
   async create(data: CreateAssetUsageData): Promise<SingleAssetUsageResponse> {

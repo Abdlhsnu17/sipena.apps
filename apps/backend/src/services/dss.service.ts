@@ -33,6 +33,9 @@ export interface DssAssetRanking {
   lastMaintenance?: string | null;
   lastRepair?: string | null;
   nextMaintenance?: string | null;
+  integrationCategory: 'normal' | 'warning' | 'mandatory_check';
+  usageWarningThreshold: number;
+  usageMandatoryCheckThreshold: number;
   criteriaScores: Record<string, number>;
   normalizedScores: Record<string, number>;
   weightedScores: Record<string, number>;
@@ -142,7 +145,17 @@ type DetailAlternative = {
   lastMaintenance?: string | null;
   lastRepair?: string | null;
   nextMaintenance?: string | null;
+  integrationCategory: 'normal' | 'warning' | 'mandatory_check';
   criteriaScores: Record<string, number>;
+};
+
+const USAGE_WARNING_THRESHOLD = 10;
+const USAGE_MANDATORY_CHECK_THRESHOLD = 25;
+
+const resolveUsageIntegrationCategory = (usageFrequency: number): 'normal' | 'warning' | 'mandatory_check' => {
+  if (usageFrequency >= USAGE_MANDATORY_CHECK_THRESHOLD) return 'mandatory_check';
+  if (usageFrequency > USAGE_WARNING_THRESHOLD) return 'warning';
+  return 'normal';
 };
 
 const normalizeDate = (value?: string | Date | null): string | null => {
@@ -384,6 +397,7 @@ export class DssService {
         const ageDays = purchase && !Number.isNaN(purchase.getTime()) ? Math.max(0, daysBetween(purchase, today)) : 0;
         const maintenanceDueDays = next && !Number.isNaN(next.getTime()) ? daysBetween(today, next) : 365;
         const maintenanceDueScore = maintenanceDueDays < 0 ? 5 : maintenanceDueDays <= 30 ? 4 : maintenanceDueDays <= 90 ? 3 : maintenanceDueDays <= 180 ? 2 : 1;
+        const usageFrequency = usageCounts.get(key) || 0;
 
         return {
           assetId: asset.id,
@@ -403,11 +417,12 @@ export class DssService {
           lastMaintenance,
           lastRepair,
           nextMaintenance,
+          integrationCategory: resolveUsageIntegrationCategory(usageFrequency),
           criteriaScores: {
             condition: normalizeConditionScore(conditionLabel),
             age: Math.max(1, Math.round(ageDays / 365)),
             maintenanceDue: maintenanceDueScore,
-            usageFrequency: usageCounts.get(key) || 0,
+            usageFrequency,
             maintenanceHistory: maintenanceCounts.get(key) || 0,
             functionalUrgency: normalizeFunctionalUrgency(detailName, detail.type, asset.category),
             statusRisk: normalizeStatusRisk(statusLabel),
@@ -496,7 +511,12 @@ export class DssService {
         })
         .sort((left, right) => right.preferenceScore - left.preferenceScore)
         .slice(0, Math.max(1, Math.min(Number(options.limit) || 100, 1000)))
-        .map((alternative, index) => ({ ...alternative, rank: index + 1 }));
+        .map((alternative, index) => ({
+          ...alternative,
+          rank: index + 1,
+          usageWarningThreshold: USAGE_WARNING_THRESHOLD,
+          usageMandatoryCheckThreshold: USAGE_MANDATORY_CHECK_THRESHOLD,
+        }));
 
       return {
         criteria,

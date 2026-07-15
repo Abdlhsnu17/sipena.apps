@@ -1962,7 +1962,6 @@ export default function BorrowingPage() {
     }, 120)
   }
 
-  const borrowingFormRef = useRef<HTMLDivElement | null>(null)
   const borrowingAssetPickerRef = useRef<HTMLDivElement | null>(null)
   const borrowDateInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -1970,12 +1969,6 @@ export default function BorrowingPage() {
     if (!showForm) return
 
     window.requestAnimationFrame(() => {
-      borrowingFormRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "nearest",
-      })
-
       const pickerButton = borrowingAssetPickerRef.current?.querySelector<HTMLButtonElement>(
         'button[aria-label="Pilih satu atau lebih inventaris"]'
       )
@@ -2091,16 +2084,51 @@ export default function BorrowingPage() {
             </CardContent>
           </Card>
 
-          {showForm && (
-              <Card ref={borrowingFormRef} className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white/80 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Form Peminjaman Baru</CardTitle>
-                <CardDescription className="text-[12px] text-muted-foreground">
-                  Isi detail inventaris dan tanggal pinjam.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+          <Dialog
+            open={showForm}
+            onOpenChange={(open) => {
+              if (open) return
+              setShowForm(false)
+              setFormData(getDefaultFormData(currentUser))
+              setSelectedBorrowableAssetIds([])
+            }}
+          >
+            {showForm && (
+              <DialogContent
+                showCloseButton={false}
+                className="max-h-[90dvh] w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:w-full sm:max-w-2xl"
+              >
+                <DialogTitle className="sr-only">Tambah Peminjaman</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Formulir peminjaman dengan area gulir mandiri.
+                </DialogDescription>
+                <div className="flex max-h-[90dvh] flex-col overflow-hidden text-sm">
+                  <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
+                    <div className="space-y-0.5">
+                      <h2 className="text-base font-semibold text-foreground">Tambah Peminjaman</h2>
+                      <p className="text-xs text-muted-foreground">
+                        Lengkapi inventaris, identitas penanggung jawab, dan keperluan peminjaman.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForm(false)
+                        setFormData(getDefaultFormData(currentUser))
+                        setSelectedBorrowableAssetIds([])
+                      }}
+                      className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      aria-label="Tutup formulir"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
                 <div className="grid mobile-form-grid gap-3">
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-semibold text-foreground">Informasi Peminjaman</h3>
+                    <p className="text-xs text-muted-foreground">Pilih inventaris serta tentukan waktu dan jumlah peminjaman.</p>
+                  </div>
                   <div ref={borrowingAssetPickerRef}>
                   <label className="block text-[14px] font-medium text-foreground mb-2">Pilih Inventaris</label>
                   <InventoryPicker
@@ -2209,15 +2237,30 @@ export default function BorrowingPage() {
                   </div>
 
                   <div>
+                    <label className="block text-[14px] font-medium mb-1">Jumlah per Inventaris</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      className="rounded-lg"
+                    />
+                  </div>
+
+                  <div className="border-t border-border/70 pt-4 md:col-span-2">
+                    <h3 className="text-sm font-semibold text-foreground">Identitas Peminjam</h3>
+                    <p className="text-xs text-muted-foreground">Pastikan identitas dan unit kerja peminjam sudah sesuai.</p>
+                  </div>
+                  <div>
                     <label className="block text-[14px] font-medium mb-1">Nama Peminjam</label>
-                    <Input value={currentUser?.name || "-"} readOnly className="rounded-2xl" />
+                    <Input value={currentUser?.name || "-"} readOnly className="rounded-lg bg-muted/50" />
                   </div>
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Jabatan Peminjam</label>
                     <Input
                       value={formData.borrowerPosition}
                       onChange={(e) => setFormData({ ...formData, borrowerPosition: e.target.value })}
-                      className="rounded-2xl"
+                      className="rounded-lg"
                       placeholder="Contoh: Staff Pelayanan"
                     />
                   </div>
@@ -2226,23 +2269,15 @@ export default function BorrowingPage() {
                     <Input
                       value={formData.borrowerWorkUnit}
                       onChange={(e) => setFormData({ ...formData, borrowerWorkUnit: e.target.value })}
-                      className="rounded-2xl"
+                      className="rounded-lg"
                       placeholder="Contoh: IGD"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[14px] font-medium mb-1">Jumlah per Inventaris</label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                      className="rounded-2xl"
-                    />
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                    </p>
+                  <div className="border-t border-border/70 pt-4 md:col-span-2">
+                    <h3 className="text-sm font-semibold text-foreground">Pemilik / Penanggung Jawab Inventaris</h3>
+                    <p className="text-xs text-muted-foreground">Tautkan akun aktif agar nama, NIP, jabatan, dan unit kerja terisi otomatis.</p>
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-[14px] font-medium mb-1">Akun Pemilik / PJ Inventaris</label>
                     <BorrowingOwnerPicker
                       value={formData.ownerUserId ? Number(formData.ownerUserId) : null}
@@ -2263,28 +2298,18 @@ export default function BorrowingPage() {
                       }))}
                     />
                   </div>
-                  <div>
-                    <label className="block text-[14px] font-medium mb-1">NIP Pemilik / PJ</label>
-                    <Input value={formData.ownerNip} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
-                  </div>
-                  <div>
-                    <label className="block text-[14px] font-medium mb-1">Nama Pemilik / PJ</label>
-                    <Input value={formData.ownerName} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
-                  </div>
-                  <div>
-                    <label className="block text-[14px] font-medium mb-1">Jabatan Pemilik / PJ</label>
-                    <Input value={formData.ownerPosition} readOnly className="rounded-2xl bg-muted/50" placeholder="Terisi dari akun" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[14px] font-medium mb-1">Unit Kerja Pemilik Inventaris</label>
-                    <Input
-                      value={formData.ownerWorkUnit}
-                      readOnly
-                      className="rounded-2xl bg-muted/50"
-                      placeholder="Terisi dari akun"
-                    />
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                    </p>
+                  {formData.ownerUserId ? (
+                    <div className="grid gap-3 rounded-xl border border-teal-200/70 bg-teal-50/60 p-3 sm:grid-cols-3 md:col-span-2 dark:border-teal-900/60 dark:bg-teal-950/20">
+                      <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">NIP</p><p className="mt-1 truncate text-sm font-semibold">{formData.ownerNip || "-"}</p></div>
+                      <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Jabatan</p><p className="mt-1 truncate text-sm font-semibold">{formData.ownerPosition || "-"}</p></div>
+                      <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Unit Kerja</p><p className="mt-1 truncate text-sm font-semibold">{formData.ownerWorkUnit || "-"}</p></div>
+                    </div>
+                  ) : (
+                    <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs text-muted-foreground md:col-span-2">Nama, NIP, jabatan, dan unit kerja akan tampil setelah akun dipilih.</p>
+                  )}
+                  <div className="border-t border-border/70 pt-4 md:col-span-2">
+                    <h3 className="text-sm font-semibold text-foreground">Detail Keperluan</h3>
+                    <p className="text-xs text-muted-foreground">Tentukan tujuan penggunaan dan tambahkan catatan bila diperlukan.</p>
                   </div>
                   <div>
                     <label className="block text-[14px] font-medium mb-1">Jenis Keperluan</label>
@@ -2375,33 +2400,32 @@ export default function BorrowingPage() {
                     </AlertDescription>
                   </Alert>
                 ) : null}
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  <Button
-                    onClick={handleSaveBorrowing}
-                    size="sm"
-                    disabled={hasBorrowingOverdueBlock}
-                    className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Simpan
-                  </Button>
+                  </div>
+                <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/70 bg-background px-4 py-3 sm:flex-row sm:justify-end sm:px-5">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="w-full rounded-2xl px-4 text-[14px] sm:w-auto"
+                    className="w-full sm:w-auto"
                     onClick={() => {
                       setShowForm(false)
                       setFormData(getDefaultFormData(currentUser))
                       setSelectedBorrowableAssetIds([])
                     }}
                   >
-                    <X className="mr-2 h-4 w-4" />
                     Batal
                   </Button>
+                  <Button
+                    onClick={handleSaveBorrowing}
+                    disabled={hasBorrowingOverdueBlock}
+                    className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Simpan Peminjaman
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              </DialogContent>
+            )}
+          </Dialog>
 
           <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70">
             <CardHeader className="space-y-3 pb-3">

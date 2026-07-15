@@ -18,7 +18,8 @@ router.get(
     query('status').optional().isIn(MAINTENANCE_STATUSES),
     query('assetId').optional().isInt({ min: 1 }).toInt(),
     query('assetType').optional().isIn(['medical', 'non_medical']),
-    query('type').optional().isIn(MAINTENANCE_TYPES)
+    query('type').optional().isIn(MAINTENANCE_TYPES),
+    query('automationSource').optional().isIn(['usage_threshold', 'manual'])
   ],
   maintenanceController.getAll
 );

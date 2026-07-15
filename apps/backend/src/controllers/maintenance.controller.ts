@@ -56,7 +56,8 @@ export class MaintenanceController {
         status,
         assetId,
         assetType,
-        type
+        type,
+        automationSource
       } = req.query;
 
       const result = await this.maintenanceService.getAll({
@@ -67,6 +68,7 @@ export class MaintenanceController {
         assetId: assetId as string,
         assetType: normalizeAssetType(assetType),
         type: type as string,
+        automationSource: automationSource as 'usage_threshold' | 'manual' | undefined,
         actorUserId: getActorUserId(req),
         actorRole: req.user?.role,
         actorWorkUnit: req.user?.workUnit

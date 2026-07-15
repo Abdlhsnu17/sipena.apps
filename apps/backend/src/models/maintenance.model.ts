@@ -124,6 +124,7 @@ export interface MaintenanceFilters {
   assetId?: string;
   assetType?: AssetType;
   type?: string;
+  automationSource?: 'usage_threshold' | 'manual';
   actorUserId?: number | string | null;
   actorRole?: string | null;
   actorWorkUnit?: string | null;

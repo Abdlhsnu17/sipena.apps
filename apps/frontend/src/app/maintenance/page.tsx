@@ -1,6 +1,7 @@
 'use client'
 
 import { buildLoginRedirectUrl } from "@/services/auth-utils";
+import { id } from "date-fns/locale";
 import {
     AlertCircle,
     CalendarDays,
@@ -29,6 +30,7 @@ import MaintenanceHistoryList from "@/components/maintenance-history-list";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -41,6 +43,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ExportFormat, exportFormularReport, FormularData, TableExportColumn } from "@/utils/export-table";
 
 import { useConfirm } from "@/hooks/use-confirm";
@@ -199,6 +202,8 @@ const getCalendarStartOffset = (date: Date) => (date.getDay() + 6) % 7
 export default function MaintenancePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const initialAutomationSource = searchParams.get("automationSource")
+  const initialSearchTerm = searchParams.get("q") || ""
   const dssPrefillHandledRef = useRef(false)
   const { confirm } = useConfirm()
   const { toast } = useToast()
@@ -217,12 +222,19 @@ export default function MaintenancePage() {
   const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null)
   const [prefillAsset, setPrefillAsset] = useState<DetailInventoryItem | null>(null)
   const [prefillNote, setPrefillNote] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
   const [filterStatus, setFilterStatus] = useState("Semua")
+  const [filterAutomationSource, setFilterAutomationSource] = useState<"all" | "usage_threshold" | "manual">(
+    initialAutomationSource === "usage_threshold" || initialAutomationSource === "manual"
+      ? initialAutomationSource
+      : "all"
+  )
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
   const [maintenancePage, setMaintenancePage] = useState(1)
   const [calendarMonthDate, setCalendarMonthDate] = useState(() => new Date())
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => new Date())
+  const [calendarPickerOpen, setCalendarPickerOpen] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     maintenanceId: number | string
     previousStatus: string
@@ -241,9 +253,10 @@ export default function MaintenancePage() {
 
   const loadMaintenance = async () => {
     try {
+      const automationSourceFilter = filterAutomationSource === "all" ? undefined : filterAutomationSource
       const [activeResponse, historyResponse] = await Promise.all([
-        maintenanceService.getAll({ page: 1, limit: 1000, view: "active" }),
-        maintenanceService.getAll({ page: 1, limit: 1000, view: "history" }),
+        maintenanceService.getAll({ page: 1, limit: 1000, view: "active", automationSource: automationSourceFilter }),
+        maintenanceService.getAll({ page: 1, limit: 1000, view: "history", automationSource: automationSourceFilter }),
       ])
 
       if (activeResponse.success) {
@@ -257,6 +270,18 @@ export default function MaintenancePage() {
       console.error("Error loading maintenance:", error)
     }
   }
+
+  useEffect(() => {
+    const nextAutomationSource = searchParams.get("automationSource")
+    if (nextAutomationSource === "usage_threshold" || nextAutomationSource === "manual") {
+      setFilterAutomationSource(nextAutomationSource)
+    }
+
+    const nextSearch = searchParams.get("q")
+    if (typeof nextSearch === "string") {
+      setSearchTerm(nextSearch)
+    }
+  }, [searchParams])
 
   const loadAssets = async () => {
     try {
@@ -366,6 +391,10 @@ export default function MaintenancePage() {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    void loadMaintenance()
+  }, [filterAutomationSource])
 
   useEffect(() => {
     const handleInventoryRefresh = () => {
@@ -1161,12 +1190,17 @@ export default function MaintenancePage() {
     ]
     const matchesSearch = matchesSearchKeyword(searchTerm, searchableValues)
     const matchesStatus = filterStatus === "Semua" || m.status === filterStatus
-    return matchesSearch && matchesStatus
+    const isThresholdAutomation = String(m.notes || "").startsWith("AUTO_USAGE_THRESHOLD")
+    const matchesAutomationSource =
+      filterAutomationSource === "all" ||
+      (filterAutomationSource === "usage_threshold" && isThresholdAutomation) ||
+      (filterAutomationSource === "manual" && !isThresholdAutomation)
+    return matchesSearch && matchesStatus && matchesAutomationSource
   })
 
   useEffect(() => {
     setMaintenancePage(1)
-  }, [filterStatus, maintenance.length, searchTerm])
+  }, [filterStatus, filterAutomationSource, maintenance.length, searchTerm])
 
   const totalMaintenancePages = Math.max(1, Math.ceil(filteredMaintenance.length / CARD_ROWS_PER_PAGE))
   const currentMaintenancePage = Math.min(maintenancePage, totalMaintenancePages)
@@ -1345,6 +1379,19 @@ export default function MaintenancePage() {
     setCalendarMonthDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
   }
 
+  const selectCalendarDate = (date: Date | undefined) => {
+    if (!date) return
+    setSelectedCalendarDate(date)
+    setCalendarMonthDate(date)
+    setCalendarPickerOpen(false)
+  }
+
+  const showCurrentCalendarDate = () => {
+    const today = new Date()
+    setSelectedCalendarDate(today)
+    setCalendarMonthDate(today)
+  }
+
   return (
     <main
       className="flex min-h-full flex-col"
@@ -1441,13 +1488,40 @@ export default function MaintenancePage() {
                   <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(-1)} aria-label="Bulan sebelumnya">
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <div className="min-w-36 rounded-xl border border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-center text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">
-                    {calendarMonthLabel}
-                  </div>
+                  <Popover open={calendarPickerOpen} onOpenChange={setCalendarPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 min-w-36 rounded-xl bg-slate-50 px-3 text-sm font-semibold capitalize text-slate-800 hover:bg-slate-100 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                        aria-label={`Pilih tanggal, bulan, dan tahun. Saat ini ${calendarMonthLabel}`}
+                      >
+                        {calendarMonthLabel}
+                        <ChevronDown className="ml-2 h-4 w-4 text-slate-500" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="center" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        locale={id}
+                        selected={selectedCalendarDate}
+                        month={calendarMonthDate}
+                        onMonthChange={setCalendarMonthDate}
+                        onSelect={selectCalendarDate}
+                        captionLayout="dropdown"
+                        startMonth={new Date(2000, 0)}
+                        endMonth={new Date(2100, 11)}
+                        formatters={{
+                          formatMonthDropdown: (date) => date.toLocaleDateString("id-ID", { month: "short" }),
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(1)} aria-label="Bulan berikutnya">
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="h-9 rounded-xl px-3" onClick={() => setCalendarMonthDate(new Date())}>
+                  <Button variant="outline" size="sm" className="h-9 rounded-xl px-3" onClick={showCurrentCalendarDate}>
                     Hari ini
                   </Button>
                 </div>
@@ -1469,7 +1543,11 @@ export default function MaintenancePage() {
                         <div
                           key={date.toISOString()}
                           className={`min-h-28 border-b border-r border-slate-200 dark:border-slate-800/35 p-2 last:border-r-0 ${
-                            isCurrentMonth ? "bg-white dark:bg-slate-900/60" : "bg-slate-50/70 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500"
+                            isSameCalendarDate(date, selectedCalendarDate)
+                              ? "bg-teal-50/70 ring-1 ring-inset ring-teal-300 dark:bg-teal-400/10 dark:ring-teal-500/40"
+                              : isCurrentMonth
+                                ? "bg-white dark:bg-slate-900/60"
+                                : "bg-slate-50/70 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           <div className="mb-2 flex items-center justify-between">
@@ -1681,7 +1759,7 @@ export default function MaintenancePage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:px-6">
+                <div className="grid gap-3 px-3 pb-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_190px_210px] lg:px-6">
                   <div>
                     <label className="sr-only">Cari jadwal pemeliharaan</label>
                     <div className="relative">
@@ -1707,6 +1785,15 @@ export default function MaintenancePage() {
                     <option value="completed">Dalam Proses Pengerjaan</option>
                     <option value="validated">Selesai</option>
                     <option value="cancelled">Ditolak / Dibatalkan</option>
+                  </select>
+                  <select
+                    value={filterAutomationSource}
+                    onChange={(e) => setFilterAutomationSource(e.target.value as "all" | "usage_threshold" | "manual")}
+                    className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
+                  >
+                    <option value="all">Semua Sumber</option>
+                    <option value="usage_threshold">Otomatis (Threshold)</option>
+                    <option value="manual">Manual</option>
                   </select>
                 </div>
                 {filteredMaintenance.length === 0 ? (

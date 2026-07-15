@@ -55,6 +55,31 @@ export class AssetUsageController {
     }
   };
 
+  getThresholdOverview = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        assetType,
+        state,
+        keyword
+      } = req.query;
+
+      const result = await this.assetUsageService.getThresholdOverview({
+        page: Number(page),
+        limit: Number(limit),
+        assetType: normalizeAssetType(assetType),
+        state: (state as 'all' | 'warning' | 'mandatory_check' | undefined) || 'all',
+        keyword: keyword as string | undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      logger.error('Get threshold overview error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
   getById = async (req: Request, res: Response): Promise<void> => {
     try {
       const result = await this.assetUsageService.getById(req.params.id);

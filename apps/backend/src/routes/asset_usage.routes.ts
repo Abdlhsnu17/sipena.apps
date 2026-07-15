@@ -24,6 +24,18 @@ router.get(
   assetUsageController.getAll
 );
 
+router.get(
+  '/threshold-overview',
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1 }).toInt(),
+    query('assetType').optional().isIn(ASSET_TYPES),
+    query('state').optional().isIn(['all', 'warning', 'mandatory_check']),
+    query('keyword').optional().trim(),
+  ],
+  assetUsageController.getThresholdOverview
+);
+
 router.get('/:id', [param('id').isInt({ min: 1 })], assetUsageController.getById);
 
 router.post(
