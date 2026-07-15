@@ -275,16 +275,30 @@ export default function DisposalPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <TabsList>
-            <TabsTrigger value="pending" className="flex items-center gap-1">
+            <TabsTrigger
+              value="pending"
+              className="flex items-center gap-1 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+            >
               <Clock className="h-3.5 w-3.5" /> Menunggu
             </TabsTrigger>
-            <TabsTrigger value="approved" className="flex items-center gap-1">
+            <TabsTrigger
+              value="approved"
+              className="flex items-center gap-1 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+            >
               <CheckCircle className="h-3.5 w-3.5" /> Disetujui
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="flex items-center gap-1">
+            <TabsTrigger
+              value="rejected"
+              className="flex items-center gap-1 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+            >
               <XCircle className="h-3.5 w-3.5" /> Ditolak
             </TabsTrigger>
-            <TabsTrigger value="all">Semua</TabsTrigger>
+            <TabsTrigger
+              value="all"
+              className="data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+            >
+              Semua
+            </TabsTrigger>
           </TabsList>
           <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button

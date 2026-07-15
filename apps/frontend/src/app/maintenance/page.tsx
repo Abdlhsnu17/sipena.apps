@@ -12,6 +12,7 @@ import {
     Download,
     Edit2,
     Eye,
+    History,
     MapPin,
     Plus,
     Save,
@@ -235,6 +236,7 @@ export default function MaintenancePage() {
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
   const [maintenancePage, setMaintenancePage] = useState(1)
+  const [maintenanceView, setMaintenanceView] = useState<"active" | "history">("active")
   const [calendarMonthDate, setCalendarMonthDate] = useState(() => new Date())
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => new Date())
   const [calendarPickerOpen, setCalendarPickerOpen] = useState(false)
@@ -1725,7 +1727,52 @@ export default function MaintenancePage() {
           )}
         </Dialog>
 
+        <div
+          role="tablist"
+          aria-label="Daftar pemeliharaan"
+          className="grid grid-cols-2 gap-2 rounded-3xl border border-slate-200/80 bg-white/90 p-2 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70 sm:gap-3 sm:p-3"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={maintenanceView === "active"}
+            aria-controls="active-maintenance-panel"
+            id="active-maintenance-tab"
+            onClick={() => setMaintenanceView("active")}
+            className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+              maintenanceView === "active"
+                ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Wrench className="h-5 w-5 shrink-0" />
+            <span>Daftar Pemeliharaan Sarana</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={maintenanceView === "history"}
+            aria-controls="maintenance-history-panel"
+            id="maintenance-history-tab"
+            onClick={() => setMaintenanceView("history")}
+            className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+              maintenanceView === "history"
+                ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            }`}
+          >
+            <History className="h-5 w-5 shrink-0" />
+            <span>Riwayat Pemeliharaan Sarana</span>
+          </button>
+        </div>
+
+        {maintenanceView === "active" && (
         <Card className="rounded-3xl border border-slate-200 bg-white/70 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-list>
+          <div
+            id="active-maintenance-panel"
+            role="tabpanel"
+            aria-labelledby="active-maintenance-tab"
+          >
           <CardHeader className="space-y-3 pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -2123,10 +2170,18 @@ export default function MaintenancePage() {
           </>
         )}
           </CardContent>
+          </div>
         </Card>
+        )}
 
         {/* Riwayat Pemeliharaan Sarana */}
+        {maintenanceView === "history" && (
         <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-history>
+          <div
+            id="maintenance-history-panel"
+            role="tabpanel"
+            aria-labelledby="maintenance-history-tab"
+          >
           <CardHeader className="space-y-3 pb-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -2178,7 +2233,9 @@ export default function MaintenancePage() {
               </>
             )}
           </CardContent>
+          </div>
         </Card>
+        )}
 
         <Dialog open={Boolean(pendingStatusChange)} onOpenChange={(open) => !open && setPendingStatusChange(null)}>
           <DialogContent className="sm:max-w-lg">

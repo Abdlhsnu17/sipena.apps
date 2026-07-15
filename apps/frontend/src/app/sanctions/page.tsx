@@ -334,9 +334,24 @@ export default function SanctionsPage() {
                 </div>
               </div>
               <TabsList className="w-full overflow-x-auto justify-start">
-                <TabsTrigger value="active" className="shrink-0">Aktif</TabsTrigger>
-                <TabsTrigger value="resolved" className="shrink-0">Selesai</TabsTrigger>
-                <TabsTrigger value="all" className="shrink-0">Semua</TabsTrigger>
+                <TabsTrigger
+                  value="active"
+                  className="shrink-0 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+                >
+                  Aktif
+                </TabsTrigger>
+                <TabsTrigger
+                  value="resolved"
+                  className="shrink-0 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+                >
+                  Selesai
+                </TabsTrigger>
+                <TabsTrigger
+                  value="all"
+                  className="shrink-0 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+                >
+                  Semua
+                </TabsTrigger>
               </TabsList>
             </div>
           </CardHeader>

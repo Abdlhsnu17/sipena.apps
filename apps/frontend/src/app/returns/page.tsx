@@ -62,6 +62,7 @@ import {
     ChevronUp,
     Download,
     Eye,
+    History,
     MapPin,
     Pencil,
     RotateCcw,
@@ -219,6 +220,7 @@ export default function ReturnsPage() {
   const [isHistorySectionMinimized, setIsHistorySectionMinimized] = useState(false)
   const [activeReturnPage, setActiveReturnPage] = useState(1)
   const [historyReturnPage, setHistoryReturnPage] = useState(1)
+  const [returnView, setReturnView] = useState<"active" | "history">("active")
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -1298,7 +1300,52 @@ export default function ReturnsPage() {
             </CardContent>
           </Card>
 
+          <div
+            role="tablist"
+            aria-label="Daftar pengembalian"
+            className="grid grid-cols-2 gap-2 rounded-3xl border border-slate-200/80 bg-white/90 p-2 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70 sm:gap-3 sm:p-3"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={returnView === "active"}
+              aria-controls="active-returns-panel"
+              id="active-returns-tab"
+              onClick={() => setReturnView("active")}
+              className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+                returnView === "active"
+                  ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              }`}
+            >
+              <RotateCcw className="h-5 w-5 shrink-0" />
+              <span>Alat yang Perlu Dikembalikan</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={returnView === "history"}
+              aria-controls="return-history-panel"
+              id="return-history-tab"
+              onClick={() => setReturnView("history")}
+              className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+                returnView === "history"
+                  ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              }`}
+            >
+              <History className="h-5 w-5 shrink-0" />
+              <span>Riwayat Pengembalian</span>
+            </button>
+          </div>
+
+          {returnView === "active" && (
           <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70">
+            <div
+              id="active-returns-panel"
+              role="tabpanel"
+              aria-labelledby="active-returns-tab"
+            >
             <CardHeader className="space-y-3 pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -1622,9 +1669,17 @@ export default function ReturnsPage() {
                 </div>
               )}
             </CardContent>
+            </div>
           </Card>
+          )}
 
+          {returnView === "history" && (
           <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70">
+            <div
+              id="return-history-panel"
+              role="tabpanel"
+              aria-labelledby="return-history-tab"
+            >
             <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <CardTitle className="text-lg">Riwayat Pengembalian</CardTitle>
@@ -2019,7 +2074,9 @@ export default function ReturnsPage() {
                 </>
               )}
           </CardContent>
+            </div>
           </Card>
+          )}
 
           {showReturnModal && selectedBorrowing && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-linear-to-br from-black/50 to-black/80 px-4">
