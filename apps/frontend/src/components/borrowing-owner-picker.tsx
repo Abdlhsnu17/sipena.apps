@@ -79,7 +79,11 @@ export default function BorrowingOwnerPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent
+        side="bottom"
         align="start"
+        sideOffset={4}
+        avoidCollisions={false}
+        updatePositionStrategy="always"
         className="max-h-[min(420px,calc(100vh-8rem))] w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden p-0"
       >
         <Command shouldFilter={false}>

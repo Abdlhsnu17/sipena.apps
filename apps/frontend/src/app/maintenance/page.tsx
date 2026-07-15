@@ -1565,21 +1565,43 @@ export default function MaintenancePage() {
             </CardContent>
           </Card>
 
-        {showForm && (
-          <MaintenanceForm
-            maintenance={editingMaintenance}
-            assets={maintenanceFormAssets}
-            prefillAsset={editingMaintenance ? null : prefillAsset}
-            prefillNote={prefillNote}
-            onSave={handleSaveMaintenance}
-            onCancel={() => {
-              setShowForm(false)
-              setEditingMaintenance(null)
-              setPrefillAsset(null)
-              setPrefillNote("")
-            }}
-          />
-        )}
+        <Dialog
+          open={showForm}
+          onOpenChange={(open) => {
+            if (open) return
+            setShowForm(false)
+            setEditingMaintenance(null)
+            setPrefillAsset(null)
+            setPrefillNote("")
+          }}
+        >
+          {showForm && (
+            <DialogContent
+              showCloseButton={false}
+              className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-y-auto overscroll-contain p-0 [scrollbar-gutter:stable] sm:max-w-[min(92rem,calc(100vw-2rem))]"
+            >
+              <DialogTitle className="sr-only">
+                {editingMaintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Formulir pemeliharaan sarana dengan area gulir mandiri.
+              </DialogDescription>
+              <MaintenanceForm
+                maintenance={editingMaintenance}
+                assets={maintenanceFormAssets}
+                prefillAsset={editingMaintenance ? null : prefillAsset}
+                prefillNote={prefillNote}
+                onSave={handleSaveMaintenance}
+                onCancel={() => {
+                  setShowForm(false)
+                  setEditingMaintenance(null)
+                  setPrefillAsset(null)
+                  setPrefillNote("")
+                }}
+              />
+            </DialogContent>
+          )}
+        </Dialog>
 
         <Card className="rounded-3xl border border-slate-200 bg-white/70 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-list>
           <CardHeader className="space-y-3 pb-3">

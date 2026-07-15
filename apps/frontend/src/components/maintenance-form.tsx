@@ -94,7 +94,6 @@ export default function MaintenanceForm({
   const defaultRepairNote = useMemo(() => buildRepairNoteTemplate(selectedAsset), [selectedAsset])
   const prevAutoRepairNoteRef = useRef(defaultRepairNote)
   const appliedPrefillRef = useRef(false)
-  const formCardRef = useRef<HTMLDivElement | null>(null)
   const scheduledDateInputRef = useRef<HTMLInputElement | null>(null)
 
   const [formData, setFormData] = useState(() => ({
@@ -253,18 +252,6 @@ export default function MaintenanceForm({
     prevAutoRepairNoteRef.current = defaultRepairNote
   }, [defaultRepairNote, maintenance])
 
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      formCardRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest",
-      })
-    })
-
-    return () => window.cancelAnimationFrame(animationFrame)
-  }, [])
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -365,7 +352,7 @@ export default function MaintenanceForm({
 
 
   return (
-    <Card ref={formCardRef} className="mb-6 scroll-mt-6">
+    <Card className="m-0 border-0 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle>{maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}</CardTitle>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
