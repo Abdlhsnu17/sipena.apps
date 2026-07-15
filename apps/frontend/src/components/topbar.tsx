@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ScanLine, Search } from "lucide-react";
+import { ArrowRight, Bell, Building2, Hash, ScanLine, Search, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -28,7 +28,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useNotifications } from "@/hooks/use-notifications";
 import { getAuthToken, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
 import { normalizeUserRole } from "@/utils/role";
 
@@ -192,16 +191,6 @@ export default function Topbar() {
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const isCompactNotification = notificationDensity === "compact"
-
-  // Real-time in-app notifications from the backend (delivered via SSE, with a
-  // polling fallback inside the hook).
-  const {
-    notifications: systemNotifications,
-    unreadCount: systemUnreadCount,
-    markAsRead: markSystemNotificationRead,
-    markAllAsRead: markAllSystemNotificationsRead,
-    remove: removeSystemNotification,
-  } = useNotifications({ limit: 15 })
 
   useEffect(() => {
     setMounted(true)
@@ -970,11 +959,7 @@ export default function Topbar() {
               aria-label="Menu notifikasi"
             >
               <Bell className="size-4.5" />
-              {systemUnreadCount > 0 ? (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-background bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                  {systemUnreadCount > 99 ? "99+" : systemUnreadCount}
-                </span>
-              ) : notifications.length > 0 ? (
+              {notifications.length > 0 ? (
                 <span className={`absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 rounded-full border border-background ${
                   notifications.some((n) => n.notifStatus === "urgent") ? "bg-red-500" :
                   notifications.some((n) => n.notifStatus === "warning") ? "bg-orange-500" :
@@ -983,24 +968,29 @@ export default function Topbar() {
                 }`} />
               ) : null}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(62vh,30rem)] w-[min(calc(100vw-1rem),20rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-white text-slate-950 shadow-lg sm:w-84">
-              <div className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-0.5">
-                <DropdownMenuLabel className="p-0 text-[11px] tracking-[0.16em] uppercase text-muted-foreground">
-                  Pemberitahuan
-                </DropdownMenuLabel>
+            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(72vh,36rem)] w-[min(calc(100vw-1rem),23rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200/80 bg-slate-50/95 p-1.5 text-slate-950 shadow-2xl shadow-slate-900/15 backdrop-blur-sm sm:w-96">
+              <div className="flex items-center justify-between gap-3 px-2.5 pt-2 pb-1.5">
+                <div className="min-w-0">
+                  <DropdownMenuLabel className="p-0 text-sm font-bold tracking-tight text-slate-900">
+                    Pemberitahuan
+                  </DropdownMenuLabel>
+                  <p className="mt-0.5 text-[11px] leading-none text-slate-500">
+                    {notifications.length > 0 ? `${notifications.length} informasi perlu diperhatikan` : "Tidak ada informasi terbaru"}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
                     setNotificationDensity(isCompactNotification ? "normal" : "compact")
                   }}
-                  className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-900 shadow-sm transition"
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                   aria-label={isCompactNotification ? "Tampilan notifikasi normal" : "Tampilan notifikasi ringkas"}
                 >
                   {isCompactNotification ? "Normal" : "Ringkas"}
                 </button>
               </div>
-              <div className="px-2.5 pb-2">
+              <div className="px-2.5 pb-2.5">
                 <div className="relative">
                   <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -1010,82 +1000,12 @@ export default function Topbar() {
                       event.stopPropagation()
                     }}
                     placeholder="Cari notifikasi..."
-                    className="h-8 border-slate-200 bg-white pl-9 text-sm text-slate-900 placeholder:text-slate-400"
+                    className="h-9 rounded-xl border-slate-200 bg-white pl-9 text-sm text-slate-900 shadow-xs placeholder:text-slate-400 focus-visible:border-blue-300 focus-visible:ring-blue-100"
                     aria-label="Cari pemberitahuan"
                   />
                 </div>
               </div>
-              <DropdownMenuSeparator />
-              {systemNotifications.length > 0 && (
-                <div className="pb-1">
-                  <div className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-1">
-                    <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500">
-                      Pemberitahuan Sistem
-                    </span>
-                    {systemUnreadCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          void markAllSystemNotificationsRead()
-                        }}
-                        className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-900 shadow-sm transition hover:bg-slate-50"
-                      >
-                        Tandai dibaca
-                      </button>
-                    )}
-                  </div>
-                  {systemNotifications.map((item) => (
-                    <DropdownMenuItem
-                      key={`system-${item.id}`}
-                      className="mt-1 block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current"
-                      onSelect={(event) => {
-                        event.preventDefault()
-                        if (!item.isRead) void markSystemNotificationRead(item.id)
-                        if (item.link) router.push(item.link)
-                      }}
-                    >
-                      <div className={`overflow-hidden rounded-lg border shadow-sm transition hover:shadow-md ${
-                        item.isRead ? "border-slate-100 bg-white" : "border-blue-200 bg-blue-50/60"
-                      }`}>
-                        <div className="flex items-start gap-2 px-2.5 py-2">
-                          {!item.isRead && (
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="min-w-0 wrap-break-word text-sm font-semibold leading-snug text-slate-900">
-                              {item.title}
-                            </p>
-                            {item.message && (
-                              <p className="min-w-0 wrap-break-word text-xs leading-snug text-slate-600">
-                                {item.message}
-                              </p>
-                            )}
-                            {item.createdAt && (
-                              <p className="pt-0.5 text-[11px] text-slate-400">
-                                {formatDateId(item.createdAt)}
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              void removeSystemNotification(item.id)
-                            }}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            aria-label="Hapus pemberitahuan"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                </div>
-              )}
+              <DropdownMenuSeparator className="mx-1 mb-1 bg-slate-200/80" />
               {isCheckingNotifications ? (
                 <div className="px-3 py-2.5 text-sm text-muted-foreground">Memeriksa kendala…</div>
               ) : notifications.length === 0 ? (
@@ -1098,7 +1018,7 @@ export default function Topbar() {
                 filteredNotifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`${isCompactNotification ? "mt-1" : "mt-1.5"} block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
+                    className={`${isCompactNotification ? "mt-1.5" : "mt-2"} block cursor-pointer rounded-xl p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
                     onSelect={(event) => {
                       event.preventDefault()
                       if (notification.href) {
@@ -1106,11 +1026,11 @@ export default function Topbar() {
                       }
                     }}
                   >
-                    <div className="overflow-hidden rounded-lg border border-slate-100 bg-white shadow-sm transition hover:shadow-md">
-                      <div className={`${isCompactNotification ? "gap-1.5 px-2.5 py-1.5" : "gap-2 px-3 py-2"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
-                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} font-semibold`}>{notificationTypeLabel[notification.type]}</span>
+                    <div className="group overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-900/10">
+                      <div className={`${isCompactNotification ? "gap-1.5 px-3 py-2" : "gap-2 px-3.5 py-2.5"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
+                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 truncate font-bold tracking-tight`}>{notificationTypeLabel[notification.type]}</span>
                         <span className="flex items-center gap-1.5">
-                          <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-xs"} rounded-full border border-white/50 bg-white/15 py-0.5 font-medium`}>
+                          <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-[11px]"} max-w-28 truncate rounded-full border border-white/40 bg-white/15 py-0.5 font-semibold shadow-inner backdrop-blur-sm`}>
                             {categoryLabelByKey[notification.category]}
                           </span>
                           {notification.dismissKey ? (
@@ -1129,25 +1049,53 @@ export default function Topbar() {
                           ) : null}
                         </span>
                       </div>
-                      <div className={`${isCompactNotification ? "space-y-0 px-2.5 py-2" : "space-y-0.5 px-3 py-2.5"} text-slate-900`}>
-                        <p className={`${isCompactNotification ? "text-sm" : "text-[15px]"} min-w-0 wrap-break-word leading-snug font-semibold`}>{notification.assetName}</p>
-                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 break-all text-slate-700`}>{notification.assetCode}</p>
-                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 break-all text-slate-700`}>No ID: {notification.recordNoId}</p>
-                        <p className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 wrap-break-word text-slate-700`}>Identitas: {notification.identity}</p>
-                        <div className={`${isCompactNotification ? "pt-1" : "pt-1.5"}`}>
+                      <div className={`${isCompactNotification ? "px-3 py-2.5" : "px-3.5 py-3"} text-slate-900`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className={`${isCompactNotification ? "text-sm" : "text-base"} min-w-0 wrap-break-word leading-snug font-bold tracking-tight text-slate-950`}>{notification.assetName}</p>
+                            <p className={`${isCompactNotification ? "mt-0.5 text-[11px]" : "mt-1 text-xs"} min-w-0 break-all font-medium text-slate-500`}>{notification.assetCode}</p>
+                          </div>
+                          <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${statusConfig[notification.notifStatus].dot} ring-4 ring-slate-100`} aria-hidden="true" />
+                        </div>
+
+                        <div className={`${isCompactNotification ? "mt-2 gap-1.5" : "mt-2.5 gap-2"} grid`}>
+                          <div className="flex min-w-0 items-start gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                            <Hash className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">Nomor ID</p>
+                              <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} break-all font-semibold text-slate-700`}>{notification.recordNoId}</p>
+                            </div>
+                          </div>
+                          <div className="flex min-w-0 items-start gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                            <UserRound className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">Identitas</p>
+                              <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} wrap-break-word font-semibold text-slate-700`}>{notification.identity}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`${isCompactNotification ? "pt-2" : "pt-2.5"}`}>
                           <div className="flex flex-wrap gap-1.5">
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
                               {notification.sourceLabel}
                             </span>
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-sm"} min-w-0 max-w-full wrap-break-word rounded-full border ${locationBadgeClass}`}>
+                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${locationBadgeClass}`}>
+                              <Building2 className="mr-1 inline size-3 text-current" />
                               {notification.roomLabel}
                             </span>
                           </div>
                         </div>
-                        <div className={`${isCompactNotification ? "pt-0.5 text-xs" : "pt-1 text-sm"} text-slate-500`}>
-                          <p>{notification.title}</p>
-                          <p>{notification.subtitle}</p>
-                          {!isCompactNotification && notification.description ? <p>{notification.description}</p> : null}
+
+                        <div className={`${isCompactNotification ? "mt-2.5 px-2.5 py-2" : "mt-3 px-3 py-2.5"} rounded-lg border border-slate-100 bg-linear-to-br from-white to-slate-50 text-slate-600`}>
+                          <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} font-semibold leading-snug text-slate-700`}>{notification.title}</p>
+                          <p className={`${isCompactNotification ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"} leading-snug text-slate-500`}>{notification.subtitle}</p>
+                          {!isCompactNotification && notification.description ? <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{notification.description}</p> : null}
+                        </div>
+
+                        <div className={`${isCompactNotification ? "mt-2" : "mt-2.5"} flex items-center justify-end gap-1 text-[11px] font-bold text-blue-600 transition group-hover:text-blue-700`}>
+                          Lihat detail
+                          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                         </div>
                       </div>
                     </div>
