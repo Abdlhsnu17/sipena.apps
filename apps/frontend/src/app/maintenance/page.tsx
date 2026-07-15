@@ -25,9 +25,9 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import MaintenanceForm from "@/components/maintenance-form";
 import MaintenanceHistoryList from "@/components/maintenance-history-list";
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -231,6 +231,7 @@ export default function MaintenancePage() {
       ? initialAutomationSource
       : "all"
   )
+  const [isCalendarMinimized, setIsCalendarMinimized] = useState(false)
   const [isMaintenanceMinimized, setIsMaintenanceMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
   const [maintenancePage, setMaintenancePage] = useState(1)
@@ -1499,162 +1500,190 @@ export default function MaintenancePage() {
                     </CardDescription>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(-1)} aria-label="Bulan sebelumnya">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Popover open={calendarPickerOpen} onOpenChange={setCalendarPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9 min-w-36 rounded-xl bg-slate-50 px-3 text-sm font-semibold capitalize text-slate-800 hover:bg-slate-100 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
-                        aria-label={`Pilih tanggal, bulan, dan tahun. Saat ini ${calendarMonthLabel}`}
-                      >
-                        {calendarMonthLabel}
-                        <ChevronDown className="ml-2 h-4 w-4 text-slate-500" />
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {!isCalendarMinimized ? (
+                    <>
+                      <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(-1)} aria-label="Bulan sebelumnya">
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="center" className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        locale={id}
-                        selected={selectedCalendarDate}
-                        month={calendarMonthDate}
-                        onMonthChange={setCalendarMonthDate}
-                        onSelect={selectCalendarDate}
-                        captionLayout="dropdown"
-                        startMonth={new Date(2000, 0)}
-                        endMonth={new Date(2100, 11)}
-                        formatters={{
-                          formatMonthDropdown: (date) => date.toLocaleDateString("id-ID", { month: "short" }),
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(1)} aria-label="Bulan berikutnya">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-9 rounded-xl px-3" onClick={showCurrentCalendarDate}>
-                    Hari ini
+                      <Popover open={calendarPickerOpen} onOpenChange={setCalendarPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 min-w-36 rounded-xl bg-slate-50 px-3 text-sm font-semibold capitalize text-slate-800 hover:bg-slate-100 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                            aria-label={`Pilih tanggal, bulan, dan tahun. Saat ini ${calendarMonthLabel}`}
+                          >
+                            {calendarMonthLabel}
+                            <ChevronDown className="ml-2 h-4 w-4 text-slate-500" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="center" className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            locale={id}
+                            selected={selectedCalendarDate}
+                            month={calendarMonthDate}
+                            onMonthChange={setCalendarMonthDate}
+                            onSelect={selectCalendarDate}
+                            captionLayout="dropdown"
+                            startMonth={new Date(2000, 0)}
+                            endMonth={new Date(2100, 11)}
+                            formatters={{
+                              formatMonthDropdown: (date) => date.toLocaleDateString("id-ID", { month: "short" }),
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" onClick={() => shiftCalendarMonth(1)} aria-label="Bulan berikutnya">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 rounded-xl px-3" onClick={showCurrentCalendarDate}>
+                        Hari ini
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCalendarMinimized((prev) => !prev)}
+                    className="rounded-2xl px-3"
+                  >
+                    {isCalendarMinimized ? (
+                      <>
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                        Tampilkan
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp className="mr-2 h-4 w-4" />
+                        Sembunyikan
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="overflow-x-auto">
-                  <div className="min-w-180 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800/35">
-                    <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40">
-                      {calendarWeekDays.map((day) => (
-                        <div key={day} className="px-2 py-2 text-center text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
-                          {day}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7">
-                      {calendarEntries.map(({ date, isCurrentMonth, items }) => (
-                        <div
-                          key={date.toISOString()}
-                          className={`min-h-28 border-b border-r border-slate-200 dark:border-slate-800/35 p-2 last:border-r-0 ${
-                            isSameCalendarDate(date, selectedCalendarDate)
-                              ? "bg-teal-50/70 ring-1 ring-inset ring-teal-300 dark:bg-teal-400/10 dark:ring-teal-500/40"
-                              : isCurrentMonth
-                                ? "bg-white dark:bg-slate-900/60"
-                                : "bg-slate-50/70 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500"
-                          }`}
-                        >
-                          <div className="mb-2 flex items-center justify-between">
-                            <span
-                              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                                isSameCalendarDate(date, new Date())
-                                  ? "bg-teal-600 text-white"
-                                  : isCurrentMonth
-                                    ? "text-slate-700 dark:text-slate-300"
-                                    : "text-slate-400 dark:text-slate-500"
-                              }`}
-                            >
-                              {date.getDate()}
-                            </span>
-                            {items.length > 0 ? (
-                              <span className="rounded-full bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                                {items.length}
+              {isCalendarMinimized ? (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-4 text-center text-[14px] text-teal-900 dark:border-teal-400/20 dark:bg-teal-400/5 dark:text-teal-200">
+                  Section kalender pemeliharaan disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="overflow-x-auto">
+                    <div className="min-w-180 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800/35">
+                      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40">
+                        {calendarWeekDays.map((day) => (
+                          <div key={day} className="px-2 py-2 text-center text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7">
+                        {calendarEntries.map(({ date, isCurrentMonth, items }) => (
+                          <div
+                            key={date.toISOString()}
+                            className={`min-h-28 border-b border-r border-slate-200 dark:border-slate-800/35 p-2 last:border-r-0 ${
+                              isSameCalendarDate(date, selectedCalendarDate)
+                                ? "bg-teal-50/70 ring-1 ring-inset ring-teal-300 dark:bg-teal-400/10 dark:ring-teal-500/40"
+                                : isCurrentMonth
+                                  ? "bg-white dark:bg-slate-900/60"
+                                  : "bg-slate-50/70 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500"
+                            }`}
+                          >
+                            <div className="mb-2 flex items-center justify-between">
+                              <span
+                                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                                  isSameCalendarDate(date, new Date())
+                                    ? "bg-teal-600 text-white"
+                                    : isCurrentMonth
+                                      ? "text-slate-700 dark:text-slate-300"
+                                      : "text-slate-400 dark:text-slate-500"
+                                }`}
+                              >
+                                {date.getDate()}
                               </span>
-                            ) : null}
-                          </div>
-                          <div className="space-y-1">
-                            {items.slice(0, 2).map((item) => {
-                              const detail = resolveDetailForMaintenance(item)
-                              const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "Aset"
-                              return (
-                                <button
-                                  key={`${date.toISOString()}-${item.id}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setSearchTerm(getMaintenanceNoId(item))
-                                    setFilterStatus("Semua")
-                                    setIsMaintenanceMinimized(false)
-                                  }}
-                                  className={`block w-full truncate rounded-md border px-2 py-1 text-left text-[11px] font-medium ${getCalendarStatusClass(item.status)}`}
-                                  title={`${getMaintenanceNoId(item)} - ${assetName}`}
-                                >
-                                  {assetName}
-                                </button>
-                              )
-                            })}
-                            {items.length > 2 ? (
-                              <div className="rounded-md bg-slate-100 dark:bg-slate-800/60 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                                +{items.length - 2} jadwal
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40 px-3 py-2">
-                    <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Jadwal terdekat</p>
-                  </div>
-                  {upcomingCalendarItems.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-3 py-4 text-sm text-muted-foreground">
-                      Tidak ada jadwal aktif mendatang.
-                    </div>
-                  ) : (
-                    upcomingCalendarItems.map(({ item, scheduledDate }) => {
-                      const detail = resolveDetailForMaintenance(item)
-                      const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
-                      return (
-                        <button
-                          key={`upcoming-${item.id}`}
-                          type="button"
-                          onClick={() => {
-                            setSearchTerm(getMaintenanceNoId(item))
-                            setFilterStatus("Semua")
-                            setIsMaintenanceMinimized(false)
-                          }}
-                          className="w-full rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-3 py-3 text-left shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{assetName}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{formatDayTimeLabel(item.scheduledDate, { showWeekday: true })}</p>
+                              {items.length > 0 ? (
+                                <span className="rounded-full bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                                  {items.length}
+                                </span>
+                              ) : null}
                             </div>
-                            <Badge variant={getStatusColor(item.status)} className="shrink-0 text-[10px]">
-                              {maintenanceStatusLabel(item.status)}
-                            </Badge>
+                            <div className="space-y-1">
+                              {items.slice(0, 2).map((item) => {
+                                const detail = resolveDetailForMaintenance(item)
+                                const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "Aset"
+                                return (
+                                  <button
+                                    key={`${date.toISOString()}-${item.id}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSearchTerm(getMaintenanceNoId(item))
+                                      setFilterStatus("Semua")
+                                      setIsMaintenanceMinimized(false)
+                                    }}
+                                    className={`block w-full truncate rounded-md border px-2 py-1 text-left text-[11px] font-medium ${getCalendarStatusClass(item.status)}`}
+                                    title={`${getMaintenanceNoId(item)} - ${assetName}`}
+                                  >
+                                    {assetName}
+                                  </button>
+                                )
+                              })}
+                              {items.length > 2 ? (
+                                <div className="rounded-md bg-slate-100 dark:bg-slate-800/60 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                  +{items.length - 2} jadwal
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
-                          <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {scheduledDate.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
-                          </p>
-                        </button>
-                      )
-                    })
-                  )}
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40 px-3 py-2">
+                      <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Jadwal terdekat</p>
+                    </div>
+                    {upcomingCalendarItems.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-3 py-4 text-sm text-muted-foreground">
+                        Tidak ada jadwal aktif mendatang.
+                      </div>
+                    ) : (
+                      upcomingCalendarItems.map(({ item, scheduledDate }) => {
+                        const detail = resolveDetailForMaintenance(item)
+                        const assetName = item.assetDetailName || detail?.detailInventoryName || detail?.detailName || item.assetName || "-"
+                        return (
+                          <button
+                            key={`upcoming-${item.id}`}
+                            type="button"
+                            onClick={() => {
+                              setSearchTerm(getMaintenanceNoId(item))
+                              setFilterStatus("Semua")
+                              setIsMaintenanceMinimized(false)
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-3 py-3 text-left shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{assetName}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{formatDayTimeLabel(item.scheduledDate, { showWeekday: true })}</p>
+                              </div>
+                              <Badge variant={getStatusColor(item.status)} className="shrink-0 text-[10px]">
+                                {maintenanceStatusLabel(item.status)}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                              {scheduledDate.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                            </p>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

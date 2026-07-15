@@ -968,13 +968,13 @@ export default function Topbar() {
                 }`} />
               ) : null}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(72vh,36rem)] w-[min(calc(100vw-1rem),23rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200/80 bg-slate-50/95 p-1.5 text-slate-950 shadow-2xl shadow-slate-900/15 backdrop-blur-sm sm:w-96">
-              <div className="flex items-center justify-between gap-3 px-2.5 pt-2 pb-1.5">
+            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(72vh,36rem)] w-[min(calc(100vw-1rem),22rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200/80 bg-slate-50/95 p-1 text-slate-950 shadow-xl shadow-slate-900/15 backdrop-blur-sm sm:w-[22rem]">
+              <div className="flex items-center justify-between gap-3 px-2 pt-1.5 pb-1">
                 <div className="min-w-0">
-                  <DropdownMenuLabel className="p-0 text-sm font-bold tracking-tight text-slate-900">
+                  <DropdownMenuLabel className="p-0 text-[13px] font-bold tracking-tight text-slate-900">
                     Pemberitahuan
                   </DropdownMenuLabel>
-                  <p className="mt-0.5 text-[11px] leading-none text-slate-500">
+                  <p className="mt-0.5 text-[10px] leading-none text-slate-500">
                     {notifications.length > 0 ? `${notifications.length} informasi perlu diperhatikan` : "Tidak ada informasi terbaru"}
                   </p>
                 </div>
@@ -984,13 +984,13 @@ export default function Topbar() {
                     event.stopPropagation()
                     setNotificationDensity(isCompactNotification ? "normal" : "compact")
                   }}
-                  className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                   aria-label={isCompactNotification ? "Tampilan notifikasi normal" : "Tampilan notifikasi ringkas"}
                 >
                   {isCompactNotification ? "Normal" : "Ringkas"}
                 </button>
               </div>
-              <div className="px-2.5 pb-2.5">
+              <div className="px-2 pb-2">
                 <div className="relative">
                   <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -1000,7 +1000,7 @@ export default function Topbar() {
                       event.stopPropagation()
                     }}
                     placeholder="Cari notifikasi..."
-                    className="h-9 rounded-xl border-slate-200 bg-white pl-9 text-sm text-slate-900 shadow-xs placeholder:text-slate-400 focus-visible:border-blue-300 focus-visible:ring-blue-100"
+                    className="h-8 rounded-lg border-slate-200 bg-white pl-8 text-xs text-slate-900 shadow-xs placeholder:text-slate-400 focus-visible:border-blue-300 focus-visible:ring-blue-100"
                     aria-label="Cari pemberitahuan"
                   />
                 </div>
@@ -1018,7 +1018,7 @@ export default function Topbar() {
                 filteredNotifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`${isCompactNotification ? "mt-1.5" : "mt-2"} block cursor-pointer rounded-xl p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
+                    className={`${isCompactNotification ? "mt-1" : "mt-2"} block cursor-pointer rounded-lg p-0 focus-visible:outline-none data-highlighted:bg-transparent data-highlighted:text-current`}
                     onSelect={(event) => {
                       event.preventDefault()
                       if (notification.href) {
@@ -1026,11 +1026,11 @@ export default function Topbar() {
                       }
                     }}
                   >
-                    <div className="group overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-900/10">
-                      <div className={`${isCompactNotification ? "gap-1.5 px-3 py-2" : "gap-2 px-3.5 py-2.5"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
-                        <span className={`${isCompactNotification ? "text-xs" : "text-sm"} min-w-0 truncate font-bold tracking-tight`}>{notificationTypeLabel[notification.type]}</span>
+                    <div className="group overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:shadow-slate-900/10">
+                      <div className={`${isCompactNotification ? "gap-1 px-2.5 py-1.5" : "gap-2 px-3.5 py-2.5"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
+                        <span className={`${isCompactNotification ? "text-[11px]" : "text-sm"} min-w-0 truncate font-bold tracking-tight`}>{notificationTypeLabel[notification.type]}</span>
                         <span className="flex items-center gap-1.5">
-                          <span className={`${isCompactNotification ? "px-2 text-[9px]" : "px-2.5 text-[11px]"} max-w-28 truncate rounded-full border border-white/40 bg-white/15 py-0.5 font-semibold shadow-inner backdrop-blur-sm`}>
+                          <span className={`${isCompactNotification ? "px-1.5 text-[8px]" : "px-2.5 text-[11px]"} max-w-28 truncate rounded-full border border-white/40 bg-white/15 py-0.5 font-semibold shadow-inner backdrop-blur-sm`}>
                             {categoryLabelByKey[notification.category]}
                           </span>
                           {notification.dismissKey ? (
@@ -1041,7 +1041,7 @@ export default function Topbar() {
                                 event.stopPropagation()
                                 dismissNotification(notification)
                               }}
-                              className="flex h-5 w-5 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
+                              className={`${isCompactNotification ? "h-4 w-4 text-xs" : "h-5 w-5"} flex items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white`}
                               aria-label="Tutup pemberitahuan"
                             >
                               ×
@@ -1049,54 +1049,56 @@ export default function Topbar() {
                           ) : null}
                         </span>
                       </div>
-                      <div className={`${isCompactNotification ? "px-3 py-2.5" : "px-3.5 py-3"} text-slate-900`}>
+                      <div className={`${isCompactNotification ? "px-2.5 py-2" : "px-3.5 py-3"} text-slate-900`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className={`${isCompactNotification ? "text-sm" : "text-base"} min-w-0 wrap-break-word leading-snug font-bold tracking-tight text-slate-950`}>{notification.assetName}</p>
-                            <p className={`${isCompactNotification ? "mt-0.5 text-[11px]" : "mt-1 text-xs"} min-w-0 break-all font-medium text-slate-500`}>{notification.assetCode}</p>
+                            <p className={`${isCompactNotification ? "text-[13px]" : "text-base"} min-w-0 wrap-break-word leading-tight font-bold tracking-tight text-slate-950`}>{notification.assetName}</p>
+                            <p className={`${isCompactNotification ? "mt-0.5 text-[10px]" : "mt-1 text-xs"} min-w-0 break-all font-medium text-slate-500`}>{notification.assetCode}</p>
                           </div>
-                          <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${statusConfig[notification.notifStatus].dot} ring-4 ring-slate-100`} aria-hidden="true" />
+                          <span className={`${isCompactNotification ? "h-2 w-2 ring-2" : "h-2.5 w-2.5 ring-4"} mt-0.5 shrink-0 rounded-full ${statusConfig[notification.notifStatus].dot} ring-slate-100`} aria-hidden="true" />
                         </div>
 
-                        <div className={`${isCompactNotification ? "mt-2 gap-1.5" : "mt-2.5 gap-2"} grid`}>
-                          <div className="flex min-w-0 items-start gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
-                            <Hash className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
+                        <div className={`${isCompactNotification ? "mt-1.5 grid-cols-2 gap-1" : "mt-2.5 gap-2"} grid`}>
+                          <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
+                            <Hash className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
                             <div className="min-w-0">
-                              <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">Nomor ID</p>
-                              <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} break-all font-semibold text-slate-700`}>{notification.recordNoId}</p>
+                              <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Nomor ID</p>
+                              <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} break-all font-semibold text-slate-700`}>{notification.recordNoId}</p>
                             </div>
                           </div>
-                          <div className="flex min-w-0 items-start gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
-                            <UserRound className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
+                          <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
+                            <UserRound className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
                             <div className="min-w-0">
-                              <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">Identitas</p>
-                              <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} wrap-break-word font-semibold text-slate-700`}>{notification.identity}</p>
+                              <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Identitas</p>
+                              <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} wrap-break-word font-semibold text-slate-700`}>{notification.identity}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className={`${isCompactNotification ? "pt-2" : "pt-2.5"}`}>
+                        <div className={`${isCompactNotification ? "pt-1.5" : "pt-2.5"}`}>
                           <div className="flex flex-wrap gap-1.5">
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
+                            <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
                               {notification.sourceLabel}
                             </span>
-                            <span className={`${isCompactNotification ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${locationBadgeClass}`}>
+                            <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${locationBadgeClass}`}>
                               <Building2 className="mr-1 inline size-3 text-current" />
                               {notification.roomLabel}
                             </span>
                           </div>
                         </div>
 
-                        <div className={`${isCompactNotification ? "mt-2.5 px-2.5 py-2" : "mt-3 px-3 py-2.5"} rounded-lg border border-slate-100 bg-linear-to-br from-white to-slate-50 text-slate-600`}>
-                          <p className={`${isCompactNotification ? "text-[11px]" : "text-xs"} font-semibold leading-snug text-slate-700`}>{notification.title}</p>
-                          <p className={`${isCompactNotification ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"} leading-snug text-slate-500`}>{notification.subtitle}</p>
+                        <div className={`${isCompactNotification ? "mt-1.5 rounded-md px-2 py-1.5" : "mt-3 rounded-lg px-3 py-2.5"} border border-slate-100 bg-linear-to-br from-white to-slate-50 text-slate-600`}>
+                          <p className={`${isCompactNotification ? "text-[10px]" : "text-xs"} font-semibold leading-snug text-slate-700`}>{notification.title}</p>
+                          <p className={`${isCompactNotification ? "mt-0.5 text-[9px]" : "mt-1 text-[11px]"} leading-snug text-slate-500`}>{notification.subtitle}</p>
                           {!isCompactNotification && notification.description ? <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{notification.description}</p> : null}
                         </div>
 
-                        <div className={`${isCompactNotification ? "mt-2" : "mt-2.5"} flex items-center justify-end gap-1 text-[11px] font-bold text-blue-600 transition group-hover:text-blue-700`}>
-                          Lihat detail
-                          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                        </div>
+                        {!isCompactNotification ? (
+                          <div className="mt-2.5 flex items-center justify-end gap-1 text-[11px] font-bold text-blue-600 transition group-hover:text-blue-700">
+                            Lihat detail
+                            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </DropdownMenuItem>
