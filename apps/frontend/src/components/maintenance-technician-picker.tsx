@@ -73,9 +73,16 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
         updatePositionStrategy="always"
         className="max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
       >
-        <Command className="max-h-[min(20rem,var(--radix-popover-content-available-height))]" shouldFilter={false}>
+        <Command
+          className="h-[min(20rem,var(--radix-popover-content-available-height))] min-h-0"
+          shouldFilter={false}
+        >
           <CommandInput placeholder="Ketik nama, NIP, atau unit kerja..." value={query} onValueChange={setQuery} />
-          <CommandList className="min-h-0 flex-1 touch-pan-y overscroll-contain [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent">
+          <CommandList
+            className="min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent"
+            onWheelCapture={(event) => event.stopPropagation()}
+            onTouchMoveCapture={(event) => event.stopPropagation()}
+          >
             {loading ? (
               <div className="flex min-h-40 items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Memuat akun...
