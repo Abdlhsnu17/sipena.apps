@@ -227,6 +227,17 @@ const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnV
   ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
   (borrowing.status === "returned" && !borrowing.returnValidatedAt)
 
+const isOverdueBorrowingBlock = (
+  borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt" | "dueDate" | "overdueDays">
+) => {
+  if (borrowing.status === "overdue") return true
+  if (borrowing.status !== "returned" || borrowing.returnValidatedAt) return false
+  if ((borrowing.overdueDays || 0) > 0) return true
+
+  const dueDate = parseServerDateTimeValue(borrowing.dueDate)
+  return Boolean(dueDate && Date.now() > dueDate.getTime())
+}
+
 const resolveDefaultDestinationRoom = (currentUser?: User | null) => {
   const subWorkUnit = currentUser?.subWorkUnit?.trim()
   if (subWorkUnit) return subWorkUnit
@@ -1791,19 +1802,23 @@ export default function BorrowingPage() {
     return true
   })
 
-  const currentUserOverdueBorrowings = useMemo(() => {
+  const currentUserBlockingBorrowings = useMemo(() => {
     if (!Number.isFinite(currentUserId) || currentUserId <= 0) return []
 
     return borrowings.filter(
       (borrowing) =>
         Number(borrowing.userId) === currentUserId &&
-        borrowing.status === "overdue"
+        isOverdueBorrowingBlock(borrowing)
     )
   }, [borrowings, currentUser?.id])
 
-  const hasBorrowingOverdueBlock = currentUserOverdueBorrowings.length > 0
+  const hasBorrowingOverdueBlock = currentUserBlockingBorrowings.length > 0
   const overdueBorrowingBlockMessage = hasBorrowingOverdueBlock
-    ? `Anda masih memiliki peminjaman yang sudah melewati batas waktu. Kembalikan alat tersebut terlebih dahulu, atau perbarui batas waktu peminjaman bila alat masih digunakan.`
+    ? currentUserBlockingBorrowings.some(
+        (borrowing) => borrowing.status === "returned" && !borrowing.returnValidatedAt
+      )
+      ? `Pengembalian alat yang terlambat masih menunggu validasi petugas. Peminjaman baru dapat dilakukan setelah pengembalian selesai divalidasi.`
+      : `Anda masih memiliki peminjaman yang sudah melewati batas waktu. Kembalikan alat tersebut terlebih dahulu, atau perbarui batas waktu peminjaman bila alat masih digunakan.`
     : ""
 
   const pendingCount = visibleBorrowings.filter((b) => b.status === "pending").length
@@ -1969,7 +1984,7 @@ export default function BorrowingPage() {
     })
   }, [showForm])
 
-  const blockedBorrowingLabels = currentUserOverdueBorrowings.slice(0, 3).map((borrowing) => {
+  const blockedBorrowingLabels = currentUserBlockingBorrowings.slice(0, 3).map((borrowing) => {
     const noId = getBorrowingNoId(borrowing)
     const itemName = borrowing.assetDetailName || borrowing.assetName || "Inventaris"
     return `${noId} - ${itemName}`
@@ -2028,7 +2043,7 @@ export default function BorrowingPage() {
                   <p>{`Data terlambat: ${blockedBorrowingLabels.join(", ")}`}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {currentUserOverdueBorrowings.map((borrowing) => {
+                  {currentUserBlockingBorrowings.map((borrowing) => {
                     const canExtend = canManageBorrowingExtension(borrowing)
                     return (
                       <Button
@@ -2370,7 +2385,7 @@ export default function BorrowingPage() {
                     <AlertDescription>
                       <p>{overdueBorrowingBlockMessage}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {currentUserOverdueBorrowings.map((borrowing) => {
+                        {currentUserBlockingBorrowings.map((borrowing) => {
                           const canExtend = canManageBorrowingExtension(borrowing)
                           return (
                             <Button

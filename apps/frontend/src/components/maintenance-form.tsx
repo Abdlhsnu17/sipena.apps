@@ -354,13 +354,10 @@ export default function MaintenanceForm({
   return (
     <Card className="m-0 flex max-h-[90dvh] flex-col overflow-hidden rounded-2xl border-0 text-sm shadow-none">
       <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
-        <div className="space-y-0.5">
+        <div>
           <CardTitle className="text-base">
             {maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Lengkapi jadwal, penanggung jawab, dan detail layanan.
-          </p>
         </div>
         <button
           type="button"
@@ -500,7 +497,10 @@ export default function MaintenanceForm({
             <p className="text-xs text-red-600 sm:text-sm">Aset sedang digunakan. Hentikan penggunaan sebelum membuat pemeliharaan aktif.</p>
           ) : <span />}
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={onCancel}>Batal</Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              <X className="mr-2 h-4 w-4" />
+              Batal
+            </Button>
             <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status)}>
               <Save className="mr-2 h-4 w-4" /> Simpan Pemeliharaan
             </Button>

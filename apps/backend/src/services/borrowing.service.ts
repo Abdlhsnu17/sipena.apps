@@ -670,7 +670,7 @@ export class BorrowingService {
          AND b.asset_type = 'non_medical'
        WHERE b.user_id = ?
          AND b.deleted_at IS NULL
-         AND b.status IN ('pending', 'approved', 'borrowed', 'overdue')
+         AND ${this.getBorrowingLockWhereClause('b.status', 'b.return_validated_at')}
          AND b.due_date IS NOT NULL
          AND NOW() > b.due_date
        ORDER BY b.due_date ASC, b.created_at ASC
@@ -696,7 +696,9 @@ export class BorrowingService {
     const isBlocked = blockingBorrowing.is_extension_blocked;
     
     let message = '';
-    if (status === 'overdue' || status === 'pending') {
+    if (status === 'returned') {
+      message = `Peminjaman baru ditolak karena pengembalian alat ${assetName}${reference} masih menunggu validasi petugas. Peminjaman baru dapat dilakukan setelah pengembalian selesai divalidasi.`;
+    } else if (status === 'overdue' || status === 'pending') {
       if (isBlocked) {
         message = `Peminjaman baru ditolak karena perpanjangan waktu peminjaman Anda telah dikunci oleh sistem. Alat ${assetName}${reference}${dueDateSegment} harus dikembalikan terlebih dahulu.`;
       } else if (extensionCount === 0) {
@@ -2035,7 +2037,7 @@ export class BorrowingService {
       SELECT COUNT(*) as count FROM borrowing_records
       WHERE user_id = ?
         AND deleted_at IS NULL
-        AND status IN ('pending', 'approved', 'borrowed', 'overdue')
+        AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
         AND due_date IS NOT NULL
         AND NOW() > due_date
       LIMIT 1
@@ -2056,7 +2058,7 @@ export class BorrowingService {
       SELECT * FROM borrowing_records
       WHERE user_id = ?
         AND deleted_at IS NULL
-        AND status IN ('pending', 'approved', 'borrowed', 'overdue')
+        AND ${this.getBorrowingLockWhereClause('status', 'return_validated_at')}
         AND due_date IS NOT NULL
         AND NOW() > due_date
       ORDER BY due_date ASC
