@@ -1303,7 +1303,7 @@ export default function ReturnsPage() {
           <div
             role="tablist"
             aria-label="Daftar pengembalian"
-            className="grid grid-cols-2 gap-2 rounded-3xl border border-slate-200/80 bg-white/90 p-2 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70 sm:gap-3 sm:p-3"
+            className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm dark:border-slate-700/35 dark:bg-slate-900/70 sm:p-2"
           >
             <button
               type="button"
@@ -1312,7 +1312,7 @@ export default function ReturnsPage() {
               aria-controls="active-returns-panel"
               id="active-returns-tab"
               onClick={() => setReturnView("active")}
-              className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
                 returnView === "active"
                   ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                   : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -1328,7 +1328,7 @@ export default function ReturnsPage() {
               aria-controls="return-history-panel"
               id="return-history-tab"
               onClick={() => setReturnView("history")}
-              className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center text-[13px] font-semibold transition sm:min-h-16 sm:gap-3 sm:px-5 sm:text-base ${
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
                 returnView === "history"
                   ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                   : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
