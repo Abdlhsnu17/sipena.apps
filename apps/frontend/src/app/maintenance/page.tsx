@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import MaintenanceForm from "@/components/maintenance-form";
 import MaintenanceHistoryList from "@/components/maintenance-history-list";
+import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ExportFormat, exportFormularReport, FormularData, TableExportColumn } from "@/utils/export-table";
 
-import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import { assetUsageService } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
@@ -205,7 +205,6 @@ export default function MaintenancePage() {
   const initialAutomationSource = searchParams.get("automationSource")
   const initialSearchTerm = searchParams.get("q") || ""
   const dssPrefillHandledRef = useRef(false)
-  const { confirm } = useConfirm()
   const { toast } = useToast()
   const activeMaintenanceStatuses = useMemo(
     () => new Set(["requested", "scheduled", "in_progress", "completed"]),
@@ -220,6 +219,9 @@ export default function MaintenancePage() {
   const [activeBorrowingLocks, setActiveBorrowingLocks] = useState<Set<string>>(new Set())
   const [showForm, setShowForm] = useState(false)
   const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null)
+  const [pendingDeleteMaintenance, setPendingDeleteMaintenance] = useState<Maintenance | null>(null)
+  const [deleteReason, setDeleteReason] = useState("")
+  const [isDeletingMaintenance, setIsDeletingMaintenance] = useState(false)
   const [prefillAsset, setPrefillAsset] = useState<DetailInventoryItem | null>(null)
   const [prefillNote, setPrefillNote] = useState("")
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
@@ -688,7 +690,7 @@ export default function MaintenancePage() {
     }
   }
 
-  const handleDeleteMaintenance = async (id: string | number) => {
+  const handleDeleteMaintenance = (item: Maintenance) => {
     if (!canDeleteMaintenance) {
       toast({
         title: "Akses ditolak",
@@ -697,16 +699,25 @@ export default function MaintenancePage() {
       })
       return
     }
-    const isConfirmed = await confirm({
-      title: "Hapus jadwal pemeliharaan",
-      description: "Apakah Anda yakin ingin menghapus jadwal ini?",
-      confirmText: "Ya, hapus",
-      destructive: true,
-    })
-    if (!isConfirmed) return
+    setPendingDeleteMaintenance(item)
+    setDeleteReason("")
+  }
 
+  const confirmDeleteMaintenance = async () => {
+    if (!pendingDeleteMaintenance) return
+    const reason = deleteReason.trim()
+    if (!reason) {
+      toast({
+        title: "Alasan wajib diisi",
+        description: "Isi alasan penghapusan sebelum melanjutkan.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsDeletingMaintenance(true)
     try {
-      const response = await maintenanceService.delete(String(id), "Dihapus oleh Admin dari daftar pemeliharaan")
+      const response = await maintenanceService.delete(String(pendingDeleteMaintenance.id), reason)
       if (!response.success) {
         toast({
           title: "Pemeliharaan belum terhapus",
@@ -715,6 +726,8 @@ export default function MaintenancePage() {
         })
         return
       }
+      setPendingDeleteMaintenance(null)
+      setDeleteReason("")
       await loadMaintenance()
       await loadAssets()
     } catch (error: any) {
@@ -724,6 +737,8 @@ export default function MaintenancePage() {
         description: "Terjadi kesalahan saat menghapus jadwal pemeliharaan.",
         variant: "destructive",
       })
+    } finally {
+      setIsDeletingMaintenance(false)
     }
   }
 
@@ -1900,7 +1915,7 @@ export default function MaintenancePage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
-                                  onClick={() => handleDeleteMaintenance(m.id)}
+                                  onClick={() => handleDeleteMaintenance(m)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -2175,6 +2190,21 @@ export default function MaintenancePage() {
             </div>
 	      </div>
 	    </div>
+
+      <DeleteReasonDialog
+        open={Boolean(pendingDeleteMaintenance)}
+        title="Arsipkan data pemeliharaan?"
+        description={`Data ${pendingDeleteMaintenance?.assetDetailName || pendingDeleteMaintenance?.assetName || "pemeliharaan"} akan disembunyikan dari daftar utama, tetapi tetap tersimpan sebagai arsip Admin.`}
+        value={deleteReason}
+        isSubmitting={isDeletingMaintenance}
+        onValueChange={setDeleteReason}
+        onCancel={() => {
+          if (isDeletingMaintenance) return
+          setPendingDeleteMaintenance(null)
+          setDeleteReason("")
+        }}
+        onConfirm={confirmDeleteMaintenance}
+      />
 
       {canCreateMaintenance && !showForm && (
         <div className="fab-safe-area fixed z-40 xl:hidden">

@@ -38,7 +38,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import { assetService } from "@/services/asset.service";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
@@ -120,7 +119,6 @@ const formatBorrowingDuration = (
 
 export default function ReturnsPage() {
   const router = useRouter()
-  const { confirm } = useConfirm()
   const { toast } = useToast()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [borrowings, setBorrowings] = useState<ApiBorrowing[]>([])
@@ -388,7 +386,7 @@ export default function ReturnsPage() {
     }
   }
 
-  const handleDeleteReturn = async (borrowing: ApiBorrowing) => {
+  const handleDeleteReturn = (borrowing: ApiBorrowing) => {
     if (!canDeleteReturns) {
       toast({
         title: "Akses ditolak",
@@ -397,13 +395,6 @@ export default function ReturnsPage() {
       })
       return
     }
-    const isConfirmed = await confirm({
-      title: "Hapus data pengembalian",
-      description: "Apakah Anda yakin ingin menghapus data pengembalian ini?",
-      confirmText: "Ya, hapus",
-      destructive: true,
-    })
-    if (!isConfirmed) return
     setPendingDeleteReturn(borrowing)
     setDeleteReason("")
   }
@@ -585,7 +576,7 @@ export default function ReturnsPage() {
   const canManageReturnRecords = isAdminOrLeaderRole(currentUser?.role)
   const canValidateReturns = canManageReturnRecords || isStaffPjRole(currentUser?.role)
   const canDeleteReturns = isAdminRole(currentUser?.role)
-  const canRequestDeleteReturns = currentUser?.role === "leader"
+  const canRequestDeleteReturns = isAdminOrLeaderRole(currentUser?.role) && !canDeleteReturns
 
   const normalizeWorkUnit = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() || ""
 
@@ -2209,6 +2200,8 @@ export default function ReturnsPage() {
         description={`Permintaan penghapusan ${pendingArchiveReturnRequest?.assetDetailName || pendingArchiveReturnRequest?.assetName || "pengembalian ini"} akan dikirim ke Admin untuk ditinjau.`}
         value={deleteReason}
         isSubmitting={isDeletingReturn}
+        confirmLabel="Ajukan"
+        submittingLabel="Mengajukan..."
         onValueChange={setDeleteReason}
         onCancel={() => {
           if (isDeletingReturn) return

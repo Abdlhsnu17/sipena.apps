@@ -17,6 +17,8 @@ type DeleteReasonDialogProps = {
   description: string
   value: string
   isSubmitting?: boolean
+  confirmLabel?: string
+  submittingLabel?: string
   onValueChange: (value: string) => void
   onCancel: () => void
   onConfirm: () => void
@@ -28,6 +30,8 @@ export default function DeleteReasonDialog({
   description,
   value,
   isSubmitting = false,
+  confirmLabel = "Hapus",
+  submittingLabel = "Mengarsipkan...",
   onValueChange,
   onCancel,
   onConfirm,
@@ -62,7 +66,7 @@ export default function DeleteReasonDialog({
             onClick={onConfirm}
             disabled={isSubmitting || !value.trim()}
           >
-            {isSubmitting ? "Mengarsipkan..." : "Hapus"}
+            {isSubmitting ? submittingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

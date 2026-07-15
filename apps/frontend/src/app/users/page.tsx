@@ -1155,6 +1155,8 @@ export default function UsersPage() {
           description={`Permintaan penghapusan ${pendingArchiveUserRequest?.name || ""} akan dikirim ke Admin untuk ditinjau.`}
           value={deleteReason}
           isSubmitting={isDeletingUser}
+          confirmLabel="Ajukan"
+          submittingLabel="Mengajukan..."
           onValueChange={setDeleteReason}
           onCancel={() => {
             if (isDeletingUser) return

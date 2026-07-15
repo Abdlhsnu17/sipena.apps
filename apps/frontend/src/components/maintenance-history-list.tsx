@@ -33,7 +33,7 @@ import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, locationBad
 import { ExportFormat, exportMaintenanceHistory, type MaintenanceHistoryExportEntry } from "@/utils/export-table";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { canManageMaintenanceStatusRole, isAdminRole } from "@/utils/role";
+import { canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { ChevronLeft, ChevronRight, Download, Eye, MapPin, Pencil, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -247,7 +247,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
   const canComplete = canManageMaintenanceStatusRole(safeUser.role);
   const canValidate = canManageMaintenanceStatusRole(safeUser.role);
   const canDelete = isAdminRole(safeUser.role);
-  const canRequestDelete = safeUser.role === "leader";
+  const canRequestDelete = isAdminOrLeaderRole(safeUser.role) && !canDelete;
 
   const getValidatorLabel = (history: MaintenanceHistory): ValidatorInfo | null => {
     const explicitName = history.validatorName?.trim();
@@ -1443,6 +1443,8 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       description={`Permintaan penghapusan ${pendingArchiveHistoryRequest?.assetDetailName || pendingArchiveHistoryRequest?.assetName || "riwayat ini"} akan dikirim ke Admin untuk ditinjau.`}
       value={deleteReason}
       isSubmitting={isDeletingHistory}
+      confirmLabel="Ajukan"
+      submittingLabel="Mengajukan..."
       onValueChange={setDeleteReason}
       onCancel={() => {
         if (isDeletingHistory) return;

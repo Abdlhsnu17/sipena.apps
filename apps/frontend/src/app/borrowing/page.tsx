@@ -584,7 +584,7 @@ export default function BorrowingPage() {
   const hasFullAccess = isAdminOrLeaderRole(currentUser?.role)
   const canValidateBorrowing = hasFullAccess || isStaffPjRole(currentUser?.role)
   const canDeleteBorrowing = isAdminRole(currentUser?.role)
-  const canRequestDeleteBorrowing = currentUser?.role === "leader"
+  const canRequestDeleteBorrowing = hasFullAccess && !canDeleteBorrowing
   const currentUserId = Number(currentUser?.id)
 
   const isBorrowingOwner = (borrowing: ApiBorrowing) =>
@@ -986,7 +986,7 @@ export default function BorrowingPage() {
     }
   }
 
-  const handleDeleteBorrowing = async (borrowing: ApiBorrowing) => {
+  const handleDeleteBorrowing = (borrowing: ApiBorrowing) => {
     if (!canDeleteBorrowing) {
       toast({
         title: "Akses ditolak",
@@ -995,13 +995,6 @@ export default function BorrowingPage() {
       })
       return
     }
-    const isConfirmed = await confirm({
-      title: "Hapus data peminjaman",
-      description: "Apakah Anda yakin ingin menghapus data peminjaman ini?",
-      confirmText: "Ya, hapus",
-      destructive: true,
-    })
-    if (!isConfirmed) return
     setPendingDeleteBorrowing(borrowing)
     setDeleteReason("")
   }
@@ -2104,11 +2097,8 @@ export default function BorrowingPage() {
                 </DialogDescription>
                 <div className="flex max-h-[90dvh] flex-col overflow-hidden text-sm">
                   <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
-                    <div className="space-y-0.5">
+                    <div>
                       <h2 className="text-base font-semibold text-foreground">Tambah Peminjaman</h2>
-                      <p className="text-xs text-muted-foreground">
-                        Lengkapi inventaris, identitas penanggung jawab, dan keperluan peminjaman.
-                      </p>
                     </div>
                     <button
                       type="button"
@@ -2411,6 +2401,7 @@ export default function BorrowingPage() {
                       setSelectedBorrowableAssetIds([])
                     }}
                   >
+                    <X className="mr-2 h-4 w-4" />
                     Batal
                   </Button>
                   <Button
@@ -3137,6 +3128,8 @@ export default function BorrowingPage() {
         description={`Permintaan penghapusan ${pendingArchiveBorrowingRequest?.assetDetailName || pendingArchiveBorrowingRequest?.assetName || "peminjaman ini"} akan dikirim ke Admin untuk ditinjau.`}
         value={deleteReason}
         isSubmitting={isDeletingBorrowing}
+        confirmLabel="Ajukan"
+        submittingLabel="Mengajukan..."
         onValueChange={setDeleteReason}
         onCancel={() => {
           if (isDeletingBorrowing) return

@@ -36,7 +36,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import { appendLine, ExportFormat, exportNarrativeReport, type DocumentSection, type SectionLine } from "@/utils/export-table";
 
@@ -405,10 +404,9 @@ const dispatchInventoryRefresh = () => {
 export default function AssetUsagePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const canDeleteAssetUsage = currentUser?.role === "admin" || currentUser?.role === "leader";
+  const canDeleteAssetUsage = ["admin", "leader"].includes(normalizeRole(currentUser?.role));
   const [assets, setAssets] = useState<DetailInventoryItem[]>([]);
   const [logs, setLogs] = useState<AssetUsageLog[]>([]);
   const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set());
@@ -817,15 +815,8 @@ export default function AssetUsagePage() {
     }
   };
 
-  const handleDelete = async (log: AssetUsageLog) => {
+  const handleDelete = (log: AssetUsageLog) => {
     if (!canDeleteAssetUsage) return;
-    const ok = await confirm({
-      title: "Arsipkan log penggunaan?",
-      description: `Log ${log.assetDetailName || log.assetName || "alat"} akan diarsipkan dari riwayat aktif.`,
-      confirmText: "Arsipkan",
-      destructive: true,
-    });
-    if (!ok) return;
     setPendingDeleteLog(log);
     setDeleteReason("");
   };
