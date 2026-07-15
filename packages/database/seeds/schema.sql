@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_attachments`, `maintenance_parts`, `maintenance_status_logs`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -248,11 +248,18 @@ CREATE TABLE `maintenance_records` (
   `asset_detail_code` varchar(100) DEFAULT NULL,
   `schedule_id` int(11) DEFAULT NULL,
   `type` varchar(50) NOT NULL,
+  `priority` varchar(20) NOT NULL DEFAULT 'normal',
   `status` varchar(20) NOT NULL DEFAULT 'scheduled',
   `scheduled_date` datetime NOT NULL,
+  `due_at` datetime DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
   `completed_date` datetime DEFAULT NULL,
   `description` text NOT NULL,
   `technician` varchar(255) DEFAULT NULL,
+  `technician_user_id` int(11) DEFAULT NULL,
+  `vendor_name` varchar(255) DEFAULT NULL,
+  `vendor_reference` varchar(100) DEFAULT NULL,
+  `warranty_until` date DEFAULT NULL,
   `cost` decimal(10,2) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `cancellation_reason` text DEFAULT NULL,
@@ -263,6 +270,54 @@ CREATE TABLE `maintenance_records` (
   `deleted_at` datetime DEFAULT NULL,
   `deleted_by` int(11) DEFAULT NULL,
   `delete_reason` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `maintenance_status_logs`
+--
+
+CREATE TABLE `maintenance_status_logs` (
+  `id` bigint(20) NOT NULL,
+  `maintenance_id` int(11) NOT NULL,
+  `from_status` varchar(20) DEFAULT NULL,
+  `to_status` varchar(20) NOT NULL,
+  `note` text DEFAULT NULL,
+  `changed_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `maintenance_parts`
+--
+
+CREATE TABLE `maintenance_parts` (
+  `id` bigint(20) NOT NULL,
+  `maintenance_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `quantity` decimal(12,2) NOT NULL DEFAULT 1.00,
+  `unit` varchar(50) DEFAULT NULL,
+  `unit_cost` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `maintenance_attachments`
+--
+
+CREATE TABLE `maintenance_attachments` (
+  `id` bigint(20) NOT NULL,
+  `maintenance_id` int(11) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `mime_type` varchar(100) DEFAULT NULL,
+  `uploaded_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -568,9 +623,34 @@ ALTER TABLE `maintenance_records`
   ADD UNIQUE KEY `uq_maintenance_code` (`maintenance_code`),
   ADD KEY `idx_maintenance_asset` (`asset_id`),
   ADD KEY `idx_maintenance_asset_type` (`asset_type`),
+  ADD KEY `idx_maintenance_priority_due` (`priority`,`due_at`),
+  ADD KEY `idx_maintenance_technician` (`technician_user_id`),
   ADD KEY `idx_maintenance_created_by` (`created_by`),
   ADD KEY `idx_maintenance_completed_by` (`completed_by`),
   ADD KEY `idx_maintenance_schedule_id` (`schedule_id`);
+
+--
+-- Indeks untuk tabel `maintenance_status_logs`
+--
+ALTER TABLE `maintenance_status_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_maintenance_status_logs_record` (`maintenance_id`,`created_at`),
+  ADD KEY `fk_maintenance_status_logs_user` (`changed_by`);
+
+--
+-- Indeks untuk tabel `maintenance_parts`
+--
+ALTER TABLE `maintenance_parts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_maintenance_parts_record` (`maintenance_id`);
+
+--
+-- Indeks untuk tabel `maintenance_attachments`
+--
+ALTER TABLE `maintenance_attachments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_maintenance_attachments_record` (`maintenance_id`),
+  ADD KEY `fk_maintenance_attachments_user` (`uploaded_by`);
 
 --
 -- Indeks untuk tabel `medical_assets`
@@ -702,6 +782,24 @@ ALTER TABLE `maintenance_records`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT untuk tabel `maintenance_status_logs`
+--
+ALTER TABLE `maintenance_status_logs`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `maintenance_parts`
+--
+ALTER TABLE `maintenance_parts`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `maintenance_attachments`
+--
+ALTER TABLE `maintenance_attachments`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT untuk tabel `medical_assets`
 --
 ALTER TABLE `medical_assets`
@@ -804,6 +902,26 @@ ALTER TABLE `maintenance_records`
   ADD CONSTRAINT `fk_maintenance_completed_by` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_maintenance_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_maintenance_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `jadwal_pemeliharaan` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `maintenance_status_logs`
+--
+ALTER TABLE `maintenance_status_logs`
+  ADD CONSTRAINT `fk_maintenance_status_logs_record` FOREIGN KEY (`maintenance_id`) REFERENCES `maintenance_records` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_status_logs_user` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Ketidakleluasaan untuk tabel `maintenance_parts`
+--
+ALTER TABLE `maintenance_parts`
+  ADD CONSTRAINT `fk_maintenance_parts_record` FOREIGN KEY (`maintenance_id`) REFERENCES `maintenance_records` (`id`) ON DELETE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `maintenance_attachments`
+--
+ALTER TABLE `maintenance_attachments`
+  ADD CONSTRAINT `fk_maintenance_attachments_record` FOREIGN KEY (`maintenance_id`) REFERENCES `maintenance_records` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_attachments_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Ketidakleluasaan untuk tabel `non_medical_assets`
