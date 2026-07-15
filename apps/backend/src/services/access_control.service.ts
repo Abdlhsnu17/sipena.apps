@@ -31,7 +31,7 @@ const DEFAULT_ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const DEFAULT_MENUS = [
-  { code: 'activity_archive', label: 'Arsip Riwayat Aktivitas', path: '/activity-archive', sortOrder: 10 },
+  { code: 'activity_archive', label: 'Arsip & Riwayat', path: '/activity-archive', sortOrder: 10 },
   { code: 'dashboard', label: 'Dashboard', path: '/', sortOrder: 20 },
   { code: 'uml', label: 'Dokumentasi Sistem', path: '/uml', sortOrder: 30 },
   { code: 'medical_assets', label: 'Inventaris Medis', path: '/medical-assets', sortOrder: 40 },

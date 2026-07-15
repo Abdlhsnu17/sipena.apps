@@ -1578,7 +1578,7 @@ export default function MaintenancePage() {
           {showForm && (
             <DialogContent
               showCloseButton={false}
-              className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-y-auto overscroll-contain p-0 [scrollbar-gutter:stable] sm:max-w-[min(92rem,calc(100vw-2rem))]"
+              className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-4xl"
             >
               <DialogTitle className="sr-only">
                 {editingMaintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}

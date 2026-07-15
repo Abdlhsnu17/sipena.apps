@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
+import { InventoryHistoryArchive } from "@/components/inventory-history-archive";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import authService, { type User as AuthUser } from "@/services/auth.service";
 import userActivityService, { type UserActivity } from "@/services/user-activity.service";
 import userService, { type User } from "@/services/user.service";
 import { getFeatureLabel } from "@/utils/feature-presentation";
 import { canViewAllActivitiesRole, getUserRoleLabel } from "@/utils/role";
-import { Archive, ChevronLeft, ChevronRight, Clock3, RotateCcw } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, ClipboardList, Clock3, History, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVITY_CODE_PATTERN = /\b([A-Z0-9]+(?:-[A-Z0-9]+)+)\b/
@@ -95,6 +96,7 @@ const formatActivityAction = (activity: UserActivity) => {
 }
 
 export default function ActivityArchivePage() {
+  const [section, setSection] = useState<"activity" | "inventory-history">("activity")
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [activities, setActivities] = useState<UserActivity[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -114,7 +116,20 @@ export default function ActivityArchivePage() {
   useEffect(() => {
     setCurrentUser(authService.getCurrentUser())
     setAuthReady(true)
+    const requestedSection = new URLSearchParams(window.location.search).get("section")
+    if (requestedSection === "inventory-history") setSection("inventory-history")
   }, [])
+
+  const changeSection = (nextSection: "activity" | "inventory-history") => {
+    setSection(nextSection)
+    if (nextSection === "activity") {
+      window.history.replaceState({}, "", "/activity-archive")
+    } else {
+      const params = new URLSearchParams(window.location.search)
+      params.set("section", "inventory-history")
+      window.history.replaceState({}, "", `/activity-archive?${params.toString()}`)
+    }
+  }
 
   useEffect(() => {
     if (!canViewOthers) return
@@ -225,10 +240,22 @@ export default function ActivityArchivePage() {
             <Archive className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="mt-1 text-[18px] font-bold text-foreground">Arsip Riwayat Aktivitas</h1>
+            <h1 className="mt-1 text-[18px] font-bold text-foreground">Arsip & Riwayat</h1>
           </div>
         </div>
       </section>
+
+      <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800/35 dark:bg-slate-900/60">
+        <Button type="button" variant={section === "activity" ? "default" : "ghost"} onClick={() => changeSection("activity")}>
+          <History className="mr-2 size-4" /> Riwayat Aktivitas
+        </Button>
+        <Button type="button" variant={section === "inventory-history" ? "default" : "ghost"} onClick={() => changeSection("inventory-history")}>
+          <ClipboardList className="mr-2 size-4" /> Riwayat Penggunaan & Peminjaman
+        </Button>
+      </div>
+
+      {section === "activity" ? (
+        <>
 
       <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 p-4 shadow-sm">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
@@ -395,6 +422,11 @@ export default function ActivityArchivePage() {
           </div>
         </div>
       </div>
+
+        </>
+      ) : (
+        <InventoryHistoryArchive />
+      )}
 
       <div className="mt-8 pt-6 border-t border-border text-center">
         <p className="text-[13px] text-muted-foreground">

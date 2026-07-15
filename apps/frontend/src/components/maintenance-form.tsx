@@ -5,7 +5,7 @@ import type React from "react";
 import InventoryPicker from "@/components/inventory-picker";
 import MaintenanceTechnicianPicker from "@/components/maintenance-technician-picker";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetUsageService } from "@/services/asset-usage.service";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
@@ -352,241 +352,160 @@ export default function MaintenanceForm({
 
 
   return (
-    <Card className="m-0 border-0 shadow-none">
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle>{maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}</CardTitle>
-        <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
-          <X className="w-5 h-5" />
+    <Card className="m-0 flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border-0 shadow-none">
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border/70 px-4 py-4 sm:px-6">
+        <div className="space-y-1">
+          <CardTitle className="text-lg sm:text-xl">
+            {maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            Lengkapi jadwal, penanggung jawab, dan detail layanan.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          aria-label="Tutup formulir"
+        >
+          <X className="h-5 w-5" />
         </button>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid mobile-form-grid gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Pilih Inventaris</label>
-              <InventoryPicker
-                assets={assets}
-                selectedAsset={selectedAsset}
-                onSelect={(asset) => {
-                  handleSelectAsset(asset)
-                }}
-                formatLabel={formatAssetLabel}
-                getItemKey={getDetailInventoryKey}
-                getAssetCategory={(asset) => asset.assetType}
-                showCategoryFilter
-                searchValue={buildInventorySearchKey}
-                placeholder="Cari inventaris..."
-                buttonLabel="Pilih inventaris"
-                ariaLabel="Pilih inventaris untuk pemeliharaan"
-                renderItemMeta={(asset) => (
-                  <span>
-                    {getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}
-                  </span>
-                )}
-                noResultsLabel="Tidak ada alat inventaris yang tersedia"
-              />
-            </div>
 
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
+          <section className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tipe Layanan</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              >
-                {typeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <h3 className="text-sm font-semibold text-foreground">Informasi Jadwal</h3>
+              <p className="text-xs text-muted-foreground">Tentukan inventaris dan waktu pelaksanaan layanan.</p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Prioritas</label>
-              <select name="priority" value={formData.priority} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground">
-                <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="critical">Kritis</option>
-              </select>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Pilih Inventaris</label>
+                <InventoryPicker
+                  assets={assets}
+                  selectedAsset={selectedAsset}
+                  onSelect={handleSelectAsset}
+                  formatLabel={formatAssetLabel}
+                  getItemKey={getDetailInventoryKey}
+                  getAssetCategory={(asset) => asset.assetType}
+                  showCategoryFilter
+                  searchValue={buildInventorySearchKey}
+                  placeholder="Cari inventaris..."
+                  buttonLabel="Pilih inventaris"
+                  ariaLabel="Pilih inventaris untuk pemeliharaan"
+                  renderItemMeta={(asset) => (
+                    <span>{getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}</span>
+                  )}
+                  noResultsLabel="Tidak ada alat inventaris yang tersedia"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Tipe Layanan</label>
+                <select name="type" value={formData.type} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                  {typeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Prioritas</label>
+                <select name="priority" value={formData.priority} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                  <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="critical">Kritis</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Tanggal &amp; Waktu Jadwal</label>
+                <input ref={scheduledDateInputRef} type="datetime-local" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required step={60} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" />
+              </div>
             </div>
+          </section>
 
+          <section className="space-y-4 border-t border-border/70 pt-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tanggal &amp; Waktu Jadwal</label>
-              <input
-                ref={scheduledDateInputRef}
-                type="datetime-local"
-                name="scheduledDate"
-                value={formData.scheduledDate}
-                onChange={handleChange}
-                required
-                step={60}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              />
+              <h3 className="text-sm font-semibold text-foreground">Teknisi / Penanggung Jawab</h3>
+              <p className="text-xs text-muted-foreground">Tautkan akun aktif agar identitas teknisi terisi otomatis.</p>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Teknisi/Penanggung Jawab</label>
+              <label className="mb-2 block text-sm font-medium text-foreground">Cari Akun Teknisi / PJ</label>
               <MaintenanceTechnicianPicker
                 value={formData.technicianUserId ? Number(formData.technicianUserId) : null}
                 selected={formData.technicianUserId ? {
-                  id: Number(formData.technicianUserId),
-                  nip: formData.technicianNip,
-                  name: formData.technician,
-                  role: formData.technicianRole,
+                  id: Number(formData.technicianUserId), nip: formData.technicianNip,
+                  name: formData.technician, role: formData.technicianRole,
                   workUnit: formData.technicianWorkUnit,
                 } : null}
                 onSelect={(technician) => setFormData((prev) => ({
-                  ...prev,
-                  technician: technician.name,
-                  technicianUserId: String(technician.id),
-                  technicianNip: technician.nip,
-                  technicianRole: technician.role,
+                  ...prev, technician: technician.name, technicianUserId: String(technician.id),
+                  technicianNip: technician.nip, technicianRole: technician.role,
                   technicianWorkUnit: technician.workUnit || technician.subWorkUnit || "",
                 }))}
               />
-              <p className="mt-1 text-xs text-muted-foreground">Nama dan NIP terisi dari akun aktif yang tertaut.</p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">NIP Teknisi / PJ</label>
-              <input
-                type="text"
-                value={formData.technicianNip}
-                readOnly
-                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
-                placeholder="Terisi dari akun"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Nama Teknisi / PJ</label>
-              <input
-                type="text"
-                value={formData.technician}
-                readOnly
-                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
-                placeholder="Terisi dari akun"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Jabatan Teknisi / PJ</label>
-              <input
-                type="text"
-                value={formData.technicianRole ? getUserRoleLabel(formData.technicianRole) : ""}
-                readOnly
-                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
-                placeholder="Terisi dari akun"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Unit Kerja Teknisi / PJ</label>
-              <input
-                type="text"
-                value={formData.technicianWorkUnit}
-                readOnly
-                className="w-full rounded-2xl border border-border bg-muted/50 px-3 py-2 text-foreground"
-                placeholder="Terisi dari akun"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Vendor/Penyedia Jasa</label>
-              <input type="text" name="vendorName" value={formData.vendorName} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="Opsional" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">No. Referensi Vendor</label>
-              <input type="text" name="vendorReference" value={formData.vendorReference} onChange={handleChange} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="PO / invoice / tiket" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              >
-                {visibleStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {!maintenance && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Biaya (Rp)</label>
-              <input
-                type="number"
-                name="cost"
-                value={formData.cost}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                placeholder="Opsional"
-              />
-            </div>
-
-            {formData.status === "cancelled" && (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Alasan Pembatalan</label>
-                <input
-                  type="text"
-                  name="cancellationReason"
-                  value={formData.cancellationReason}
-                  onChange={handleChange}
-                  required
-                  list="maintenance-cancellation-reasons"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                  placeholder="Pilih atau ketik alasan pembatalan"
-                />
-                <datalist id="maintenance-cancellation-reasons">
-                  {CANCELLATION_REASON_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Contoh: {CANCELLATION_REASON_OPTIONS.join(", ")}
-                </p>
+            {formData.technicianUserId ? (
+              <div className="grid gap-3 rounded-xl border border-teal-200/70 bg-teal-50/60 p-4 sm:grid-cols-3 dark:border-teal-900/60 dark:bg-teal-950/20">
+                <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">NIP</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianNip || "-"}</p></div>
+                <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Jabatan</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianRole ? getUserRoleLabel(formData.technicianRole) : "-"}</p></div>
+                <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Unit Kerja</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianWorkUnit || "-"}</p></div>
               </div>
+            ) : (
+              <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs text-muted-foreground">Nama, NIP, jabatan, dan unit kerja akan tampil setelah akun dipilih.</p>
             )}
+          </section>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Catatan Perbaikan</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                rows={3}
-                placeholder="Catatan perbaikan (cantumkan keluhan dan alat yang diperiksa)"
-              />
+          <section className="space-y-4 border-t border-border/70 pt-5">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Detail Layanan</h3>
+              <p className="text-xs text-muted-foreground">Informasi vendor, status pengajuan, dan biaya layanan.</p>
             </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <div className="flex items-center gap-3">
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status)}>
-                <Save className="mr-2 h-4 w-4" />
-                Simpan
-              </Button>
-              {hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status) && (
-                <p className="text-sm text-red-600">Aset sedang digunakan — hentikan penggunaan terlebih dahulu untuk membuat pemeliharaan aktif.</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Vendor/Penyedia Jasa</label>
+                <input type="text" name="vendorName" value={formData.vendorName} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Opsional" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">No. Referensi Vendor</label>
+                <input type="text" name="vendorReference" value={formData.vendorReference} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="PO / invoice / tiket" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Status</label>
+                <select name="status" value={formData.status} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                  {visibleStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Biaya (Rp)</label>
+                <input type="number" name="cost" value={formData.cost} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Opsional" />
+              </div>
+              {formData.status === "cancelled" && (
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-foreground">Alasan Pembatalan</label>
+                  <input type="text" name="cancellationReason" value={formData.cancellationReason} onChange={handleChange} required list="maintenance-cancellation-reasons" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Pilih atau ketik alasan pembatalan" />
+                  <datalist id="maintenance-cancellation-reasons">
+                    {CANCELLATION_REASON_OPTIONS.map((option) => <option key={option} value={option} />)}
+                  </datalist>
+                  <p className="mt-1 text-xs text-muted-foreground">Contoh: {CANCELLATION_REASON_OPTIONS.join(", ")}</p>
+                </div>
               )}
             </div>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              <X className="mr-2 h-4 w-4" />
-              Batal
+          </section>
+
+          <section className="space-y-2 border-t border-border/70 pt-5">
+            <label className="block text-sm font-semibold text-foreground">Catatan Perbaikan</label>
+            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" rows={3} placeholder="Cantumkan keluhan dan alat yang diperiksa" />
+          </section>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-3 border-t border-border/70 bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          {hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status) ? (
+            <p className="text-xs text-red-600 sm:text-sm">Aset sedang digunakan. Hentikan penggunaan sebelum membuat pemeliharaan aktif.</p>
+          ) : <span />}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button type="button" variant="outline" onClick={onCancel}>Batal</Button>
+            <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status)}>
+              <Save className="mr-2 h-4 w-4" /> Simpan Pemeliharaan
             </Button>
           </div>
-        </form>
-      </CardContent>
+        </div>
+      </form>
     </Card>
   )
 }

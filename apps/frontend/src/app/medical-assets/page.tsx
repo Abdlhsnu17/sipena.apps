@@ -830,6 +830,16 @@ export default function MedicalAssetsPage() {
                                     sourceLabel: "Medis",
                                   })
                                 }
+                                onViewHistory={() => {
+                                  const params = new URLSearchParams({
+                                    section: "inventory-history",
+                                    assetId: String(room.id),
+                                    assetType: "medical",
+                                    detailId: String(asset.id),
+                                    detailCode: asset.assetCode || "",
+                                  })
+                                  window.location.assign(`/activity-archive?${params.toString()}`)
+                                }}
                                 onEdit={
                                   canEditInventory
                                     ? () => {

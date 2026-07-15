@@ -13,6 +13,7 @@ import { cn } from "@/utils";
 import {
     CalendarDays,
     Download,
+    History,
     MapPin,
     Package2,
     PencilLine,
@@ -52,6 +53,7 @@ type InventoryDetailCardProps = {
   onShowQr: () => void
   onDownloadLabel: () => void
   onPrintLabel: () => void
+  onViewHistory?: () => void
   onEdit?: () => void
   onDelete?: () => void
   deleteLabel?: string
@@ -166,6 +168,7 @@ export function InventoryDetailCard({
   onShowQr,
   onDownloadLabel,
   onPrintLabel,
+  onViewHistory,
   onEdit,
   onDelete,
   deleteLabel = "Hapus",
@@ -174,6 +177,10 @@ export function InventoryDetailCard({
   const actions: ActionConfig[] = [
     { label: "QR Code", icon: QrCode, onClick: onShowQr },
   ]
+
+  if (onViewHistory) {
+    actions.push({ label: "Riwayat", icon: History, onClick: onViewHistory })
+  }
 
   const labelPreviewRows = [
     { label: "No ID", value: noId },

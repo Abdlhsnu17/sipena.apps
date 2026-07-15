@@ -30,7 +30,7 @@ type QuickActionLink = {
 const quickActionLinks: QuickActionLink[] = [
   {
     key: "activity-archive",
-    label: "Arsip Riwayat Aktivitas",
+    label: "Arsip & Riwayat",
     description: "Lihat rekam aktivitas pengguna dan perubahan data.",
     href: "/activity-archive",
     icon: Archive,

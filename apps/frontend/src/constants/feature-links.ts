@@ -43,5 +43,5 @@ export const featureLinks: FeatureLink[] = [
   { label: "Penggunaan", href: "/asset-usage", icon: ClipboardList, iconColor: featureIconColor },
   { label: "Penghapusan Aset", href: "/disposal", icon: Trash2, iconColor: featureIconColor },
   { label: "Unggah Dokumen", href: "/unggahan", icon: FileUp, iconColor: featureIconColor },
-  { label: "Arsip Riwayat Aktivitas", href: "/activity-archive", icon: Archive, iconColor: featureIconColor },
+  { label: "Arsip & Riwayat", href: "/activity-archive", icon: Archive, iconColor: featureIconColor },
 ]
