@@ -251,6 +251,45 @@ export class UserController {
   };
 
   /**
+   * Bulk delete users
+   * POST /api/users/bulk-delete
+   */
+  bulkDelete = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+        return;
+      }
+
+      const actorId = getAuthenticatedUserId(req);
+      if (!actorId) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+        return;
+      }
+
+      const userIds = (req.body.userIds as Array<number | string>).map(Number);
+      const deleteReason = String(req.body.deleteReason).trim();
+      const result = await this.userService.bulkDelete(userIds, actorId, deleteReason);
+
+      res.json(result);
+    } catch (error) {
+      console.error('Bulk delete users error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Gagal menghapus pengguna secara massal',
+      });
+    }
+  };
+
+  /**
    * Change user password
    * PATCH /api/users/:id/password
    */

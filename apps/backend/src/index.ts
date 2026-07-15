@@ -20,8 +20,8 @@ import {
     ensureInitialAdminAccount,
     ensureMaintenanceAssetTypeColumn,
     ensureMaintenanceCancellationReasonColumn,
-    ensureMaintenanceOperationsSchema,
     ensureMaintenanceDetailColumns,
+    ensureMaintenanceOperationsSchema,
     ensureNonMedicalSpecificationsColumn,
     ensureReportUploadsTable,
     ensureRoleMenuAccessControlTables,
@@ -199,10 +199,10 @@ const parseRateLimitMax = (value: string | undefined, fallback: number): number 
   const parsedValue = Number.parseInt(value || '', 10);
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
 };
-const generalRateLimitMax = parseRateLimitMax(process.env.GENERAL_RATE_LIMIT_MAX, isDev ? 10000 : 1000);
-const loginRateLimitMax = parseRateLimitMax(process.env.LOGIN_RATE_LIMIT_MAX, isDev ? 1000 : 20);
-const registerRateLimitMax = parseRateLimitMax(process.env.REGISTER_RATE_LIMIT_MAX, isDev ? 1000 : 10);
-const passwordResetRateLimitMax = parseRateLimitMax(process.env.PASSWORD_RESET_RATE_LIMIT_MAX, isDev ? 1000 : 10);
+const generalRateLimitMax = parseRateLimitMax(process.env.GENERAL_RATE_LIMIT_MAX, isDev ? 10000 : 2000);
+const loginRateLimitMax = parseRateLimitMax(process.env.LOGIN_RATE_LIMIT_MAX, isDev ? 1000 : 40);
+const registerRateLimitMax = parseRateLimitMax(process.env.REGISTER_RATE_LIMIT_MAX, isDev ? 1000 : 20);
+const passwordResetRateLimitMax = parseRateLimitMax(process.env.PASSWORD_RESET_RATE_LIMIT_MAX, isDev ? 1000 : 20);
 
 // CORS configuration
 app.use(cors({

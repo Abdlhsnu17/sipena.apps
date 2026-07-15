@@ -35,6 +35,16 @@ export interface UserResponse {
   pagination?: PaginationMeta
 }
 
+export interface BulkDeleteUsersResponse {
+  success: boolean
+  message: string
+  data: {
+    requested: number
+    deleted: number
+    skipped: number
+  }
+}
+
 const normalizeUser = (user: any): User => ({
   id: user.id,
   nip: user.nip,
@@ -121,6 +131,10 @@ class UserService {
 
   async delete(id: number | string, deleteReason?: string): Promise<UserResponse> {
     return apiService.delete<UserResponse>(`/users/${id}`, { deleteReason })
+  }
+
+  async bulkDelete(userIds: Array<number | string>, deleteReason: string): Promise<BulkDeleteUsersResponse> {
+    return apiService.post<BulkDeleteUsersResponse>("/users/bulk-delete", { userIds, deleteReason })
   }
 
   async changePassword(id: number | string, currentPassword: string, newPassword: string): Promise<UserResponse> {

@@ -391,24 +391,32 @@ export default function UsersPage() {
       return
     }
 
-    setIsDeletingUser(true)
-    const deletions = users
+    const userIds = users
       .filter((user) => String(user.id) !== String(currentUser.id))
-      .map((user) => userService.delete(user.id, reason))
+      .map((user) => user.id)
 
-    Promise.all(deletions)
-      .then(() => {
-        setMessage("Pengguna berhasil dihapus")
-        setMessageType("success")
+    if (userIds.length === 0) {
+      setMessage("Tidak ada pengguna lain yang dapat dihapus")
+      setMessageType("error")
+      return
+    }
+
+    setIsDeletingUser(true)
+    try {
+      const result = await userService.bulkDelete(userIds, reason)
+      setMessage(result.message)
+      setMessageType(result.success ? "success" : "error")
+      if (result.success) {
         setIsDeleteAllUsersOpen(false)
         setDeleteReason("")
-        loadUsers()
-      })
-      .catch((error: any) => {
-        setMessageType("error")
-        setMessage(error.message || "Gagal menghapus semua pengguna")
-      })
-      .finally(() => setIsDeletingUser(false))
+        await loadUsers()
+      }
+    } catch (error: any) {
+      setMessageType("error")
+      setMessage(error.message || "Gagal menghapus semua pengguna")
+    } finally {
+      setIsDeletingUser(false)
+    }
   }
 
   const openResetPassword = (user: ApiUser) => {

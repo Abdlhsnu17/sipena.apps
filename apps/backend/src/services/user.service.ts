@@ -40,6 +40,18 @@ interface CountRow extends RowDataPacket {
   count: number;
 }
 
+interface BulkDeleteUserRow extends RowDataPacket {
+  id: number;
+}
+
+interface BulkDeleteUsersResult {
+  requested: number;
+  deleted: number;
+  skipped: number;
+}
+
+const BULK_DELETE_CHUNK_SIZE = 500;
+
 export class UserService {
   async getAll(filters: UserFilters): Promise<PaginatedResponse<User>> {
     const { page, limit, search, role } = filters;
@@ -225,6 +237,97 @@ export class UserService {
     }
 
     return { success: true, message: 'Pengguna diarsipkan' };
+  }
+
+  async bulkDelete(
+    userIds: number[],
+    deletedBy: number,
+    deleteReason: string,
+  ): Promise<ApiResponse<BulkDeleteUsersResult>> {
+    const uniqueUserIds = Array.from(new Set(
+      userIds.filter((id) => Number.isInteger(id) && id > 0),
+    ));
+    const targetUserIds = uniqueUserIds.filter((id) => id !== deletedBy);
+    const connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const existingUserIds: number[] = [];
+      for (let index = 0; index < targetUserIds.length; index += BULK_DELETE_CHUNK_SIZE) {
+        const chunk = targetUserIds.slice(index, index + BULK_DELETE_CHUNK_SIZE);
+        const placeholders = chunk.map(() => '?').join(', ');
+        const [rows] = await connection.query<BulkDeleteUserRow[]>(
+          `SELECT id
+           FROM users
+           WHERE id IN (${placeholders})
+             AND deleted_at IS NULL
+           FOR UPDATE`,
+          chunk,
+        );
+        existingUserIds.push(...rows.map((row) => Number(row.id)));
+      }
+
+      let deleted = 0;
+      for (let index = 0; index < existingUserIds.length; index += BULK_DELETE_CHUNK_SIZE) {
+        const chunk = existingUserIds.slice(index, index + BULK_DELETE_CHUNK_SIZE);
+        const placeholders = chunk.map(() => '?').join(', ');
+        const [result] = await connection.query<ResultSetHeader>(
+          `UPDATE users
+           SET deleted_at = NOW(),
+               deleted_by = ?,
+               delete_reason = ?,
+               account_status = 'inactive',
+               is_active = 0,
+               session_version = session_version + 1,
+               updated_at = NOW()
+           WHERE id IN (${placeholders})
+             AND id <> ?
+             AND deleted_at IS NULL`,
+          [deletedBy, deleteReason.trim(), ...chunk, deletedBy],
+        );
+        deleted += result.affectedRows;
+      }
+
+      const skipped = uniqueUserIds.length - deleted;
+      await connection.query<ResultSetHeader>(
+        `INSERT INTO user_activity_logs (user_id, feature, action, description, metadata_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          deletedBy,
+          'pengguna',
+          'bulk_delete',
+          `Mengarsipkan ${deleted} pengguna secara massal`,
+          JSON.stringify({
+            requested: uniqueUserIds.length,
+            requested_count: uniqueUserIds.length,
+            deleted,
+            deleted_count: deleted,
+            skipped,
+            skipped_count: skipped,
+            deleteReason: deleteReason.trim(),
+            delete_reason: deleteReason.trim(),
+          }),
+        ],
+      );
+
+      await connection.commit();
+
+      return {
+        success: true,
+        message: `${deleted} pengguna berhasil diarsipkan${skipped > 0 ? `, ${skipped} dilewati` : ''}`,
+        data: {
+          requested: uniqueUserIds.length,
+          deleted,
+          skipped,
+        },
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<ApiResponse> {

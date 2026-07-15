@@ -54,6 +54,17 @@ router.post(
   userController.create
 );
 
+router.post(
+  '/bulk-delete',
+  [
+    body('userIds').isArray({ min: 1, max: 5000 }).withMessage('Daftar pengguna wajib berisi 1 sampai 5000 ID'),
+    body('userIds.*').isInt({ min: 1 }).toInt(),
+    body('deleteReason').trim().isLength({ min: 5, max: 500 }).withMessage('Alasan penghapusan wajib diisi (5-500 karakter)'),
+  ],
+  requireRole(['admin']),
+  userController.bulkDelete,
+);
+
 router.put(
   '/:id',
   [
