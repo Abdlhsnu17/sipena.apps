@@ -352,13 +352,13 @@ export default function MaintenanceForm({
 
 
   return (
-    <Card className="m-0 flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border-0 shadow-none">
-      <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border/70 px-4 py-4 sm:px-6">
-        <div className="space-y-1">
-          <CardTitle className="text-lg sm:text-xl">
+    <Card className="m-0 flex max-h-[90dvh] flex-col overflow-hidden rounded-2xl border-0 text-sm shadow-none">
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
+        <div className="space-y-0.5">
+          <CardTitle className="text-base">
             {maintenance ? "Edit Pemeliharaan Sarana" : "Tambah Pemeliharaan Sarana"}
           </CardTitle>
-          <p className="text-xs text-muted-foreground sm:text-sm">
+          <p className="text-xs text-muted-foreground">
             Lengkapi jadwal, penanggung jawab, dan detail layanan.
           </p>
         </div>
@@ -373,15 +373,15 @@ export default function MaintenanceForm({
       </CardHeader>
 
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
-          <section className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+          <section className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Informasi Jadwal</h3>
               <p className="text-xs text-muted-foreground">Tentukan inventaris dan waktu pelaksanaan layanan.</p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Pilih Inventaris</label>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Pilih Inventaris</label>
                 <InventoryPicker
                   assets={assets}
                   selectedAsset={selectedAsset}
@@ -393,6 +393,7 @@ export default function MaintenanceForm({
                   searchValue={buildInventorySearchKey}
                   placeholder="Cari inventaris..."
                   buttonLabel="Pilih inventaris"
+                  buttonClassName="h-10"
                   ariaLabel="Pilih inventaris untuk pemeliharaan"
                   renderItemMeta={(asset) => (
                     <span>{getDetailInventoryStatusLabel(asset)} · Kondisi: {getConditionLabel(asset)}</span>
@@ -401,31 +402,31 @@ export default function MaintenanceForm({
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Tipe Layanan</label>
-                <select name="type" value={formData.type} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Tipe Layanan</label>
+                <select name="type" value={formData.type} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
                   {typeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Prioritas</label>
-                <select name="priority" value={formData.priority} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Prioritas</label>
+                <select name="priority" value={formData.priority} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
                   <option value="low">Rendah</option><option value="normal">Normal</option><option value="high">Tinggi</option><option value="critical">Kritis</option>
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Tanggal &amp; Waktu Jadwal</label>
-                <input ref={scheduledDateInputRef} type="datetime-local" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required step={60} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" />
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Tanggal &amp; Waktu Jadwal</label>
+                <input ref={scheduledDateInputRef} type="datetime-local" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} required step={60} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
               </div>
             </div>
           </section>
 
-          <section className="space-y-4 border-t border-border/70 pt-5">
+          <section className="space-y-3 border-t border-border/70 pt-4">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Teknisi / Penanggung Jawab</h3>
               <p className="text-xs text-muted-foreground">Tautkan akun aktif agar identitas teknisi terisi otomatis.</p>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Cari Akun Teknisi / PJ</label>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Cari Akun Teknisi / PJ</label>
               <MaintenanceTechnicianPicker
                 value={formData.technicianUserId ? Number(formData.technicianUserId) : null}
                 selected={formData.technicianUserId ? {
@@ -441,7 +442,7 @@ export default function MaintenanceForm({
               />
             </div>
             {formData.technicianUserId ? (
-              <div className="grid gap-3 rounded-xl border border-teal-200/70 bg-teal-50/60 p-4 sm:grid-cols-3 dark:border-teal-900/60 dark:bg-teal-950/20">
+              <div className="grid gap-3 rounded-xl border border-teal-200/70 bg-teal-50/60 p-3 sm:grid-cols-3 dark:border-teal-900/60 dark:bg-teal-950/20">
                 <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">NIP</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianNip || "-"}</p></div>
                 <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Jabatan</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianRole ? getUserRoleLabel(formData.technicianRole) : "-"}</p></div>
                 <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">Unit Kerja</p><p className="mt-1 truncate text-sm font-semibold">{formData.technicianWorkUnit || "-"}</p></div>
@@ -451,34 +452,34 @@ export default function MaintenanceForm({
             )}
           </section>
 
-          <section className="space-y-4 border-t border-border/70 pt-5">
+          <section className="space-y-3 border-t border-border/70 pt-4">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Detail Layanan</h3>
               <p className="text-xs text-muted-foreground">Informasi vendor, status pengajuan, dan biaya layanan.</p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Vendor/Penyedia Jasa</label>
-                <input type="text" name="vendorName" value={formData.vendorName} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Opsional" />
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Vendor/Penyedia Jasa</label>
+                <input type="text" name="vendorName" value={formData.vendorName} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="Opsional" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">No. Referensi Vendor</label>
-                <input type="text" name="vendorReference" value={formData.vendorReference} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="PO / invoice / tiket" />
+                <label className="mb-1.5 block text-xs font-medium text-foreground">No. Referensi Vendor</label>
+                <input type="text" name="vendorReference" value={formData.vendorReference} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="PO / invoice / tiket" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Status</label>
-                <select name="status" value={formData.status} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Status</label>
+                <select name="status" value={formData.status} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
                   {visibleStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Biaya (Rp)</label>
-                <input type="number" name="cost" value={formData.cost} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Opsional" />
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Biaya (Rp)</label>
+                <input type="number" name="cost" value={formData.cost} onChange={handleChange} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="Opsional" />
               </div>
               {formData.status === "cancelled" && (
                 <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-foreground">Alasan Pembatalan</label>
-                  <input type="text" name="cancellationReason" value={formData.cancellationReason} onChange={handleChange} required list="maintenance-cancellation-reasons" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" placeholder="Pilih atau ketik alasan pembatalan" />
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Alasan Pembatalan</label>
+                  <input type="text" name="cancellationReason" value={formData.cancellationReason} onChange={handleChange} required list="maintenance-cancellation-reasons" className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="Pilih atau ketik alasan pembatalan" />
                   <datalist id="maintenance-cancellation-reasons">
                     {CANCELLATION_REASON_OPTIONS.map((option) => <option key={option} value={option} />)}
                   </datalist>
@@ -488,13 +489,13 @@ export default function MaintenanceForm({
             </div>
           </section>
 
-          <section className="space-y-2 border-t border-border/70 pt-5">
-            <label className="block text-sm font-semibold text-foreground">Catatan Perbaikan</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground" rows={3} placeholder="Cantumkan keluhan dan alat yang diperiksa" />
+          <section className="space-y-1.5 border-t border-border/70 pt-4">
+            <label className="block text-xs font-medium text-foreground">Catatan Perbaikan</label>
+            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" rows={3} placeholder="Cantumkan keluhan dan alat yang diperiksa" />
           </section>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-border/70 bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-border/70 bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           {hasActiveUsage && ["scheduled","in_progress","completed"].includes(formData.status) ? (
             <p className="text-xs text-red-600 sm:text-sm">Aset sedang digunakan. Hentikan penggunaan sebelum membuat pemeliharaan aktif.</p>
           ) : <span />}

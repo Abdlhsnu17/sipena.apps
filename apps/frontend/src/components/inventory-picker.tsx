@@ -224,10 +224,12 @@ export function InventoryPicker<T>({
         align="start"
         side="bottom"
         sideOffset={8}
-        avoidCollisions={false}
-        className={popoverClassName}
+        avoidCollisions
+        collisionPadding={12}
+        updatePositionStrategy="always"
+        className={`${popoverClassName} max-h-[var(--radix-popover-content-available-height)]`}
       >
-        <Command className="max-h-[min(420px,calc(100vh-8rem))]" shouldFilter={false}>
+        <Command className="max-h-[min(22rem,var(--radix-popover-content-available-height))]" shouldFilter={false}>
           <CommandInput
             ref={inputRef}
             placeholder={placeholder}
@@ -271,7 +273,7 @@ export function InventoryPicker<T>({
               </button>
             </div>
           )}
-          <CommandList className={`max-h-[min(300px,calc(100vh-15rem))] space-y-1 border-none bg-transparent px-2 pb-2 pt-1 ${listClassName ?? ''}`}>
+          <CommandList className={`min-h-0 flex-1 touch-pan-y overscroll-contain space-y-1 border-none bg-transparent px-2 pb-2 pt-1 [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent ${listClassName ?? ''}`}>
             {filteredAssets.map((asset, index) => {
               const searchText = matchValue(asset)
               return (

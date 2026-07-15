@@ -1,10 +1,17 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { assetUsageService, type AssetUsageLog } from "@/services/asset-usage.service"
 import { borrowingService, type Borrowing } from "@/services/borrowing.service"
 import { matchesSearchKeyword } from "@/utils/search-keyword"
-import { ChevronLeft, ChevronRight, ClipboardList, HandHelping, RotateCcw, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, ClipboardList, Eye, HandHelping, RotateCcw, Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 type HistoryKind = "usage" | "borrowing"
@@ -49,6 +56,15 @@ const sameDetail = (
   )
 }
 
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="grid gap-1 border-b border-slate-100 py-2.5 last:border-b-0 sm:grid-cols-[10rem_minmax(0,1fr)] dark:border-slate-800/60">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="break-words text-sm text-slate-900 dark:text-slate-100">{value === undefined || value === null || value === "" ? "-" : value}</p>
+    </div>
+  )
+}
+
 export function InventoryHistoryArchive() {
   const [kind, setKind] = useState<HistoryKind>("usage")
   const [usageRecords, setUsageRecords] = useState<AssetUsageLog[]>([])
@@ -63,6 +79,8 @@ export function InventoryHistoryArchive() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
+  const [selectedUsage, setSelectedUsage] = useState<AssetUsageLog | null>(null)
+  const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -214,20 +232,20 @@ export function InventoryHistoryArchive() {
         {errorMessage ? <div className="m-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</div> : null}
         <div className="overflow-x-auto">
           {kind === "usage" ? (
-            <table className="min-w-280 table-fixed text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th className="px-4 py-3">Waktu</th><th className="px-4 py-3">Detail inventaris</th><th className="px-4 py-3">Pengguna</th><th className="px-4 py-3">Tujuan/lokasi</th><th className="px-4 py-3">Kondisi</th><th className="px-4 py-3">Sumber & status</th></tr></thead>
+            <table className="min-w-220 table-fixed text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th className="w-52 px-4 py-3">Waktu</th><th className="w-72 px-4 py-3">Detail inventaris</th><th className="w-60 px-4 py-3">Pengguna</th><th className="w-48 px-4 py-3">Sumber & status</th><th className="w-32 px-4 py-3 text-center">Tindakan</th></tr></thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/35">
-                {loading ? <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Memuat riwayat penggunaan...</td></tr> : visibleUsage.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Belum ada riwayat penggunaan pada filter ini.</td></tr> : visibleUsage.map((record) => (
-                  <tr key={record.id} className="align-top"><td className="px-4 py-3"><p>{formatDateTime(record.startedAt)}</p><p className="text-xs text-muted-foreground">s.d. {formatDateTime(record.endedAt)}</p></td><td className="px-4 py-3"><p className="font-medium">{record.assetDetailName || record.assetName || "-"}</p><p className="text-xs text-muted-foreground">{record.assetDetailCode || record.assetCode || record.no || "-"}</p></td><td className="px-4 py-3"><p>{record.operatorName || "-"}</p><p className="text-xs text-muted-foreground">NIP: {record.operatorNip || "-"}</p></td><td className="px-4 py-3">{record.roomName || record.assetLocation || "-"}</td><td className="px-4 py-3"><p>Sebelum: {record.conditionBefore || "-"}</p><p>Sesudah: {record.conditionAfter || "-"}</p></td><td className="px-4 py-3"><p>{record.sourceType === "borrowing_sync" ? "Peminjaman" : "Manual"}</p><p className="text-xs font-medium text-teal-700">{usageStatus(record)}</p></td></tr>
+                {loading ? <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Memuat riwayat penggunaan...</td></tr> : visibleUsage.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Belum ada riwayat penggunaan pada filter ini.</td></tr> : visibleUsage.map((record) => (
+                  <tr key={record.id} className="align-top"><td className="px-4 py-3"><p>{formatDateTime(record.startedAt)}</p><p className="text-xs text-muted-foreground">s.d. {formatDateTime(record.endedAt)}</p></td><td className="px-4 py-3"><p className="font-medium">{record.assetDetailName || record.assetName || "-"}</p><p className="text-xs text-muted-foreground">{record.assetDetailCode || record.assetCode || record.no || "-"}</p></td><td className="px-4 py-3"><p>{record.operatorName || "-"}</p><p className="text-xs text-muted-foreground">NIP: {record.operatorNip || "-"}</p></td><td className="px-4 py-3"><p>{record.sourceType === "borrowing_sync" ? "Peminjaman" : "Manual"}</p><p className="text-xs font-medium text-teal-700">{usageStatus(record)}</p></td><td className="px-4 py-3 text-center"><Button type="button" size="sm" variant="ghost" onClick={() => setSelectedUsage(record)}><Eye className="mr-1.5 size-4" /> Detail</Button></td></tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <table className="min-w-280 table-fixed text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th className="px-4 py-3">Waktu</th><th className="px-4 py-3">Detail inventaris</th><th className="px-4 py-3">Peminjam</th><th className="px-4 py-3">Tujuan</th><th className="px-4 py-3">Jumlah/kondisi</th><th className="px-4 py-3">Status</th></tr></thead>
+            <table className="min-w-220 table-fixed text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th className="w-52 px-4 py-3">Waktu</th><th className="w-72 px-4 py-3">Detail inventaris</th><th className="w-60 px-4 py-3">Peminjam</th><th className="w-48 px-4 py-3">Status</th><th className="w-32 px-4 py-3 text-center">Tindakan</th></tr></thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/35">
-                {loading ? <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Memuat riwayat peminjaman...</td></tr> : visibleBorrowing.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Belum ada riwayat peminjaman pada filter ini.</td></tr> : visibleBorrowing.map((record) => (
-                  <tr key={record.id} className="align-top"><td className="px-4 py-3"><p>{formatDateTime(record.borrowDate)}</p><p className="text-xs text-muted-foreground">Jatuh tempo: {formatDateTime(record.dueDate)}</p></td><td className="px-4 py-3"><p className="font-medium">{record.assetDetailName || record.assetName || "-"}</p><p className="text-xs text-muted-foreground">{record.assetDetailCode || record.assetCode || record.borrowingCode || "-"}</p></td><td className="px-4 py-3"><p>{record.ownerName || record.userName || "-"}</p><p className="text-xs text-muted-foreground">NIP: {record.ownerNip || record.userNip || "-"}</p></td><td className="px-4 py-3"><p>{record.destinationRoom || "-"}</p><p className="text-xs text-muted-foreground">{record.purpose || "-"}</p></td><td className="px-4 py-3"><p>Jumlah: {record.quantity || 1}</p><p className="text-xs text-muted-foreground">Kembali: {record.returnCondition || "-"}</p></td><td className="px-4 py-3 font-medium text-teal-700">{borrowingStatusLabels[record.status] || record.status}</td></tr>
+                {loading ? <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Memuat riwayat peminjaman...</td></tr> : visibleBorrowing.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Belum ada riwayat peminjaman pada filter ini.</td></tr> : visibleBorrowing.map((record) => (
+                  <tr key={record.id} className="align-top"><td className="px-4 py-3"><p>{formatDateTime(record.borrowDate)}</p><p className="text-xs text-muted-foreground">Jatuh tempo: {formatDateTime(record.dueDate)}</p></td><td className="px-4 py-3"><p className="font-medium">{record.assetDetailName || record.assetName || "-"}</p><p className="text-xs text-muted-foreground">{record.assetDetailCode || record.assetCode || record.borrowingCode || "-"}</p></td><td className="px-4 py-3"><p>{record.ownerName || record.userName || "-"}</p><p className="text-xs text-muted-foreground">NIP: {record.ownerNip || record.userNip || "-"}</p></td><td className="px-4 py-3 font-medium text-teal-700">{borrowingStatusLabels[record.status] || record.status}</td><td className="px-4 py-3 text-center"><Button type="button" size="sm" variant="ghost" onClick={() => setSelectedBorrowing(record)}><Eye className="mr-1.5 size-4" /> Detail</Button></td></tr>
                 ))}
               </tbody>
             </table>
@@ -238,6 +256,62 @@ export function InventoryHistoryArchive() {
           <div className="flex gap-2"><Button variant="outline" size="sm" disabled={currentPage <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft className="mr-1 size-4" /> Sebelumnya</Button><Button variant="outline" size="sm" disabled={currentPage >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Berikutnya <ChevronRight className="ml-1 size-4" /></Button></div>
         </div>
       </div>
+
+      <Dialog open={Boolean(selectedUsage)} onOpenChange={(open) => { if (!open) setSelectedUsage(null) }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detail Riwayat Penggunaan</DialogTitle>
+            <DialogDescription>Informasi lengkap penggunaan alat tanpa memenuhi tabel arsip.</DialogDescription>
+          </DialogHeader>
+          {selectedUsage ? (
+            <div className="rounded-lg border border-slate-200 px-4 dark:border-slate-800">
+              <DetailRow label="Nama alat" value={selectedUsage.assetDetailName || selectedUsage.assetName} />
+              <DetailRow label="No ID / kode" value={selectedUsage.assetDetailCode || selectedUsage.assetCode || selectedUsage.no} />
+              <DetailRow label="Pengguna" value={selectedUsage.operatorName} />
+              <DetailRow label="NIP" value={selectedUsage.operatorNip} />
+              <DetailRow label="Waktu mulai" value={formatDateTime(selectedUsage.startedAt)} />
+              <DetailRow label="Waktu selesai" value={formatDateTime(selectedUsage.endedAt)} />
+              <DetailRow label="Jumlah penggunaan" value={selectedUsage.usageCount || 1} />
+              <DetailRow label="Lokasi / tujuan" value={selectedUsage.roomName || selectedUsage.assetLocation} />
+              <DetailRow label="Sumber" value={selectedUsage.sourceType === "borrowing_sync" ? "Peminjaman" : "Manual"} />
+              <DetailRow label="Status" value={usageStatus(selectedUsage)} />
+              <DetailRow label="Kondisi sebelum" value={selectedUsage.conditionBefore} />
+              <DetailRow label="Kondisi sesudah" value={selectedUsage.conditionAfter} />
+              <DetailRow label="Catatan" value={selectedUsage.notes} />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedBorrowing)} onOpenChange={(open) => { if (!open) setSelectedBorrowing(null) }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detail Riwayat Peminjaman</DialogTitle>
+            <DialogDescription>Informasi lengkap peminjaman alat tanpa memenuhi tabel arsip.</DialogDescription>
+          </DialogHeader>
+          {selectedBorrowing ? (
+            <div className="rounded-lg border border-slate-200 px-4 dark:border-slate-800">
+              <DetailRow label="No peminjaman" value={selectedBorrowing.borrowingCode} />
+              <DetailRow label="Nama alat" value={selectedBorrowing.assetDetailName || selectedBorrowing.assetName} />
+              <DetailRow label="No ID / kode" value={selectedBorrowing.assetDetailCode || selectedBorrowing.assetCode} />
+              <DetailRow label="Peminjam" value={selectedBorrowing.ownerName || selectedBorrowing.userName} />
+              <DetailRow label="NIP" value={selectedBorrowing.ownerNip || selectedBorrowing.userNip} />
+              <DetailRow label="Unit kerja" value={selectedBorrowing.ownerWorkUnit || selectedBorrowing.borrowerWorkUnit} />
+              <DetailRow label="Tanggal pinjam" value={formatDateTime(selectedBorrowing.borrowDate)} />
+              <DetailRow label="Jatuh tempo" value={formatDateTime(selectedBorrowing.dueDate)} />
+              <DetailRow label="Tanggal kembali" value={formatDateTime(selectedBorrowing.returnDate)} />
+              <DetailRow label="Jumlah" value={selectedBorrowing.quantity || 1} />
+              <DetailRow label="Ruangan tujuan" value={selectedBorrowing.destinationRoom} />
+              <DetailRow label="Keperluan" value={selectedBorrowing.purpose} />
+              <DetailRow label="Status" value={borrowingStatusLabels[selectedBorrowing.status] || selectedBorrowing.status} />
+              <DetailRow label="Kondisi pengembalian" value={selectedBorrowing.returnCondition} />
+              <DetailRow label="Catatan" value={selectedBorrowing.returnNotes || selectedBorrowing.notes} />
+              <DetailRow label="Validator pengembalian" value={selectedBorrowing.returnValidatorName} />
+              <DetailRow label="Waktu validasi" value={formatDateTime(selectedBorrowing.returnValidatedAt)} />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -56,7 +56,7 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
           type="button"
           role="combobox"
           aria-expanded={open}
-          className="flex h-12 w-full items-center justify-between rounded-lg border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 hover:bg-background"
+          className="flex h-10 w-full items-center justify-between rounded-lg border border-border/80 bg-background px-3 py-2 text-sm text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 hover:bg-background"
         >
           <span className={selected ? "truncate" : "truncate text-muted-foreground"}>
             {selectedLabel}
@@ -68,15 +68,16 @@ export default function MaintenanceTechnicianPicker({ value, selected, onSelect 
         side="bottom"
         align="start"
         sideOffset={4}
-        avoidCollisions={false}
+        avoidCollisions
+        collisionPadding={12}
         updatePositionStrategy="always"
-        className="max-h-[min(420px,calc(100vh-8rem))] w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+        className="max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
       >
-        <Command shouldFilter={false}>
+        <Command className="max-h-[min(20rem,var(--radix-popover-content-available-height))]" shouldFilter={false}>
           <CommandInput placeholder="Ketik nama, NIP, atau unit kerja..." value={query} onValueChange={setQuery} />
-          <CommandList className="max-h-80 min-h-55">
+          <CommandList className="min-h-0 flex-1 touch-pan-y overscroll-contain [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent">
             {loading ? (
-              <div className="flex min-h-55 items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+              <div className="flex min-h-40 items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Memuat akun...
               </div>
             ) : (
