@@ -2,13 +2,20 @@
 
 import { Button } from "@/components/ui/button";
 import { InventoryHistoryArchive } from "@/components/inventory-history-archive";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import authService, { type User as AuthUser } from "@/services/auth.service";
 import userActivityService, { type UserActivity } from "@/services/user-activity.service";
 import userService, { type User } from "@/services/user.service";
 import { getFeatureLabel } from "@/utils/feature-presentation";
 import { canViewAllActivitiesRole, getUserRoleLabel } from "@/utils/role";
-import { Archive, ChevronLeft, ChevronRight, ClipboardList, Clock3, History, RotateCcw } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, ClipboardList, Clock3, Eye, History, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVITY_CODE_PATTERN = /\b([A-Z0-9]+(?:-[A-Z0-9]+)+)\b/
@@ -95,6 +102,15 @@ const formatActivityAction = (activity: UserActivity) => {
   return activity.description
 }
 
+function ActivityDetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="grid gap-1 border-b border-slate-100 py-2.5 last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)] dark:border-slate-800/60">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="break-words text-sm text-slate-900 dark:text-slate-100">{value === undefined || value === null || value === "" ? "-" : value}</p>
+    </div>
+  )
+}
+
 export default function ActivityArchivePage() {
   const [section, setSection] = useState<"activity" | "inventory-history">("activity")
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -109,6 +125,7 @@ export default function ActivityArchivePage() {
   const [authReady, setAuthReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
+  const [selectedActivity, setSelectedActivity] = useState<UserActivity | null>(null)
 
   const canViewOthers = canViewAllActivitiesRole(currentUser?.role)
   const shouldLoadArchive = Boolean(authReady && currentUser)
@@ -246,10 +263,20 @@ export default function ActivityArchivePage() {
       </section>
 
       <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800/35 dark:bg-slate-900/60">
-        <Button type="button" variant={section === "activity" ? "default" : "ghost"} onClick={() => changeSection("activity")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className={section === "activity" ? "bg-teal-600 text-white hover:bg-teal-700 hover:text-white" : "hover:bg-teal-50 hover:text-teal-800 dark:hover:bg-teal-400/10"}
+          onClick={() => changeSection("activity")}
+        >
           <History className="mr-2 size-4" /> Riwayat Aktivitas
         </Button>
-        <Button type="button" variant={section === "inventory-history" ? "default" : "ghost"} onClick={() => changeSection("inventory-history")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className={section === "inventory-history" ? "bg-teal-600 text-white hover:bg-teal-700 hover:text-white" : "hover:bg-teal-50 hover:text-teal-800 dark:hover:bg-teal-400/10"}
+          onClick={() => changeSection("inventory-history")}
+        >
           <ClipboardList className="mr-2 size-4" /> Riwayat Penggunaan & Peminjaman
         </Button>
       </div>
@@ -343,33 +370,31 @@ export default function ActivityArchivePage() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="min-w-280 table-fixed text-left text-sm">
+          <table className="min-w-220 table-fixed text-left text-sm">
             <colgroup>
-              <col className="w-55" />
               <col className="w-52" />
-              <col className="w-37.5" />
-              <col className="w-45" />
-              <col className="w-65" />
-              <col className="w-90" />
+              <col className="w-52" />
+              <col className="w-48" />
+              <col className="w-72" />
+              <col className="w-32" />
             </colgroup>
             <thead className="bg-slate-50 dark:bg-slate-900/40 text-xs uppercase tracking-normal text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-semibold">Waktu</th>
                 <th className="px-4 py-3 font-semibold">User</th>
-                <th className="px-4 py-3 font-semibold">No User</th>
                 <th className="px-4 py-3 font-semibold">Fitur</th>
                 <th className="px-4 py-3 font-semibold">Aktivitas</th>
-                <th className="px-4 py-3 font-semibold">Detail Alat</th>
+                <th className="px-4 py-3 text-center font-semibold">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/35">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">Memuat arsip aktivitas...</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Memuat arsip aktivitas...</td>
                 </tr>
               ) : activities.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada aktivitas pada filter ini.</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada aktivitas pada filter ini.</td>
                 </tr>
               ) : (
                 activities.map((activity) => {
@@ -391,14 +416,13 @@ export default function ActivityArchivePage() {
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{activity.userNip ?? "-"}</td>
                       <td className="px-4 py-3 font-medium text-teal-700">{getFeatureLabel(activity.feature)}</td>
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatActivityAction(activity)}</td>
-                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
-                        {getActivityItemName(activity) ? <p>Nama Alat: {getActivityItemName(activity)}</p> : null}
-                        {getActivityItemCode(activity) ? <p>Kode Barang: {getActivityItemCode(activity)}</p> : null}
-                        {getActivityCode(activity) ? <p>No ID: {getActivityCode(activity)}</p> : null}
-                        {!getActivityItemName(activity) && !getActivityItemCode(activity) && !getActivityCode(activity) ? "-" : null}
+                      <td className="px-4 py-3 text-center">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedActivity(activity)}>
+                          <Eye className="mr-1.5 size-4" />
+                          Detail
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -422,6 +446,29 @@ export default function ActivityArchivePage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={Boolean(selectedActivity)} onOpenChange={(open) => { if (!open) setSelectedActivity(null) }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detail Riwayat Aktivitas</DialogTitle>
+            <DialogDescription>Informasi lengkap tindakan pengguna pada sistem.</DialogDescription>
+          </DialogHeader>
+          {selectedActivity ? (
+            <div className="rounded-lg border border-slate-200 px-4 dark:border-slate-800">
+              <ActivityDetailRow label="Waktu" value={formatDateTime(selectedActivity.createdAt)} />
+              <ActivityDetailRow label="User" value={resolveActivityUser(selectedActivity)} />
+              <ActivityDetailRow label="NIP / No user" value={selectedActivity.userNip} />
+              <ActivityDetailRow label="Peran" value={resolveActivityUserRole(selectedActivity)} />
+              <ActivityDetailRow label="Fitur" value={getFeatureLabel(selectedActivity.feature)} />
+              <ActivityDetailRow label="Tindakan" value={formatActivityAction(selectedActivity)} />
+              <ActivityDetailRow label="Deskripsi" value={selectedActivity.description} />
+              <ActivityDetailRow label="Nama alat" value={getActivityItemName(selectedActivity)} />
+              <ActivityDetailRow label="Kode barang" value={getActivityItemCode(selectedActivity)} />
+              <ActivityDetailRow label="No ID / transaksi" value={getActivityCode(selectedActivity)} />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
         </>
       ) : (

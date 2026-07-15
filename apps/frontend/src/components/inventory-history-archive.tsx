@@ -189,10 +189,20 @@ export function InventoryHistoryArchive() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800/35 dark:bg-slate-900/60">
-        <Button type="button" variant={kind === "usage" ? "default" : "ghost"} onClick={() => setKind("usage")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className={kind === "usage" ? "bg-teal-600 text-white hover:bg-teal-700 hover:text-white" : "hover:bg-teal-50 hover:text-teal-800 dark:hover:bg-teal-400/10"}
+          onClick={() => setKind("usage")}
+        >
           <ClipboardList className="mr-2 size-4" /> Riwayat Penggunaan
         </Button>
-        <Button type="button" variant={kind === "borrowing" ? "default" : "ghost"} onClick={() => setKind("borrowing")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className={kind === "borrowing" ? "bg-teal-600 text-white hover:bg-teal-700 hover:text-white" : "hover:bg-teal-50 hover:text-teal-800 dark:hover:bg-teal-400/10"}
+          onClick={() => setKind("borrowing")}
+        >
           <HandHelping className="mr-2 size-4" /> Riwayat Peminjaman
         </Button>
       </div>
