@@ -18,6 +18,9 @@
     "lint": "npm run lint --workspace=inventory-backend && npm run lint --workspace=inventory-frontend",
     "type-check": "npm run type-check --workspace=inventory-frontend",
     "verify": "npm run lint && npm run build && npm run type-check",
+    "test:selenium": "node --test --test-concurrency=1 selenium/e2e/*.test.mjs",
+    "test:selenium:core": "node --test --test-concurrency=1 selenium/e2e/full-regression.test.mjs",
+    "test:selenium:smoke": "node --test --test-concurrency=1 selenium/e2e/navigation-smoke.test.mjs",
     "start": "sh scripts/start-production.sh",
     "configure:notifications": "sh scripts/configure-notification-channels.sh",
     "dev:backend": "npm run dev --workspace=inventory-backend",
@@ -46,6 +49,7 @@
   },
   "devDependencies": {
     "@types/node": "20.19.27",
+    "selenium-webdriver": "^4.46.0",
     "typescript": "5.9.3"
   },
   "dependencies": {

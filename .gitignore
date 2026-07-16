@@ -21,6 +21,9 @@ playwright-report/
 test-results/
 blob-report/
 .nyc_output/
+selenium/screenshots/
+selenium/reports/
+selenium.env.json
 
 # ==========================
 # TypeScript cache
