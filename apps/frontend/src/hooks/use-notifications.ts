@@ -112,19 +112,43 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     // Local (offline) auth sessions are not backed by the API, so skip the stream.
     if (!token || isLocalAuthToken(token)) return;
 
-    const source = notificationService.createEventSource(token);
-    if (!source) return;
+    let source: EventSource | null = null;
+    let reconnectTimeoutId: number | null = null;
+    let cancelled = false;
 
     const handleEvent = () => {
       void refresh();
     };
 
-    source.addEventListener("notification", handleEvent);
-    // On error the browser automatically attempts to reconnect; nothing to do.
+    const connect = async (): Promise<void> => {
+      const createdSource = await notificationService.createEventSource();
+      if (cancelled) {
+        createdSource?.close();
+        return;
+      }
+      source = createdSource;
+      source?.addEventListener("notification", handleEvent);
+      source?.addEventListener("error", handleError);
+    };
+
+    const handleError = (): void => {
+      source?.removeEventListener("notification", handleEvent);
+      source?.removeEventListener("error", handleError);
+      source?.close();
+      source = null;
+      if (!cancelled) {
+        reconnectTimeoutId = window.setTimeout(() => void connect(), 10000);
+      }
+    };
+
+    void connect();
 
     return () => {
-      source.removeEventListener("notification", handleEvent);
-      source.close();
+      cancelled = true;
+      source?.removeEventListener("notification", handleEvent);
+      source?.removeEventListener("error", handleError);
+      source?.close();
+      if (reconnectTimeoutId !== null) window.clearTimeout(reconnectTimeoutId);
     };
   }, [refresh]);
 

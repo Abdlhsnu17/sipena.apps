@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { param, query, validationResult } from 'express-validator';
 import notificationService from '../services/notification.service';
 import { notificationStreamHub } from '../utils/notification-stream';
+import { createSseTicket } from '../utils/sse-ticket';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -22,6 +23,21 @@ const isValidWebhookUrl = (value: string | undefined): boolean => {
 };
 
 class NotificationController {
+  createStreamTicket = async (req: Request, res: Response): Promise<void> => {
+    const actorId = getActorUserId(req);
+    if (!actorId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const data = await createSseTicket(actorId);
+      res.status(201).json({ success: true, data });
+    } catch {
+      res.status(503).json({ success: false, message: 'Layanan notifikasi real-time belum tersedia' });
+    }
+  };
+
   getDeliveryStatus = async (_req: Request, res: Response): Promise<void> => {
     const isProduction = (process.env.NODE_ENV || 'development') === 'production';
     const hasWhatsapp = isValidWebhookUrl(
@@ -119,10 +135,10 @@ class NotificationController {
 
   /**
    * Server-Sent Events stream that pushes real-time notification signals to the
-   * authenticated user. Authentication is handled by `sseAuthMiddleware`.
+   * authenticated user. Authentication is handled by a short-lived, one-use ticket.
    */
   stream = (req: Request, res: Response): void => {
-    const actorId = getActorUserId(req);
+    const actorId = req.streamUserId || null;
     if (!actorId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;

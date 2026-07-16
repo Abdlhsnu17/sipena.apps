@@ -62,19 +62,21 @@ const run = async (): Promise<void> => {
       .sort((a, b) => a.localeCompare(b));
 
     for (const filename of files) {
+      const filePath = path.join(migrationsDir, filename);
+      const sql = await fs.readFile(filePath, 'utf8');
+      const checksum = crypto.createHash('sha256').update(sql).digest('hex');
       const [existingRows] = await connection.query<mysql.RowDataPacket[]>(
-        'SELECT id FROM schema_migrations WHERE filename = ? LIMIT 1',
+        'SELECT checksum FROM schema_migrations WHERE filename = ? LIMIT 1',
         [filename],
       );
 
       if (existingRows.length > 0) {
+        if (existingRows[0].checksum !== checksum) {
+          throw new Error(`Migration checksum mismatch: ${filename}`);
+        }
         console.log(`skip ${filename}`);
         continue;
       }
-
-      const filePath = path.join(migrationsDir, filename);
-      const sql = await fs.readFile(filePath, 'utf8');
-      const checksum = crypto.createHash('sha256').update(sql).digest('hex');
 
       console.log(`apply ${filename}`);
       await connection.beginTransaction();

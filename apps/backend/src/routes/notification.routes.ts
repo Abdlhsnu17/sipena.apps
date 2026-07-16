@@ -5,6 +5,7 @@ const router = Router();
 
 router.get('/', notificationValidators.getMine, notificationController.getMine);
 router.get('/delivery-status', notificationController.getDeliveryStatus);
+router.post('/stream-ticket', notificationController.createStreamTicket);
 
 router.get('/unread-count', notificationController.getUnreadCount);
 

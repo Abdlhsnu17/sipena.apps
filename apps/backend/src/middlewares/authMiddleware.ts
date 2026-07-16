@@ -4,6 +4,7 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { TokenPayload, User } from '../types/auth';
 import { hasAnyRole } from '../utils/role';
+import { consumeSseTicket } from '../utils/sse-ticket';
 
 interface AuthUserRow extends RowDataPacket {
   id: number;
@@ -138,40 +139,22 @@ export const authMiddleware = async (
   }
 };
 
-/**
- * Authenticate an SSE connection. EventSource cannot attach an Authorization
- * header, so the JWT is accepted from the `token` query parameter (falling back
- * to a Bearer header when present). The must-change-password gate is not applied
- * here because the notification stream is a passive, read-only channel.
- */
-export const sseAuthMiddleware = async (
+export const sseTicketMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const headerToken = authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.substring(7)
-      : undefined;
-    const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
-    const token = headerToken || queryToken;
-
-    if (!token) {
-      res.status(401).json({ success: false, message: 'No token provided' });
+    const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : '';
+    const userId = await consumeSseTicket(ticket);
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Invalid or expired stream ticket' });
       return;
     }
-
-    const resolved = await resolveUserFromToken(token);
-    if (!resolved.ok) {
-      res.status(resolved.status).json({ success: false, message: resolved.message });
-      return;
-    }
-
-    req.user = resolved.user;
+    req.streamUserId = userId;
     next();
   } catch {
-    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    res.status(401).json({ success: false, message: 'Invalid or expired stream ticket' });
   }
 };
 

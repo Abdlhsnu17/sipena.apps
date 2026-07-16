@@ -83,17 +83,17 @@ class NotificationService {
     return apiService.delete<{ success: boolean; message: string }>(`/notifications/${id}`);
   }
 
-  /**
-   * Open a Server-Sent Events stream for real-time notifications. EventSource
-   * cannot send an Authorization header, so the JWT is passed as a query param.
-   * Returns null when running on the server or when EventSource is unavailable.
-   */
-  createEventSource(token: string): EventSource | null {
-    if (typeof window === 'undefined' || typeof EventSource === 'undefined' || !token) {
+  async createEventSource(): Promise<EventSource | null> {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
       return null;
     }
-    const url = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
+
     try {
+      const response = await apiService.post<{
+        success: boolean;
+        data: { ticket: string; expiresIn: number };
+      }>('/notifications/stream-ticket', {});
+      const url = `${API_BASE_URL}/notifications/stream?ticket=${encodeURIComponent(response.data.ticket)}`;
       return new EventSource(url);
     } catch {
       return null;

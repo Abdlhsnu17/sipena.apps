@@ -67,6 +67,15 @@ class NotificationStreamHub {
     }
   }
 
+  closeAll(): void {
+    for (const clients of this.clientsByUser.values()) {
+      for (const client of clients) {
+        client.res.end();
+      }
+    }
+    this.clientsByUser.clear();
+  }
+
   private write(res: Response, event: string, data: unknown): void {
     try {
       res.write(`event: ${event}\n`);

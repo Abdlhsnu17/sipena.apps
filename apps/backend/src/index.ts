@@ -3,13 +3,15 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { connectDatabase } from './config/database';
+import { Server } from 'http';
+import { connectDatabase, disconnectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
-import { connectRedis } from './config/redis';
-import { authMiddleware, sseAuthMiddleware } from './middlewares/authMiddleware';
+import { connectRedis, disconnectRedis } from './config/redis';
+import { authMiddleware, sseTicketMiddleware } from './middlewares/authMiddleware';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestContextMiddleware } from './middlewares/requestContext';
 import { createScopedLogger } from './utils/logger';
+import { notificationStreamHub } from './utils/notification-stream';
 import {
     ensureAssetCategoryUmbrellaValues,
     ensureAssetDisposalTable,
@@ -335,9 +337,9 @@ app.use('/api/maintenance-schedule', authMiddleware, maintenanceScheduleRoutes);
 app.use('/api/user-activities', authMiddleware, userActivityRoutes);
 app.use('/api/sanctions', authMiddleware, sanctionsRoutes);
 app.use('/api/asset-disposal', authMiddleware, assetDisposalRoutes);
-// Real-time notification stream (SSE). Mounted before the header-authenticated
-// notification router because EventSource authenticates via a query-string token.
-app.get('/api/notifications/stream', sseAuthMiddleware, notificationController.stream);
+// EventSource cannot set Authorization headers, so this route consumes a
+// short-lived, one-use ticket issued by the authenticated notification router.
+app.get('/api/notifications/stream', sseTicketMiddleware, notificationController.stream);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 // 404 handler
@@ -357,6 +359,8 @@ const sleep = async (delayMs: number): Promise<void> => {
 };
 
 // Start the HTTP server with port-retry logic so a busy port doesn't crash the process.
+let activeHttpServer: Server | null = null;
+
 const startHttpServer = (startPort: number, maxAttempts = 10) => {
   let attempt = 0;
 
@@ -365,6 +369,7 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
     const server = app.listen(port);
 
     server.on('listening', () => {
+      activeHttpServer = server;
       logger.info('Server started', {
         port,
         environment: process.env.NODE_ENV || 'development',
@@ -472,16 +477,40 @@ const initializeInfrastructure = async (): Promise<void> => {
 
 void initializeInfrastructure();
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
+let shutdownStarted = false;
+const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  logger.info('Shutdown signal received', { signal });
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
+  const forceExitTimer = setTimeout(() => {
+    logger.error('Graceful shutdown timed out');
+    process.exit(1);
+  }, 10000);
+  forceExitTimer.unref();
+
+  try {
+    notificationStreamHub.closeAll();
+    if (activeHttpServer) {
+      const server = activeHttpServer;
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => error ? reject(error) : resolve());
+      });
+      activeHttpServer = null;
+    }
+    await Promise.allSettled([disconnectDatabase(), disconnectRedis()]);
+    clearTimeout(forceExitTimer);
+    logger.info('Graceful shutdown complete');
+    process.exit(0);
+  } catch (error) {
+    clearTimeout(forceExitTimer);
+    logger.error('Graceful shutdown failed', { error });
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: Error | any, promise: Promise<any>) => {
