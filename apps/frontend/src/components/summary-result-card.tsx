@@ -1,9 +1,9 @@
 "use client"
 
-import type { ComponentType, ReactNode } from "react"
-import { Building2, CalendarClock, Package, Tag, UserRound } from "lucide-react"
+import { Building2, CalendarClock, Package, Tag, UserRound } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 
-import { cn } from "@/utils/cn"
+import { cn } from "@/utils/cn";
 
 type SummaryResultCardProps = {
   title: string

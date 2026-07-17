@@ -23,6 +23,8 @@ export interface Maintenance {
   dueAt?: string;
   startedAt?: string;
   completedDate?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
   validatedAt?: string;
   description: string;
   technician?: string;
@@ -33,6 +35,28 @@ export interface Maintenance {
   vendorName?: string;
   vendorReference?: string;
   warrantyUntil?: string;
+  estimatedDurationMinutes?: number;
+  estimatedCost?: number;
+  damagePhotoUrl?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
+  diagnosis?: string;
+  actionTaken?: string;
+  checklist?: string;
+  spareParts?: string;
+  verificationResult?: string;
+  finalCondition?: string;
+  verificationNotes?: string;
+  nextMaintenanceDate?: string;
+  recurrenceInterval?: 'none' | 'monthly' | 'quarterly' | 'yearly';
+  recurrenceEnabled?: boolean;
+  approvalStatus?: 'not_required' | 'pending' | 'approved' | 'rejected';
+  approvalNotes?: string;
+  approvedBy?: number;
+  approvedAt?: string;
+  reminderH7SentAt?: string;
+  reminderH3SentAt?: string;
+  reminderH1SentAt?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -118,6 +142,8 @@ const normalizeMaintenance = (maintenance: any): Maintenance => {
     dueAt: maintenance.dueAt ?? maintenance.due_at,
     startedAt: maintenance.startedAt ?? maintenance.started_at,
     completedDate: maintenance.completedDate ?? maintenance.completed_date,
+    actualStartAt: maintenance.actualStartAt ?? maintenance.actual_start_at,
+    actualEndAt: maintenance.actualEndAt ?? maintenance.actual_end_at,
     description: maintenance.description,
     technician: maintenance.technician,
     technicianUserId: maintenance.technicianUserId ?? maintenance.technician_user_id,
@@ -127,6 +153,28 @@ const normalizeMaintenance = (maintenance: any): Maintenance => {
     vendorName: maintenance.vendorName ?? maintenance.vendor_name,
     vendorReference: maintenance.vendorReference ?? maintenance.vendor_reference,
     warrantyUntil: maintenance.warrantyUntil ?? maintenance.warranty_until,
+    estimatedDurationMinutes: maintenance.estimatedDurationMinutes ?? maintenance.estimated_duration_minutes,
+    estimatedCost: maintenance.estimatedCost ?? maintenance.estimated_cost,
+    damagePhotoUrl: maintenance.damagePhotoUrl ?? maintenance.damage_photo_url,
+    beforePhotoUrl: maintenance.beforePhotoUrl ?? maintenance.before_photo_url,
+    afterPhotoUrl: maintenance.afterPhotoUrl ?? maintenance.after_photo_url,
+    diagnosis: maintenance.diagnosis,
+    actionTaken: maintenance.actionTaken ?? maintenance.action_taken,
+    checklist: maintenance.checklist,
+    spareParts: maintenance.spareParts ?? maintenance.spare_parts,
+    verificationResult: maintenance.verificationResult ?? maintenance.verification_result,
+    finalCondition: maintenance.finalCondition ?? maintenance.final_condition,
+    verificationNotes: maintenance.verificationNotes ?? maintenance.verification_notes,
+    nextMaintenanceDate: maintenance.nextMaintenanceDate ?? maintenance.next_maintenance_date,
+    recurrenceInterval: maintenance.recurrenceInterval ?? maintenance.recurrence_interval ?? 'none',
+    recurrenceEnabled: Boolean(maintenance.recurrenceEnabled ?? maintenance.recurrence_enabled),
+    approvalStatus: maintenance.approvalStatus ?? maintenance.approval_status ?? 'not_required',
+    approvalNotes: maintenance.approvalNotes ?? maintenance.approval_notes,
+    approvedBy: maintenance.approvedBy ?? maintenance.approved_by,
+    approvedAt: maintenance.approvedAt ?? maintenance.approved_at,
+    reminderH7SentAt: maintenance.reminderH7SentAt ?? maintenance.reminder_h7_sent_at,
+    reminderH3SentAt: maintenance.reminderH3SentAt ?? maintenance.reminder_h3_sent_at,
+    reminderH1SentAt: maintenance.reminderH1SentAt ?? maintenance.reminder_h1_sent_at,
     cost: maintenance.cost,
     notes: maintenance.notes,
     cancellationReason: maintenance.cancellationReason ?? maintenance.cancellation_reason,
@@ -151,6 +199,10 @@ export interface CreateMaintenanceData {
   status?: 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'validated' | 'cancelled';
   scheduledDate: string;
   dueAt?: string;
+  startedAt?: string;
+  completedDate?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
   description?: string;
   assetDetailId?: string;
   assetDetailName?: string;
@@ -161,6 +213,23 @@ export interface CreateMaintenanceData {
   vendorName?: string;
   vendorReference?: string;
   warrantyUntil?: string;
+  estimatedDurationMinutes?: number;
+  estimatedCost?: number;
+  damagePhotoUrl?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
+  diagnosis?: string;
+  actionTaken?: string;
+  checklist?: string;
+  spareParts?: string;
+  verificationResult?: string;
+  finalCondition?: string;
+  verificationNotes?: string;
+  nextMaintenanceDate?: string;
+  recurrenceInterval?: 'none' | 'monthly' | 'quarterly' | 'yearly';
+  recurrenceEnabled?: boolean;
+  approvalStatus?: 'not_required' | 'pending' | 'approved' | 'rejected';
+  approvalNotes?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -174,6 +243,10 @@ export interface UpdateMaintenanceData {
   priority?: 'low' | 'normal' | 'high' | 'critical';
   scheduledDate?: string;
   dueAt?: string;
+  startedAt?: string;
+  completedDate?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
   description?: string;
   assetDetailId?: string;
   assetDetailName?: string;
@@ -184,6 +257,23 @@ export interface UpdateMaintenanceData {
   vendorName?: string;
   vendorReference?: string;
   warrantyUntil?: string;
+  estimatedDurationMinutes?: number;
+  estimatedCost?: number;
+  damagePhotoUrl?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
+  diagnosis?: string;
+  actionTaken?: string;
+  checklist?: string;
+  spareParts?: string;
+  verificationResult?: string;
+  finalCondition?: string;
+  verificationNotes?: string;
+  nextMaintenanceDate?: string;
+  recurrenceInterval?: 'none' | 'monthly' | 'quarterly' | 'yearly';
+  recurrenceEnabled?: boolean;
+  approvalStatus?: 'not_required' | 'pending' | 'approved' | 'rejected';
+  approvalNotes?: string;
   cost?: number;
   notes?: string;
   cancellationReason?: string;
@@ -264,6 +354,22 @@ class MaintenanceService {
 
   async getScheduledMaintenance(): Promise<MaintenanceResponse> {
     return this.getAll({ status: 'scheduled' });
+  }
+
+  async uploadAttachment(id: number | string, file: File): Promise<{ success: boolean; message: string; data?: { url: string; fileName: string } }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiService.post<{ success: boolean; message: string; data?: { url: string; fileName: string } }>(`/maintenance/${id}/attachments`, formData as FormData);
+  }
+
+  async getAnalytics(): Promise<{ success: boolean; message: string; data?: any }> {
+    return apiService.get<{ success: boolean; message: string; data?: any }>('/maintenance/analytics');
+  }
+
+  async dispatchReminders(): Promise<{ success: boolean; message: string; data?: { sent: number } }> {
+    const response = await apiService.post<{ success: boolean; message: string; data?: { sent: number } }>('/maintenance/dispatch-reminders', {});
+    if (response.success) emitNotificationsRefresh();
+    return response;
   }
 
   async getByAsset(assetId: number | string): Promise<MaintenanceResponse> {

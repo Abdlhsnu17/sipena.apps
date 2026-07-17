@@ -43,6 +43,60 @@ export class MaintenanceController {
     }
   };
 
+  getAnalytics = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.maintenanceService.getAnalytics();
+      res.json(result);
+    } catch (error) {
+      console.error('Get maintenance analytics error:', error);
+      res.status(500).json({ success: false, message: 'Dashboard pemeliharaan gagal dimuat' });
+    }
+  };
+
+  dispatchReminders = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.maintenanceService.dispatchDueReminders();
+      res.json(result);
+    } catch (error) {
+      console.error('Dispatch maintenance reminders error:', error);
+      res.status(500).json({ success: false, message: 'Reminder pemeliharaan gagal diproses' });
+    }
+  };
+
+  getAttachments = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id);
+      const result = await this.maintenanceService.getAttachments(id);
+      res.json(result);
+    } catch (error) {
+      console.error('Get maintenance attachments error:', error);
+      res.status(500).json({ success: false, message: 'Lampiran pemeliharaan gagal dimuat' });
+    }
+  };
+
+  uploadAttachment = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id);
+      if (!req.file) {
+        res.status(400).json({ success: false, message: 'File lampiran wajib diunggah' });
+        return;
+      }
+
+      const actorId = getActorUserId(req);
+      const result = await this.maintenanceService.addAttachment({
+        maintenanceId: id,
+        fileName: req.file.originalname,
+        filePath: `/uploads/maintenance/${req.file.filename}`,
+        mimeType: req.file.mimetype,
+        uploadedBy: actorId,
+      });
+      res.status(result.success ? 201 : 404).json(result);
+    } catch (error) {
+      console.error('Upload maintenance attachment error:', error);
+      res.status(500).json({ success: false, message: 'Lampiran pemeliharaan gagal diunggah' });
+    }
+  };
+
   /**
    * Get all maintenance records
    * GET /api/maintenance
@@ -144,6 +198,14 @@ export class MaintenanceController {
         return;
       }
 
+      if (req.body.status && req.body.status !== 'requested') {
+        res.status(400).json({
+          success: false,
+          message: 'Pengajuan baru harus dimulai dari status Diajukan'
+        });
+        return;
+      }
+
       const result = await this.maintenanceService.create({
         ...req.body,
         createdBy
@@ -226,7 +288,7 @@ export class MaintenanceController {
       if (req.body.status === 'validated' && !canManageMaintenanceCompletion(requesterRole)) {
         res.status(403).json({
           success: false,
-          message: 'Hanya admin, leader, atau teknisi yang dapat melakukan validasi akhir pemeliharaan'
+          message: 'Hanya admin, leader, atau teknisi yang dapat meneruskan validasi akhir pemeliharaan'
         });
         return;
       }
@@ -245,6 +307,13 @@ export class MaintenanceController {
             success: false,
             message: 'User not authenticated'
           });
+          return;
+        }
+
+        const { status: _status, ...verificationDetails } = req.body;
+        const detailResult = await this.maintenanceService.update(id, verificationDetails, actorId);
+        if (!detailResult.success) {
+          res.status(400).json(detailResult);
           return;
         }
 
@@ -278,12 +347,19 @@ export class MaintenanceController {
         return;
       }
 
-      if (req.body.status === 'cancelled' && !canManageMaintenanceCompletion(requesterRole)) {
-        res.status(403).json({
-          success: false,
-          message: 'Hanya admin, leader, atau teknisi yang dapat membatalkan pemeliharaan'
-        });
-        return;
+      if (req.body.status === 'cancelled') {
+        const canCancelAsManager = hasAnyRole(requesterRole, ['admin', 'leader']);
+        const canCancelAsStaffPj = hasAnyRole(requesterRole, ['staff_pj', 'staff pj'])
+          && ['requested', 'scheduled'].includes(existingStatus);
+        const canCancelAsTechnician = hasAnyRole(requesterRole, ['teknisi'])
+          && ['scheduled', 'in_progress'].includes(existingStatus);
+        if (!canCancelAsManager && !canCancelAsStaffPj && !canCancelAsTechnician) {
+          res.status(403).json({
+            success: false,
+            message: 'Anda tidak memiliki kewenangan untuk menolak atau membatalkan tahap pemeliharaan ini'
+          });
+          return;
+        }
       }
 
       if (
@@ -297,7 +373,26 @@ export class MaintenanceController {
         return;
       }
 
-      if (req.body.status === 'completed') {
+      if (req.body.status === 'scheduled' && !hasAnyRole(requesterRole, ['admin', 'leader', 'staff_pj', 'staff pj', 'teknisi'])) {
+        res.status(403).json({
+          success: false,
+          message: 'Hanya admin, leader, PJ pengguna aset, atau teknisi yang dapat menyetujui pengajuan pemeliharaan'
+        });
+        return;
+      }
+
+      if (req.body.status === 'in_progress' && !canManageMaintenanceCompletion(requesterRole)) {
+        res.status(403).json({
+          success: false,
+          message: 'Hanya admin, leader, atau teknisi yang dapat memulai pelaksanaan pemeliharaan'
+        });
+        return;
+      }
+
+      // A form edit on an already-completed record also sends its current
+      // status. Only run the completion workflow for an actual transition;
+      // otherwise persist the verification/detail fields as a normal update.
+      if (req.body.status === 'completed' && existingStatus !== 'completed') {
         if (!canManageMaintenanceCompletion(requesterRole)) {
           res.status(403).json({
             success: false,
@@ -314,6 +409,15 @@ export class MaintenanceController {
           return;
         }
 
+        const { status: _status, ...executionDetails } = req.body;
+        if (Object.keys(executionDetails).length > 0) {
+          const detailResult = await this.maintenanceService.update(id, executionDetails, actorId);
+          if (!detailResult.success) {
+            res.status(400).json(detailResult);
+            return;
+          }
+        }
+
         const completeResult = await this.maintenanceService.complete(id, {
           notes: req.body.notes,
           cost: req.body.cost,
@@ -321,7 +425,7 @@ export class MaintenanceController {
         });
 
         if (!completeResult.success) {
-          res.status(404).json(completeResult);
+          res.status(400).json(completeResult);
           return;
         }
 

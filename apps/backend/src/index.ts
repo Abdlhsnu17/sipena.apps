@@ -34,7 +34,7 @@ import {
     ensureUserProfileColumns,
     withSchemaLock
 } from './utils/schema';
-import { getProfileUploadsDir } from './utils/storage-paths';
+import { getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
 import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
@@ -49,6 +49,7 @@ import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
 import maintenanceScheduleRoutes from './routes/maintenance_schedule.routes';
+import { MaintenanceService } from './services/maintenance.service';
 import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
 import sanctionsRoutes from './routes/sanctions.routes';
@@ -285,6 +286,11 @@ app.use('/uploads/profiles', (req, res, next) => {
   next();
 });
 app.use('/uploads/profiles', express.static(getProfileUploadsDir()));
+app.use('/uploads/maintenance', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
+app.use('/uploads/maintenance', express.static(getMaintenanceUploadsDir()));
 
 const healthHandler = (req: express.Request, res: express.Response) => {
   const status = infrastructureStatus.database === 'up' && infrastructureStatus.schema === 'up'
@@ -360,6 +366,23 @@ const sleep = async (delayMs: number): Promise<void> => {
 
 // Start the HTTP server with port-retry logic so a busy port doesn't crash the process.
 let activeHttpServer: Server | null = null;
+let maintenanceReminderTimer: NodeJS.Timeout | null = null;
+
+const startMaintenanceReminderScheduler = () => {
+  if (maintenanceReminderTimer) return;
+  const maintenanceService = new MaintenanceService();
+  const run = async () => {
+    try {
+      const result = await maintenanceService.dispatchDueReminders();
+      logger.info('Maintenance reminder scheduler completed', { sent: result.data?.sent ?? 0 });
+    } catch (error) {
+      logger.error('Maintenance reminder scheduler failed', { error });
+    }
+  };
+  setTimeout(() => void run(), 30000).unref();
+  maintenanceReminderTimer = setInterval(() => void run(), 24 * 60 * 60 * 1000);
+  maintenanceReminderTimer.unref();
+};
 
 const startHttpServer = (startPort: number, maxAttempts = 10) => {
   let attempt = 0;
@@ -376,6 +399,7 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
         frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
         apiUrl: `http://localhost:${port}`,
       });
+      startMaintenanceReminderScheduler();
     });
 
     server.on('error', (err: NodeJS.ErrnoException) => {
@@ -491,6 +515,10 @@ const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
 
   try {
     notificationStreamHub.closeAll();
+    if (maintenanceReminderTimer) {
+      clearInterval(maintenanceReminderTimer);
+      maintenanceReminderTimer = null;
+    }
     if (activeHttpServer) {
       const server = activeHttpServer;
       await new Promise<void>((resolve, reject) => {

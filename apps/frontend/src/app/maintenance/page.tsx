@@ -5,12 +5,12 @@ import { id } from "date-fns/locale";
 import {
     AlertCircle,
     CalendarDays,
+    CheckCircle,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
     ChevronUp,
     Download,
-    Edit2,
     Eye,
     History,
     MapPin,
@@ -60,7 +60,7 @@ import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, locationBad
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isTechnicianRole } from "@/utils/role";
+import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole, normalizeUserRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 
 type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
@@ -141,16 +141,35 @@ const isBorrowingLockRecord = (record: { status: string; returnValidatedAt?: str
 const MAINTENANCE_STATUS_TRANSITIONS: Record<string, string[]> = {
   requested: ["scheduled", "cancelled"],
   scheduled: ["in_progress", "cancelled"],
-  in_progress: ["completed", "cancelled"],
+  in_progress: ["completed"],
   completed: ["validated", "in_progress"],
   validated: [],
-  cancelled: [],
+  cancelled: ["scheduled"],
 }
 
-const getSelectableStatuses = (currentStatus: string) => [
-  currentStatus,
-  ...(MAINTENANCE_STATUS_TRANSITIONS[currentStatus] || []),
-]
+const canCancelMaintenance = (currentStatus: string, role?: string | null) => {
+  const normalizedRole = normalizeUserRole(role)
+  if (!["requested", "scheduled"].includes(currentStatus)) return false
+  if (["admin", "leader"].includes(normalizedRole)) return true
+  if (normalizedRole === "staff_pj") return ["requested", "scheduled"].includes(currentStatus)
+  return normalizedRole === "teknisi" && currentStatus === "scheduled"
+}
+
+const canOpenMaintenanceWorkflow = (status: Maintenance["status"], role?: string | null) => {
+  const normalizedRole = normalizeUserRole(role)
+  if (["validated", "cancelled"].includes(status)) return false
+  if (status === "requested") return false
+  if (status === "scheduled") return ["admin", "leader", "staff_pj", "teknisi"].includes(normalizedRole)
+  return ["admin", "leader", "teknisi"].includes(normalizedRole)
+}
+
+const maintenanceWorkflowActionLabel = (status: Maintenance["status"]) => {
+  if (status === "requested") return "Tinjau Pengajuan"
+  if (status === "scheduled") return "Atur Penugasan"
+  if (status === "in_progress") return "Isi Laporan"
+  if (status === "completed") return "Verifikasi Hasil"
+  return "Buka Proses"
+}
 
 const maintenanceSlaLabel = (status?: Maintenance["slaStatus"]) => {
   switch (status) {
@@ -245,6 +264,7 @@ export default function MaintenancePage() {
     previousStatus: string
     cancellationReason: string
   } | null>(null)
+  const [maintenanceAnalytics, setMaintenanceAnalytics] = useState<any | null>(null)
 
   // 1. Cek Autentikasi Pengguna
   useEffect(() => {
@@ -276,6 +296,39 @@ export default function MaintenancePage() {
     }
   }
 
+  const loadMaintenanceAnalytics = async () => {
+    try {
+      const response = await maintenanceService.getAnalytics()
+      if (response.success) {
+        setMaintenanceAnalytics(response.data || null)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ""
+      if (message.includes("Maintenance record not found")) {
+        setMaintenanceAnalytics(null)
+        return
+      }
+      console.warn("Maintenance analytics unavailable:", error)
+    }
+  }
+
+  const handleDispatchReminders = async () => {
+    try {
+      const response = await maintenanceService.dispatchReminders()
+      toast({
+        title: response.success ? "Reminder diproses" : "Reminder belum diproses",
+        description: response.success ? `${response.data?.sent ?? 0} notifikasi reminder dibuat.` : response.message,
+        variant: response.success ? "default" : "destructive",
+      })
+    } catch {
+      toast({
+        title: "Reminder belum diproses",
+        description: "Terjadi kesalahan saat memproses reminder pemeliharaan.",
+        variant: "destructive",
+      })
+    }
+  }
+
   useEffect(() => {
     const nextAutomationSource = searchParams.get("automationSource")
     if (nextAutomationSource === "usage_threshold" || nextAutomationSource === "manual") {
@@ -287,6 +340,29 @@ export default function MaintenancePage() {
       setSearchTerm(nextSearch)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (searchParams.get("openForm") !== "1") return
+    if (!canCreateMaintenanceRole(currentUser?.role)) return
+    if (assets.length === 0) return
+    const query = (searchParams.get("q") || "").trim().toLowerCase()
+    if (!query) return
+    const matchedAsset = assets.find((asset) => {
+      const candidates = [
+        asset.detailId,
+        asset.detailCode,
+        asset.assetCode,
+        asset.detailInventoryName,
+        asset.detailName,
+        asset.assetName,
+      ].filter(Boolean).map((value) => String(value).toLowerCase())
+      return candidates.some((value) => value.includes(query) || query.includes(value))
+    })
+    if (!matchedAsset) return
+    setPrefillAsset(matchedAsset)
+    setPrefillNote("Pengajuan dari QR inventaris.")
+    setShowForm(true)
+  }, [assets, currentUser?.role, searchParams])
 
   const loadAssets = async () => {
     try {
@@ -384,6 +460,7 @@ export default function MaintenancePage() {
       if (!isMounted) return
       await Promise.all([
         loadMaintenance(),
+        loadMaintenanceAnalytics(),
         loadAssets(),
         loadActiveUsageLocks(),
         loadActiveBorrowingLocks()
@@ -398,13 +475,14 @@ export default function MaintenancePage() {
   }, [])
 
   useEffect(() => {
-    void loadMaintenance()
+    void Promise.all([loadMaintenance(), loadMaintenanceAnalytics()])
   }, [filterAutomationSource])
 
   useEffect(() => {
     const handleInventoryRefresh = () => {
       void Promise.all([
         loadMaintenance(),
+        loadMaintenanceAnalytics(),
         loadAssets(),
         loadActiveUsageLocks(),
         loadActiveBorrowingLocks(),
@@ -420,7 +498,7 @@ export default function MaintenancePage() {
   const canDeleteMaintenance = isAdminRole(currentUser?.role)
   const isTechnician = isTechnicianRole(currentUser?.role)
   const canCreateMaintenance = canCreateMaintenanceRole(currentUser?.role)
-  const canEditMaintenance = hasFullAccess || isTechnician
+  const canEditMaintenance = hasFullAccess || isTechnician || isStaffPjRole(currentUser?.role)
   const canManageAdvancedStatuses = canManageMaintenanceStatusRole(currentUser?.role)
   const createMaintenanceActionLabel = "Tambah Pemeliharaan"
 
@@ -561,31 +639,35 @@ export default function MaintenancePage() {
       return
     }
 
-    try {
-      const usageResponse = await assetUsageService.getAll({
-        page: 1,
-        limit: 50,
-        assetId: String(data.assetId),
-        assetType: data.assetType,
-      })
-      const hasActiveUsage = Array.isArray(usageResponse.data) && usageResponse.data.some((usage) => {
-        const matchesDetail = !data.assetDetailId || !usage.assetDetailId || usage.assetDetailId === data.assetDetailId
-        return matchesDetail && !usage.endedAt
-      })
-      if (hasActiveUsage) {
-        toast({
-          title: "Aset belum dapat dipelihara",
-          description: "Aset sedang dalam penggunaan aktif. Selesaikan penggunaan terlebih dahulu.",
-          variant: "destructive",
+    const shouldBlockByUsage = ["in_progress", "completed", "validated"].includes(String(data.status || "requested"))
+    if (shouldBlockByUsage) {
+      try {
+        const usageResponse = await assetUsageService.getAll({
+          page: 1,
+          limit: 50,
+          assetId: String(data.assetId),
+          assetType: data.assetType,
         })
-        return
+        const hasActiveUsage = Array.isArray(usageResponse.data) && usageResponse.data.some((usage) => {
+          const matchesDetail = !data.assetDetailId || !usage.assetDetailId || usage.assetDetailId === data.assetDetailId
+          return matchesDetail && !usage.endedAt
+        })
+        if (hasActiveUsage) {
+          toast({
+            title: "Aset belum dapat dipelihara",
+            description: "Aset sedang dalam penggunaan aktif. Selesaikan penggunaan terlebih dahulu.",
+            variant: "destructive",
+          })
+          return
+        }
+      } catch (usageError) {
+        console.error("Failed to check asset usage before maintenance create:", usageError)
       }
-    } catch (usageError) {
-      console.error("Failed to check asset usage before maintenance create:", usageError)
     }
 
     try {
       const isEditing = Boolean(editingMaintenance)
+      let savedMaintenanceId: number | string | undefined
 
       if (isEditing) {
         if (!canEditMaintenance) {
@@ -604,10 +686,35 @@ export default function MaintenancePage() {
           assetDetailName: data.assetDetailName,
           assetDetailCode: data.assetDetailCode,
           type: data.type,
+          priority: data.priority,
           scheduledDate: data.scheduledDate,
           description: data.description || '',
           technician: data.technician || undefined,
           technicianUserId: data.technicianUserId ? Number(data.technicianUserId) : undefined,
+          vendorName: data.vendorName || undefined,
+          vendorReference: data.vendorReference || undefined,
+          warrantyUntil: data.warrantyUntil || undefined,
+          estimatedDurationMinutes: data.estimatedDurationMinutes ? Number(data.estimatedDurationMinutes) : undefined,
+          estimatedCost: data.estimatedCost ? Number(data.estimatedCost) : undefined,
+          damagePhotoUrl: data.damagePhotoUrl || undefined,
+          beforePhotoUrl: data.beforePhotoUrl || undefined,
+          afterPhotoUrl: data.afterPhotoUrl || undefined,
+          diagnosis: data.diagnosis || undefined,
+          actionTaken: data.actionTaken || undefined,
+          checklist: data.checklist || undefined,
+          spareParts: data.spareParts || undefined,
+          verificationResult: data.verificationResult || undefined,
+          finalCondition: data.finalCondition || undefined,
+          verificationNotes: data.verificationNotes || undefined,
+          nextMaintenanceDate: data.nextMaintenanceDate || undefined,
+          startedAt: data.startedAt || undefined,
+          completedDate: data.completedDate || undefined,
+          actualStartAt: data.actualStartAt || data.startedAt || undefined,
+          actualEndAt: data.actualEndAt || data.completedDate || undefined,
+          recurrenceInterval: data.recurrenceInterval || "none",
+          recurrenceEnabled: Boolean(data.recurrenceEnabled),
+          approvalStatus: data.approvalStatus || undefined,
+          approvalNotes: data.approvalNotes || undefined,
           cost: data.cost ? Number(data.cost) : undefined,
           notes: data.notes || undefined,
           status: data.status,
@@ -618,7 +725,15 @@ export default function MaintenancePage() {
         if (!currentMaintenance) {
           return
         }
+        // If Admin/Leader saves as 'scheduled' but no technician chosen,
+        // assign current user so backend validation passes.
+        if (updatePayload.status === "scheduled" && !updatePayload.technicianUserId && isAdminOrLeaderRole(currentUser.role)) {
+          updatePayload.technicianUserId = Number(currentUser.id)
+        }
+
+        console.debug("Updating maintenance (payload):", updatePayload)
         const response = await maintenanceService.update(currentMaintenance.id, updatePayload)
+        console.debug("Update response:", response)
         if (!response.success) {
           toast({
             title: "Pemeliharaan belum diperbarui",
@@ -627,6 +742,7 @@ export default function MaintenancePage() {
           })
           return
         }
+        savedMaintenanceId = response.data?.id ?? currentMaintenance.id
       } else {
         if (!canCreateMaintenance) {
           toast({
@@ -641,17 +757,49 @@ export default function MaintenancePage() {
           assetId: Number(data.assetId),
           assetType: data.assetType,
           type: data.type,
+          priority: data.priority,
           status: data.status,
           scheduledDate: data.scheduledDate,
           description: data.description || '',
           technician: data.technician || undefined,
           technicianUserId: data.technicianUserId ? Number(data.technicianUserId) : undefined,
+          vendorName: data.vendorName || undefined,
+          vendorReference: data.vendorReference || undefined,
+          warrantyUntil: data.warrantyUntil || undefined,
+          estimatedDurationMinutes: data.estimatedDurationMinutes ? Number(data.estimatedDurationMinutes) : undefined,
+          estimatedCost: data.estimatedCost ? Number(data.estimatedCost) : undefined,
+          damagePhotoUrl: data.damagePhotoUrl || undefined,
+          beforePhotoUrl: data.beforePhotoUrl || undefined,
+          afterPhotoUrl: data.afterPhotoUrl || undefined,
+          diagnosis: data.diagnosis || undefined,
+          actionTaken: data.actionTaken || undefined,
+          checklist: data.checklist || undefined,
+          spareParts: data.spareParts || undefined,
+          verificationResult: data.verificationResult || undefined,
+          finalCondition: data.finalCondition || undefined,
+          verificationNotes: data.verificationNotes || undefined,
+          nextMaintenanceDate: data.nextMaintenanceDate || undefined,
+          startedAt: data.startedAt || undefined,
+          completedDate: data.completedDate || undefined,
+          actualStartAt: data.actualStartAt || data.startedAt || undefined,
+          actualEndAt: data.actualEndAt || data.completedDate || undefined,
+          recurrenceInterval: data.recurrenceInterval || "none",
+          recurrenceEnabled: Boolean(data.recurrenceEnabled),
+          approvalStatus: data.approvalStatus || undefined,
+          approvalNotes: data.approvalNotes || undefined,
           cost: data.cost ? Number(data.cost) : undefined,
           notes: data.notes || undefined,
           cancellationReason: data.cancellationReason?.trim() || undefined,
           createdBy: Number(currentUser.id),
         }
 
+        // If Admin/Leader creates as 'scheduled' but no technician chosen,
+        // assign current user so backend validation passes.
+        if (newPayload.status === "scheduled" && !newPayload.technicianUserId && isAdminOrLeaderRole(currentUser.role)) {
+          newPayload.technicianUserId = Number(currentUser.id)
+        }
+
+        console.debug("Creating maintenance (payload):", newPayload)
         const response = await maintenanceService.create({
           ...newPayload,
           assetDetailId: data.assetDetailId,
@@ -668,9 +816,38 @@ export default function MaintenancePage() {
           })
           return
         }
+        savedMaintenanceId = response.data?.id
+      }
+
+      if (savedMaintenanceId && data.attachmentFiles) {
+        const uploadedUrls: Record<string, string> = {}
+        const uploadTargets = [
+          { key: "damagePhotoUrl", file: data.attachmentFiles.damagePhoto },
+          { key: "beforePhotoUrl", file: data.attachmentFiles.beforePhoto },
+          { key: "afterPhotoUrl", file: data.attachmentFiles.afterPhoto },
+        ].filter((target) => target.file)
+
+        for (const target of uploadTargets) {
+          const uploadResponse = await maintenanceService.uploadAttachment(savedMaintenanceId, target.file)
+          if (uploadResponse.success && uploadResponse.data?.url) {
+            uploadedUrls[target.key] = uploadResponse.data.url
+          }
+        }
+
+        if (Object.keys(uploadedUrls).length > 0) {
+          await maintenanceService.update(savedMaintenanceId, uploadedUrls as any)
+        }
       }
 
       await loadMaintenance()
+      if (savedMaintenanceId) {
+        try {
+          const refreshed = await maintenanceService.getById(String(savedMaintenanceId))
+          console.debug("Refreshed maintenance record:", refreshed)
+        } catch (e) {
+          console.debug("Failed to fetch refreshed maintenance record:", e)
+        }
+      }
       await loadAssets()
       setShowForm(false)
       setEditingMaintenance(null)
@@ -682,12 +859,20 @@ export default function MaintenancePage() {
           title: "Pemeliharaan sarana berhasil ditambahkan",
           description: "Data pemeliharaan sarana sudah tersimpan.",
         })
+      } else {
+        toast({
+          title: data.status === "in_progress" ? "Proses perbaikan dimulai" : "Pemeliharaan sarana diperbarui",
+          description: data.status === "in_progress"
+            ? "Penjadwalan tersimpan dan status sudah berpindah ke Dalam Proses Perbaikan."
+            : "Perubahan data pemeliharaan sarana sudah tersimpan.",
+        })
       }
     } catch (error: any) {
       console.error("Error saving maintenance:", error)
+      const backendMessage = error?.response?.body?.message || error?.message
       toast({
         title: "Pemeliharaan belum tersimpan",
-        description: "Terjadi kesalahan saat menyimpan pemeliharaan sarana.",
+        description: backendMessage || "Terjadi kesalahan saat menyimpan pemeliharaan sarana.",
         variant: "destructive",
       })
     }
@@ -745,19 +930,6 @@ export default function MaintenancePage() {
     }
   }
 
-  const handleEditMaintenance = (data: Maintenance) => {
-    if (!canEditMaintenance) {
-      toast({
-        title: "Akses ditolak",
-        description: "Anda tidak memiliki izin untuk mengedit jadwal pemeliharaan.",
-        variant: "destructive",
-      })
-      return
-    }
-    setEditingMaintenance(data)
-    setShowForm(true)
-  }
-
   const handleUpdateStatus = async (id: string | number, newStatus: string) => {
     if (!currentUser) {
       toast({
@@ -778,10 +950,10 @@ export default function MaintenancePage() {
       return
     }
 
-    if (["validated", "cancelled"].includes(currentRecord.status)) {
+    if (currentRecord.status === "validated") {
       toast({
         title: "Status tidak dapat diubah",
-        description: "Pemeliharaan yang sudah selesai final atau dibatalkan tidak dapat diubah lagi.",
+        description: "Pemeliharaan yang sudah selesai final tidak dapat diubah lagi.",
         variant: "destructive",
       })
       return
@@ -790,7 +962,7 @@ export default function MaintenancePage() {
     if (!canManageAdvancedStatuses) {
       toast({
         title: "Akses ditolak",
-        description: "Hanya Admin, Leader, atau Teknisi yang dapat mengubah alur status pemeliharaan.",
+        description: "Anda tidak memiliki kewenangan untuk mengubah tahap pemeliharaan ini.",
         variant: "destructive",
       })
       return
@@ -822,9 +994,19 @@ export default function MaintenancePage() {
           return
         }
       } else if (["requested", "scheduled", "in_progress", "validated", "cancelled"].includes(newStatus)) {
-        const response = await maintenanceService.update(String(id), {
+        // If Admin/Leader approves (schedules) but no technician/PJ is selected,
+        // set the current user as the assignee so backend validation passes.
+        const payload: any = {
           status: newStatus as "requested" | "scheduled" | "in_progress" | "validated" | "cancelled",
-        })
+        }
+        if (
+          newStatus === "scheduled" &&
+          !currentRecord.technicianUserId &&
+          isAdminOrLeaderRole(currentUser.role)
+        ) {
+          payload.technicianUserId = Number(currentUser.id)
+        }
+        const response = await maintenanceService.update(String(id), payload)
         if (!response.success) {
           toast({
             title: "Status belum diperbarui",
@@ -842,17 +1024,20 @@ export default function MaintenancePage() {
       if (newStatus === "scheduled") {
         toast({
           title: "Pemeliharaan disetujui",
-          description: "Pengajuan pemeliharaan sudah masuk ke tahap persetujuan.",
+          description:
+            currentRecord.status === "cancelled"
+              ? "Pemeliharaan dibuka kembali dan masuk ke tahap penugasan teknisi/leader/vendor."
+              : "Pengajuan pemeliharaan sudah masuk ke tahap penugasan teknisi/leader/vendor.",
         })
       } else if (newStatus === "in_progress") {
         toast({
-          title: "Pemeliharaan sarana sedang pengecekan lanjutan",
-          description: "Status pemeliharaan sudah diubah ke tahap pengecekan lanjutan.",
+          title: "Pemeliharaan dalam proses perbaikan",
+          description: "Status pemeliharaan sudah diubah ke tahap pelaksanaan tindakan.",
         })
       } else if (newStatus === "completed") {
         toast({
-          title: "Pemeliharaan dalam proses pengerjaan",
-          description: "Status pemeliharaan sudah diubah ke tahap dalam proses pengerjaan.",
+          title: "Tindakan selesai, menunggu verifikasi",
+          description: "Status pemeliharaan sudah diubah ke tahap verifikasi hasil tindakan.",
         })
       } else if (newStatus === "validated") {
         toast({
@@ -867,9 +1052,12 @@ export default function MaintenancePage() {
       }
     } catch (error: any) {
       console.error("Error updating maintenance status:", error)
+      // Prefer backend-provided message when available so the user sees
+      // why the update failed (e.g. missing technician selection).
+      const backendMessage = error?.response?.body?.message || error?.message
       toast({
         title: "Status belum diperbarui",
-        description: "Terjadi kesalahan saat memperbarui status pemeliharaan.",
+        description: backendMessage || "Terjadi kesalahan saat memperbarui status pemeliharaan.",
         variant: "destructive",
       })
     }
@@ -1130,19 +1318,13 @@ export default function MaintenancePage() {
     () => {
       const byId = new Map<number, Maintenance>()
 
-      maintenance
-        .filter((item) => item.status === "completed")
-        .forEach((item) => {
-          byId.set(item.id, item)
-        })
-
       maintenanceHistory.forEach((item) => {
         byId.set(item.id, item)
       })
 
       return Array.from(byId.values())
     },
-    [maintenance, maintenanceHistory]
+    [maintenanceHistory]
   )
   const calendarEntries = useMemo(() => {
     const year = calendarMonthDate.getFullYear()
@@ -1446,45 +1628,80 @@ export default function MaintenancePage() {
             </div>
           </section>
 
-          <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-summary>
-            <CardContent className="p-4">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50/70 dark:bg-slate-950/30 p-3">
+          <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-dashboard>
+            <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-lg">Dashboard Pemeliharaan</CardTitle>
+                <CardDescription className="text-[13px] text-muted-foreground">
+                  Ringkasan status, keterlambatan, dan biaya pemeliharaan.
+                </CardDescription>
+              </div>
+              {isAdminOrLeaderRole(currentUser?.role) ? (
+                <Button variant="outline" size="sm" onClick={() => void handleDispatchReminders()}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Proses Reminder
+                </Button>
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status Pemeliharaan</p>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50/70 p-3 dark:bg-slate-950/30">
                   <div>
                     <p className="text-[12px] text-muted-foreground">Diajukan / Disetujui</p>
-                    <p className="text-xl font-semibold text-slate-700 dark:text-slate-300 mt-1">{submissionCount.toLocaleString("id-ID")}</p>
+                    <p className="mt-1 text-xl font-semibold text-slate-700 dark:text-slate-300">{submissionCount.toLocaleString("id-ID")}</p>
                   </div>
-                  <ShieldCheck className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
                 </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Sedang Pengecekan Lanjutan</p>
-                    <p className="text-xl font-semibold text-teal-600 mt-1">{inProgressCount.toLocaleString("id-ID")}</p>
+                    <p className="text-[12px] text-muted-foreground">Dalam Proses Perbaikan</p>
+                    <p className="mt-1 text-xl font-semibold text-teal-600">{inProgressCount.toLocaleString("id-ID")}</p>
                   </div>
-                  <Wrench className="h-4 w-4 text-teal-500 shrink-0" />
+                  <Wrench className="h-4 w-4 shrink-0 text-teal-500" />
                 </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/30 p-3">
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
                   <div>
-                    <p className="text-[12px] text-muted-foreground">Dalam Proses Pengerjaan</p>
-                    <p className="text-xl font-semibold text-foreground mt-1">{awaitingValidationCount.toLocaleString("id-ID")}</p>
+                    <p className="text-[12px] text-muted-foreground">Laporan Selesai - Menunggu Verifikasi</p>
+                    <p className="mt-1 text-xl font-semibold text-foreground">{awaitingValidationCount.toLocaleString("id-ID")}</p>
                   </div>
-                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
                 </div>
-                  <div className="flex items-start justify-between gap-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 p-3">
-                    <div>
-                      <p className="text-[12px] text-muted-foreground">Selesai Pemeliharaan Sarana</p>
-                      <p className="text-xl font-semibold text-foreground mt-1">{completedCount.toLocaleString("id-ID")}</p>
-                    </div>
-                    <UserCheck className="h-4 w-4 text-indigo-500 shrink-0" />
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-indigo-50/50 p-3 dark:bg-indigo-950/30">
+                  <div>
+                    <p className="text-[12px] text-muted-foreground">Selesai Pemeliharaan Sarana</p>
+                    <p className="mt-1 text-xl font-semibold text-foreground">{completedCount.toLocaleString("id-ID")}</p>
                   </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/30 p-3">
+                  <UserCheck className="h-4 w-4 shrink-0 text-indigo-500" />
+                </div>
+                <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/60 p-3 dark:bg-rose-950/30">
                   <div>
                     <p className="text-[12px] text-muted-foreground">Ditolak / Dibatalkan</p>
-                    <p className="text-xl font-semibold text-rose-600 mt-1">{cancelledCount.toLocaleString("id-ID")}</p>
+                    <p className="mt-1 text-xl font-semibold text-rose-600">{cancelledCount.toLocaleString("id-ID")}</p>
                   </div>
-                  <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                  <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                </div>
                 </div>
               </div>
+
+              {maintenanceAnalytics?.summary ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ringkasan Operasional</p>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {[
+                      ["Total", maintenanceAnalytics.summary.total],
+                      ["Terlambat", maintenanceAnalytics.summary.overdue],
+                      ["Biaya Aktual", `Rp ${Number(maintenanceAnalytics.summary.total_cost || 0).toLocaleString("id-ID")}`],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/30">
+                        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                        <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -1667,12 +1884,16 @@ export default function MaintenancePage() {
                             }}
                             className="w-full rounded-2xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-3 py-3 text-left shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-900/40"
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
+                            <div className="flex items-start gap-2">
+                              <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{assetName}</p>
-                                <p className="mt-1 text-xs text-muted-foreground">{formatDayTimeLabel(item.scheduledDate, { showWeekday: true })}</p>
+                                <p className="mt-1 truncate text-xs text-muted-foreground">{formatDayTimeLabel(item.scheduledDate, { showWeekday: true })}</p>
                               </div>
-                              <Badge variant={getStatusColor(item.status)} className="shrink-0 text-[10px]">
+                              <Badge
+                                variant={getStatusColor(item.status)}
+                                className="max-w-[58%] shrink text-left text-[10px] whitespace-normal wrap-break-word leading-tight"
+                                title={maintenanceStatusLabel(item.status)}
+                              >
                                 {maintenanceStatusLabel(item.status)}
                               </Badge>
                             </div>
@@ -1715,6 +1936,7 @@ export default function MaintenancePage() {
                 assets={maintenanceFormAssets}
                 prefillAsset={editingMaintenance ? null : prefillAsset}
                 prefillNote={prefillNote}
+                userRole={currentUser?.role}
                 onSave={handleSaveMaintenance}
                 onCancel={() => {
                   setShowForm(false)
@@ -1872,8 +2094,8 @@ export default function MaintenancePage() {
                     <option>Semua</option>
                     <option value="requested">Diajukan</option>
                     <option value="scheduled">Disetujui</option>
-                    <option value="in_progress">Sedang Pengecekan Lanjutan</option>
-                    <option value="completed">Dalam Proses Pengerjaan</option>
+                    <option value="in_progress">Dalam Proses Perbaikan</option>
+                    <option value="completed">Laporan Pelaksanaan Selesai - Menunggu Verifikasi</option>
                     <option value="validated">Selesai</option>
                     <option value="cancelled">Ditolak / Dibatalkan</option>
                   </select>
@@ -1937,6 +2159,11 @@ export default function MaintenancePage() {
                 const registrationNote = m.description || "-"
                 const afterNotesLabel = m.notes || "-"
                 const cancellationReasonLabel = m.cancellationReason || "-"
+                const estimatedDurationLabel = m.estimatedDurationMinutes ? `${m.estimatedDurationMinutes} menit` : "-"
+                const estimatedCostLabel = m.estimatedCost ? `Rp ${Number(m.estimatedCost).toLocaleString("id-ID")}` : "-"
+                const nextMaintenanceDateLabel = m.nextMaintenanceDate
+                  ? formatDayTimeLabel(m.nextMaintenanceDate, { showWeekday: false })
+                  : "-"
 
                 const isExpanded = expandedMaintenanceIds.has(m.id)
 
@@ -1950,19 +2177,34 @@ export default function MaintenancePage() {
                         onSelectedChange={() => toggleMaintenanceSelection(m.id)}
                         selectionLabel={`Pilih jadwal pemeliharaan ${inventoryName}`}
                       >
-                        {canManageAdvancedStatuses && getSelectableStatuses(m.status).length > 1 ? (
-                          <select
-                            value={m.status}
-                            onChange={(e) => handleStatusSelection(m.id, e.target.value)}
-                            className="h-8 rounded-lg border border-border bg-slate-50 dark:bg-slate-900/40 px-2.5 text-[12px]"
-                          >
-                            {getSelectableStatuses(m.status).map((status) => (
-                              <option key={`${m.id}-${status}`} value={status}>
-                                {maintenanceStatusLabel(status)}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
+                        {m.status === "requested" && ["admin", "leader", "staff_pj", "teknisi"].includes(normalizeUserRole(currentUser?.role)) && (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 rounded-lg p-1.5 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-400/10"
+                              onClick={() => void handleUpdateStatus(m.id, "scheduled")}
+                              title="Setujui pengajuan pemeliharaan"
+                              aria-label="Setujui pengajuan pemeliharaan"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            {canCancelMaintenance(m.status, currentUser?.role) && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
+                                onClick={() => handleStatusSelection(m.id, "cancelled")}
+                                title="Tolak pengajuan pemeliharaan"
+                                aria-label="Tolak pengajuan pemeliharaan"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
 
                         <Button
                           variant="ghost"
@@ -1975,30 +2217,47 @@ export default function MaintenancePage() {
                           Lihat
                         </Button>
 
+                        {canOpenMaintenanceWorkflow(m.status, currentUser?.role) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 rounded-lg px-2.5 text-[12px] font-medium"
+                            onClick={() => {
+                              setEditingMaintenance(m)
+                              setShowForm(true)
+                            }}
+                          >
+                            <Wrench className="h-4 w-4" />
+                            {maintenanceWorkflowActionLabel(m.status)}
+                          </Button>
+                        )}
+
+                        {m.status === "cancelled" && ["admin", "leader", "staff_pj"].includes(normalizeUserRole(currentUser?.role)) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 rounded-lg px-2.5 text-[12px] font-medium"
+                            onClick={() => void handleUpdateStatus(m.id, "scheduled")}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            Buka Kembali
+                          </Button>
+                        )}
+
                         <div className="flex items-center gap-2">
-                          {canEditMaintenance ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-400/10"
-                                onClick={() => handleEditMaintenance(m)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              {canDeleteMaintenance && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
-                                  onClick={() => handleDeleteMaintenance(m)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
+                          {canDeleteMaintenance ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
+                              onClick={() => handleDeleteMaintenance(m)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           ) : (
-                            <span className="text-[12px] text-muted-foreground">-</span>
+                            <span className="text-[11px] text-muted-foreground">Alur via status</span>
                           )}
                         </div>
 
@@ -2054,7 +2313,7 @@ export default function MaintenancePage() {
                         )}
                         statusBadges={(
                           <>
-                            <Badge variant={getStatusColor(m.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
+                            <Badge variant={getStatusColor(m.status)} className="max-w-full rounded-full px-2.5 py-1 text-left text-[11px] font-medium whitespace-normal wrap-break-word leading-tight sm:text-[12px]">
                               {maintenanceStatusLabel(m.status)}
                             </Badge>
                             {m.slaStatus && m.slaStatus !== "no_target" ? (
@@ -2088,9 +2347,11 @@ export default function MaintenancePage() {
                               <InfoRow label="Nama Pengirim">{m.requesterName || "-"}</InfoRow>
                               <InfoRow label="NIP Pengirim">{m.requesterNip || "-"}</InfoRow>
                               <InfoRow label="Jadwal Pemeliharaan Sarana">{scheduledLabel}</InfoRow>
+                              <InfoRow label="Estimasi Durasi">{estimatedDurationLabel}</InfoRow>
                               <InfoRow label="Batas Penyelesaian (SLA)">{m.dueAt ? formatDayTimeLabel(m.dueAt, { showWeekday: false }) : "-"}</InfoRow>
                               <InfoRow label="Status SLA">{maintenanceSlaLabel(m.slaStatus)}</InfoRow>
                               <InfoRow label="Catatan Pendaftaran">{registrationNote}</InfoRow>
+                              <InfoRow label="Bukti Kerusakan">{m.damagePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={m.damagePhotoUrl} target="_blank" rel="noreferrer">Lihat lampiran</a> : "-"}</InfoRow>
                             </div>
                           </div>
                           <div className="mb-3 break-inside-avoid space-y-2">
@@ -2100,12 +2361,28 @@ export default function MaintenancePage() {
                               <InfoRow label="NIP Teknisi/PJ">{m.technicianNip || "-"}</InfoRow>
                               <InfoRow label="Vendor/Penyedia Jasa">{m.vendorName || "-"}</InfoRow>
                               <InfoRow label="Referensi Vendor">{m.vendorReference || "-"}</InfoRow>
+                              <InfoRow label="Estimasi Biaya">{estimatedCostLabel}</InfoRow>
                               <InfoRow label="Waktu Selesai">{completionLabel}</InfoRow>
                               <InfoRow label="Biaya Pemeliharaan">{costLabel}</InfoRow>
+                              <InfoRow label="Diagnosis">{m.diagnosis || "-"}</InfoRow>
+                              <InfoRow label="Tindakan">{m.actionTaken || "-"}</InfoRow>
+                              <InfoRow label="Checklist">{m.checklist || "-"}</InfoRow>
+                              <InfoRow label="Suku Cadang">{m.spareParts || "-"}</InfoRow>
+                              <InfoRow label="Foto Sebelum">{m.beforePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={m.beforePhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
+                              <InfoRow label="Foto Sesudah">{m.afterPhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={m.afterPhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
                               <InfoRow label="Catatan (After)">{afterNotesLabel}</InfoRow>
                               {m.status === "cancelled" && (
                                 <InfoRow label="Alasan Pembatalan">{cancellationReasonLabel}</InfoRow>
                               )}
+                            </div>
+                          </div>
+                          <div className="mb-3 break-inside-avoid space-y-2">
+                            <SectionHeader label="Verifikasi" />
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
+                              <InfoRow label="Hasil Pengujian">{m.verificationResult || "-"}</InfoRow>
+                              <InfoRow label="Kondisi Akhir">{m.finalCondition || "-"}</InfoRow>
+                              <InfoRow label="Catatan Verifikasi">{m.verificationNotes || "-"}</InfoRow>
+                              <InfoRow label="Jadwal Berikutnya">{nextMaintenanceDateLabel}</InfoRow>
                             </div>
                           </div>
                         </div>

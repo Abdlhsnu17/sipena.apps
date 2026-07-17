@@ -260,11 +260,37 @@ CREATE TABLE `maintenance_records` (
   `vendor_name` varchar(255) DEFAULT NULL,
   `vendor_reference` varchar(100) DEFAULT NULL,
   `warranty_until` date DEFAULT NULL,
+  `estimated_duration_minutes` int(11) DEFAULT NULL,
+  `estimated_cost` decimal(12,2) DEFAULT NULL,
+  `damage_photo_url` varchar(500) DEFAULT NULL,
+  `before_photo_url` varchar(500) DEFAULT NULL,
+  `after_photo_url` varchar(500) DEFAULT NULL,
+  `diagnosis` text DEFAULT NULL,
+  `action_taken` text DEFAULT NULL,
+  `checklist` text DEFAULT NULL,
+  `spare_parts` text DEFAULT NULL,
+  `verification_result` text DEFAULT NULL,
+  `final_condition` varchar(100) DEFAULT NULL,
+  `verification_notes` text DEFAULT NULL,
+  `next_maintenance_date` date DEFAULT NULL,
+  `actual_start_at` datetime DEFAULT NULL,
+  `actual_end_at` datetime DEFAULT NULL,
+  `recurrence_interval` varchar(20) NOT NULL DEFAULT 'none',
+  `recurrence_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `approval_status` varchar(20) NOT NULL DEFAULT 'not_required',
+  `approval_notes` text DEFAULT NULL,
+  `approved_by` int(11) DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `reminder_h7_sent_at` datetime DEFAULT NULL,
+  `reminder_h3_sent_at` datetime DEFAULT NULL,
+  `reminder_h1_sent_at` datetime DEFAULT NULL,
   `cost` decimal(10,2) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `cancellation_reason` text DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `completed_by` int(11) DEFAULT NULL,
+  `validated_by` int(11) DEFAULT NULL,
+  `validated_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `deleted_at` datetime DEFAULT NULL,
@@ -627,6 +653,7 @@ ALTER TABLE `maintenance_records`
   ADD KEY `idx_maintenance_technician` (`technician_user_id`),
   ADD KEY `idx_maintenance_created_by` (`created_by`),
   ADD KEY `idx_maintenance_completed_by` (`completed_by`),
+  ADD KEY `idx_maintenance_validated_by` (`validated_by`),
   ADD KEY `idx_maintenance_schedule_id` (`schedule_id`);
 
 --
@@ -901,6 +928,7 @@ ALTER TABLE `maintenance_history`
 ALTER TABLE `maintenance_records`
   ADD CONSTRAINT `fk_maintenance_completed_by` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_maintenance_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_validated_by` FOREIGN KEY (`validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_maintenance_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `jadwal_pemeliharaan` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --

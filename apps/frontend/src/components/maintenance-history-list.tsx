@@ -1,9 +1,9 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -21,11 +21,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import apiService from "@/services/api.service";
-import deletionRequestService from "@/services/deletion-request.service";
-import { getUsers } from "@/services/auth-utils";
-import maintenanceService, { type Maintenance } from "@/services/maintenance.service";
 import { Textarea } from "@/components/ui/textarea";
+import apiService from "@/services/api.service";
+import { getUsers } from "@/services/auth-utils";
+import deletionRequestService from "@/services/deletion-request.service";
+import maintenanceService, { type Maintenance } from "@/services/maintenance.service";
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { cn } from "@/utils";
@@ -1086,7 +1086,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
               className="rounded-xl border border-border/80 bg-background px-4 py-2 text-[13px] text-foreground transition focus:border-teal-500"
             >
               <option value="Semua">Semua Status</option>
-              <option value="completed">Dalam Proses Pengerjaan</option>
+              <option value="completed">Tindakan Selesai - Menunggu Verifikasi</option>
               <option value="validated">Selesai Pemeliharaan Sarana</option>
               <option value="cancelled">Ditolak / Dibatalkan</option>
             </select>
@@ -1277,7 +1277,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                       </>
                     )}
                     statusBadges={(
-                      <Badge variant={getStatusColor(h.status)} className="rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-[12px]">
+                      <Badge variant={getStatusColor(h.status)} className="max-w-full rounded-full px-2.5 py-1 text-left text-[11px] font-medium whitespace-normal wrap-break-word leading-tight sm:text-[12px]">
                         {maintenanceStatusLabel(h.status)}
                       </Badge>
                     )}

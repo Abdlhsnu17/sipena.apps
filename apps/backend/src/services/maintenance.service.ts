@@ -39,6 +39,16 @@ interface TechnicianAccountRow extends RowDataPacket {
   sub_work_unit: string | null;
 }
 
+interface MaintenanceAttachmentRow extends RowDataPacket {
+  id: number;
+  maintenance_id: number;
+  file_name: string;
+  file_path: string;
+  mime_type: string | null;
+  uploaded_by: number | null;
+  created_at: Date;
+}
+
 const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
@@ -59,7 +69,7 @@ const formatMaintenanceStatusLabel = (status?: string | null): string => {
     case 'in_progress':
       return 'diproses';
     case 'completed':
-      return 'selesai perbaikan';
+      return 'laporan pelaksanaan selesai dan menunggu verifikasi';
     case 'validated':
       return 'divalidasi';
     case 'cancelled':
@@ -154,7 +164,7 @@ export class MaintenanceService {
     in_progress: ['completed', 'cancelled'],
     completed: ['validated', 'in_progress'],
     validated: [],
-    cancelled: []
+    cancelled: ['scheduled']
   };
   
   // Maintenance interval configuration (in months)
@@ -171,6 +181,7 @@ export class MaintenanceService {
     critical: 8,
   };
   private readonly slaAtRiskWindowMinutes = 120;
+  private readonly approvalCostThreshold = 5000000;
 
   constructor() {
     this.assetService = new AssetService();
@@ -251,6 +262,32 @@ export class MaintenanceService {
     return {
       ...row,
       scheduledDate: toLocalIsoDateTime(row.scheduledDate ?? row.scheduled_date ?? null),
+      dueAt: toLocalIsoDateTime(row.dueAt ?? row.due_at ?? null),
+      startedAt: toLocalIsoDateTime(row.startedAt ?? row.started_at ?? null),
+      completedDate: toLocalIsoDateTime(row.completedDate ?? row.completed_date ?? null),
+      estimatedDurationMinutes: row.estimatedDurationMinutes ?? row.estimated_duration_minutes,
+      estimatedCost: row.estimatedCost ?? row.estimated_cost,
+      damagePhotoUrl: row.damagePhotoUrl ?? row.damage_photo_url,
+      beforePhotoUrl: row.beforePhotoUrl ?? row.before_photo_url,
+      afterPhotoUrl: row.afterPhotoUrl ?? row.after_photo_url,
+      actionTaken: row.actionTaken ?? row.action_taken,
+      spareParts: row.spareParts ?? row.spare_parts,
+      verificationResult: row.verificationResult ?? row.verification_result,
+      finalCondition: row.finalCondition ?? row.final_condition,
+      verificationNotes: row.verificationNotes ?? row.verification_notes,
+      nextMaintenanceDate: row.nextMaintenanceDate ?? row.next_maintenance_date,
+      actualStartAt: toLocalIsoDateTime(row.actualStartAt ?? row.actual_start_at ?? null),
+      actualEndAt: toLocalIsoDateTime(row.actualEndAt ?? row.actual_end_at ?? null),
+      validatedAt: toLocalIsoDateTime(row.validatedAt ?? row.validated_at ?? null),
+      recurrenceInterval: row.recurrenceInterval ?? row.recurrence_interval,
+      recurrenceEnabled: Boolean(row.recurrenceEnabled ?? row.recurrence_enabled),
+      approvalStatus: row.approvalStatus ?? row.approval_status,
+      approvalNotes: row.approvalNotes ?? row.approval_notes,
+      approvedBy: row.approvedBy ?? row.approved_by,
+      approvedAt: toLocalIsoDateTime(row.approvedAt ?? row.approved_at ?? null),
+      reminderH7SentAt: toLocalIsoDateTime(row.reminderH7SentAt ?? row.reminder_h7_sent_at ?? null),
+      reminderH3SentAt: toLocalIsoDateTime(row.reminderH3SentAt ?? row.reminder_h3_sent_at ?? null),
+      reminderH1SentAt: toLocalIsoDateTime(row.reminderH1SentAt ?? row.reminder_h1_sent_at ?? null),
       costLabel: formatCostLabel(row.cost),
       requesterName: row.requester_name || undefined,
       requesterNip: row.requester_nip || undefined,
@@ -379,6 +416,86 @@ export class MaintenanceService {
     const nextDate = new Date(value);
     nextDate.setMonth(nextDate.getMonth() + months);
     return nextDate;
+  }
+
+  private getRecurrenceMonths(interval?: string | null): number | null {
+    switch (interval) {
+      case 'monthly':
+        return 1;
+      case 'quarterly':
+        return 3;
+      case 'yearly':
+        return 12;
+      default:
+        return null;
+    }
+  }
+
+  private shouldRequireApproval(data: {
+    priority?: string | null;
+    estimatedCost?: number | string | null;
+    cost?: number | string | null;
+    approvalStatus?: string | null;
+  }): boolean {
+    if (data.approvalStatus && data.approvalStatus !== 'not_required') return true;
+    const cost = Number(data.estimatedCost ?? data.cost ?? 0);
+    return data.priority === 'critical' || (Number.isFinite(cost) && cost >= this.approvalCostThreshold);
+  }
+
+  private buildApprovalStatus(data: CreateMaintenanceDTO | UpdateMaintenanceDTO): string {
+    if (data.approvalStatus) return data.approvalStatus;
+    return this.shouldRequireApproval(data) ? 'pending' : 'not_required';
+  }
+
+  private async createNextRecurringMaintenance(source: Record<string, any>, validatedBy: number): Promise<void> {
+    const recurrenceEnabled = Boolean(source.recurrenceEnabled ?? source.recurrence_enabled);
+    const recurrenceInterval = source.recurrenceInterval ?? source.recurrence_interval;
+    const months = this.getRecurrenceMonths(recurrenceInterval);
+    if (!recurrenceEnabled || !months) return;
+
+    const sourceId = this.normalizeAssetId(source.id);
+    const assetId = this.normalizeAssetId(source.assetId ?? source.asset_id);
+    if (!sourceId || !assetId) return;
+
+    const existingNext = await this.getExistingRecurringChild(sourceId);
+    if (existingNext) return;
+
+    const explicitNextDate = this.parseDateValue(source.nextMaintenanceDate ?? source.next_maintenance_date);
+    const baseDate =
+      explicitNextDate ??
+      this.parseDateValue(source.completedDate ?? source.completed_date) ??
+      this.parseDateValue(source.scheduledDate ?? source.scheduled_date) ??
+      new Date();
+    const scheduledDate = explicitNextDate ?? this.addMonths(baseDate, months);
+
+    await this.create({
+      assetId,
+      assetType: this.normalizeAssetType(source.assetType ?? source.asset_type),
+      assetDetailId: source.assetDetailId ?? source.asset_detail_id ?? undefined,
+      assetDetailName: source.assetDetailName ?? source.asset_detail_name ?? undefined,
+      assetDetailCode: source.assetDetailCode ?? source.asset_detail_code ?? undefined,
+      type: source.type || 'preventive',
+      priority: source.priority || 'normal',
+      status: 'scheduled',
+      scheduledDate,
+      description: `Jadwal preventif otomatis dari ${source.maintenanceCode ?? source.maintenance_code ?? `#${sourceId}`}`,
+      technician: source.technician ?? undefined,
+      technicianUserId: source.technicianUserId ?? source.technician_user_id ?? undefined,
+      recurrenceInterval,
+      recurrenceEnabled: true,
+      approvalStatus: 'not_required',
+      notes: `AUTO_RECURRING_SOURCE:${sourceId}`,
+      createdBy: validatedBy,
+    });
+  }
+
+  private async getExistingRecurringChild(sourceId: number): Promise<boolean> {
+    const [rows] = await pool.query<CountRow[]>(
+      `SELECT COUNT(*) as count FROM maintenance_records
+       WHERE notes LIKE ? AND deleted_at IS NULL`,
+      [`%AUTO_RECURRING_SOURCE:${sourceId}%`]
+    );
+    return (rows[0]?.count || 0) > 0;
   }
 
   private parseAssetSpecifications(raw: unknown): Record<string, any> {
@@ -837,7 +954,7 @@ export class MaintenanceService {
         created: 'Pemeliharaan baru dibuat',
         scheduled: 'Pemeliharaan disetujui',
         in_progress: 'Pemeliharaan diproses',
-        completed: 'Pemeliharaan selesai perbaikan',
+        completed: 'Laporan pemeliharaan menunggu verifikasi',
         validated: 'Pemeliharaan divalidasi',
         cancelled: 'Pemeliharaan dibatalkan',
       };
@@ -905,7 +1022,7 @@ export class MaintenanceService {
       LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
       LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
       LEFT JOIN users u ON m.created_by = u.id
-      LEFT JOIN users v ON m.completed_by = v.id
+      LEFT JOIN users v ON m.validated_by = v.id
       LEFT JOIN users t ON m.technician_user_id = t.id
       WHERE m.deleted_at IS NULL
     `;
@@ -1000,7 +1117,7 @@ export class MaintenanceService {
        LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
        LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
        LEFT JOIN users u ON m.created_by = u.id
-       LEFT JOIN users v ON m.completed_by = v.id
+       LEFT JOIN users v ON m.validated_by = v.id
        LEFT JOIN users t ON m.technician_user_id = t.id
       WHERE m.id = ?
         AND m.deleted_at IS NULL`,
@@ -1072,6 +1189,15 @@ export class MaintenanceService {
     if (data.dueAt && !dueAtValue) {
       return { success: false, message: 'Due date is invalid' };
     }
+    const startedAtValue = data.startedAt || data.actualStartAt
+      ? formatDateTimeForMySQL(data.startedAt || data.actualStartAt)
+      : null;
+    const completedDateValue = data.completedDate || data.actualEndAt
+      ? formatDateTimeForMySQL(data.completedDate || data.actualEndAt)
+      : null;
+    const recurrenceInterval = data.recurrenceInterval || 'none';
+    const recurrenceEnabled = Boolean(data.recurrenceEnabled && recurrenceInterval !== 'none');
+    const approvalStatus = this.buildApprovalStatus(data);
 
     const descriptionValue = data.description || '';
     const technicianAccount = data.technicianUserId
@@ -1095,18 +1221,41 @@ export class MaintenanceService {
          status,
          scheduled_date,
          due_at,
+         started_at,
+         completed_date,
          description,
          technician,
          technician_user_id,
          vendor_name,
          vendor_reference,
          warranty_until,
+         estimated_duration_minutes,
+         estimated_cost,
+         damage_photo_url,
+         before_photo_url,
+         after_photo_url,
+         diagnosis,
+         action_taken,
+         checklist,
+         spare_parts,
+         verification_result,
+         final_condition,
+         verification_notes,
+         next_maintenance_date,
+         actual_start_at,
+         actual_end_at,
+         recurrence_interval,
+         recurrence_enabled,
+         approval_status,
+         approval_notes,
+         approved_by,
+         approved_at,
          cost,
          notes,
          cancellation_reason,
          created_by
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         maintenanceCode,
         data.assetId,
@@ -1120,12 +1269,35 @@ export class MaintenanceService {
         statusValue,
         scheduledDateValue,
         dueAtValue,
+        startedAtValue,
+        completedDateValue,
         descriptionValue,
         technicianAccount?.name ?? data.technician ?? null,
         data.technicianUserId || null,
         data.vendorName || null,
         data.vendorReference || null,
         data.warrantyUntil ? this.formatDateOnly(data.warrantyUntil) : null,
+        data.estimatedDurationMinutes || null,
+        data.estimatedCost || null,
+        data.damagePhotoUrl || null,
+        data.beforePhotoUrl || null,
+        data.afterPhotoUrl || null,
+        data.diagnosis || null,
+        data.actionTaken || null,
+        data.checklist || null,
+        data.spareParts || null,
+        data.verificationResult || null,
+        data.finalCondition || null,
+        data.verificationNotes || null,
+        data.nextMaintenanceDate ? this.formatDateOnly(data.nextMaintenanceDate) : null,
+        startedAtValue,
+        completedDateValue,
+        recurrenceInterval,
+        recurrenceEnabled ? 1 : 0,
+        approvalStatus,
+        data.approvalNotes || null,
+        data.approvedBy || null,
+        data.approvedAt ? formatDateTimeForMySQL(data.approvedAt) : null,
         data.cost || null,
         data.notes || null,
         data.cancellationReason || null,
@@ -1217,11 +1389,16 @@ export class MaintenanceService {
     const nextScheduledDate =
       data.scheduledDate ?? existingMaintenance.scheduledDate ?? existingMaintenance.scheduled_date;
     const nextMaintenanceType = data.type ?? existingMaintenance.type ?? existingMaintenance.maintenance_type;
-    const nextCancellationReason =
-      data.cancellationReason ??
-      existingMaintenance.cancellationReason ??
-      existingMaintenance.cancellation_reason;
     const currentStatus = existingMaintenance.status as string | undefined;
+    // Reopening a cancelled/rejected maintenance drops the previous rejection
+    // reason unless a new one is explicitly provided in this update.
+    const isReopeningFromCancelled =
+      currentStatus === 'cancelled' && data.status !== undefined && data.status !== 'cancelled';
+    const nextCancellationReason = isReopeningFromCancelled
+      ? data.cancellationReason ?? undefined
+      : data.cancellationReason ??
+        existingMaintenance.cancellationReason ??
+        existingMaintenance.cancellation_reason;
 
     if (
       existingMaintenance.status === 'validated' &&
@@ -1242,6 +1419,35 @@ export class MaintenanceService {
         success: false,
         message: this.getStatusTransitionError(currentStatus, data.status)
       };
+    }
+
+    // Enforce required fields when approving/scheduling a maintenance.
+    // Technician/PJ assignment is optional at this stage ("bisa tunjuk teknisi") —
+    // it is still enforced below before work can move to 'in_progress'.
+    if (data.status === 'scheduled' && currentStatus !== 'scheduled') {
+      const effectiveScheduled = nextScheduledDate;
+      const formattedScheduled = effectiveScheduled ? formatDateTimeForMySQL(effectiveScheduled) : null;
+      if (!formattedScheduled) {
+        return { success: false, message: 'Jadwal pelaksanaan wajib diisi saat menyetujui pemeliharaan' };
+      }
+    }
+
+    if (data.status === 'in_progress' && currentStatus !== 'in_progress') {
+      const technicianUserId = this.normalizeAssetId(
+        data.technicianUserId ?? existingMaintenance.technicianUserId ?? existingMaintenance.technician_user_id
+      );
+      if (!technicianUserId) {
+        return {
+          success: false,
+          message: 'Pilih akun teknisi/PJ sebelum memulai pelaksanaan pemeliharaan'
+        };
+      }
+      if (!nextScheduledDate || !formatDateTimeForMySQL(nextScheduledDate)) {
+        return {
+          success: false,
+          message: 'Jadwal pelaksanaan wajib diisi sebelum pekerjaan dimulai'
+        };
+      }
     }
 
     if (nextAssetId && this.isActiveMaintenanceStatus(nextStatus)) {
@@ -1270,18 +1476,29 @@ export class MaintenanceService {
       if (value !== undefined) {
         const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         let normalizedValue = value;
-        if (key === 'scheduledDate' || key === 'dueAt') {
+        if (key === 'scheduledDate' || key === 'dueAt' || key === 'startedAt' || key === 'completedDate' || key === 'actualStartAt' || key === 'actualEndAt' || key === 'approvedAt') {
           const formatted = formatDateTimeForMySQL(value);
           if (!formatted) {
             throw new Error('Invalid scheduled date');
           }
           normalizedValue = formatted;
         }
-        if (key === 'warrantyUntil') normalizedValue = this.formatDateOnly(value) || null;
+        if (key === 'warrantyUntil' || key === 'nextMaintenanceDate') normalizedValue = this.formatDateOnly(value) || null;
         fields.push(`${snakeKey} = ?`);
         values.push(normalizedValue);
       }
     });
+
+    // Reopening a cancelled/rejected maintenance (cancelled -> scheduled) should not
+    // keep showing the previous rejection reason once it is back in an active stage.
+    const shouldClearCancellationReason =
+      currentStatus === 'cancelled' &&
+      data.status !== undefined &&
+      data.status !== 'cancelled' &&
+      data.cancellationReason === undefined;
+    if (shouldClearCancellationReason) {
+      fields.push('cancellation_reason = NULL');
+    }
 
     const shouldAutoAdjustDueAt =
       data.dueAt === undefined &&
@@ -1443,6 +1660,16 @@ export class MaintenanceService {
       };
     }
 
+    const diagnosis = String(maintenanceData.diagnosis || '').trim();
+    const actionTaken = String(maintenanceData.actionTaken ?? maintenanceData.action_taken ?? '').trim();
+    const checklist = String(maintenanceData.checklist || '').trim();
+    if (!diagnosis || !actionTaken || !checklist) {
+      return {
+        success: false,
+        message: 'Diagnosis, tindakan yang dilakukan, dan checklist pekerjaan wajib lengkap sebelum tindakan diselesaikan'
+      };
+    }
+
     const assetId = this.normalizeAssetId(
       maintenanceData.assetId ?? maintenanceData.asset_id
     );
@@ -1453,7 +1680,14 @@ export class MaintenanceService {
 
     await pool.query(
       `UPDATE maintenance_records 
-       SET status = 'completed', completed_date = NOW(), notes = COALESCE(?, notes), cost = COALESCE(?, cost), completed_by = ?, updated_at = NOW()
+       SET status = 'completed',
+           completed_date = NOW(),
+           actual_start_at = COALESCE(actual_start_at, started_at, NOW()),
+           actual_end_at = COALESCE(actual_end_at, NOW()),
+           notes = COALESCE(?, notes),
+           cost = COALESCE(?, cost),
+           completed_by = ?,
+           updated_at = NOW()
        WHERE id = ?`,
       [data.notes || null, data.cost || null, data.completedBy, id]
     );
@@ -1531,11 +1765,24 @@ export class MaintenanceService {
       };
     }
 
+    const verificationResult = String(
+      maintenanceData.verificationResult ?? maintenanceData.verification_result ?? ''
+    ).trim();
+    const finalCondition = String(
+      maintenanceData.finalCondition ?? maintenanceData.final_condition ?? ''
+    ).trim();
+    if (!verificationResult || !finalCondition) {
+      return {
+        success: false,
+        message: 'Hasil pengujian dan kondisi akhir wajib diisi sebelum validasi final'
+      };
+    }
+
     await pool.query(
       `UPDATE maintenance_records
-       SET status = 'validated', updated_at = NOW()
+       SET status = 'validated', validated_by = ?, validated_at = ?, updated_at = NOW()
        WHERE id = ?`,
-      [id]
+      [validatedBy, formatDateTimeForMySQL(validatedAt), id]
     );
     await this.recordStatusLog(id, currentStatus, 'validated', validatedBy, 'Validasi akhir');
 
@@ -1575,6 +1822,12 @@ export class MaintenanceService {
       });
     }
 
+    try {
+      await this.createNextRecurringMaintenance(maintenanceData, validatedBy);
+    } catch (recurringError) {
+      console.error('Error creating next recurring maintenance:', recurringError);
+    }
+
     const updated = await this.getById(id);
     if (!updated.success) return updated;
 
@@ -1590,6 +1843,167 @@ export class MaintenanceService {
     return {
       ...updated,
       message: 'Pemeliharaan selesai final setelah lolos validasi akhir'
+    };
+  }
+
+  async addAttachment(data: {
+    maintenanceId: number;
+    fileName: string;
+    filePath: string;
+    mimeType?: string | null;
+    uploadedBy?: number | null;
+  }): Promise<ApiResponse<Record<string, any>>> {
+    const existing = await this.getById(String(data.maintenanceId));
+    if (!existing.success) return { success: false, message: 'Maintenance record not found' };
+
+    const [result] = await pool.query<ResultSetHeader>(
+      `INSERT INTO maintenance_attachments (maintenance_id, file_name, file_path, mime_type, uploaded_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [data.maintenanceId, data.fileName, data.filePath, data.mimeType ?? null, data.uploadedBy ?? null]
+    );
+
+    const [rows] = await pool.query<MaintenanceAttachmentRow[]>(
+      'SELECT * FROM maintenance_attachments WHERE id = ?',
+      [result.insertId]
+    );
+    const row = rows[0];
+    return {
+      success: true,
+      message: 'Lampiran pemeliharaan berhasil diunggah',
+      data: {
+        id: row.id,
+        maintenanceId: row.maintenance_id,
+        fileName: row.file_name,
+        filePath: row.file_path,
+        mimeType: row.mime_type,
+        uploadedBy: row.uploaded_by,
+        createdAt: row.created_at,
+        url: row.file_path,
+      }
+    };
+  }
+
+  async getAttachments(maintenanceId: number): Promise<ApiResponse<Record<string, any>[]>> {
+    const [rows] = await pool.query<MaintenanceAttachmentRow[]>(
+      `SELECT * FROM maintenance_attachments
+       WHERE maintenance_id = ?
+       ORDER BY created_at DESC`,
+      [maintenanceId]
+    );
+    return {
+      success: true,
+      message: 'Lampiran pemeliharaan berhasil dimuat',
+      data: rows.map((row) => ({
+        id: row.id,
+        maintenanceId: row.maintenance_id,
+        fileName: row.file_name,
+        filePath: row.file_path,
+        mimeType: row.mime_type,
+        uploadedBy: row.uploaded_by,
+        createdAt: row.created_at,
+        url: row.file_path,
+      }))
+    };
+  }
+
+  async dispatchDueReminders(): Promise<ApiResponse<{ sent: number }>> {
+    const [rows] = await pool.query<MaintenanceRow[]>(`
+      SELECT *, DATEDIFF(DATE(scheduled_date), CURDATE()) AS days_remaining
+      FROM maintenance_records
+      WHERE deleted_at IS NULL
+        AND status NOT IN ('validated', 'cancelled')
+        AND scheduled_date IS NOT NULL
+        AND DATEDIFF(DATE(scheduled_date), CURDATE()) IN (7, 3, 1)
+        AND (
+          (DATEDIFF(DATE(scheduled_date), CURDATE()) = 7 AND reminder_h7_sent_at IS NULL) OR
+          (DATEDIFF(DATE(scheduled_date), CURDATE()) = 3 AND reminder_h3_sent_at IS NULL) OR
+          (DATEDIFF(DATE(scheduled_date), CURDATE()) = 1 AND reminder_h1_sent_at IS NULL)
+        )
+    `);
+
+    let sent = 0;
+    for (const row of rows) {
+      const days = Number((row as any).days_remaining);
+      const reminderColumn = days === 7 ? 'reminder_h7_sent_at' : days === 3 ? 'reminder_h3_sent_at' : 'reminder_h1_sent_at';
+      const recipients = await this.getMaintenanceReminderRecipients(row);
+      if (recipients.length > 0) {
+        await notificationService.createForUsers(recipients, {
+          type: `maintenance_reminder_h${days}`,
+          category: 'maintenance',
+          title: `Pengingat H-${days} pemeliharaan`,
+          message: `${row.assetDetailName || row.assetName || 'Aset'} ${row.maintenanceCode || ''} dijadwalkan pada ${this.formatDateOnly(row.scheduledDate ?? (row as any).scheduled_date) || '-'}`,
+          link: '/maintenance',
+          referenceType: 'maintenance',
+          referenceId: Number(row.id),
+        });
+      }
+      await pool.query(`UPDATE maintenance_records SET ${reminderColumn} = NOW() WHERE id = ?`, [row.id]);
+      sent += recipients.length;
+    }
+
+    return { success: true, message: 'Reminder pemeliharaan diproses', data: { sent } };
+  }
+
+  private async getMaintenanceReminderRecipients(row: MaintenanceRow): Promise<number[]> {
+    const recipients = [
+      this.normalizeAssetId((row as any).created_by ?? row.createdBy),
+      this.normalizeAssetId((row as any).technician_user_id ?? row.technicianUserId),
+      this.normalizeAssetId((row as any).completed_by ?? row.completedBy),
+    ].filter((id): id is number => Boolean(id));
+
+    const [users] = await pool.query<RowDataPacket[]>(
+      `SELECT id FROM users WHERE role IN ('admin', 'leader') AND deleted_at IS NULL`
+    );
+    users.forEach((user) => {
+      const id = this.normalizeAssetId(user.id);
+      if (id) recipients.push(id);
+    });
+    return Array.from(new Set(recipients));
+  }
+
+  async getAnalytics(): Promise<ApiResponse<Record<string, any>>> {
+    const [summaryRows] = await pool.query<RowDataPacket[]>(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(status = 'requested') AS requested,
+        SUM(status = 'scheduled') AS scheduled,
+        SUM(status = 'in_progress') AS in_progress,
+        SUM(status = 'completed') AS completed,
+        SUM(status = 'validated') AS validated,
+        SUM(status = 'cancelled') AS cancelled,
+        SUM(status NOT IN ('validated','cancelled') AND scheduled_date < NOW()) AS overdue,
+        COALESCE(SUM(cost), 0) AS total_cost,
+        COALESCE(SUM(estimated_cost), 0) AS total_estimated_cost,
+        AVG(TIMESTAMPDIFF(HOUR, COALESCE(actual_start_at, started_at, scheduled_date), COALESCE(actual_end_at, completed_date, updated_at))) AS avg_downtime_hours
+      FROM maintenance_records
+      WHERE deleted_at IS NULL
+    `);
+    const [frequentAssets] = await pool.query<RowDataPacket[]>(`
+      SELECT asset_id, COALESCE(asset_detail_name, asset_detail_code, asset_id) AS asset_name, COUNT(*) AS total
+      FROM maintenance_records
+      WHERE deleted_at IS NULL
+      GROUP BY asset_id, COALESCE(asset_detail_name, asset_detail_code, asset_id)
+      ORDER BY total DESC
+      LIMIT 8
+    `);
+    const [technicians] = await pool.query<RowDataPacket[]>(`
+      SELECT COALESCE(technician, 'Belum ditugaskan') AS technician, COUNT(*) AS total,
+        SUM(status = 'validated') AS completed
+      FROM maintenance_records
+      WHERE deleted_at IS NULL
+      GROUP BY COALESCE(technician, 'Belum ditugaskan')
+      ORDER BY total DESC
+      LIMIT 8
+    `);
+
+    return {
+      success: true,
+      message: 'Dashboard pemeliharaan berhasil dimuat',
+      data: {
+        summary: summaryRows[0] || {},
+        frequentAssets,
+        technicians,
+      }
     };
   }
 

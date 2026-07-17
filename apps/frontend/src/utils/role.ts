@@ -110,7 +110,7 @@ export const getDefaultRouteForRole = (role?: string | UserRole | null): string 
 }
 
 export const canManageMaintenanceStatusRole = (role?: string | null): boolean => {
-  return isAdminOrLeaderRole(role) || isTechnicianRole(role)
+  return isAdminOrLeaderRole(role) || isTechnicianRole(role) || isStaffPjRole(role)
 }
 
 export const canCreateMaintenanceRole = (role?: string | null): boolean => {

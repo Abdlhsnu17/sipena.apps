@@ -97,9 +97,11 @@ export function AssetQrDialog({
   const [dataUrl, setDataUrl] = useState<string>("")
   const [selectedSizeId, setSelectedSizeId] = useState<LabelSizeId>("medium")
 
-  // The QR encodes the full visible asset identity so generic scanners show
-  // the complete label details, not just the asset code.
-  const qrValue = buildQrIdentityValue({ noId, assetName, assetCode, serialNumber, location, sourceLabel })
+  const maintenanceRequestUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/maintenance?q=${encodeURIComponent(noId || assetCode || assetName)}&openForm=1`
+      : ""
+  const qrValue = maintenanceRequestUrl || buildQrIdentityValue({ noId, assetName, assetCode, serialNumber, location, sourceLabel })
 
   useEffect(() => {
     if (!open) return

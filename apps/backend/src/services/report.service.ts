@@ -1122,7 +1122,10 @@ export class ReportService {
         m.*,
         COALESCE(m.asset_detail_name, ma.name, na.name) as asset_name,
         COALESCE(m.asset_detail_code, ma.asset_code, na.asset_code) as asset_code,
-        COALESCE(ma.location, na.location) as asset_location
+        COALESCE(ma.location, na.location) as asset_location,
+        TIMESTAMPDIFF(HOUR, COALESCE(m.actual_start_at, m.started_at, m.scheduled_date), COALESCE(m.actual_end_at, m.completed_date, m.updated_at)) as downtime_hours,
+        (COALESCE(m.cost, 0) - COALESCE(m.estimated_cost, 0)) as cost_variance,
+        m.technician as technician_name
       FROM maintenance_records m
       LEFT JOIN medical_assets ma ON m.asset_id = ma.id AND (m.asset_type IS NULL OR m.asset_type = 'medical')
       LEFT JOIN non_medical_assets na ON m.asset_id = na.id AND m.asset_type = 'non_medical'

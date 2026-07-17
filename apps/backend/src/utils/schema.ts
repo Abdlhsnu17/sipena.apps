@@ -709,7 +709,14 @@ export async function ensureMaintenanceOperationsSchema(): Promise<void> {
   const [columns] = await pool.query<RowDataPacket[]>(`
     SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'maintenance_records'
-      AND COLUMN_NAME IN ('priority', 'due_at', 'started_at', 'technician_user_id', 'vendor_name', 'vendor_reference', 'warranty_until')
+      AND COLUMN_NAME IN (
+        'priority', 'due_at', 'started_at', 'technician_user_id', 'vendor_name', 'vendor_reference', 'warranty_until',
+        'estimated_duration_minutes', 'estimated_cost', 'damage_photo_url', 'before_photo_url', 'after_photo_url',
+        'diagnosis', 'action_taken', 'checklist', 'spare_parts', 'verification_result', 'final_condition',
+        'verification_notes', 'next_maintenance_date', 'actual_start_at', 'actual_end_at', 'recurrence_interval',
+        'recurrence_enabled', 'approval_status', 'approval_notes', 'approved_by', 'approved_at',
+        'reminder_h7_sent_at', 'reminder_h3_sent_at', 'reminder_h1_sent_at', 'validated_by', 'validated_at'
+      )
   `);
   const existing = new Set(columns.map((row) => row.COLUMN_NAME));
   const additions: Array<[string, string]> = [
@@ -720,6 +727,32 @@ export async function ensureMaintenanceOperationsSchema(): Promise<void> {
     ['vendor_name', 'VARCHAR(255) NULL AFTER technician_user_id'],
     ['vendor_reference', 'VARCHAR(100) NULL AFTER vendor_name'],
     ['warranty_until', 'DATE NULL AFTER vendor_reference'],
+    ['estimated_duration_minutes', 'INT(11) NULL AFTER warranty_until'],
+    ['estimated_cost', 'DECIMAL(12,2) NULL AFTER estimated_duration_minutes'],
+    ['damage_photo_url', 'VARCHAR(500) NULL AFTER estimated_cost'],
+    ['before_photo_url', 'VARCHAR(500) NULL AFTER damage_photo_url'],
+    ['after_photo_url', 'VARCHAR(500) NULL AFTER before_photo_url'],
+    ['diagnosis', 'TEXT NULL AFTER after_photo_url'],
+    ['action_taken', 'TEXT NULL AFTER diagnosis'],
+    ['checklist', 'TEXT NULL AFTER action_taken'],
+    ['spare_parts', 'TEXT NULL AFTER checklist'],
+    ['verification_result', 'TEXT NULL AFTER spare_parts'],
+    ['final_condition', 'VARCHAR(100) NULL AFTER verification_result'],
+    ['verification_notes', 'TEXT NULL AFTER final_condition'],
+    ['next_maintenance_date', 'DATE NULL AFTER verification_notes'],
+    ['actual_start_at', 'DATETIME NULL AFTER next_maintenance_date'],
+    ['actual_end_at', 'DATETIME NULL AFTER actual_start_at'],
+    ['recurrence_interval', "VARCHAR(20) NOT NULL DEFAULT 'none' AFTER actual_end_at"],
+    ['recurrence_enabled', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER recurrence_interval'],
+    ['approval_status', "VARCHAR(20) NOT NULL DEFAULT 'not_required' AFTER recurrence_enabled"],
+    ['approval_notes', 'TEXT NULL AFTER approval_status'],
+    ['approved_by', 'INT(11) NULL AFTER approval_notes'],
+    ['approved_at', 'DATETIME NULL AFTER approved_by'],
+    ['reminder_h7_sent_at', 'DATETIME NULL AFTER approved_at'],
+    ['reminder_h3_sent_at', 'DATETIME NULL AFTER reminder_h7_sent_at'],
+    ['reminder_h1_sent_at', 'DATETIME NULL AFTER reminder_h3_sent_at'],
+    ['validated_by', 'INT(11) NULL AFTER completed_by'],
+    ['validated_at', 'DATETIME NULL AFTER validated_by'],
   ];
   for (const [name, definition] of additions) {
     if (!existing.has(name)) await pool.query(`ALTER TABLE maintenance_records ADD COLUMN ${name} ${definition}`);

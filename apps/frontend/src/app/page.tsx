@@ -262,7 +262,10 @@ export default function DashboardPage() {
       })
       mapThresholdOverview(response)
     } catch (error) {
-      console.error("Failed to load threshold overview:", error)
+      const message = error instanceof Error ? error.message : ""
+      if (!message.includes("Asset usage log not found")) {
+        console.warn("Usage threshold overview unavailable:", error)
+      }
       setUsageThresholdOverview(null)
     } finally {
       setIsThresholdLoading(false)
