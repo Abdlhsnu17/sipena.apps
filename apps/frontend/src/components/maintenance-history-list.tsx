@@ -674,7 +674,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       {
         key: "status",
         label: "Status",
-        getValue: (history) => maintenanceStatusLabel(history.status),
+        getValue: (history) => maintenanceStatusLabel(history.status, history.type),
         defaultSelected: true,
       },
     ],
@@ -828,7 +828,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         ? meta.assetRoom
         : undefined;
     const status =
-      columnSet.has("status") ? maintenanceStatusLabel(history.status) : undefined;
+      columnSet.has("status") ? maintenanceStatusLabel(history.status, history.type) : undefined;
     const requesterName = columnSet.has("pengirim") ? history.requesterName || "-" : undefined;
     const requesterNip = columnSet.has("nipPengirim") ? history.requesterNip || "-" : undefined;
     const scheduledDate = columnSet.has("jadwalPemeliharaan")
@@ -1278,7 +1278,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                     )}
                     statusBadges={(
                       <Badge variant={getStatusColor(h.status)} className="max-w-full rounded-full px-2.5 py-1 text-left text-[11px] font-medium whitespace-normal wrap-break-word leading-tight sm:text-[12px]">
-                        {maintenanceStatusLabel(h.status)}
+                        {maintenanceStatusLabel(h.status, h.type)}
                       </Badge>
                     )}
                   />

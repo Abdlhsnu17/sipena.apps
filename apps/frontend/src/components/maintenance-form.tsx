@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { assetUsageService } from "@/services/asset-usage.service";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
+import { maintenanceStatusLabel } from "@/utils/api-mappers";
 import { toLocalDateTimeString } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { getUserRoleLabel, normalizeUserRole } from "@/utils/role";
@@ -81,6 +82,29 @@ const EDITABLE_STATUS_TRANSITIONS: Record<string, string[]> = {
   completed: ["completed", "validated", "in_progress"],
   validated: ["validated"],
   cancelled: ["cancelled"],
+}
+
+const EXECUTION_FIELD_LABELS: Record<string, string> = {
+  diagnosis: "Diagnosis",
+  actionTaken: "Tindakan yang Dilakukan",
+  checklist: "Checklist Pekerjaan",
+  spareParts: "Suku Cadang",
+}
+
+const EXECUTION_REQUIRED_FIELDS_BY_TYPE: Record<string, Array<keyof typeof EXECUTION_FIELD_LABELS>> = {
+  preventive: ["checklist"],
+  corrective: ["diagnosis", "actionTaken", "spareParts"],
+  calibration: ["actionTaken"],
+  inspection: ["checklist"],
+}
+
+const VERIFICATION_FIELD_LABELS: Record<string, string> = {
+  finalCondition: "Kondisi Akhir",
+  verificationResult: "Hasil Pengujian",
+}
+
+const VERIFICATION_REQUIRED_FIELDS_BY_TYPE: Record<string, Array<keyof typeof VERIFICATION_FIELD_LABELS>> = {
+  calibration: ["verificationResult"],
 }
 
 export default function MaintenanceForm({
@@ -233,6 +257,8 @@ export default function MaintenanceForm({
   const canEditScheduling = ["admin", "leader", "staff_pj"].includes(normalizedRole) && ["requested", "scheduled"].includes(currentWorkflowStatus)
   const canEditExecution = ["teknisi", "admin", "leader"].includes(normalizedRole) && ["scheduled", "in_progress"].includes(currentWorkflowStatus)
   const canEditVerification = ["admin", "leader"].includes(normalizedRole) && ["completed", "validated"].includes(currentWorkflowStatus)
+  const canCompleteExecution = Boolean(currentWorkflowStatus === "in_progress" && canEditExecution)
+  const canValidateExecution = Boolean(currentWorkflowStatus === "completed" && canEditVerification)
 
   const assetsByLabel = useMemo(
     () =>
@@ -426,7 +452,11 @@ export default function MaintenanceForm({
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
     const effectiveStatus = submitter?.value === "start_repair"
       ? "in_progress"
-      : formData.status
+      : submitter?.value === "complete"
+        ? "completed"
+        : submitter?.value === "validate"
+          ? "validated"
+          : formData.status
 
     if (effectiveStatus === "cancelled" && !formData.cancellationReason.trim()) {
       alert("Alasan pembatalan wajib diisi jika status Dibatalkan")
@@ -443,28 +473,26 @@ export default function MaintenanceForm({
       return
     }
 
-    if (requiresExecutionCompletion) {
-      if (!formData.diagnosis.trim()) {
-        alert("Isi Diagnosis sebelum menyelesaikan tindakan perbaikan.")
-        return
-      }
-      if (!formData.actionTaken.trim()) {
-        alert("Isi Tindakan yang Dilakukan sebelum menyelesaikan tindakan perbaikan.")
-        return
-      }
-      if (!formData.checklist.trim()) {
-        alert("Isi Checklist Pekerjaan sebelum menyelesaikan tindakan perbaikan.")
+    if (["completed", "validated"].includes(effectiveStatus)) {
+      const requiredExecutionFields = EXECUTION_REQUIRED_FIELDS_BY_TYPE[formData.type] || EXECUTION_REQUIRED_FIELDS_BY_TYPE.preventive
+      const formDataRecord = formData as unknown as Record<string, string>
+      const missingExecutionField = requiredExecutionFields.find((field) => !(formDataRecord[field] ?? "").trim())
+      if (missingExecutionField) {
+        alert(`Isi ${EXECUTION_FIELD_LABELS[missingExecutionField]} sebelum menyelesaikan tindakan perbaikan.`)
         return
       }
     }
 
-    if (formData.status === "validated") {
+    if (effectiveStatus === "validated") {
       if (!formData.finalCondition.trim()) {
         alert("Pilih Kondisi Akhir sebelum validasi final.")
         return
       }
-      if (!formData.verificationResult.trim()) {
-        alert("Isi Hasil Pengujian sebelum validasi final.")
+      const requiredVerificationFields = VERIFICATION_REQUIRED_FIELDS_BY_TYPE[formData.type] || []
+      const formDataRecord = formData as unknown as Record<string, string>
+      const missingVerificationField = requiredVerificationFields.find((field) => !(formDataRecord[field] ?? "").trim())
+      if (missingVerificationField) {
+        alert(`Isi ${VERIFICATION_FIELD_LABELS[missingVerificationField]} sebelum validasi final.`)
         return
       }
     }
@@ -769,7 +797,7 @@ export default function MaintenanceForm({
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Status Selesai</label>
-                <input type="text" readOnly value={formData.status === "validated" ? "Selesai Pemeliharaan Sarana" : "Tindakan Selesai - Menunggu Verifikasi"} className="h-10 w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground" />
+                <input type="text" readOnly value={maintenanceStatusLabel(canValidateExecution ? "validated" : formData.status, formData.type)} className="h-10 w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground" />
               </div>
             </div>
           </section>
@@ -787,19 +815,14 @@ export default function MaintenanceForm({
               <X className="mr-2 h-4 w-4" />
               Batal
             </Button>
-            {canStartRepair && (
-              <Button type="submit" variant="outline" value="save_only">
-                <Save className="mr-2 h-4 w-4" /> Simpan Saja
-              </Button>
-            )}
             <Button
               type="submit"
-              value={canStartRepair ? "start_repair" : "save"}
+              value={canStartRepair ? "start_repair" : canCompleteExecution ? "complete" : canValidateExecution ? "validate" : "save"}
               className="bg-teal-600 hover:bg-teal-700"
               disabled={hasActiveUsage && (canStartRepair || ["in_progress","completed","validated"].includes(formData.status))}
             >
               <Save className="mr-2 h-4 w-4" />
-              {canStartRepair ? "Simpan & Mulai Perbaikan" : "Simpan Pemeliharaan"}
+              {canStartRepair ? "Simpan & Mulai Perbaikan" : canCompleteExecution ? "Simpan & Selesaikan Tindakan" : canValidateExecution ? "Simpan & Validasi Final" : "Simpan Pemeliharaan"}
             </Button>
           </div>
         </div>

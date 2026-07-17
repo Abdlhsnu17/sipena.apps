@@ -860,12 +860,34 @@ export default function MaintenancePage() {
           description: "Data pemeliharaan sarana sudah tersimpan.",
         })
       } else {
-        toast({
-          title: data.status === "in_progress" ? "Proses perbaikan dimulai" : "Pemeliharaan sarana diperbarui",
-          description: data.status === "in_progress"
-            ? "Penjadwalan tersimpan dan status sudah berpindah ke Dalam Proses Perbaikan."
-            : "Perubahan data pemeliharaan sarana sudah tersimpan.",
-        })
+        const savedStatusToast: Record<string, { title: string; description: string }> = {
+          scheduled: {
+            title: "Penjadwalan tersimpan",
+            description: "Penugasan teknisi/vendor sudah tersimpan dan menunggu proses perbaikan dimulai.",
+          },
+          in_progress: {
+            title: "Proses perbaikan dimulai",
+            description: "Penjadwalan tersimpan dan status sudah berpindah ke Dalam Proses Perbaikan.",
+          },
+          completed: {
+            title: "Tindakan perbaikan selesai",
+            description: "Laporan pelaksanaan tersimpan dan status sudah berpindah ke Menunggu Verifikasi.",
+          },
+          validated: {
+            title: maintenanceStatusLabel("validated", data.type),
+            description: "Hasil verifikasi tersimpan dan pemeliharaan sarana sudah selesai final.",
+          },
+          cancelled: {
+            title: "Pemeliharaan dibatalkan",
+            description: "Status pemeliharaan sudah diperbarui menjadi dibatalkan.",
+          },
+        }
+        toast(
+          savedStatusToast[String(data.status)] ?? {
+            title: "Pemeliharaan sarana diperbarui",
+            description: "Perubahan data pemeliharaan sarana sudah tersimpan.",
+          }
+        )
       }
     } catch (error: any) {
       console.error("Error saving maintenance:", error)
@@ -1265,7 +1287,7 @@ export default function MaintenancePage() {
       {
         key: "status",
         label: "Status",
-        getValue: (item) => maintenanceStatusLabel(item.status),
+        getValue: (item) => maintenanceStatusLabel(item.status, item.type),
         defaultSelected: true,
       },
     ],
@@ -1490,7 +1512,7 @@ export default function MaintenancePage() {
             { label: "Tipe Layanan", value: maintenanceTypeLabel(item.type) },
             { label: "Jadwal Pemeliharaan", value: formatDayTimeLabel(item.scheduledDate, { showWeekday: false }) },
             { label: "Uraian Permohonan", value: item.description || "-" },
-            { label: "Status", value: maintenanceStatusLabel(item.status) },
+            { label: "Status", value: maintenanceStatusLabel(item.status, item.type) },
           ],
         },
         {
@@ -1892,9 +1914,9 @@ export default function MaintenancePage() {
                               <Badge
                                 variant={getStatusColor(item.status)}
                                 className="max-w-[58%] shrink text-left text-[10px] whitespace-normal wrap-break-word leading-tight"
-                                title={maintenanceStatusLabel(item.status)}
+                                title={maintenanceStatusLabel(item.status, item.type)}
                               >
-                                {maintenanceStatusLabel(item.status)}
+                                {maintenanceStatusLabel(item.status, item.type)}
                               </Badge>
                             </div>
                             <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -2314,7 +2336,7 @@ export default function MaintenancePage() {
                         statusBadges={(
                           <>
                             <Badge variant={getStatusColor(m.status)} className="max-w-full rounded-full px-2.5 py-1 text-left text-[11px] font-medium whitespace-normal wrap-break-word leading-tight sm:text-[12px]">
-                              {maintenanceStatusLabel(m.status)}
+                              {maintenanceStatusLabel(m.status, m.type)}
                             </Badge>
                             {m.slaStatus && m.slaStatus !== "no_target" ? (
                               <Badge className={`rounded-full border px-2.5 py-1 text-[11px] font-medium sm:text-[12px] ${maintenanceSlaBadgeClass(m.slaStatus)}`}>

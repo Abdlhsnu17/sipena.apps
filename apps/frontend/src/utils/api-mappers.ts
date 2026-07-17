@@ -125,7 +125,14 @@ export const assetSourceBadgeClass = (source: AssetSourceKey): string => {
 export const locationBadgeClass =
   "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50"
 
-export const maintenanceStatusLabel = (status: string): string => {
+const maintenanceValidatedLabelByType: Record<string, string> = {
+  preventive: "Selesai Pengecekan Rutin",
+  corrective: "Selesai Perbaikan",
+  calibration: "Selesai Kalibrasi",
+  inspection: "Selesai Inspeksi",
+}
+
+export const maintenanceStatusLabel = (status: string, type?: string): string => {
   switch (status) {
     case "requested":
       return "Diajukan"
@@ -136,7 +143,7 @@ export const maintenanceStatusLabel = (status: string): string => {
     case "completed":
       return "Tindakan Selesai - Menunggu Verifikasi"
     case "validated":
-      return "Selesai Pemeliharaan Sarana"
+      return (type && maintenanceValidatedLabelByType[type]) || "Selesai Pemeliharaan Sarana"
     case "cancelled":
       return "Ditolak / Dibatalkan"
     default:

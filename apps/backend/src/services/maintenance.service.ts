@@ -1660,13 +1660,33 @@ export class MaintenanceService {
       };
     }
 
-    const diagnosis = String(maintenanceData.diagnosis || '').trim();
-    const actionTaken = String(maintenanceData.actionTaken ?? maintenanceData.action_taken ?? '').trim();
-    const checklist = String(maintenanceData.checklist || '').trim();
-    if (!diagnosis || !actionTaken || !checklist) {
+    const executionFieldValues: Record<string, string> = {
+      diagnosis: String(maintenanceData.diagnosis || '').trim(),
+      actionTaken: String(maintenanceData.actionTaken ?? maintenanceData.action_taken ?? '').trim(),
+      checklist: String(maintenanceData.checklist || '').trim(),
+      spareParts: String(maintenanceData.spareParts ?? maintenanceData.spare_parts ?? '').trim(),
+    };
+    const executionFieldLabels: Record<string, string> = {
+      diagnosis: 'Diagnosis',
+      actionTaken: 'Tindakan yang dilakukan',
+      checklist: 'Checklist pekerjaan',
+      spareParts: 'Suku cadang',
+    };
+    const executionRequiredFieldsByType: Record<string, string[]> = {
+      preventive: ['checklist'],
+      corrective: ['diagnosis', 'actionTaken', 'spareParts'],
+      calibration: ['actionTaken'],
+      inspection: ['checklist'],
+    };
+    const serviceType = String(maintenanceData.type ?? maintenanceData.maintenance_type ?? 'preventive');
+    const requiredExecutionFields = executionRequiredFieldsByType[serviceType] || executionRequiredFieldsByType.preventive;
+    const missingExecutionLabels = requiredExecutionFields
+      .filter((field) => !executionFieldValues[field])
+      .map((field) => executionFieldLabels[field]);
+    if (missingExecutionLabels.length > 0) {
       return {
         success: false,
-        message: 'Diagnosis, tindakan yang dilakukan, dan checklist pekerjaan wajib lengkap sebelum tindakan diselesaikan'
+        message: `${missingExecutionLabels.join(', ')} wajib lengkap sebelum tindakan diselesaikan`
       };
     }
 
@@ -1765,16 +1785,26 @@ export class MaintenanceService {
       };
     }
 
-    const verificationResult = String(
-      maintenanceData.verificationResult ?? maintenanceData.verification_result ?? ''
-    ).trim();
-    const finalCondition = String(
-      maintenanceData.finalCondition ?? maintenanceData.final_condition ?? ''
-    ).trim();
-    if (!verificationResult || !finalCondition) {
+    const verificationFieldValues: Record<string, string> = {
+      finalCondition: String(maintenanceData.finalCondition ?? maintenanceData.final_condition ?? '').trim(),
+      verificationResult: String(maintenanceData.verificationResult ?? maintenanceData.verification_result ?? '').trim(),
+    };
+    const verificationFieldLabels: Record<string, string> = {
+      finalCondition: 'Kondisi akhir',
+      verificationResult: 'Hasil pengujian',
+    };
+    const verificationRequiredFieldsByType: Record<string, string[]> = {
+      calibration: ['verificationResult'],
+    };
+    const validationServiceType = String(maintenanceData.type ?? maintenanceData.maintenance_type ?? 'preventive');
+    const requiredVerificationFields = ['finalCondition', ...(verificationRequiredFieldsByType[validationServiceType] || [])];
+    const missingVerificationLabels = requiredVerificationFields
+      .filter((field) => !verificationFieldValues[field])
+      .map((field) => verificationFieldLabels[field]);
+    if (missingVerificationLabels.length > 0) {
       return {
         success: false,
-        message: 'Hasil pengujian dan kondisi akhir wajib diisi sebelum validasi final'
+        message: `${missingVerificationLabels.join(' dan ')} wajib diisi sebelum validasi final`
       };
     }
 
