@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 import dssController from '../controllers/dss.controller';
 
 const router = Router();
@@ -31,5 +31,6 @@ router.put(
 );
 
 router.get('/history', dssController.getRankingHistory);
+router.delete('/history/:id', [param('id').isInt({ min: 1 }).toInt()], dssController.deleteRankingHistory);
 
 export default router;

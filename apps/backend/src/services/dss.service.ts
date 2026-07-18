@@ -1,4 +1,4 @@
-import { RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { DssRankingHistoryEntry, DssWeightPreference } from '../models/dss.model';
 import { createScopedLogger } from '../utils/logger';
@@ -107,6 +107,7 @@ interface RankingHistoryRow extends RowDataPacket {
   user_id: number | null;
   asset_type: string;
   weights_json: string;
+  pairwise_matrix_json: string | null;
   criteria_json: string;
   total_alternatives: number;
   top_rankings_json: string | null;
@@ -654,7 +655,7 @@ export class DssService {
     return { userId, weights, assetType, updatedAt: new Date().toISOString() };
   }
 
-  async saveRankingHistory(userId: number | null, assetType: string, result: DssRankingResult): Promise<void> {
+  async saveRankingHistory(userId: number | null, assetType: string, result: DssRankingResult, pairwiseMatrix?: number[][] | null): Promise<void> {
     const weightsJson = JSON.stringify(Object.fromEntries(result.criteria.map((criterion) => [criterion.id, criterion.weight])));
 
     // Skip persisting when the last saved snapshot for this user used the exact same
@@ -679,12 +680,13 @@ export class DssService {
       recommendation: ranking.recommendation,
     }));
     await pool.query(
-      `INSERT INTO dss_ranking_history (user_id, asset_type, weights_json, criteria_json, total_alternatives, top_rankings_json, generated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO dss_ranking_history (user_id, asset_type, weights_json, pairwise_matrix_json, criteria_json, total_alternatives, top_rankings_json, generated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         assetType,
         weightsJson,
+        pairwiseMatrix ? JSON.stringify(pairwiseMatrix) : null,
         JSON.stringify(result.criteria),
         result.totalAlternatives,
         JSON.stringify(topRankings),
@@ -695,7 +697,7 @@ export class DssService {
 
   async listRankingHistory(userId: number, limit = 20): Promise<DssRankingHistoryEntry[]> {
     const [rows] = await pool.query<RankingHistoryRow[]>(
-      `SELECT id, user_id, asset_type, weights_json, criteria_json, total_alternatives, top_rankings_json, generated_at, created_at
+      `SELECT id, user_id, asset_type, weights_json, pairwise_matrix_json, criteria_json, total_alternatives, top_rankings_json, generated_at, created_at
        FROM dss_ranking_history
        WHERE user_id = ?
        ORDER BY created_at DESC
@@ -712,7 +714,16 @@ export class DssService {
       topRankings: parseJsonArray(row.top_rankings_json),
       generatedAt: row.generated_at,
       createdAt: row.created_at,
+      pairwiseMatrix: row.pairwise_matrix_json ? parseJsonArray<number[]>(row.pairwise_matrix_json) : null,
     }));
+  }
+
+  async deleteRankingHistory(userId: number, historyId: number): Promise<boolean> {
+    const [result] = await pool.query<ResultSetHeader>(
+      `DELETE FROM dss_ranking_history WHERE id = ? AND user_id = ?`,
+      [historyId, userId]
+    );
+    return result.affectedRows > 0;
   }
 }
 

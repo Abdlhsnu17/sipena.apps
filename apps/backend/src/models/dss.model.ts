@@ -15,4 +15,5 @@ export interface DssRankingHistoryEntry {
   topRankings: Array<{ rank: number; detailName: string; detailCode: string; preferenceScore: number; recommendation: string }>;
   generatedAt: Date | string;
   createdAt: Date | string;
+  pairwiseMatrix?: number[][] | null;
 }

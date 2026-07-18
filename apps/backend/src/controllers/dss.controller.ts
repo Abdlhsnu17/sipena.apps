@@ -35,7 +35,12 @@ export class DssController {
 
       const userId = getActorUserId(req);
       if (result.totalAlternatives > 0) {
-        dssService.saveRankingHistory(userId, assetType, result).catch((error) => {
+        // Only persist the pairwise matrix when it's actually what produced these
+        // weights (CR passed) — if AHP was inconsistent and the service fell back
+        // to manual/default weights, storing the failed matrix would misrepresent
+        // this snapshot as AHP-derived when "Gunakan Bobot" restores it later.
+        const appliedPairwiseMatrix = result.consistency?.isConsistent ? (req.body?.pairwiseMatrix ?? null) : null;
+        dssService.saveRankingHistory(userId, assetType, result, appliedPairwiseMatrix).catch((error) => {
           logger.warn('Failed to persist DSS ranking history', { error });
         });
       }
@@ -95,6 +100,30 @@ export class DssController {
       res.json({ success: true, message: 'DSS ranking history fetched', data: history });
     } catch (error) {
       logger.error('DSS ranking history fetch error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  deleteRankingHistory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
+        return;
+      }
+      const userId = getActorUserId(req);
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+      const deleted = await dssService.deleteRankingHistory(userId, Number(req.params.id));
+      if (!deleted) {
+        res.status(404).json({ success: false, message: 'Riwayat perhitungan tidak ditemukan' });
+        return;
+      }
+      res.json({ success: true, message: 'Riwayat perhitungan berhasil dihapus' });
+    } catch (error) {
+      logger.error('DSS ranking history delete error', { error });
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };

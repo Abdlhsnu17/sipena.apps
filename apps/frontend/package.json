@@ -18,7 +18,8 @@
     "dev": "next dev --webpack",
     "lint": "eslint .",
     "start": "next start",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -82,6 +83,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "vitest": "^4.1.10",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^20.10.5",
     "@types/qrcode": "^1.5.5",

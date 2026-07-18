@@ -340,3 +340,25 @@ describe('DssService.saveRankingHistory (deduplication)', () => {
     expect(insertCalls).toHaveLength(1);
   });
 });
+
+describe('DssService.deleteRankingHistory', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it('deletes only the requested history owned by the user', async () => {
+    mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    await expect(dssService.deleteRankingHistory(7, 42)).resolves.toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE id = ? AND user_id = ?'),
+      [42, 7]
+    );
+  });
+
+  it('returns false when the history does not exist or belongs to another user', async () => {
+    mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    await expect(dssService.deleteRankingHistory(7, 99)).resolves.toBe(false);
+  });
+});

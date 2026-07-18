@@ -91,12 +91,18 @@ export interface DssRankingHistoryEntry {
   topRankings: Array<{ rank: number; detailName: string; detailCode: string; preferenceScore: number; recommendation: string }>;
   generatedAt: string;
   createdAt: string;
+  pairwiseMatrix?: number[][] | null;
 }
 
 export interface DssRankingHistoryResponse {
   success: boolean;
   message: string;
   data: DssRankingHistoryEntry[];
+}
+
+export interface DssDeleteRankingHistoryResponse {
+  success: boolean;
+  message: string;
 }
 
 class DssService {
@@ -114,6 +120,10 @@ class DssService {
 
   async getRankingHistory(limit = 20): Promise<DssRankingHistoryResponse> {
     return apiService.get<DssRankingHistoryResponse>(`/dss/history?limit=${limit}`);
+  }
+
+  async deleteRankingHistory(id: number): Promise<DssDeleteRankingHistoryResponse> {
+    return apiService.delete<DssDeleteRankingHistoryResponse>(`/dss/history/${id}`);
   }
 }
 

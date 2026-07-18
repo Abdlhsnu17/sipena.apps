@@ -6,12 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingHistoryEntry, type DssRankingResult } from "@/services/dss.service";
 import { cn } from "@/utils";
+import {
+    buildDefaultPairwiseValues,
+    buildPairwiseKey,
+    buildPairwiseMatrixFromValues,
+    buildPairwiseValuesFromMatrix,
+    closestSaatyValue,
+    computePairwiseConsistencyHints,
+    rescaleWeightsToSliderRange,
+    SAATY_SCALE_OPTIONS,
+} from "@/utils/ahp";
 import { locationBadgeClass } from "@/utils/api-mappers";
 import { buildTableExportRows, exportTableData, type TableExportColumn } from "@/utils/export-table";
 import { canCreateMaintenanceRole } from "@/utils/role";
@@ -46,6 +57,7 @@ import {
     SlidersHorizontal,
     Stethoscope,
     Trophy,
+    Trash2,
     Wrench,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -74,68 +86,6 @@ const DEFAULT_CRITERIA: DssRankingResult["criteria"] = [
 ]
 
 const CRITERIA_IDS = DEFAULT_CRITERIA.map((criterion) => criterion.id)
-
-const SAATY_SCALE_OPTIONS = [
-  { value: 9, label: "9 - Mutlak lebih penting" },
-  { value: 7, label: "7 - Sangat lebih penting" },
-  { value: 5, label: "5 - Lebih penting" },
-  { value: 3, label: "3 - Sedikit lebih penting" },
-  { value: 1, label: "1 - Sama penting" },
-  { value: 1 / 3, label: "1/3 - Sedikit lebih penting" },
-  { value: 1 / 5, label: "1/5 - Lebih penting" },
-  { value: 1 / 7, label: "1/7 - Sangat lebih penting" },
-  { value: 1 / 9, label: "1/9 - Mutlak lebih penting" },
-]
-
-const closestSaatyValue = (value: number) => {
-  return SAATY_SCALE_OPTIONS.reduce((closest, option) => (
-    Math.abs(option.value - value) < Math.abs(closest - value) ? option.value : closest
-  ), 1)
-}
-
-const buildPairwiseKey = (rowId: string, colId: string) => `${rowId}__${colId}`
-
-const buildDefaultPairwiseValues = (): Record<string, number> => {
-  const values: Record<string, number> = {}
-  for (let i = 0; i < CRITERIA_IDS.length; i += 1) {
-    for (let j = i + 1; j < CRITERIA_IDS.length; j += 1) {
-      values[buildPairwiseKey(CRITERIA_IDS[i], CRITERIA_IDS[j])] = 1
-    }
-  }
-  return values
-}
-
-const buildPairwiseMatrixFromValues = (values: Record<string, number>): number[][] => {
-  const n = CRITERIA_IDS.length
-  const matrix = Array.from({ length: n }, () => Array.from({ length: n }, () => 1))
-  for (let i = 0; i < n; i += 1) {
-    for (let j = i + 1; j < n; j += 1) {
-      const raw = Number(values[buildPairwiseKey(CRITERIA_IDS[i], CRITERIA_IDS[j])])
-      const value = Number.isFinite(raw) && raw > 0 ? raw : 1
-      matrix[i][j] = value
-      matrix[j][i] = 1 / value
-    }
-  }
-  return matrix
-}
-
-// Saved/historical weights are fractions that sum to 1 (backend-normalized);
-// the manual sliders expect integers in [1, 40]. Both restore paths (saved
-// preference on mount, "Gunakan Bobot" from history) must rescale through
-// this so a fraction like 0.19 doesn't just clamp to the slider minimum.
-const rescaleWeightsToSliderRange = (entryWeights: Record<string, number>, base: Record<string, number>): Record<string, number> => {
-  const positiveValues = Object.values(entryWeights).filter((value) => Number.isFinite(value) && value > 0)
-  if (positiveValues.length === 0) return base
-  const maxWeight = Math.max(...positiveValues)
-  const scale = 40 / maxWeight
-  const next = { ...base }
-  Object.entries(entryWeights).forEach(([key, value]) => {
-    if (Number.isFinite(value) && value > 0) {
-      next[key] = Math.min(40, Math.max(1, Math.round(value * scale)))
-    }
-  })
-  return next
-}
 
 const criteriaHelp: Record<string, string> = {
   condition: "Semakin buruk kondisi, semakin tinggi prioritas.",
@@ -225,6 +175,7 @@ const rankMeta = (rank: number) => {
 
 export default function DssPage() {
   const router = useRouter()
+  const { confirm } = useConfirm()
   const [rankingResult, setRankingResult] = useState<DssRankingResult | null>(null)
   const [weights, setWeights] = useState(DEFAULT_WEIGHTS)
   const [assetType, setAssetType] = useState<DssAssetType>("all")
@@ -240,8 +191,10 @@ export default function DssPage() {
   const [historyEntries, setHistoryEntries] = useState<DssRankingHistoryEntry[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [weightMode, setWeightMode] = useState<"manual" | "ahp">("manual")
-  const [pairwiseValues, setPairwiseValues] = useState<Record<string, number>>(buildDefaultPairwiseValues)
+  const [pairwiseValues, setPairwiseValues] = useState<Record<string, number>>(() => buildDefaultPairwiseValues(CRITERIA_IDS))
   const [historyDetailEntry, setHistoryDetailEntry] = useState<DssRankingHistoryEntry | null>(null)
+  const [deletingHistoryId, setDeletingHistoryId] = useState<number | null>(null)
+  const [historyActionMessage, setHistoryActionMessage] = useState<string | null>(null)
   const [isWeightsMinimized, setIsWeightsMinimized] = useState(false)
   const [isRankingMinimized, setIsRankingMinimized] = useState(false)
   const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
@@ -316,14 +269,53 @@ export default function DssPage() {
     }
   }, [rankingResult, normalizedWeights, assetType])
 
-  const applyWeightsFromEntry = useCallback((entryWeights: Record<string, number>) => {
-    setWeights((current) => rescaleWeightsToSliderRange(entryWeights, current))
+  const applyHistoryEntry = useCallback((entry: DssRankingHistoryEntry) => {
+    if (entry.pairwiseMatrix && entry.pairwiseMatrix.length === CRITERIA_IDS.length) {
+      setPairwiseValues(buildPairwiseValuesFromMatrix(entry.pairwiseMatrix, CRITERIA_IDS))
+      setWeightMode("ahp")
+      return
+    }
+    setWeights((current) => rescaleWeightsToSliderRange(entry.weights, current))
     setWeightMode("manual")
   }, [])
+
+  const deleteHistoryEntry = useCallback(async (entry: DssRankingHistoryEntry) => {
+    const confirmed = await confirm({
+      title: "Hapus riwayat perhitungan?",
+      description: `Riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")} akan dihapus permanen.`,
+      confirmText: "Ya, hapus",
+      cancelText: "Batal",
+      destructive: true,
+    })
+    if (!confirmed) return
+
+    setDeletingHistoryId(entry.id)
+    setHistoryActionMessage(null)
+    try {
+      const response = await dssService.deleteRankingHistory(entry.id)
+      if (response.success) {
+        setHistoryEntries((current) => current.filter((item) => item.id !== entry.id))
+        setHistoryDetailEntry((current) => current?.id === entry.id ? null : current)
+        setHistoryActionMessage("Riwayat perhitungan berhasil dihapus.")
+      }
+    } catch {
+      setHistoryActionMessage("Riwayat gagal dihapus. Silakan coba lagi.")
+    } finally {
+      setDeletingHistoryId(null)
+    }
+  }, [confirm])
 
   const setPairwiseValue = useCallback((rowId: string, colId: string, value: number) => {
     setPairwiseValues((current) => ({ ...current, [buildPairwiseKey(rowId, colId)]: value }))
   }, [])
+
+  // Live per-pair inconsistency hint, recomputed as the user edits — doesn't wait
+  // for "Hitung Ulang" or the backend's CR check, so contradictory judgments can
+  // be spotted and fixed before submitting.
+  const pairwiseHints = useMemo(
+    () => computePairwiseConsistencyHints(buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS), CRITERIA_IDS),
+    [pairwiseValues]
+  )
 
   const requestMaintenanceForItem = useCallback((item: DssAssetRanking) => {
     const params = new URLSearchParams({
@@ -347,7 +339,7 @@ export default function DssPage() {
           // Manual weights ride along as the fallback the backend uses when
           // the pairwise matrix turns out inconsistent (CR > 0.1), so that
           // fallback actually matches what the UI tells the user happens.
-          ? { assetType, limit: 250, pairwiseMatrix: buildPairwiseMatrixFromValues(pairwiseValues), weights: normalizedWeights }
+          ? { assetType, limit: 250, pairwiseMatrix: buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS), weights: normalizedWeights }
           : { assetType, limit: 250, weights: normalizedWeights }
       )
       if (response.success) {
@@ -615,7 +607,7 @@ export default function DssPage() {
                   type="button"
                   variant="outline"
                   className="w-full sm:w-auto"
-                  onClick={() => setPairwiseValues(buildDefaultPairwiseValues())}
+                  onClick={() => setPairwiseValues(buildDefaultPairwiseValues(CRITERIA_IDS))}
                 >
                   Reset Matriks AHP
                 </Button>
@@ -723,6 +715,48 @@ export default function DssPage() {
                   </div>
                 )}
 
+                {rankingResult?.consistency?.isConsistent && (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800/35">
+                    <div className="border-b border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                      Bobot hasil AHP yang dipakai untuk perhitungan TOPSIS (diurutkan dari yang terbesar).
+                    </div>
+                    <table className="w-full text-left text-[13px]">
+                      <thead className="bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">
+                        <tr>
+                          <th className="px-4 py-2">Kriteria</th>
+                          <th className="px-4 py-2">Tipe</th>
+                          <th className="px-4 py-2 text-right">Bobot AHP</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
+                        {[...rankingResult.criteria]
+                          .sort((a, b) => b.weight - a.weight)
+                          .map((criterion) => (
+                            <tr key={criterion.id}>
+                              <td className="px-4 py-2 text-slate-800 dark:text-slate-200">{criterion.name}</td>
+                              <td className="px-4 py-2">
+                                <Badge variant="outline" className="bg-white dark:bg-slate-900/60">
+                                  {criterion.type === "benefit" ? "Benefit" : "Cost"}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800/60">
+                                    <div
+                                      className="h-full rounded-full bg-linear-to-r from-teal-400 to-teal-600"
+                                      style={{ width: `${Math.min(100, Math.round(criterion.weight * 100))}%` }}
+                                    />
+                                  </div>
+                                  <span className="w-14 font-semibold text-slate-900 dark:text-slate-100">{formatPercent(criterion.weight)}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800/35">
                   <div className="border-b border-slate-200 dark:border-slate-800/35 bg-slate-50/70 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
                     Bandingkan tingkat kepentingan tiap pasangan kriteria memakai skala Saaty (1-9).
@@ -732,12 +766,19 @@ export default function DssPage() {
                       DEFAULT_CRITERIA.slice(i + 1).map((colCriterion) => {
                         const key = buildPairwiseKey(rowCriterion.id, colCriterion.id)
                         const value = closestSaatyValue(pairwiseValues[key] ?? 1)
+                        const hint = pairwiseHints.find((entry) => entry.rowId === rowCriterion.id && entry.colId === colCriterion.id)
                         return (
                           <div key={key} className="grid grid-cols-1 items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-50/60 dark:bg-slate-900/40 p-3 sm:grid-cols-[minmax(0,1fr)_200px]">
                             <div className="text-sm text-slate-800 dark:text-slate-200">
                               <span className="font-semibold">{rowCriterion.name}</span>
                               <span className="mx-1.5 text-slate-400">vs</span>
                               <span className="font-semibold">{colCriterion.name}</span>
+                              {hint?.isHighContributor && (
+                                <Badge variant="outline" className="ml-2 gap-1 border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Kontribusi inkonsistensi tinggi
+                                </Badge>
+                              )}
                             </div>
                             <Select
                               value={String(value)}
@@ -1020,6 +1061,11 @@ export default function DssPage() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
+            {historyActionMessage && (
+              <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-300" role="status">
+                {historyActionMessage}
+              </div>
+            )}
             {isHistoryMinimized ? (
               <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-[14px] text-blue-900 dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-200">
                 Section riwayat perhitungan disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
@@ -1072,10 +1118,22 @@ export default function DssPage() {
                               variant="outline"
                               size="sm"
                               className="gap-1"
-                              onClick={() => applyWeightsFromEntry(entry.weights)}
+                              onClick={() => applyHistoryEntry(entry)}
                             >
                               <ListChecks className="h-3.5 w-3.5" />
                               Gunakan Bobot
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-400/30 dark:text-red-300 dark:hover:bg-red-400/10"
+                              disabled={deletingHistoryId === entry.id}
+                              onClick={() => void deleteHistoryEntry(entry)}
+                              aria-label={`Hapus riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {deletingHistoryId === entry.id ? "Menghapus..." : "Hapus"}
                             </Button>
                           </div>
                         </td>
@@ -1196,6 +1254,11 @@ export default function DssPage() {
             <DialogTitle className="flex items-center gap-2 text-xl leading-tight">
               <History className="h-4 w-4 text-teal-700" />
               Detail Riwayat Perhitungan
+              {historyDetailEntry?.pairwiseMatrix && (
+                <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-300">
+                  Dihitung dengan AHP
+                </Badge>
+              )}
             </DialogTitle>
             <DialogDescription>
               {historyDetailEntry ? `${new Date(historyDetailEntry.createdAt).toLocaleString("id-ID")} · ${assetTypeLabel(historyDetailEntry.assetType as DssAssetType)} · ${historyDetailEntry.totalAlternatives} alternatif` : ""}
