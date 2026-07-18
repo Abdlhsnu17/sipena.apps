@@ -28,6 +28,9 @@ jobs:
       - name: Backend build
         run: npm run build:backend
 
+      - name: Backend test
+        run: npm run test:backend
+
       - name: Frontend lint
         run: npm run lint --workspace=inventory-frontend
 

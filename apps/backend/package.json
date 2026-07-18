@@ -20,7 +20,8 @@
     "migrate:prod": "node dist/scripts/run-migrations.js",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix"
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -54,6 +55,7 @@
     "@typescript-eslint/parser": "^8.56.0",
     "eslint": "^9.0.0",
     "tsx": "^4.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.10"
   }
 }
