@@ -51,12 +51,28 @@ interface MaintenanceHistory {
   assetDetailCode?: string;
   assetLocation?: string;
   type: string;
+  priority?: 'low' | 'normal' | 'high' | 'critical';
   status: string;
   scheduledDate: string;
   startedDate?: string;
   completedDate?: string;
+  dueAt?: string;
+  estimatedDurationMinutes?: number;
+  estimatedCost?: number;
+  slaStatus?: 'no_target' | 'on_track' | 'at_risk' | 'overdue' | 'met' | 'met_late';
   description: string;
   technician?: string;
+  technicianNip?: string;
+  vendorName?: string;
+  vendorReference?: string;
+  diagnosis?: string;
+  actionTaken?: string;
+  checklist?: string;
+  spareParts?: string;
+  verificationResult?: string;
+  finalCondition?: string;
+  verificationNotes?: string;
+  nextMaintenanceDate?: string;
   cost?: number;
   notes?: string;
   damagePhotoUrl?: string;
@@ -105,6 +121,36 @@ const SectionHeader = ({ label }: { label: string }) => (
     {label}
   </div>
 );
+
+const maintenancePriorityLabel = (priority?: MaintenanceHistory["priority"]) => {
+  switch (priority) {
+    case "low":
+      return "Rendah";
+    case "high":
+      return "Tinggi";
+    case "critical":
+      return "Kritis";
+    default:
+      return "Normal";
+  }
+};
+
+const maintenanceSlaLabel = (status?: MaintenanceHistory["slaStatus"]) => {
+  switch (status) {
+    case "on_track":
+      return "SLA Aman";
+    case "at_risk":
+      return "SLA Risiko";
+    case "overdue":
+      return "Lewat SLA";
+    case "met":
+      return "SLA Tercapai";
+    case "met_late":
+      return "SLA Tercapai Terlambat";
+    default:
+      return "-";
+  }
+};
 
 const InfoRow = ({ label, children }: InfoRowProps) => (
   <div className="detail-labeled-row border-b border-slate-200 dark:border-slate-800/35 last:border-b-0">
@@ -489,12 +535,28 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         assetDetailCode: m.assetDetailCode,
         assetLocation: m.assetLocation,
         type: m.type,
+        priority: m.priority,
         status: validation?.status === "validated" ? "validated" : m.status,
         scheduledDate: m.scheduledDate,
         startedDate: m.createdAt,
         completedDate: m.completedDate,
+        dueAt: m.dueAt,
+        estimatedDurationMinutes: m.estimatedDurationMinutes,
+        estimatedCost: m.estimatedCost,
+        slaStatus: m.slaStatus,
         description: m.description,
         technician: m.technician,
+        technicianNip: m.technicianNip,
+        vendorName: m.vendorName,
+        vendorReference: m.vendorReference,
+        diagnosis: m.diagnosis,
+        actionTaken: m.actionTaken,
+        checklist: m.checklist,
+        spareParts: m.spareParts,
+        verificationResult: m.verificationResult,
+        finalCondition: m.finalCondition,
+        verificationNotes: m.verificationNotes,
+        nextMaintenanceDate: m.nextMaintenanceDate,
         cost: m.cost,
         notes: m.notes,
         damagePhotoUrl: m.damagePhotoUrl,
@@ -755,6 +817,14 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     const validatorNip = validatorLabel?.nip || "-";
     const scheduledLabel = formatDayTimeLabel(history.scheduledDate, { showWeekday: true });
     const costLabel = history.cost ? formatCostLabel(history.cost) : "-";
+    const priorityLabel = maintenancePriorityLabel(history.priority);
+    const dueAtLabel = history.dueAt ? formatDayTimeLabel(history.dueAt, { showWeekday: false }) : "-";
+    const slaLabel = maintenanceSlaLabel(history.slaStatus);
+    const estimatedDurationLabel = history.estimatedDurationMinutes ? `${history.estimatedDurationMinutes} menit` : "-";
+    const estimatedCostLabel = history.estimatedCost ? `Rp ${Number(history.estimatedCost).toLocaleString("id-ID")}` : "-";
+    const nextMaintenanceDateLabel = history.nextMaintenanceDate
+      ? formatDayTimeLabel(history.nextMaintenanceDate, { showWeekday: false })
+      : "-";
 
     return {
       detail,
@@ -773,6 +843,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       validatorNip,
       scheduledLabel,
       costLabel,
+      priorityLabel,
+      dueAtLabel,
+      slaLabel,
+      estimatedDurationLabel,
+      estimatedCostLabel,
+      nextMaintenanceDateLabel,
     };
   };
 
@@ -1327,6 +1403,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
                           <InfoRow label="Jenis Inventaris">{meta.inventoryBadgeLabel}</InfoRow>
                           <InfoRow label="Tipe Layanan">{maintenanceTypeLabel(h.type)}</InfoRow>
+                          <InfoRow label="Prioritas">{meta.priorityLabel}</InfoRow>
                           <InfoRow label="No ID Jadwal">{historyNoId}</InfoRow>
                           <InfoRow label="Nama Alat">{meta.assetName}</InfoRow>
                           <InfoRow label="Kode Alat">{meta.assetCode}</InfoRow>
@@ -1340,6 +1417,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           <InfoRow label="Nama Pengirim">{h.requesterName || "-"}</InfoRow>
                           <InfoRow label="NIP Pengirim">{h.requesterNip || "-"}</InfoRow>
                           <InfoRow label="Jadwal Pemeliharaan Sarana">{meta.scheduledLabel}</InfoRow>
+                          <InfoRow label="Estimasi Durasi">{meta.estimatedDurationLabel}</InfoRow>
+                          <InfoRow label="Batas Penyelesaian (SLA)">{meta.dueAtLabel}</InfoRow>
+                          <InfoRow label="Status SLA">{meta.slaLabel}</InfoRow>
                           <InfoRow label="Catatan Pendaftaran">{meta.registrationNotes}</InfoRow>
                           <InfoRow label="Bukti Kerusakan">{h.damagePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.damagePhotoUrl} target="_blank" rel="noreferrer">Lihat lampiran</a> : "-"}</InfoRow>
                         </div>
@@ -1348,8 +1428,16 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <SectionHeader label="Pelaksanaan & Biaya" />
                         <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
                           <InfoRow label="Teknisi Pelaksana">{h.technician || "-"}</InfoRow>
+                          <InfoRow label="NIP Teknisi/PJ">{h.technicianNip || "-"}</InfoRow>
+                          <InfoRow label="Vendor/Penyedia Jasa">{h.vendorName || "-"}</InfoRow>
+                          <InfoRow label="Referensi Vendor">{h.vendorReference || "-"}</InfoRow>
+                          <InfoRow label="Estimasi Biaya">{meta.estimatedCostLabel}</InfoRow>
                           <InfoRow label="Waktu Selesai">{meta.completionDateLabel}</InfoRow>
                           <InfoRow label="Biaya Pemeliharaan">{meta.costLabel}</InfoRow>
+                          <InfoRow label="Diagnosis">{h.diagnosis || "-"}</InfoRow>
+                          <InfoRow label="Tindakan">{h.actionTaken || "-"}</InfoRow>
+                          <InfoRow label="Checklist">{h.checklist || "-"}</InfoRow>
+                          <InfoRow label="Suku Cadang">{h.spareParts || "-"}</InfoRow>
                           <InfoRow label="Foto Sebelum">{h.beforePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.beforePhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
                           <InfoRow label="Foto Sesudah">{h.afterPhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.afterPhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
                           <InfoRow label="Catatan (After)">{renderNotesContent(meta.afterNotes)}</InfoRow>
@@ -1359,8 +1447,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         </div>
                       </div>
                       <div className="mb-3 break-inside-avoid space-y-2">
-                        <SectionHeader label="Validasi" />
+                        <SectionHeader label="Verifikasi" />
                         <div className="rounded-xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60">
+                          <InfoRow label="Hasil Pengujian">{h.verificationResult || "-"}</InfoRow>
+                          <InfoRow label="Kondisi Akhir">{h.finalCondition || "-"}</InfoRow>
+                          <InfoRow label="Catatan Verifikasi">{h.verificationNotes || "-"}</InfoRow>
+                          <InfoRow label="Jadwal Berikutnya">{meta.nextMaintenanceDateLabel}</InfoRow>
                           <InfoRow label="Validator">{meta.validatorName}</InfoRow>
                           <InfoRow label="NIP Validator">{meta.validatorNip}</InfoRow>
                           <InfoRow label="Waktu Validasi">{meta.validationDateLabel}</InfoRow>
