@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { DetailSource } from "@/types/detail-inventory";
 import { sanitizeAssetFilename } from "@/utils/asset-label";
 import { buildScanTargetParams } from "@/utils/asset-scan-target";
-import { Download, Printer, QrCode } from "lucide-react";
+import { Check, CheckCircle2, Download, MapPin, Printer, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 
@@ -120,7 +120,7 @@ export function AssetQrDialog({
       try {
         const url = await QRCode.toDataURL(qrValue, {
           errorCorrectionLevel: "M",
-          margin: 2,
+          margin: 4,
           width: 512,
           color: { dark: "#0f172a", light: "#ffffff" },
         })
@@ -130,8 +130,8 @@ export function AssetQrDialog({
         if (canvas) {
           await QRCode.toCanvas(canvas, qrValue, {
             errorCorrectionLevel: "M",
-            margin: 2,
-            width: 220,
+            margin: 4,
+            width: 260,
             color: { dark: "#0f172a", light: "#ffffff" },
           })
         }
@@ -207,56 +207,105 @@ export function AssetQrDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5 text-teal-600" />
-            Kode QR Aset
-          </DialogTitle>
-          <DialogDescription>
-            Pindai, unduh, atau cetak barcode aset ini.
-          </DialogDescription>
+      <DialogContent className="max-h-[calc(100vh-2rem)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 shadow-2xl shadow-slate-950/15 sm:max-w-[560px] dark:border-slate-800 dark:shadow-black/30">
+        <DialogHeader className="border-b border-slate-100 px-5 py-5 pr-14 text-left sm:px-7 sm:py-6">
+          <div className="flex items-start gap-3.5">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-300 dark:ring-teal-400/15">
+              <QrCode className="size-5" />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <DialogTitle className="text-xl leading-6 font-bold tracking-tight text-slate-950 dark:text-slate-50">
+                Kode QR Aset
+              </DialogTitle>
+              <DialogDescription className="leading-5">
+                Pindai untuk membuka detail atau simpan untuk dicetak.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex flex-col items-center py-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <canvas ref={canvasRef} className="h-55 w-55" aria-label={`QR ${qrValue}`} />
+        <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900/60">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold tracking-wide text-slate-950 uppercase dark:text-slate-50">
+                {assetName || "Aset SIPENA"}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold text-teal-700 dark:text-teal-300">{noId || assetCode || "Tanpa ID"}</span>
+                {location && (
+                  <>
+                    <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">•</span>
+                    <span className="inline-flex min-w-0 items-center gap-1">
+                      <MapPin className="size-3" aria-hidden="true" />
+                      <span className="truncate">{location}</span>
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            {sourceLabel && (
+              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold tracking-wider text-slate-600 uppercase shadow-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                {sourceLabel}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center rounded-3xl bg-slate-50 px-4 py-5 ring-1 ring-slate-100 dark:bg-slate-900/50 dark:ring-slate-800">
+            <div className="rounded-2xl bg-white p-3 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80">
+              <canvas
+                ref={canvasRef}
+                className="size-[236px] sm:size-[260px]"
+                aria-label={`Kode QR untuk ${assetName || noId}`}
+              />
+            </div>
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/15">
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              Siap dipindai
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Ukuran label</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pilih ukuran media saat dicetak.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-900" role="group" aria-label="Ukuran label cetak">
+              {LABEL_SIZES.map((size) => {
+                const isActive = size.id === selectedSizeId
+                return (
+                  <button
+                    key={size.id}
+                    type="button"
+                    onClick={() => setSelectedSizeId(size.id)}
+                    className={`relative flex min-w-0 flex-col items-center rounded-xl px-1.5 py-2.5 text-center outline-none transition-all focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 ${
+                      isActive
+                        ? "bg-white text-teal-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-teal-300 dark:ring-slate-700"
+                        : "text-slate-700 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-slate-800/60"
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="inline-flex items-center gap-1 text-xs font-bold sm:text-sm">
+                      {isActive && <Check className="size-3.5" aria-hidden="true" />}
+                      {size.label}
+                    </span>
+                    <span className="mt-0.5 truncate text-[10px] text-slate-500 sm:text-[11px] dark:text-slate-400">{sizeDimensionLabel(size)}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Ukuran cetak barcode</p>
-          <div className="grid grid-cols-3 gap-2">
-            {LABEL_SIZES.map((size) => {
-              const isActive = size.id === selectedSizeId
-              return (
-                <button
-                  key={size.id}
-                  type="button"
-                  onClick={() => setSelectedSizeId(size.id)}
-                  className={`flex flex-col items-center rounded-lg border px-2 py-1.5 text-center transition ${
-                    isActive
-                      ? "border-teal-600 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
-                      : "border-border text-foreground hover:border-teal-300 hover:bg-teal-50/50"
-                  }`}
-                  aria-pressed={isActive}
-                >
-                  <span className="text-sm font-semibold">{size.label}</span>
-                  <span className="text-[11px] text-muted-foreground">{sizeDimensionLabel(size)}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <DialogFooter className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
+        <DialogFooter className="grid grid-cols-1 gap-2 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:grid-cols-2 sm:px-7 dark:border-slate-800 dark:bg-slate-900/40">
+          <Button className="h-11 rounded-xl bg-white shadow-xs dark:bg-slate-950" variant="outline" onClick={handleDownload} disabled={!dataUrl}>
             <Download className="mr-2 h-4 w-4" />
-            Unduh Barcode
+            Unduh Kode QR
           </Button>
-          <Button variant="outline" onClick={handlePrint} disabled={!dataUrl}>
+          <Button className="h-11 rounded-xl bg-teal-600 text-white shadow-sm shadow-teal-900/15 hover:bg-teal-700" onClick={handlePrint} disabled={!dataUrl}>
             <Printer className="mr-2 h-4 w-4" />
-            Cetak Barcode
+            Cetak Kode QR
           </Button>
         </DialogFooter>
       </DialogContent>
