@@ -132,6 +132,13 @@ const maintenanceValidatedLabelByType: Record<string, string> = {
   inspection: "Selesai Inspeksi",
 }
 
+const maintenanceInProgressLabelByType: Record<string, string> = {
+  preventive: "Dalam Proses Pengecekan Rutin",
+  corrective: "Dalam Proses Perbaikan",
+  calibration: "Dalam Proses Kalibrasi",
+  inspection: "Dalam Proses Inspeksi",
+}
+
 export const maintenanceStatusLabel = (status: string, type?: string): string => {
   switch (status) {
     case "requested":
@@ -139,7 +146,7 @@ export const maintenanceStatusLabel = (status: string, type?: string): string =>
     case "scheduled":
       return "Disetujui"
     case "in_progress":
-      return "Dalam Proses Perbaikan"
+      return (type && maintenanceInProgressLabelByType[type]) || "Dalam Proses Pemeliharaan Sarana"
     case "completed":
       return "Tindakan Selesai - Menunggu Verifikasi"
     case "validated":
