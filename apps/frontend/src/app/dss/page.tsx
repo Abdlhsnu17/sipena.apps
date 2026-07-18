@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingHistoryEntry, type DssRankingResult } from "@/services/dss.service";
 import { cn } from "@/utils";
@@ -34,10 +34,8 @@ import {
     Building2,
     Calculator,
     CheckCircle2,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
-    ChevronUp,
     Clock,
     Download,
     Eye,
@@ -195,9 +193,7 @@ export default function DssPage() {
   const [historyDetailEntry, setHistoryDetailEntry] = useState<DssRankingHistoryEntry | null>(null)
   const [deletingHistoryId, setDeletingHistoryId] = useState<number | null>(null)
   const [historyActionMessage, setHistoryActionMessage] = useState<string | null>(null)
-  const [isWeightsMinimized, setIsWeightsMinimized] = useState(false)
-  const [isRankingMinimized, setIsRankingMinimized] = useState(false)
-  const [isHistoryMinimized, setIsHistoryMinimized] = useState(false)
+  const [activeSection, setActiveSection] = useState<"weights" | "ranking" | "history">("weights")
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -563,7 +559,42 @@ export default function DssPage() {
           </Card>
         </div>
 
-        <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
+        <Tabs
+          value={activeSection}
+          onValueChange={(value) => setActiveSection(value as "weights" | "ranking" | "history")}
+          className="gap-4"
+        >
+          <div className="overflow-x-auto pb-1">
+            <TabsList
+              aria-label="Navigasi fitur SPK"
+              className="h-auto min-w-max gap-1 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800/60"
+            >
+              <TabsTrigger
+                value="weights"
+                className="h-11 rounded-xl px-4 text-sm data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Bobot Kriteria
+              </TabsTrigger>
+              <TabsTrigger
+                value="ranking"
+                className="h-11 rounded-xl px-4 text-sm data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+              >
+                <ArrowDownUp className="h-4 w-4" />
+                Ranking Prioritas
+              </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="h-11 rounded-xl px-4 text-sm data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+              >
+                <History className="h-4 w-4" />
+                Riwayat Perhitungan
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="weights" className="mt-0">
+            <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
           <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <SlidersHorizontal className="h-4 w-4 text-teal-700" />
@@ -573,25 +604,6 @@ export default function DssPage() {
               {weightsSavedMessage && (
                 <span className="text-xs text-slate-500 dark:text-slate-400">{weightsSavedMessage}</span>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => setIsWeightsMinimized((prev) => !prev)}
-              >
-                {isWeightsMinimized ? (
-                  <>
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                    Tampilkan
-                  </>
-                ) : (
-                  <>
-                    <ChevronUp className="mr-2 h-4 w-4" />
-                    Sembunyikan
-                  </>
-                )}
-              </Button>
               {weightMode === "manual" && (
                 <Button
                   type="button"
@@ -624,12 +636,6 @@ export default function DssPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-0">
-            {isWeightsMinimized ? (
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-[14px] text-blue-900 dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-200">
-                Section bobot kriteria disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
-              </div>
-            ) : (
-              <>
             <Tabs value={weightMode} onValueChange={(value) => setWeightMode(value as "manual" | "ahp")}>
               <TabsList>
                 <TabsTrigger value="manual">Bobot Manual</TabsTrigger>
@@ -803,12 +809,12 @@ export default function DssPage() {
                 </div>
               </div>
             )}
-              </>
-            )}
           </CardContent>
-        </Card>
+            </Card>
+          </TabsContent>
 
-        <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
+          <TabsContent value="ranking" className="mt-0">
+            <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
           <CardHeader className="gap-3 pb-3 lg:flex-row lg:items-center lg:justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <ArrowDownUp className="h-4 w-4 text-teal-700" />
@@ -840,34 +846,9 @@ export default function DssPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => setIsRankingMinimized((prev) => !prev)}
-              >
-                {isRankingMinimized ? (
-                  <>
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                    Tampilkan
-                  </>
-                ) : (
-                  <>
-                    <ChevronUp className="mr-2 h-4 w-4" />
-                    Sembunyikan
-                  </>
-                )}
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {isRankingMinimized ? (
-              <div className="m-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-[14px] text-blue-900 dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-200">
-                Section ranking prioritas disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
-              </div>
-            ) : (
-            <>
             {errorMessage && (
               <div className="m-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300">
                 {errorMessage}
@@ -1029,36 +1010,17 @@ export default function DssPage() {
                 )}
               </div>
             )}
-            </>
-            )}
           </CardContent>
-        </Card>
+            </Card>
+          </TabsContent>
 
-        <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+          <TabsContent value="history" className="mt-0">
+            <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4 text-teal-700" />
               Riwayat Perhitungan
             </CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => setIsHistoryMinimized((prev) => !prev)}
-            >
-              {isHistoryMinimized ? (
-                <>
-                  <ChevronDown className="mr-2 h-4 w-4" />
-                  Tampilkan
-                </>
-              ) : (
-                <>
-                  <ChevronUp className="mr-2 h-4 w-4" />
-                  Sembunyikan
-                </>
-              )}
-            </Button>
           </CardHeader>
           <CardContent className="pt-0">
             {historyActionMessage && (
@@ -1066,11 +1028,7 @@ export default function DssPage() {
                 {historyActionMessage}
               </div>
             )}
-            {isHistoryMinimized ? (
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-[14px] text-blue-900 dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-200">
-                Section riwayat perhitungan disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
-              </div>
-            ) : isHistoryLoading ? (
+            {isHistoryLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="h-12 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800/60" />
@@ -1148,7 +1106,9 @@ export default function DssPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <Activity className="h-4 w-4" />
