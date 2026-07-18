@@ -355,10 +355,13 @@ export interface MaintenanceHistoryExportEntry {
   requesterName?: string
   requesterNip?: string
   scheduledDate?: string
+  damagePhotoUrl?: string
   technician?: string
   completionDate?: string
   cost?: string
   notes?: string
+  beforePhotoUrl?: string
+  afterPhotoUrl?: string
   registrationNotes?: string
   status?: string
   validationDate?: string
@@ -901,11 +904,14 @@ const buildMaintenanceHistorySections = (entry: MaintenanceHistoryExportEntry): 
   appendLine(administration, 'NIP Pengirim', entry.requesterNip)
   appendLine(administration, 'Jadwal Pemeliharaan', entry.scheduledDate)
   appendLine(administration, 'Catatan Pendaftaran', entry.registrationNotes)
+  appendLine(administration, 'Bukti Kerusakan', entry.damagePhotoUrl)
 
   const execution: SectionLine[] = []
   appendLine(execution, 'Teknisi Pelaksana', entry.technician)
   appendLine(execution, 'Waktu Selesai', entry.completionDate)
   appendLine(execution, 'Biaya Pemeliharaan', entry.cost)
+  appendLine(execution, 'Foto Sebelum', entry.beforePhotoUrl)
+  appendLine(execution, 'Foto Sesudah', entry.afterPhotoUrl)
   appendLine(execution, 'Catatan (After)', entry.notes)
   appendLine(execution, 'Alasan Pembatalan', entry.cancellationReason)
 

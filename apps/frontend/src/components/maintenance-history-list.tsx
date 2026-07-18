@@ -59,6 +59,9 @@ interface MaintenanceHistory {
   technician?: string;
   cost?: number;
   notes?: string;
+  damagePhotoUrl?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
   cancellationReason?: string;
   createdBy: number;
   validatedBy?: number;
@@ -494,6 +497,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         technician: m.technician,
         cost: m.cost,
         notes: m.notes,
+        damagePhotoUrl: m.damagePhotoUrl,
+        beforePhotoUrl: m.beforePhotoUrl,
+        afterPhotoUrl: m.afterPhotoUrl,
         cancellationReason: m.cancellationReason,
         createdBy: m.createdBy,
         validatedBy: validation?.validatedBy,
@@ -624,6 +630,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         defaultSelected: true,
       },
       {
+        key: "buktiKerusakan",
+        label: "Bukti Kerusakan",
+        getValue: (history) => history.damagePhotoUrl || "-",
+        defaultSelected: true,
+      },
+      {
         key: "teknisi",
         label: "Teknisi Pelaksana",
         getValue: (history) => history.technician || "-",
@@ -639,6 +651,18 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
         key: "biaya",
         label: "Biaya Pemeliharaan",
         getValue: (history) => (history.cost ? formatCostLabel(history.cost) : "-"),
+        defaultSelected: true,
+      },
+      {
+        key: "fotoSebelum",
+        label: "Foto Sebelum",
+        getValue: (history) => history.beforePhotoUrl || "-",
+        defaultSelected: true,
+      },
+      {
+        key: "fotoSesudah",
+        label: "Foto Sesudah",
+        getValue: (history) => history.afterPhotoUrl || "-",
         defaultSelected: true,
       },
       {
@@ -849,6 +873,15 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     const registrationNotes = columnSet.has("catatanPendaftaran")
       ? meta.registrationNotes
       : undefined;
+    const damagePhotoUrl = columnSet.has("buktiKerusakan")
+      ? history.damagePhotoUrl || "-"
+      : undefined;
+    const beforePhotoUrl = columnSet.has("fotoSebelum")
+      ? history.beforePhotoUrl || "-"
+      : undefined;
+    const afterPhotoUrl = columnSet.has("fotoSesudah")
+      ? history.afterPhotoUrl || "-"
+      : undefined;
     const validationDate = columnSet.has("waktuValidasi")
       ? meta.validationDateLabel
       : undefined;
@@ -876,9 +909,12 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       requesterName,
       requesterNip,
       scheduledDate,
+      damagePhotoUrl,
       technician,
       completionDate,
       cost,
+      beforePhotoUrl,
+      afterPhotoUrl,
       notes: afterNotes,
       registrationNotes,
       status,
@@ -1305,6 +1341,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           <InfoRow label="NIP Pengirim">{h.requesterNip || "-"}</InfoRow>
                           <InfoRow label="Jadwal Pemeliharaan Sarana">{meta.scheduledLabel}</InfoRow>
                           <InfoRow label="Catatan Pendaftaran">{meta.registrationNotes}</InfoRow>
+                          <InfoRow label="Bukti Kerusakan">{h.damagePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.damagePhotoUrl} target="_blank" rel="noreferrer">Lihat lampiran</a> : "-"}</InfoRow>
                         </div>
                       </div>
                       <div className="mb-3 break-inside-avoid space-y-2">
@@ -1313,6 +1350,8 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                           <InfoRow label="Teknisi Pelaksana">{h.technician || "-"}</InfoRow>
                           <InfoRow label="Waktu Selesai">{meta.completionDateLabel}</InfoRow>
                           <InfoRow label="Biaya Pemeliharaan">{meta.costLabel}</InfoRow>
+                          <InfoRow label="Foto Sebelum">{h.beforePhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.beforePhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
+                          <InfoRow label="Foto Sesudah">{h.afterPhotoUrl ? <a className="text-teal-700 underline dark:text-teal-300" href={h.afterPhotoUrl} target="_blank" rel="noreferrer">Lihat foto</a> : "-"}</InfoRow>
                           <InfoRow label="Catatan (After)">{renderNotesContent(meta.afterNotes)}</InfoRow>
                           {h.status === "cancelled" && (
                             <InfoRow label="Alasan Pembatalan">{h.cancellationReason || "-"}</InfoRow>
