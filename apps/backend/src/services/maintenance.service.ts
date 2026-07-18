@@ -49,18 +49,18 @@ interface MaintenanceAttachmentRow extends RowDataPacket {
   created_at: Date;
 }
 
-const normalizeComparableText = (value?: string | null): string => {
+export const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
 
-const toLocalIsoDateTime = (value?: string | Date | null): string => {
+export const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) return '';
   const pad = (num: number) => String(num).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
-const formatMaintenanceStatusLabel = (status?: string | null): string => {
+export const formatMaintenanceStatusLabel = (status?: string | null): string => {
   switch (status) {
     case 'requested':
       return 'diajukan';
@@ -78,7 +78,7 @@ const formatMaintenanceStatusLabel = (status?: string | null): string => {
       return status || 'diproses';
   }
 };
-const shouldSendMaintenancePhoneNotification = (status?: string | null): boolean =>
+export const shouldSendMaintenancePhoneNotification = (status?: string | null): boolean =>
   ['scheduled', 'in_progress', 'completed', 'validated', 'cancelled'].includes(String(status || ''));
 interface CountRow extends RowDataPacket {
   count: number;

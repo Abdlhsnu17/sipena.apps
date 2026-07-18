@@ -122,7 +122,7 @@ type UsageThresholdOverviewFilters = {
   keyword?: string;
 };
 
-const toLocalIsoDateTime = (value?: string | Date | null): string => {
+export const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) return '';
@@ -130,7 +130,7 @@ const toLocalIsoDateTime = (value?: string | Date | null): string => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-const generateUsageNumber = (value?: string | Date | null): string => {
+export const generateUsageNumber = (value?: string | Date | null): string => {
   const date = value ? (value instanceof Date ? value : new Date(String(value))) : new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const y = date.getFullYear();
@@ -143,7 +143,7 @@ const generateUsageNumber = (value?: string | Date | null): string => {
   return `PG-${y}${m}${d}-${hh}${mm}${ss}-${rand}`;
 };
 
-const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => {
+export const mapUsageRow = (row: AssetUsageRow): AssetUsageLog => {
   const borrowingId = row.borrowing_id ?? row.borrowingId;
   return {
     ...row,

@@ -28,7 +28,7 @@ import notificationService from './notification.service';
  * Parse datetime string as LOCAL time (not UTC)
  * Expects format: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
  */
-const normalizeDateInput = (value?: string | Date): Date | undefined => {
+export const normalizeDateInput = (value?: string | Date): Date | undefined => {
   if (value === undefined || value === null) return undefined;
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? undefined : value;
@@ -62,17 +62,17 @@ const normalizeDateInput = (value?: string | Date): Date | undefined => {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
-const normalizeOptionalText = (value?: string | null): string | null => {
+export const normalizeOptionalText = (value?: string | null): string | null => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 };
 
-const normalizeComparableText = (value?: string | null): string => {
+export const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
 
-const getRoleLabel = (role?: string | null): string => {
+export const getRoleLabel = (role?: string | null): string => {
   switch (String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')) {
     case 'admin': return 'Administrator';
     case 'leader': return 'Leader';

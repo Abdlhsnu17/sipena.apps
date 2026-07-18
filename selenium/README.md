@@ -38,3 +38,5 @@ Variabel opsional:
 - `SELENIUM_E2E_USERNAME` dan `SELENIUM_E2E_PASSWORD` sebagai alternatif file konfigurasi.
 
 Suite regresi membuat data dengan prefix `SEL-AST-`/`E2E` dan mencoba membersihkannya setelah selesai. Gunakan database pengujian terpisah karena proses yang dihentikan paksa masih dapat meninggalkan data uji.
+
+Folder screenshot (`selenium/screenshots` secara default, atau `SELENIUM_SCREENSHOT_DIR` bila diisi) dibersihkan otomatis setiap kali salah satu perintah `test:selenium*` dijalankan, sehingga hasil `-fail.png` dari run sebelumnya tidak tertinggal begitu skenario tersebut lulus di run berikutnya.
