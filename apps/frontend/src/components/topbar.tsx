@@ -17,8 +17,19 @@ import {
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
+import { parseScannedBarcode, type ScanSourceType } from "@/utils/scanned-asset";
 
 import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -152,31 +163,6 @@ const saveDismissedNotificationKeys = (keys: Set<string>) => {
   window.localStorage.setItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(Array.from(keys)))
 }
 
-type ScanSourceType = "medical" | "non-medical" | "unknown"
-
-const parseScannedBarcode = (raw: string): { query: string; source: ScanSourceType } => {
-  const normalized = raw.trim()
-  if (!normalized) {
-    return { query: "", source: "unknown" }
-  }
-
-  const noId = normalized.match(/NO\s*ID\s*:\s*([^\n\r]+)/i)?.[1]?.trim() || ""
-  const code = normalized.match(/KODE\s*:\s*([^\n\r]+)/i)?.[1]?.trim() || ""
-  const sourceRaw = normalized.match(/SUMBER\s*:\s*([^\n\r]+)/i)?.[1]?.trim().toLowerCase() || ""
-  const firstLine = normalized.split(/\r?\n/)[0]?.trim() || ""
-
-  const source: ScanSourceType = sourceRaw.includes("non")
-    ? "non-medical"
-    : sourceRaw.includes("med")
-      ? "medical"
-      : "unknown"
-
-  return {
-    query: noId || code || firstLine,
-    source,
-  }
-}
-
 export default function Topbar() {
   const topbarAnnouncement =
     "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat. Terima Kasih"
@@ -190,6 +176,7 @@ export default function Topbar() {
   const [notificationQuery, setNotificationQuery] = useState("")
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [scanChoice, setScanChoice] = useState<{ query: string; source: ScanSourceType } | null>(null)
   const isCompactNotification = notificationDensity === "compact"
 
   useEffect(() => {
@@ -265,20 +252,32 @@ export default function Topbar() {
       return
     }
 
-    const encodedQuery = encodeURIComponent(parsed.query)
+    setScanChoice(parsed)
+  }, [])
 
-    if (parsed.source === "non-medical") {
+  const handleScanChooseBorrow = useCallback(() => {
+    if (!scanChoice) return
+    router.push(`/borrowing?q=${encodeURIComponent(scanChoice.query)}&openForm=1`)
+    setScanChoice(null)
+  }, [router, scanChoice])
+
+  const handleScanChooseUsage = useCallback(() => {
+    if (!scanChoice) return
+    router.push(`/asset-usage?q=${encodeURIComponent(scanChoice.query)}&openForm=1`)
+    setScanChoice(null)
+  }, [router, scanChoice])
+
+  const handleScanChooseDetail = useCallback(() => {
+    if (!scanChoice) return
+    const encodedQuery = encodeURIComponent(scanChoice.query)
+
+    if (scanChoice.source === "non-medical") {
       router.push(`/non-medical-assets?scan=${encodedQuery}`)
-      return
-    }
-
-    if (parsed.source === "medical") {
+    } else {
       router.push(`/medical-assets?scan=${encodedQuery}`)
-      return
     }
-
-    router.push(`/medical-assets?scan=${encodedQuery}`)
-  }, [router])
+    setScanChoice(null)
+  }, [router, scanChoice])
 
   const dateFormatter = useMemo(() => {
     return new Intl.DateTimeFormat("id-ID", {
@@ -968,7 +967,7 @@ export default function Topbar() {
                 }`} />
               ) : null}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(72vh,36rem)] w-[min(calc(100vw-1rem),22rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200/80 bg-slate-50/95 p-1 text-slate-950 shadow-xl shadow-slate-900/15 backdrop-blur-sm sm:w-[22rem]">
+            <DropdownMenuContent align="end" sideOffset={8} className="max-h-[min(72vh,36rem)] w-[min(calc(100vw-1rem),22rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200/80 bg-slate-50/95 p-1 text-slate-950 shadow-xl shadow-slate-900/15 backdrop-blur-sm sm:w-88">
               <div className="flex items-center justify-between gap-3 px-2 pt-1.5 pb-1">
                 <div className="min-w-0">
                   <DropdownMenuLabel className="p-0 text-[13px] font-bold tracking-tight text-slate-900">
@@ -1120,6 +1119,32 @@ export default function Topbar() {
         onOpenChange={setScanDialogOpen}
         onDetected={handleBarcodeDetected}
       />
+
+      <AlertDialog open={Boolean(scanChoice)} onOpenChange={(open) => !open && setScanChoice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aset terdeteksi</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pilih tindakan yang ingin dilakukan untuk aset hasil scan ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction onClick={handleScanChooseBorrow} className="w-full bg-teal-600 hover:bg-teal-700">
+              Pinjam
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleScanChooseUsage} className="w-full bg-blue-600 hover:bg-blue-700">
+              Gunakan
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleScanChooseDetail}
+              className="w-full border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              Lihat Detail
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full">Batal</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   )
 }

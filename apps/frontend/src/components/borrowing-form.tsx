@@ -1,5 +1,6 @@
 "use client"
 
+import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import InventoryPicker from "@/components/inventory-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,8 @@ import { getCurrentLocalDateTimeValue, toDateTimeLocalInputValue } from "@/utils
 import { getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { toLocalDateTimeString } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
-import { X } from "lucide-react";
+import { findMatchingAsset, parseScannedBarcode } from "@/utils/scanned-asset";
+import { ScanLine, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type BorrowingFormPayload = {
@@ -46,6 +48,7 @@ export default function BorrowingForm({
 }: BorrowingFormProps) {
   const [selectedAsset, setSelectedAsset] = useState<DetailInventoryItem | null>(null)
   const [hasActiveUsage, setHasActiveUsage] = useState(false)
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [formData, setFormData] = useState(() => ({
     borrowDate: defaultBorrowDate ?? "",
     dueDate: "",
@@ -82,6 +85,22 @@ export default function BorrowingForm({
     void checkUsage(selectedAsset)
     return () => { mounted = false }
   }, [selectedAsset])
+
+  const handleBarcodeDetected = (rawValue: string) => {
+    const parsed = parseScannedBarcode(rawValue)
+    if (!parsed.query) {
+      alert("Hasil scan kosong. Silakan coba lagi.")
+      return
+    }
+
+    const match = findMatchingAsset(assets, parsed.query, buildInventorySearchKey)
+    if (!match) {
+      alert("Aset dari barcode tidak ditemukan di daftar yang tersedia untuk dipinjam (mungkin sedang dipakai, dalam perbaikan, atau di luar akses Anda).")
+      return
+    }
+
+    setSelectedAsset(match)
+  }
 
   const handleBorrowDateFocus = () => {
     if (formData.borrowDate) {
@@ -136,10 +155,22 @@ export default function BorrowingForm({
   return (
     <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Tambah Data Peminjaman</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Daftar penambahan inventaris sudah menyediakan pemilihan tanggal pinjaman seperti jadwal pemeliharaan.
-        </CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg">Tambah Data Peminjaman</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Daftar penambahan inventaris sudah menyediakan pemilihan tanggal pinjaman seperti jadwal pemeliharaan.
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setScanDialogOpen(true)}
+            className="gap-1.5 bg-teal-600 hover:bg-teal-700"
+          >
+            <ScanLine className="h-4 w-4" />
+            Scan Barcode
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -227,6 +258,11 @@ export default function BorrowingForm({
           </div>
         </form>
       </CardContent>
+      <BarcodeScannerDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        onDetected={handleBarcodeDetected}
+      />
     </Card>
   )
 }

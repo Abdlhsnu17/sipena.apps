@@ -1,5 +1,6 @@
 "use client";
 
+import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import { Badge } from "@/components/ui/badge";
 import InventoryPicker from "@/components/inventory-picker";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
@@ -17,8 +18,9 @@ import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Eye, Pencil, Save, Search, Tag, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { findMatchingAsset, parseScannedBarcode } from "@/utils/scanned-asset";
+import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Eye, Pencil, Save, ScanLine, Search, Tag, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -403,9 +405,11 @@ const dispatchInventoryRefresh = () => {
 
 export default function AssetUsagePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const canDeleteAssetUsage = ["admin", "leader"].includes(normalizeRole(currentUser?.role));
   const [assets, setAssets] = useState<DetailInventoryItem[]>([]);
   const [logs, setLogs] = useState<AssetUsageLog[]>([]);
@@ -742,6 +746,44 @@ export default function AssetUsagePage() {
       usageContext: prev.usageContext === "emergency" ? "emergency" : nextUsageContext,
     }));
   };
+
+  const handleBarcodeDetected = (rawValue: string) => {
+    const parsed = parseScannedBarcode(rawValue);
+    if (!parsed.query) {
+      toast({ title: "Scan gagal", description: "Hasil scan kosong. Silakan coba lagi.", variant: "destructive" });
+      return;
+    }
+
+    const match = findMatchingAsset(selectableAssets, parsed.query, buildInventorySearchKey);
+    if (!match) {
+      toast({
+        title: "Alat tidak ditemukan",
+        description: "Aset dari barcode tidak ditemukan di daftar yang tersedia untuk digunakan (mungkin sedang dipakai, dalam perbaikan, atau di luar akses Anda).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleAssetChange(getInventoryKey(match));
+  };
+
+  useEffect(() => {
+    if (searchParams.get("openForm") !== "1") return;
+    const query = searchParams.get("q")?.trim();
+    if (!query || selectableAssets.length === 0) return;
+
+    const match = findMatchingAsset(selectableAssets, query, buildInventorySearchKey);
+    if (!match) {
+      toast({
+        title: "Alat tidak ditemukan",
+        description: "Aset dari hasil scan tidak ditemukan di daftar yang tersedia untuk digunakan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleAssetChange(getInventoryKey(match));
+  }, [searchParams, selectableAssets.length]);
 
   useEffect(() => {
     if (!selectedAsset) return;
@@ -1240,7 +1282,19 @@ export default function AssetUsagePage() {
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-sm font-medium">Alat</label>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-sm font-medium">Alat</label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setScanDialogOpen(true)}
+                        className="gap-1.5"
+                      >
+                        <ScanLine className="h-4 w-4" />
+                        Scan Barcode
+                      </Button>
+                    </div>
                     <div className="mt-1">
                       <InventoryPicker
                         assets={selectableAssets}
@@ -1880,6 +1934,12 @@ export default function AssetUsagePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BarcodeScannerDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        onDetected={handleBarcodeDetected}
+      />
 
       <div className="mt-8 pt-6 border-t border-border text-center">
         <p className="text-[13px] text-muted-foreground">
