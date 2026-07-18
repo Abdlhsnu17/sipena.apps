@@ -11,6 +11,26 @@ export interface AssetLabelData {
   sourceLabel?: string
 }
 
+export type AssetLabelSizeId = "small" | "medium" | "large"
+
+export interface AssetLabelSize {
+  id: AssetLabelSizeId
+  label: string
+  widthMm: number
+  heightMm: number
+  paddingMm: number
+  titleFontPt: number
+  tableFontPt: number
+  metaFontPt: number
+  rowPaddingMm: number
+}
+
+export const ASSET_LABEL_SIZES: AssetLabelSize[] = [
+  { id: "small", label: "Kecil", widthMm: 70, heightMm: 50, paddingMm: 2.5, titleFontPt: 7.5, tableFontPt: 5, metaFontPt: 4.5, rowPaddingMm: 0.4 },
+  { id: "medium", label: "Sedang", widthMm: 85, heightMm: 60, paddingMm: 3, titleFontPt: 9, tableFontPt: 6, metaFontPt: 5.5, rowPaddingMm: 0.5 },
+  { id: "large", label: "Besar", widthMm: 100, heightMm: 70, paddingMm: 3.5, titleFontPt: 10, tableFontPt: 7, metaFontPt: 6, rowPaddingMm: 0.6 },
+]
+
 const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, "&amp;")
@@ -40,7 +60,12 @@ const formatDateId = (value?: string): string => {
   return date.toLocaleDateString("id-ID")
 }
 
-export const buildManualAssetLabelHtml = (data: AssetLabelData, autoPrint: boolean) => {
+export const buildManualAssetLabelHtml = (
+  data: AssetLabelData,
+  autoPrint: boolean,
+  sizeId: AssetLabelSizeId = "medium",
+) => {
+  const size = ASSET_LABEL_SIZES.find((item) => item.id === sizeId) ?? ASSET_LABEL_SIZES[1]
   const rows = [
     { label: "No ID", value: data.noId },
     { label: "Kode Inventaris", value: data.assetCode },
@@ -69,13 +94,13 @@ export const buildManualAssetLabelHtml = (data: AssetLabelData, autoPrint: boole
     <title>Label Manual ${escapeHtml(data.noId || data.assetCode || data.assetName || "Aset")}</title>
     <style>
       * { box-sizing: border-box; }
-      @page { size: 100mm 80mm; margin: 0; }
+      @page { size: ${size.widthMm}mm ${size.heightMm}mm; margin: 0; }
       html, body { margin: 0; padding: 0; }
       body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
       .label-card {
-        width: 100mm;
-        min-height: 80mm;
-        padding: 4mm;
+        width: ${size.widthMm}mm;
+        height: ${size.heightMm}mm;
+        padding: ${size.paddingMm}mm;
         border: 0.3mm solid #111827;
       }
       .topline {
@@ -84,17 +109,17 @@ export const buildManualAssetLabelHtml = (data: AssetLabelData, autoPrint: boole
         justify-content: space-between;
         gap: 3mm;
         border-bottom: 0.25mm solid #111827;
-        padding-bottom: 1.5mm;
-        margin-bottom: 2mm;
+        padding-bottom: 1mm;
+        margin-bottom: 1.2mm;
       }
-      .brand { font-size: 7pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-      .type { border: 0.25mm solid #111827; padding: 0.8mm 1.5mm; font-size: 6pt; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
-      .title { margin: 0 0 2mm; font-size: 10pt; font-weight: 800; line-height: 1.2; word-break: break-word; }
-      table { width: 100%; border-collapse: collapse; font-size: 7pt; table-layout: fixed; }
-      td { border-bottom: 0.15mm solid #d1d5db; padding: 0.7mm 0; vertical-align: top; line-height: 1.25; }
-      td.label { width: 35%; color: #4b5563; text-transform: uppercase; font-size: 6pt; letter-spacing: 0.03em; }
+      .brand { font-size: ${size.metaFontPt + 1}pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+      .type { border: 0.25mm solid #111827; padding: 0.8mm 1.5mm; font-size: ${size.metaFontPt}pt; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+      .title { margin: 0 0 1.2mm; font-size: ${size.titleFontPt}pt; font-weight: 800; line-height: 1.15; word-break: break-word; }
+      table { width: 100%; border-collapse: collapse; font-size: ${size.tableFontPt}pt; table-layout: fixed; }
+      td { border-bottom: 0.15mm solid #d1d5db; padding: ${size.rowPaddingMm}mm 0; vertical-align: top; line-height: 1.2; }
+      td.label { width: 35%; color: #4b5563; text-transform: uppercase; font-size: ${size.metaFontPt}pt; letter-spacing: 0.03em; }
       td.value { font-weight: 700; word-break: break-word; }
-      .footer { margin-top: 2mm; display: flex; justify-content: space-between; gap: 2mm; color: #4b5563; font-size: 5.5pt; text-transform: uppercase; letter-spacing: 0.06em; }
+      .footer { margin-top: 1.2mm; display: flex; justify-content: space-between; gap: 2mm; color: #4b5563; font-size: ${Math.max(size.metaFontPt - 0.5, 4)}pt; text-transform: uppercase; letter-spacing: 0.06em; }
     </style>
   </head>
   <body>
@@ -125,23 +150,24 @@ export const buildManualAssetLabelHtml = (data: AssetLabelData, autoPrint: boole
 </html>`
 }
 
-export const downloadManualAssetLabel = (data: AssetLabelData) => {
-  const html = buildManualAssetLabelHtml(data, false)
+export const downloadManualAssetLabel = (data: AssetLabelData, sizeId: AssetLabelSizeId = "medium") => {
+  const size = ASSET_LABEL_SIZES.find((item) => item.id === sizeId) ?? ASSET_LABEL_SIZES[1]
+  const html = buildManualAssetLabelHtml(data, false, sizeId)
   const blob = new Blob([html], { type: "text/html;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
-  link.download = `LABEL-${sanitizeAssetFilename(data.noId || data.assetCode || data.assetName || "aset")}.html`
+  link.download = `LABEL-${sanitizeAssetFilename(data.noId || data.assetCode || data.assetName || "aset")}-${size.widthMm}x${size.heightMm}mm.html`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
-export const printManualAssetLabel = (data: AssetLabelData) => {
+export const printManualAssetLabel = (data: AssetLabelData, sizeId: AssetLabelSizeId = "medium") => {
   const printWindow = window.open("", "_blank", "width=720,height=640")
   if (!printWindow) return
 
-  printWindow.document.write(buildManualAssetLabelHtml(data, true))
+  printWindow.document.write(buildManualAssetLabelHtml(data, true, sizeId))
   printWindow.document.close()
 }

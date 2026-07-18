@@ -873,7 +873,7 @@ export default function NonMedicalAssetsPage() {
                                 usageSummaryText={formatUsageSummary(asset.usageSummary)}
                                 notes={asset.notes}
                                 onShowQr={() => setQrTarget({ noId, asset, roomId: room.id, location: room.roomName })}
-                                onDownloadLabel={() =>
+                                onDownloadLabel={(sizeId) =>
                                   downloadManualAssetLabel({
                                     noId,
                                     assetName: asset.inventoryName || asset.name,
@@ -885,9 +885,9 @@ export default function NonMedicalAssetsPage() {
                                     purchaseDate: asset.purchaseDate,
                                     nextMaintenance: asset.nextMaintenance,
                                     sourceLabel: "Non-Medis",
-                                  })
+                                  }, sizeId)
                                 }
-                                onPrintLabel={() =>
+                                onPrintLabel={(sizeId) =>
                                   printManualAssetLabel({
                                     noId,
                                     assetName: asset.inventoryName || asset.name,
@@ -899,7 +899,7 @@ export default function NonMedicalAssetsPage() {
                                     purchaseDate: asset.purchaseDate,
                                     nextMaintenance: asset.nextMaintenance,
                                     sourceLabel: "Non-Medis",
-                                  })
+                                  }, sizeId)
                                 }
                                 onViewHistory={() => {
                                   const params = new URLSearchParams({
