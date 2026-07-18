@@ -17,9 +17,10 @@ import {
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
-import { parseScannedBarcode, type ScanSourceType } from "@/utils/scanned-asset";
+import { parseScannedBarcode } from "@/utils/scanned-asset";
 
 import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
+import { buildBorrowUrl, buildDetailUrl, buildMaintenanceUrl, buildUsageUrl, type ScanChoice } from "@/components/scan-choice-dialog";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -176,7 +177,7 @@ export default function Topbar() {
   const [notificationQuery, setNotificationQuery] = useState("")
   const [notificationDensity, setNotificationDensity] = useState<"compact" | "normal">("compact")
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
-  const [scanChoice, setScanChoice] = useState<{ query: string; source: ScanSourceType } | null>(null)
+  const [scanChoice, setScanChoice] = useState<ScanChoice | null>(null)
   const isCompactNotification = notificationDensity === "compact"
 
   useEffect(() => {
@@ -257,25 +258,25 @@ export default function Topbar() {
 
   const handleScanChooseBorrow = useCallback(() => {
     if (!scanChoice) return
-    router.push(`/borrowing?q=${encodeURIComponent(scanChoice.query)}&openForm=1`)
+    router.push(buildBorrowUrl(scanChoice))
     setScanChoice(null)
   }, [router, scanChoice])
 
   const handleScanChooseUsage = useCallback(() => {
     if (!scanChoice) return
-    router.push(`/asset-usage?q=${encodeURIComponent(scanChoice.query)}&openForm=1`)
+    router.push(buildUsageUrl(scanChoice))
+    setScanChoice(null)
+  }, [router, scanChoice])
+
+  const handleScanChooseMaintenance = useCallback(() => {
+    if (!scanChoice) return
+    router.push(buildMaintenanceUrl(scanChoice))
     setScanChoice(null)
   }, [router, scanChoice])
 
   const handleScanChooseDetail = useCallback(() => {
     if (!scanChoice) return
-    const encodedQuery = encodeURIComponent(scanChoice.query)
-
-    if (scanChoice.source === "non-medical") {
-      router.push(`/non-medical-assets?scan=${encodedQuery}`)
-    } else {
-      router.push(`/medical-assets?scan=${encodedQuery}`)
-    }
+    router.push(buildDetailUrl(scanChoice))
     setScanChoice(null)
   }, [router, scanChoice])
 
@@ -1134,6 +1135,9 @@ export default function Topbar() {
             </AlertDialogAction>
             <AlertDialogAction onClick={handleScanChooseUsage} className="w-full bg-blue-600 hover:bg-blue-700">
               Gunakan
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleScanChooseMaintenance} className="w-full bg-amber-600 hover:bg-amber-700">
+              Pemeliharaan
             </AlertDialogAction>
             <AlertDialogAction
               onClick={handleScanChooseDetail}

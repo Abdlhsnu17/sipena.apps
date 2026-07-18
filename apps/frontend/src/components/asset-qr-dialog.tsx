@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { DetailSource } from "@/types/detail-inventory";
 import { sanitizeAssetFilename } from "@/utils/asset-label";
+import { buildScanTargetParams } from "@/utils/asset-scan-target";
 import { Download, Printer, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
@@ -12,6 +14,10 @@ export interface AssetQrDialogProps {
   onOpenChange: (open: boolean) => void
   /** Canonical human-readable identifier, e.g. "IMD-DTL-0001". */
   noId: string
+  /** Real database identifier of the detail row, used to build the scan target link. */
+  detailId: string
+  assetId: number
+  assetType: DetailSource
   assetName: string
   assetCode?: string
   serialNumber?: string
@@ -87,6 +93,9 @@ export function AssetQrDialog({
   open,
   onOpenChange,
   noId,
+  detailId,
+  assetId,
+  assetType,
   assetName,
   assetCode,
   serialNumber,
@@ -97,11 +106,11 @@ export function AssetQrDialog({
   const [dataUrl, setDataUrl] = useState<string>("")
   const [selectedSizeId, setSelectedSizeId] = useState<LabelSizeId>("medium")
 
-  const maintenanceRequestUrl =
+  const scanUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/maintenance?q=${encodeURIComponent(noId || assetCode || assetName)}&openForm=1`
+      ? `${window.location.origin}/scan?${buildScanTargetParams({ detailId, assetId, type: assetType }).toString()}`
       : ""
-  const qrValue = maintenanceRequestUrl || buildQrIdentityValue({ noId, assetName, assetCode, serialNumber, location, sourceLabel })
+  const qrValue = scanUrl || buildQrIdentityValue({ noId, assetName, assetCode, serialNumber, location, sourceLabel })
 
   useEffect(() => {
     if (!open) return

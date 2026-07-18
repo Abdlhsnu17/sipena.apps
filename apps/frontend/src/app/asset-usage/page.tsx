@@ -15,17 +15,18 @@ import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { locationBadgeClass } from "@/utils/api-mappers";
 import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils/detail-inventory";
 import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
+import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { findMatchingAsset, parseScannedBarcode } from "@/utils/scanned-asset";
-import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPlus, Download, Eye, Pencil, Save, ScanLine, Search, Tag, Trash2 } from "lucide-react";
+import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Download, Eye, Pencil, Plus, Save, ScanLine, Search, Tag, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -423,7 +424,7 @@ export default function AssetUsagePage() {
   const [selectedUsageColumns, setSelectedUsageColumns] = useState<UsageExportColumnKey[]>(
     usageExportColumnDefinitions.map((column) => column.key)
   );
-  const [isUsageFormMinimized, setIsUsageFormMinimized] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [isUsageHistoryMinimized, setIsUsageHistoryMinimized] = useState(false);
   const [expandedUsageHistoryIds, setExpandedUsageHistoryIds] = useState<number[]>([]);
   const [usageHistoryPage, setUsageHistoryPage] = useState(1);
@@ -749,12 +750,14 @@ export default function AssetUsagePage() {
 
   const handleBarcodeDetected = (rawValue: string) => {
     const parsed = parseScannedBarcode(rawValue);
-    if (!parsed.query) {
+    if (!parsed.query && !parsed.target) {
       toast({ title: "Scan gagal", description: "Hasil scan kosong. Silakan coba lagi.", variant: "destructive" });
       return;
     }
 
-    const match = findMatchingAsset(selectableAssets, parsed.query, buildInventorySearchKey);
+    const match = findAssetByScanTarget(selectableAssets, parsed.target, parsed.query, (assets, query) =>
+      findMatchingAsset(assets, query, buildInventorySearchKey),
+    );
     if (!match) {
       toast({
         title: "Alat tidak ditemukan",
@@ -769,10 +772,15 @@ export default function AssetUsagePage() {
 
   useEffect(() => {
     if (searchParams.get("openForm") !== "1") return;
+    setShowForm(true);
+    const target = parseScanTargetFromSearchParams(searchParams);
     const query = searchParams.get("q")?.trim();
-    if (!query || selectableAssets.length === 0) return;
+    if (!target && !query) return;
+    if (selectableAssets.length === 0) return;
 
-    const match = findMatchingAsset(selectableAssets, query, buildInventorySearchKey);
+    const match = findAssetByScanTarget(selectableAssets, target, query, (assets, q) =>
+      findMatchingAsset(assets, q, buildInventorySearchKey),
+    );
     if (!match) {
       toast({
         title: "Alat tidak ditemukan",
@@ -839,7 +847,8 @@ export default function AssetUsagePage() {
 
       if (response.success) {
         toast({ title: "Penggunaan alat dicatat", description: "Frekuensi pemakaian alat berhasil ditambahkan." });
-        setForm((prev) => ({ ...initialForm, inventoryKey: prev.inventoryKey, roomName: prev.roomName, startedAt: toDateTimeLocalInputValue() }));
+        setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+        setShowForm(false);
         await loadData();
         dispatchInventoryRefresh();
       } else {
@@ -1174,13 +1183,26 @@ export default function AssetUsagePage() {
   return (
     <div className="min-h-full w-full space-y-5">
       <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-4 shadow-2xl backdrop-blur-sm dark:border-teal-800/60 dark:bg-slate-900/70 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
-            <ClipboardList className="h-5 w-5 text-white" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-5">
+            <div className="rounded-lg bg-linear-to-br from-teal-500 to-teal-700 p-2.5">
+              <ClipboardList className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-[18px] font-bold text-foreground">Penggunaan</h1>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[18px] font-bold text-foreground">Penggunaan</h1>
-          </div>
+          <Button
+            size="sm"
+            className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
+            onClick={() => {
+              setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+              setShowForm(true);
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Tambah Penggunaan
+          </Button>
         </div>
       </section>
 
@@ -1231,37 +1253,50 @@ export default function AssetUsagePage() {
         </Card>
 
       <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <CardTitle className="flex items-center gap-2 text-base"><ClipboardPlus className="h-4 w-4" /> Catat Pemakaian</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsUsageFormMinimized((prev) => !prev)}
-                className="w-full rounded-2xl px-3 sm:w-auto"
-              >
-                {isUsageFormMinimized ? (
-                  <>
-                    <ChevronDown className="mr-2 h-5 w-5" />
-                    Tampilkan
-                  </>
-                ) : (
-                  <>
-                    <ChevronUp className="mr-2 h-5 w-5" />
-                    Sembunyikan
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-              {isUsageFormMinimized ? (
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-4 text-center text-sm text-blue-900 dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-200">
-                Section catat pemakaian disembunyikan. Tekan tombol tampilkan untuk membuka kembali detail.
-              </div>
-            ) : (
-              <>
+        <Dialog
+          open={showForm}
+          onOpenChange={(open) => {
+            if (open) return;
+            setShowForm(false);
+            setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+          }}
+        >
+          {showForm && (
+            <DialogContent
+              showCloseButton={false}
+              className="max-h-[90dvh] w-[calc(100vw-1rem)] gap-0 overflow-hidden rounded-2xl p-0 sm:w-full sm:max-w-2xl"
+            >
+              <DialogTitle className="sr-only">Tambah Penggunaan</DialogTitle>
+              <DialogDescription className="sr-only">
+                Formulir penggunaan dengan area gulir mandiri.
+              </DialogDescription>
+              <div className="flex max-h-[90dvh] flex-col overflow-hidden text-sm">
+                <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
+                  <h2 className="text-base font-semibold text-foreground">Tambah Penggunaan</h2>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setScanDialogOpen(true)}
+                      className="gap-1.5 bg-teal-600 hover:bg-teal-700"
+                    >
+                      <ScanLine className="h-4 w-4" />
+                      Scan Barcode
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label="Tutup formulir penggunaan"
+                      onClick={() => {
+                        setShowForm(false);
+                        setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+                      }}
+                      className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="overflow-y-auto px-4 py-4 sm:px-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium">Jenis Pemakaian</label>
@@ -1282,19 +1317,7 @@ export default function AssetUsagePage() {
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="text-sm font-medium">Alat</label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setScanDialogOpen(true)}
-                        className="gap-1.5"
-                      >
-                        <ScanLine className="h-4 w-4" />
-                        Scan Barcode
-                      </Button>
-                    </div>
+                    <label className="text-sm font-medium">Alat</label>
                     <div className="mt-1">
                       <InventoryPicker
                         assets={selectableAssets}
@@ -1363,19 +1386,31 @@ export default function AssetUsagePage() {
                   </div>
                 )}
 
-                <div className="mt-3 flex justify-end">
+                </div>
+                <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/70 px-4 py-3 sm:flex-row sm:justify-end sm:px-5">
                   <Button
-                    className="w-full md:w-48 bg-teal-600 hover:bg-teal-700 text-white"
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowForm(false);
+                      setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+                    }}
+                    disabled={isSaving}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    className="bg-teal-600 text-white hover:bg-teal-700 sm:min-w-48"
                     onClick={handleSubmit}
                     disabled={isSaving || isLoading || (overdueEmergencyWarning !== null && !overdueEmergencyWarning.isAllowed)}
                   >
                     <Save className="mr-2 h-4 w-4" /> {isSaving ? "Menyimpan..." : "Simpan Penggunaan"}
                   </Button>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </DialogContent>
+          )}
+        </Dialog>
 
         <Card className="rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/90 dark:bg-slate-900/60 shadow-xl">
           <CardHeader className="space-y-3">
@@ -1934,6 +1969,22 @@ export default function AssetUsagePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {!showForm && (
+        <div className="fab-safe-area fixed z-40 xl:hidden">
+          <Button
+            size="sm"
+            className="h-11 rounded-full bg-teal-600 px-4 text-white shadow-xl hover:bg-teal-700"
+            onClick={() => {
+              setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+              setShowForm(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Penggunaan
+          </Button>
+        </div>
+      )}
 
       <BarcodeScannerDialog
         open={scanDialogOpen}

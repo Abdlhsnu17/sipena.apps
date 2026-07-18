@@ -54,13 +54,16 @@ export default function ClientLayout({
   const isAuthPage = isLoginPage || isRegisterPage || isResetPasswordPage
   const showLayout = !isAuthPage
 
+  const isScanPage = pathname === "/scan"
   const isAllowedPath = canAccessRoute(user?.role, pathname)
-  const isAllowedByDatabase = allowedPaths
-    ? allowedPaths.some((path) => {
-        if (path === "/") return pathname === "/"
-        return pathname === path || pathname.startsWith(`${path}/`)
-      })
-    : isAllowedPath
+  const isAllowedByDatabase = isScanPage
+    ? true
+    : allowedPaths
+      ? allowedPaths.some((path) => {
+          if (path === "/") return pathname === "/"
+          return pathname === path || pathname.startsWith(`${path}/`)
+        })
+      : isAllowedPath
 
   useEffect(() => {
     if (!loading && showLayout && !user) {

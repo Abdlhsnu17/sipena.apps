@@ -32,6 +32,7 @@ import {
     parseServerDateTimeValue,
     toLocalDateTimeString,
 } from "@/utils/format";
+import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
@@ -1979,12 +1980,14 @@ export default function BorrowingPage() {
 
   const handleBarcodeDetected = (rawValue: string) => {
     const parsed = parseScannedBarcode(rawValue)
-    if (!parsed.query) {
+    if (!parsed.query && !parsed.target) {
       toast({ title: "Scan gagal", description: "Hasil scan kosong. Silakan coba lagi.", variant: "destructive" })
       return
     }
 
-    const match = findMatchingAsset(borrowableAssets, parsed.query, buildInventorySearchKey)
+    const match = findAssetByScanTarget(borrowableAssets, parsed.target, parsed.query, (assets, query) =>
+      findMatchingAsset(assets, query, buildInventorySearchKey),
+    )
     if (!match) {
       toast({
         title: "Aset tidak ditemukan",
@@ -1999,10 +2002,14 @@ export default function BorrowingPage() {
 
   useEffect(() => {
     if (searchParams.get("openForm") !== "1") return
+    const target = parseScanTargetFromSearchParams(searchParams)
     const query = searchParams.get("q")?.trim()
-    if (!query || borrowableAssets.length === 0) return
+    if (!target && !query) return
+    if (borrowableAssets.length === 0) return
 
-    const match = findMatchingAsset(borrowableAssets, query, buildInventorySearchKey)
+    const match = findAssetByScanTarget(borrowableAssets, target, query, (assets, q) =>
+      findMatchingAsset(assets, q, buildInventorySearchKey),
+    )
     if (!match) {
       toast({
         title: "Aset tidak ditemukan",

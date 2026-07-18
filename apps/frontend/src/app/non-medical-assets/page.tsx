@@ -12,6 +12,7 @@ import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import type { User } from "@/types/auth-types";
 import { buildSpecifications, deriveAssetCondition, deriveAssetStatus, getSpecificationDetails } from "@/utils/api-mappers";
 import { downloadManualAssetLabel, printManualAssetLabel } from "@/utils/asset-label";
+import { parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
@@ -59,20 +60,46 @@ export default function NonMedicalAssetsPage() {
   const [editingAsset, setEditingAsset] = useState<NonMedicalAsset | null>(null)
   const [editingRoom, setEditingRoom] = useState<NonMedicalRoom | null>(null)
   const [disposalTarget, setDisposalTarget] = useState<{ roomId: string; asset: NonMedicalAsset } | null>(null)
-  const [qrTarget, setQrTarget] = useState<{ noId: string; asset: NonMedicalAsset; location?: string } | null>(null)
+  const [qrTarget, setQrTarget] = useState<{ noId: string; asset: NonMedicalAsset; roomId: string; location?: string } | null>(null)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [selectedRoomId, setSelectedRoomId] = useState("")
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("Semua")
   const [isResettingInventory, setIsResettingInventory] = useState(false)
+  const [highlightedDetailId, setHighlightedDetailId] = useState<string | null>(null)
+  const detailCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   useEffect(() => {
-    const scannedQuery = searchParams.get("scan")?.trim()
-    if (!scannedQuery) return
+    if (rooms.length === 0) return
 
-    setSearchTerm(scannedQuery)
-  }, [searchParams])
+    const target = parseScanTargetFromSearchParams(searchParams)
+    if (target) {
+      const owningRoom = rooms.find((room) => room.assets.some((asset) => asset.id === target.detailId))
+      if (owningRoom) {
+        setExpandedRooms((prev) => new Set(prev).add(owningRoom.id))
+        setHighlightedDetailId(target.detailId)
+        return
+      }
+    }
+
+    const scannedQuery = searchParams.get("scan")?.trim()
+    if (scannedQuery) setSearchTerm(scannedQuery)
+  }, [searchParams, rooms])
+
+  useEffect(() => {
+    if (!highlightedDetailId) return
+    const node = detailCardRefs.current.get(highlightedDetailId)
+    if (!node) return
+    const frame = requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+    const timeout = setTimeout(() => setHighlightedDetailId(null), 3000)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(timeout)
+    }
+  }, [highlightedDetailId])
 
   const categoryOptions = ["Non Medis"]
   const defaultCategory = "Non Medis"
@@ -822,6 +849,11 @@ export default function NonMedicalAssetsPage() {
                             return (
                               <InventoryDetailCard
                                 key={assetKey}
+                                cardRef={(el) => {
+                                  if (el) detailCardRefs.current.set(asset.id, el)
+                                  else detailCardRefs.current.delete(asset.id)
+                                }}
+                                highlighted={asset.id === highlightedDetailId}
                                 title={asset.inventoryName || asset.name}
                                 noId={noId}
                                 statusLabel={statusLabel}
@@ -840,7 +872,7 @@ export default function NonMedicalAssetsPage() {
                                 )}
                                 usageSummaryText={formatUsageSummary(asset.usageSummary)}
                                 notes={asset.notes}
-                                onShowQr={() => setQrTarget({ noId, asset, location: room.roomName })}
+                                onShowQr={() => setQrTarget({ noId, asset, roomId: room.id, location: room.roomName })}
                                 onDownloadLabel={() =>
                                   downloadManualAssetLabel({
                                     noId,
@@ -939,6 +971,9 @@ export default function NonMedicalAssetsPage() {
           open={true}
           onOpenChange={(open) => { if (!open) setQrTarget(null) }}
           noId={qrTarget.noId}
+          detailId={qrTarget.asset.id}
+          assetId={Number(qrTarget.roomId)}
+          assetType="non_medis"
           assetName={qrTarget.asset.inventoryName || qrTarget.asset.name}
           assetCode={qrTarget.asset.assetCode}
           serialNumber={qrTarget.asset.serialNumber}

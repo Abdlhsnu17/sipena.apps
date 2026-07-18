@@ -57,6 +57,7 @@ import { maintenanceService, type Maintenance } from "@/services/maintenance.ser
 import type { User } from "@/types/auth-types";
 import type { DetailInventoryItem } from "@/types/detail-inventory";
 import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, locationBadgeClass, maintenanceStatusLabel, maintenanceTypeBadgeClass, maintenanceTypeLabel } from "@/utils/api-mappers";
+import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
@@ -345,19 +346,22 @@ export default function MaintenancePage() {
     if (searchParams.get("openForm") !== "1") return
     if (!canCreateMaintenanceRole(currentUser?.role)) return
     if (assets.length === 0) return
+    const target = parseScanTargetFromSearchParams(searchParams)
     const query = (searchParams.get("q") || "").trim().toLowerCase()
-    if (!query) return
-    const matchedAsset = assets.find((asset) => {
-      const candidates = [
-        asset.detailId,
-        asset.detailCode,
-        asset.assetCode,
-        asset.detailInventoryName,
-        asset.detailName,
-        asset.assetName,
-      ].filter(Boolean).map((value) => String(value).toLowerCase())
-      return candidates.some((value) => value.includes(query) || query.includes(value))
-    })
+    if (!target && !query) return
+    const matchedAsset = findAssetByScanTarget(assets, target, query, (candidateAssets, fuzzyQuery) =>
+      candidateAssets.find((asset) => {
+        const candidates = [
+          asset.detailId,
+          asset.detailCode,
+          asset.assetCode,
+          asset.detailInventoryName,
+          asset.detailName,
+          asset.assetName,
+        ].filter(Boolean).map((value) => String(value).toLowerCase())
+        return candidates.some((value) => value.includes(fuzzyQuery) || fuzzyQuery.includes(value))
+      }),
+    )
     if (!matchedAsset) return
     setPrefillAsset(matchedAsset)
     setPrefillNote("Pengajuan dari QR inventaris.")

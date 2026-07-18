@@ -57,6 +57,8 @@ type InventoryDetailCardProps = {
   onEdit?: () => void
   onDelete?: () => void
   deleteLabel?: string
+  highlighted?: boolean
+  cardRef?: (el: HTMLDivElement | null) => void
 }
 
 const statusToneClassName = (statusLabel: string) => {
@@ -172,6 +174,8 @@ export function InventoryDetailCard({
   onEdit,
   onDelete,
   deleteLabel = "Hapus",
+  highlighted = false,
+  cardRef,
 }: InventoryDetailCardProps) {
   const [labelDialogOpen, setLabelDialogOpen] = useState(false)
   const actions: ActionConfig[] = [
@@ -206,7 +210,13 @@ export function InventoryDetailCard({
 
   return (
     <>
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.35)]">
+      <div
+        ref={cardRef}
+        className={cn(
+          "flex h-full flex-col rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.35)] transition",
+          highlighted && "border-teal-500 ring-2 ring-teal-400 ring-offset-2",
+        )}
+      >
         <div className="grid gap-4 border-b border-slate-200 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0">
             <h5 className="text-lg font-semibold leading-tight tracking-tight text-slate-950 sm:text-xl">
