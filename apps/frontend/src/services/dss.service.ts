@@ -68,9 +68,52 @@ export interface DssRankingResponse {
   data: DssRankingResult;
 }
 
+export interface DssWeightPreference {
+  userId: number;
+  weights: Record<string, number>;
+  assetType: string;
+  updatedAt: string;
+}
+
+export interface DssWeightPreferenceResponse {
+  success: boolean;
+  message: string;
+  data: DssWeightPreference | null;
+}
+
+export interface DssRankingHistoryEntry {
+  id: number;
+  userId: number | null;
+  assetType: string;
+  weights: Record<string, number>;
+  criteria: DssCriterion[];
+  totalAlternatives: number;
+  topRankings: Array<{ rank: number; detailName: string; detailCode: string; preferenceScore: number; recommendation: string }>;
+  generatedAt: string;
+  createdAt: string;
+}
+
+export interface DssRankingHistoryResponse {
+  success: boolean;
+  message: string;
+  data: DssRankingHistoryEntry[];
+}
+
 class DssService {
   async getRanking(data: DssRankingRequest = {}): Promise<DssRankingResponse> {
     return apiService.post<DssRankingResponse>('/dss/ranking', data);
+  }
+
+  async getWeightPreference(): Promise<DssWeightPreferenceResponse> {
+    return apiService.get<DssWeightPreferenceResponse>('/dss/weights');
+  }
+
+  async saveWeightPreference(weights: Record<string, number>, assetType: DssAssetType = 'all'): Promise<DssWeightPreferenceResponse> {
+    return apiService.put<DssWeightPreferenceResponse>('/dss/weights', { weights, assetType });
+  }
+
+  async getRankingHistory(limit = 20): Promise<DssRankingHistoryResponse> {
+    return apiService.get<DssRankingHistoryResponse>(`/dss/history?limit=${limit}`);
   }
 }
 

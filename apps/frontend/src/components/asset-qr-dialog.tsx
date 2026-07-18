@@ -3,9 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { DetailSource } from "@/types/detail-inventory";
-import { sanitizeAssetFilename } from "@/utils/asset-label";
+import { ASSET_LABEL_SIZES, sanitizeAssetFilename, type AssetLabelSizeId } from "@/utils/asset-label";
 import { buildScanTargetParams } from "@/utils/asset-scan-target";
-import { Check, CheckCircle2, Download, MapPin, Printer, QrCode, X } from "lucide-react";
+import { Check, CheckCircle2, Download, Printer, QrCode, X } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 
@@ -38,35 +38,40 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 
-type LabelSizeId = "small" | "medium" | "large"
 type QrAction = "download" | "print"
 
-interface LabelSize {
-  id: LabelSizeId
-  /** Short display name shown on the selector. */
-  label: string
-  /** Physical label dimensions in millimetres (matches the printed page). */
-  widthMm: number
-  heightMm: number
+type QrLabelSize = (typeof ASSET_LABEL_SIZES)[number] & {
   qrMm: number
-  nameFontPt: number
-  tableFontPt: number
-  paddingMm: number
-  /** Small labels place the QR beside the info to fit the limited height. */
-  layout: "vertical" | "horizontal"
-  /** Small labels only show the most essential rows so nothing overflows. */
-  maxRows: number
 }
 
-const LABEL_SIZES: LabelSize[] = [
-  { id: "small", label: "Kecil", widthMm: 40, heightMm: 30, qrMm: 20, nameFontPt: 5, tableFontPt: 4.5, paddingMm: 1.5, layout: "horizontal", maxRows: 3 },
-  { id: "medium", label: "Sedang", widthMm: 50, heightMm: 50, qrMm: 28, nameFontPt: 8, tableFontPt: 6, paddingMm: 3, layout: "vertical", maxRows: 5 },
-  { id: "large", label: "Besar", widthMm: 70, heightMm: 50, qrMm: 32, nameFontPt: 10, tableFontPt: 7.5, paddingMm: 4, layout: "vertical", maxRows: 5 },
-]
+const QR_SIZE_MM: Record<AssetLabelSizeId, number> = {
+  small: 38,
+  medium: 46,
+  large: 54,
+}
 
-const sizeDimensionLabel = (size: LabelSize): string => `${size.widthMm}×${size.heightMm} mm`
+/** QR labels share the exact physical sizes used by the inventory labels. */
+const LABEL_SIZES: QrLabelSize[] = ASSET_LABEL_SIZES.map((size) => ({
+  ...size,
+  qrMm: QR_SIZE_MM[size.id],
+}))
+
+const sizeDimensionLabel = (size: QrLabelSize): string => `${size.widthMm}×${size.heightMm} mm`
 
 const hasValue = (value?: string): value is string => Boolean(value?.trim() && value.trim() !== "-")
+
+function IdentityPreviewRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2 border-b border-slate-100 py-1.5 text-xs last:border-b-0 dark:border-slate-800">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400">
+        {label}
+      </span>
+      <span className="min-w-0 break-words font-medium leading-4 text-slate-950 dark:text-slate-100">
+        {hasValue(value) ? value : "-"}
+      </span>
+    </div>
+  )
+}
 
 const buildQrIdentityValue = ({
   noId,
@@ -105,7 +110,7 @@ export function AssetQrDialog({
 }: AssetQrDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [dataUrl, setDataUrl] = useState<string>("")
-  const [selectedSizeId, setSelectedSizeId] = useState<LabelSizeId>("medium")
+  const [selectedSizeId, setSelectedSizeId] = useState<AssetLabelSizeId>("medium")
   const [activeAction, setActiveAction] = useState<QrAction | null>(null)
 
   const scanUrl =
@@ -235,17 +240,17 @@ export function AssetQrDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 shadow-2xl shadow-slate-950/15 sm:max-w-[420px] dark:border-slate-800 dark:shadow-black/30">
-        <DialogHeader className="border-b border-slate-100 px-5 py-4 pr-14 text-left">
-          <div className="flex items-start gap-3.5">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-300 dark:ring-teal-400/15">
-              <QrCode className="size-5" />
+      <DialogContent className="max-h-[calc(100vh-2rem)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 shadow-2xl shadow-slate-950/15 sm:max-w-[440px] dark:border-slate-800 dark:shadow-black/30">
+        <DialogHeader className="border-b border-slate-100 px-4 py-3 pr-12 text-left dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 ring-1 ring-teal-100 dark:bg-teal-400/10 dark:text-teal-300 dark:ring-teal-400/15">
+              <QrCode className="size-4" />
             </div>
-            <div className="min-w-0 space-y-1.5">
-              <DialogTitle className="text-xl leading-6 font-bold tracking-tight text-slate-950 dark:text-slate-50">
+            <div className="min-w-0 space-y-0.5">
+              <DialogTitle className="text-lg leading-5 font-bold tracking-tight text-slate-950 dark:text-slate-50">
                 Kode QR Aset
               </DialogTitle>
-              <DialogDescription className="leading-5">
+              <DialogDescription className="text-xs leading-4">
                 Pindai untuk membuka detail atau simpan untuk dicetak.
               </DialogDescription>
             </div>
@@ -253,42 +258,39 @@ export function AssetQrDialog({
         </DialogHeader>
 
         <div className="space-y-4 px-5 py-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-900/60">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold tracking-wide text-slate-950 uppercase dark:text-slate-50">
-                {assetName || "Aset SIPENA"}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-semibold text-teal-700 dark:text-teal-300">{noId || assetCode || "Tanpa ID"}</span>
-                {location && (
-                  <>
-                    <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">•</span>
-                    <span className="inline-flex min-w-0 items-center gap-1">
-                      <MapPin className="size-3" aria-hidden="true" />
-                      <span className="truncate">{location}</span>
-                    </span>
-                  </>
-                )}
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  SIPENA - Identitas Inventaris
+                </p>
+                <p className="mt-1 text-base font-bold leading-tight text-slate-950 dark:text-slate-50">
+                  {assetName || "Aset SIPENA"}
+                </p>
               </div>
-            </div>
-            {sourceLabel && (
-              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold tracking-wider text-slate-600 uppercase shadow-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                {sourceLabel}
+              <span className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold uppercase text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                {sourceLabel || "Inventaris"}
               </span>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center rounded-3xl bg-slate-50 px-3 py-3.5 ring-1 ring-slate-100 dark:bg-slate-900/50 dark:ring-slate-800">
-            <div className="rounded-2xl bg-white p-3 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80">
-              <canvas
-                ref={canvasRef}
-                className="size-[236px] sm:size-[260px]"
-                aria-label={`Kode QR untuk ${assetName || noId}`}
-              />
             </div>
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/15">
-              <CheckCircle2 className="size-3.5" aria-hidden="true" />
-              Siap dipindai
+            <div>
+              <IdentityPreviewRow label="No. ID" value={noId} />
+              <IdentityPreviewRow label="Kode" value={assetCode} />
+              <IdentityPreviewRow label="Nomor Seri" value={serialNumber} />
+              <IdentityPreviewRow label="Lokasi" value={location} />
+            </div>
+
+            <div className="mt-3 flex flex-col items-center border-t border-slate-200 pt-3 dark:border-slate-800">
+              <div className="rounded-2xl bg-white p-3 shadow-[0_14px_40px_-20px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80">
+                <canvas
+                  ref={canvasRef}
+                  className="size-[236px] sm:size-[260px]"
+                  aria-label={`Kode QR untuk ${assetName || noId}`}
+                />
+              </div>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/15">
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                Siap dipindai
+              </div>
             </div>
           </div>
 

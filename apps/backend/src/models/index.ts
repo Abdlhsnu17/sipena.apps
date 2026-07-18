@@ -3,6 +3,7 @@ export * from './asset_disposal.model';
 export * from './asset_usage.model';
 export * from './borrowing.model';
 export * from './deletion_request.model';
+export * from './dss.model';
 export * from './maintenance.model';
 export * from './maintenance_history.model';
 export * from './maintenance_schedule.model';

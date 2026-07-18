@@ -5,6 +5,11 @@ import { createScopedLogger } from '../utils/logger';
 
 const logger = createScopedLogger('controller:dss');
 
+const getActorUserId = (req: Request): number | null => {
+  const parsed = Number(req.user?.id);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
 export class DssController {
   getRanking = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -14,10 +19,11 @@ export class DssController {
         return;
       }
 
+      const assetType = req.body?.assetType || 'all';
       const result = await dssService.rankAssets({
         weights: req.body?.weights,
         pairwiseMatrix: req.body?.pairwiseMatrix,
-        assetType: req.body?.assetType || 'all',
+        assetType,
         limit: req.body?.limit,
       });
 
@@ -26,12 +32,70 @@ export class DssController {
         message: 'DSS ranking generated successfully',
         data: result,
       });
+
+      const userId = getActorUserId(req);
+      if (result.totalAlternatives > 0) {
+        dssService.saveRankingHistory(userId, assetType, result).catch((error) => {
+          logger.warn('Failed to persist DSS ranking history', { error });
+        });
+      }
     } catch (error) {
       logger.error('DSS ranking error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
       });
+    }
+  };
+
+  getWeightPreference = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = getActorUserId(req);
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+      const preference = await dssService.getWeightPreference(userId);
+      res.json({ success: true, message: 'DSS weight preference fetched', data: preference });
+    } catch (error) {
+      logger.error('DSS weight preference fetch error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  saveWeightPreference = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
+        return;
+      }
+      const userId = getActorUserId(req);
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+      const preference = await dssService.saveWeightPreference(userId, req.body.weights, req.body.assetType || 'all');
+      res.json({ success: true, message: 'DSS weight preference saved', data: preference });
+    } catch (error) {
+      logger.error('DSS weight preference save error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  getRankingHistory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = getActorUserId(req);
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+      const limit = Number(req.query.limit) || 20;
+      const history = await dssService.listRankingHistory(userId, limit);
+      res.json({ success: true, message: 'DSS ranking history fetched', data: history });
+    } catch (error) {
+      logger.error('DSS ranking history fetch error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
 

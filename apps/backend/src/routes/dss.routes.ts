@@ -18,4 +18,18 @@ router.post(
   dssController.getRanking
 );
 
+router.get('/weights', dssController.getWeightPreference);
+
+router.put(
+  '/weights',
+  [
+    body('weights').isObject(),
+    body('weights.*').isFloat({ min: 0 }),
+    body('assetType').optional().isIn(['all', 'medical', 'non_medical']),
+  ],
+  dssController.saveWeightPreference
+);
+
+router.get('/history', dssController.getRankingHistory);
+
 export default router;
