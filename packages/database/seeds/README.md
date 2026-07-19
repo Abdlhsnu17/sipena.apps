@@ -1,30 +1,54 @@
-# Database Seeds
+# Seed Database SIPENA
 
-This folder stores the local schema seed for SIPENA. Database migrations are stored one level above in `packages/database/migrations`.
+Folder ini menyimpan `schema.sql`, yaitu struktur dasar MySQL untuk instalasi SIPENA baru. File ini tidak berisi akun, aset, transaksi, atau data contoh. Perubahan skema setelah baseline seed berada di `../migrations` dan tetap harus dijalankan berurutan.
 
-- `schema.sql`: local schema dump for `sipena_db_local`
-- `../migrations/`: migration scripts for schema changes after the seed was created
+Dokumentasi database secara keseluruhan tersedia di [`../README.md`](../README.md).
 
-## Local MySQL + phpMyAdmin
+## MySQL dan phpMyAdmin melalui Docker
 
-The canonical seed schema for `sipena_db_local` lives in `packages/database/seeds/schema.sql`. To use it with a local MySQL + phpMyAdmin stack:
+Dari root repository jalankan:
 
-1. From the repo root run `docker compose up -d mysql phpmyadmin`.
-   * The compose file will start MySQL (`sipena_db_local`) on the private Docker network and phpMyAdmin on `localhost:8081`. The default credentials are `root` / `root_changeme`.
-   * If you plan to connect the backend container to this MySQL container, use `DB_HOST=mysql`, `DB_PORT=3306`, `DB_USER=sipena_app`, and `DB_PASSWORD=changeme`.
-2. Open `http://localhost:8081`, log in as `root` and import `packages/database/seeds/schema.sql` into the `sipena_db_local` database.
-   * `schema.sql` only contains table structure, no sample rows. The first time the backend starts against an empty `users` table, it bootstraps exactly one admin account from `INITIAL_ADMIN_NIP` / `INITIAL_ADMIN_NAME` / `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` / `INITIAL_ADMIN_PHONE` in `apps/backend/.env` (see `ensureInitialAdminAccount` in `apps/backend/src/utils/schema.ts`). Set all five before starting the backend, or no admin will exist to log in with.
-3. Run migration scripts from `packages/database/migrations` after pulling backend changes that add new columns.
+```bash
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d mysql phpmyadmin
+```
 
-Current migrations include:
+Pada konfigurasi development bawaan:
 
-- `20260427_add_borrowing_sanctions.sql`
-- `20260517_add_borrowing_extension_columns.sql`
-- `20260517_add_user_security_columns.sql`
-- `20260523_add_asset_usage_logs.sql`
-- `20260523_add_user_sub_work_unit.sql`
-- `20260524_add_asset_usage_no.sql`
-- `20260524_link_asset_usage_borrowings.sql`
-- `20260528_add_user_access_control_columns.sql`
+- phpMyAdmin: `http://localhost:8081`
+- database: `sipena_db_local`
+- login phpMyAdmin: `root` / `root_changeme`
+- koneksi dari container backend: `mysql:3306`, user `sipena_app`, password `changeme`
 
-Once the schema is imported, backend containers can use `mysql:3306` / `sipena_db_local`. For host-side CLI access, run commands through the container with `docker compose exec mysql ...` or add a local-only compose override that publishes a free host port.
+Nilai bawaan hanya untuk mesin lokal. Gunakan `--env-file docker/.env` dengan kredensial kuat untuk environment bersama dan production.
+
+Saat volume `mysql_data` masih kosong, MySQL otomatis menjalankan `schema.sql` karena file tersebut dipasang ke `/docker-entrypoint-initdb.d/01-schema.sql`. Jika volume sudah pernah dibuat, perubahan seed tidak diterapkan ulang. Jalankan migration runner untuk database yang sudah ada:
+
+```bash
+npm run migrate --workspace=inventory-backend
+```
+
+## Impor Manual
+
+Untuk MySQL yang tidak dibuat melalui Compose:
+
+1. Buat database dengan charset `utf8mb4`.
+2. Impor `packages/database/seeds/schema.sql` ke database tersebut.
+3. Isi konfigurasi `DB_*` di `apps/backend/.env`.
+4. Jalankan seluruh migrasi melalui migration runner.
+5. Isi `INITIAL_ADMIN_NIP`, `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, dan `INITIAL_ADMIN_PHONE` sebelum startup backend pertama.
+
+Backend membuat tepat satu admin awal hanya bila seluruh variabel tersebut terisi dan tabel `users` belum memiliki admin. Endpoint register publik tidak dapat membuat role admin.
+
+## Migrasi Aktif
+
+Migration runner membaca semua file `.sql` di `packages/database/migrations` berdasarkan urutan nama dan mencatat hasilnya di tabel `schema_migrations`. Daftar saat ini mencakup perubahan berikut:
+
+- sanksi, perpanjangan peminjaman, dan keamanan user;
+- log/sumber/audit penggunaan aset dan hubungan dengan peminjaman;
+- sub-unit kerja, kontrol akses user/menu, dan notifikasi;
+- deletion request, soft delete, dan disposal aset;
+- workflow pemeliharaan, pilihan detail aset, lampiran, approval, reminder, recurrence, serta verifikasi;
+- penautan Pemilik/PJ peminjaman ke akun aktif;
+- preferensi bobot, riwayat ranking, dan matriks AHP pada modul SPK.
+
+Jangan mengedit migration yang sudah diterapkan untuk mengubah perilaku database. Buat file migration baru agar perubahan dapat diaudit dan diterapkan konsisten pada seluruh environment.

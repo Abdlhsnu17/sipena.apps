@@ -4,7 +4,7 @@ Suite ini menguji alur bisnis inti dan memastikan halaman utama SIPENA dapat dib
 
 ## Cakupan
 
-- `full-regression.test.mjs`: 20 skenario autentikasi, pengguna, aset, peminjaman, pengembalian, pemeliharaan, validasi input, role, dan logout.
+- `full-regression.test.mjs`: 21 skenario autentikasi, pengguna, aset, peminjaman, pengembalian, pemeliharaan, validasi input, role, kontrol fitur utama, dan logout.
 - `navigation-smoke.test.mjs`: smoke test seluruh halaman operasional utama.
 
 ## Persiapan
@@ -37,7 +37,8 @@ memvalidasi URL, judul, serta label fitur/kolom utama pada setiap halaman.
 Urutan kunjungan menu dan pemeriksaan kontrol fitur menggunakan abjad Indonesia
 agar hasil headed dan log screenshot mudah diikuti.
 `test:selenium:core` menguji alur bisnis dan interaksi kontrol UI seperti form,
-tab, filter, hak akses, arsip, laporan, dan dokumentasi. Setup dan cleanup data
+tab, filter, hak akses, arsip, laporan, dokumentasi, tab pemeliharaan, serta
+bobot/ranking/riwayat SPK. Setup dan cleanup data
 tetap dilakukan melalui API agar run dapat diulang secara konsisten, sedangkan
 kontrol fitur diperiksa melalui klik browser. Screenshot full regression memakai
 mode full-page sehingga seluruh panjang halaman dan kolom ikut tersimpan; panel

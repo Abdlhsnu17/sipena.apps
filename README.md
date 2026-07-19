@@ -7,7 +7,7 @@ Dokumen kebutuhan produk dan baseline perilaku aplikasi tersedia di [`docs/PRD.m
 | Metadata | Nilai |
 | --- | --- |
 | Versi aplikasi | 2.5.0 |
-| Baseline dokumentasi | Implementasi aktif per 15 Juli 2026 |
+| Baseline dokumentasi | Implementasi aktif per 19 Juli 2026 |
 | PRD | Versi 1.1 (as-built) |
 
 ## Ringkasan Kegunaan
@@ -21,7 +21,7 @@ Secara praktis, SIPENA digunakan untuk:
 - Mencatat penggunaan aset berdasarkan ruangan, operator, waktu pemakaian, kondisi, sumber pencatatan, dan catatan operasional.
 - Memantau frekuensi penggunaan per detail inventaris, memberi peringatan setelah lebih dari 10 kali penggunaan, dan membuat tiket cek rutin otomatis saat mencapai 25 kali penggunaan.
 - Menjadwalkan dan memantau pemeliharaan aset, termasuk penautan Teknisi/PJ ke akun aktif dan pemisahan tiket manual dari tiket otomatis.
-- Membantu penentuan prioritas aset melalui modul SPK Prioritas Aset.
+- Membantu penentuan prioritas aset melalui modul SPK Prioritas Aset dengan bobot manual atau AHP dan pemeringkatan TOPSIS.
 - Mencatat riwayat pemeliharaan dan aktivitas pengguna sebagai bahan evaluasi dan kontrol.
 - Mengelola laporan operasional, dokumen pendukung, dan dokumentasi sistem agar lebih mudah ditinjau kembali.
 - Memindai QR/barcode melalui kamera atau gambar untuk mencari aset dan membuka inventaris yang sesuai.
@@ -96,8 +96,9 @@ Isi paket database:
 - Ringkasan frekuensi penggunaan pada setiap detail inventaris dan halaman riwayat yang dapat difilter berdasarkan alat, detail, kata kunci, serta rentang tanggal.
 - Otomasi ambang penggunaan: status peringatan pada total lebih dari 10 kali dan wajib cek rutin pada total minimal 25 kali, disertai notifikasi dan pembuatan tiket pemeliharaan preventif otomatis.
 - Pemeliharaan aset dengan status request, jadwal, proses, selesai, validasi, riwayat, filter sumber manual/otomatis, serta Teknisi/PJ tertaut ke akun aktif.
+- Workflow pemeliharaan lanjutan: estimasi durasi/biaya, persetujuan pekerjaan kritis atau bernilai minimal Rp5.000.000, vendor dan garansi, diagnosis, tindakan, checklist, suku cadang, bukti foto/lampiran, verifikasi hasil, pengingat H-7/H-3/H-1, serta jadwal berulang bulanan, triwulanan, atau tahunan.
 - Jadwal pemeliharaan terpisah yang tersinkron ke record pemeliharaan.
-- SPK Prioritas Aset untuk membantu pemeringkatan aset berdasarkan bobot dan matriks penilaian.
+- SPK Prioritas Aset dengan delapan kriteria, bobot manual atau matriks perbandingan berpasangan AHP, pemeriksaan rasio konsistensi, pemeringkatan TOPSIS, preferensi bobot per pengguna, dan riwayat hasil yang dapat dipulihkan atau dihapus.
 - Penghapusan aset (disposal) dengan pengajuan, persetujuan/penolakan, serta sinkronisasi otomatis status aset atau detail aset yang dihapuskan.
 - Permintaan arsip data (deletion request) untuk user, peminjaman/pengembalian, dan pemeliharaan, lengkap dengan alur review sebelum data benar-benar diarsipkan.
 - Manajemen sanksi atas keterlambatan pengembalian aset: daftar sanksi aktif/selesai, penyelesaian sanksi, pembebasan sanksi dengan catatan, dan statistik ringkas.
@@ -111,7 +112,13 @@ Isi paket database:
 
 ## Pembaruan Implementasi Terbaru
 
-Baseline 15 Juli 2026 mencakup pembaruan berikut:
+Baseline 19 Juli 2026 mencakup pembaruan berikut:
+
+- Struktur proyek telah dipisahkan menjadi workspace `apps/frontend`, `apps/backend`, dan paket bersama di `packages/*`; konfigurasi Docker, script runtime, dan Selenium berada di folder khusus masing-masing.
+- Pemeliharaan kini mencatat estimasi, waktu aktual, vendor/garansi, diagnosis dan tindakan, checklist/suku cadang, bukti foto atau lampiran, hasil verifikasi, kondisi akhir, dan tanggal pemeliharaan berikutnya.
+- Pemeliharaan prioritas kritis atau berestimasi minimal Rp5.000.000 masuk ke alur persetujuan. Admin/leader juga dapat membuat notifikasi pengingat H-7, H-3, dan H-1 serta mengaktifkan pekerjaan berulang.
+- SPK Prioritas Aset mendukung bobot manual dan AHP. Matriks AHP yang tidak konsisten (`CR > 0,1`) menggunakan bobot manual/default sebagai fallback; hasil akhir tetap dihitung dengan TOPSIS.
+- Preferensi bobot, ringkasan hasil, dan matriks perbandingan disimpan pada riwayat SPK per pengguna untuk kebutuhan audit dan pemakaian ulang.
 
 - Pemilik/PJ pada peminjaman dipilih dari akun aktif melalui pencarian nama, NIP, atau unit kerja. Sistem menyimpan `owner_user_id` beserta snapshot nama, NIP, jabatan, dan unit kerja agar dokumen transaksi tetap dapat ditelusuri.
 - Teknisi/PJ pada pemeliharaan menggunakan pola penautan akun yang sama dan menampilkan nama serta NIP pada ringkasan maupun detail.
@@ -128,6 +135,10 @@ Perubahan skema yang menjadi bagian dari baseline ini antara lain:
 - `20260621_add_borrowing_sanction_resolution_columns.sql` menambahkan waktu, aktor, dan catatan penyelesaian/pembebasan sanksi.
 - `20260622_add_asset_usage_audit_columns.sql` menambahkan metadata arsip lunak dan sumber pencatatan Penggunaan, termasuk penandaan data yang berasal dari peminjaman.
 - `20260714_link_borrowing_owner_accounts.sql` menautkan Pemilik/PJ peminjaman ke akun pengguna dan menyimpan snapshot NIP.
+- `20260717_add_maintenance_advanced_workflow.sql` menambahkan waktu aktual, pekerjaan berulang, approval, reminder, dan metadata validasi pemeliharaan.
+- `20260717_expand_maintenance_workflow_details.sql` menambahkan estimasi, bukti foto, diagnosis, tindakan, checklist, suku cadang, hasil verifikasi, kondisi akhir, dan tanggal berikutnya.
+- `20260718_add_dss_weight_and_history.sql` menambahkan preferensi bobot dan riwayat pemeringkatan SPK.
+- `20260719_add_dss_history_pairwise_matrix.sql` menyimpan matriks AHP pada riwayat SPK.
 
 ## Arsitektur
 
@@ -174,6 +185,47 @@ Kontrak utama backend:
 ```
 
 `packages/database` menyimpan `migrations/`, `seeds/`, dan shared database client. Migrasi query SQL dari service lama ke repository dilakukan per modul agar alur produksi yang sudah berjalan tidak berubah secara massal dalam satu perubahan.
+
+Dokumentasi teknis per bagian:
+
+- [`apps/frontend/README.md`](apps/frontend/README.md) — halaman, proxy API, konfigurasi, dan perintah frontend.
+- [`apps/backend/README.md`](apps/backend/README.md) — tanggung jawab API, infrastruktur, environment, endpoint, migrasi, dan penyimpanan file.
+- [`packages/database/README.md`](packages/database/README.md) — database client, seed, urutan migrasi, dan inisialisasi database.
+- [`selenium/README.md`](selenium/README.md) — persiapan dan cakupan pengujian end-to-end.
+
+## Menjalankan Secara Lokal
+
+Prasyarat: Node.js sesuai [`.nvmrc`](.nvmrc), npm 11.7+, MySQL 8, dan Redis bila ingin memakai penyimpanan OTP/SSE secara penuh.
+
+```bash
+npm install
+cp apps/backend/.env.example apps/backend/.env
+cp apps/frontend/.env.example apps/frontend/.env.local
+npm run dev:backend
+```
+
+Pada terminal lain:
+
+```bash
+npm run dev
+```
+
+Frontend tersedia di `http://localhost:3000`, backend di `http://localhost:4000`, dan health check di `http://localhost:4000/api/health`. Siapkan skema dan migrasi database mengikuti [`packages/database/README.md`](packages/database/README.md). Untuk menjalankan seluruh stack menggunakan container, salin konfigurasi dari `apps/backend/.docker.env.example` ke `docker/.env`, ganti semua kredensial contoh, lalu jalankan:
+
+```bash
+docker compose --env-file docker/.env -f docker/compose.yml up --build
+```
+
+## Verifikasi Perubahan
+
+```bash
+npm run lint
+npm run build
+npm run type-check
+npm run test:backend
+```
+
+Gunakan `npm run verify` untuk menjalankan keempat pemeriksaan tersebut secara berurutan. Pengujian browser dijalankan terpisah dengan `npm run test:selenium` setelah frontend, backend, dan database pengujian aktif.
 
 ## Endpoint Backend
 
