@@ -1475,7 +1475,7 @@ export default function AssetUsagePage() {
                       onClick={() => setUsageSourceFilter(option.value)}
                       className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-[12px] font-semibold transition sm:text-[13px] lg:flex-none ${
                         active
-                          ? "bg-white text-slate-950 shadow-sm dark:bg-slate-950 dark:text-slate-50"
+                          ? "bg-teal-600 text-white shadow-sm dark:bg-teal-600 dark:text-white"
                           : "text-slate-600 hover:bg-white/60 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900/70 dark:hover:text-slate-50"
                       }`}
                       aria-pressed={active}
@@ -1484,7 +1484,7 @@ export default function AssetUsagePage() {
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[10px] ${
                           active
-                            ? "bg-teal-100 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
+                            ? "bg-white/20 text-white dark:bg-white/20 dark:text-white"
                             : "bg-white/70 text-slate-500 dark:bg-slate-900/70 dark:text-slate-400"
                         }`}
                       >
