@@ -25,6 +25,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Docker sets HOSTNAME to the container ID; without this override, Next's
+# standalone server binds to that address instead of 0.0.0.0, so nothing
+# can reach it via 127.0.0.1 or the compose service name.
+ENV HOSTNAME=0.0.0.0
 
 # pakai standalone (WAJIB)
 # npm workspaces monorepo: standalone output nests under apps/frontend
