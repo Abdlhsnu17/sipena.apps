@@ -27,13 +27,34 @@ Pilihan suite:
 ```bash
 npm run test:selenium:core
 npm run test:selenium:smoke
+npm run test:selenium:smoke:headed
+npm run test:selenium:core:headed
+npm run test:selenium:headed
 ```
+
+`test:selenium:smoke` membuka setiap fitur melalui klik menu sidebar, lalu
+memvalidasi URL, judul, serta label fitur/kolom utama pada setiap halaman.
+Urutan kunjungan menu dan pemeriksaan kontrol fitur menggunakan abjad Indonesia
+agar hasil headed dan log screenshot mudah diikuti.
+`test:selenium:core` menguji alur bisnis dan interaksi kontrol UI seperti form,
+tab, filter, hak akses, arsip, laporan, dan dokumentasi. Setup dan cleanup data
+tetap dilakukan melalui API agar run dapat diulang secara konsisten, sedangkan
+kontrol fitur diperiksa melalui klik browser. Screenshot full regression memakai
+mode full-page sehingga seluruh panjang halaman dan kolom ikut tersimpan; panel
+bukti ditampilkan sebagai kartu kecil yang konsisten di tengah tanpa mengubah
+ukuran normal konten aplikasi. Alias
+`npm run selenium:smoke:headed` juga tersedia untuk kompatibilitas.
 
 Variabel opsional:
 
 - `SELENIUM_BASE_URL`, default `http://localhost:3000`.
 - `SELENIUM_TIMEOUT_MS`, default `20000`.
 - `SELENIUM_HEADLESS=false` untuk menampilkan Chrome.
+- `SELENIUM_EVIDENCE_DELAY_MS` untuk mengatur lama panel hasil tampil; default
+  `2500` ms pada mode headed dan `0` pada mode headless. Panel selalu dihapus
+  sebelum skenario berikutnya dimulai agar pesan lama tidak tertinggal.
+- `SELENIUM_STEP_DELAY_MS` untuk memberi jeda antarklik, pengisian form, dan
+  navigasi; default `600` ms pada mode headed dan `0` pada mode headless.
 - `SELENIUM_SCREENSHOT_DIR` untuk mengganti folder artefak.
 - `SELENIUM_E2E_USERNAME` dan `SELENIUM_E2E_PASSWORD` sebagai alternatif file konfigurasi.
 

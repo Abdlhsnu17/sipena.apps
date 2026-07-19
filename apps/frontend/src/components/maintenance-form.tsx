@@ -253,7 +253,6 @@ export default function MaintenanceForm({
   }
 
   const normalizedRole = normalizeUserRole(userRole)
-  const canEditRequestSection = isNewRequest || currentWorkflowStatus === "requested" || ["admin", "leader", "staff", "staff_pj", "user"].includes(normalizedRole)
   const canEditScheduling = ["admin", "leader", "staff_pj"].includes(normalizedRole) && ["requested", "scheduled"].includes(currentWorkflowStatus)
   const canEditExecution = ["teknisi", "admin", "leader"].includes(normalizedRole) && ["scheduled", "in_progress"].includes(currentWorkflowStatus)
   const canEditVerification = ["admin", "leader"].includes(normalizedRole) && ["completed", "validated"].includes(currentWorkflowStatus)

@@ -61,11 +61,28 @@ export async function waitForPath(driver, expectedPath) {
   }, timeout, `Halaman tidak berpindah ke ${expectedPath}`);
 }
 
-export async function saveScreenshot(driver, testName, status = "result") {
+async function takeFullPageScreenshot(driver) {
+  const metrics = await driver.sendAndGetDevToolsCommand("Page.getLayoutMetrics", {});
+  const contentSize = metrics.cssContentSize || metrics.contentSize;
+  const width = Math.max(1, Math.ceil(contentSize.width));
+  const height = Math.max(1, Math.ceil(contentSize.height));
+  const result = await driver.sendAndGetDevToolsCommand("Page.captureScreenshot", {
+    format: "png",
+    fromSurface: true,
+    captureBeyondViewport: true,
+    clip: { x: 0, y: 0, width, height, scale: 1 },
+  });
+
+  return result.data;
+}
+
+export async function saveScreenshot(driver, testName, status = "result", options = {}) {
   const outputDir = path.resolve(screenshotDir);
   await mkdir(outputDir, { recursive: true });
   const safeName = testName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const screenshot = await driver.takeScreenshot();
+  const screenshot = options.fullPage
+    ? await takeFullPageScreenshot(driver)
+    : await driver.takeScreenshot();
   const outputPath = path.join(outputDir, `${safeName}-${status}.png`);
   await writeFile(outputPath, screenshot, "base64");
   return outputPath;
