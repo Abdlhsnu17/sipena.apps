@@ -34,7 +34,7 @@ export class DssController {
       });
 
       const userId = getActorUserId(req);
-      if (result.totalAlternatives > 0) {
+      if (result.totalAlternatives > 0 && req.body?.saveHistory === true) {
         // Only persist the pairwise matrix when it's actually what produced these
         // weights (CR passed) — if AHP was inconsistent and the service fell back
         // to manual/default weights, storing the failed matrix would misrepresent

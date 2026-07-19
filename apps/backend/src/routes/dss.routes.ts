@@ -14,6 +14,7 @@ router.post(
     body('pairwiseMatrix').optional().isArray(),
     body('pairwiseMatrix.*').optional().isArray(),
     body('pairwiseMatrix.*.*').optional().isFloat({ gt: 0 }),
+    body('saveHistory').optional().isBoolean().toBoolean(),
   ],
   dssController.getRanking
 );

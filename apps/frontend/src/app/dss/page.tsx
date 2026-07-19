@@ -318,7 +318,7 @@ export default function DssPage() {
     router.push(`/maintenance?${params.toString()}`)
   }, [router])
 
-  const loadRanking = useCallback(async () => {
+  const loadRanking = useCallback(async (options: { persistHistory?: boolean } = {}) => {
     setIsLoading(true)
     setErrorMessage(null)
     try {
@@ -327,8 +327,8 @@ export default function DssPage() {
           // Manual weights ride along as the fallback the backend uses when
           // the pairwise matrix turns out inconsistent (CR > 0.1), so that
           // fallback actually matches what the UI tells the user happens.
-          ? { assetType, limit: 250, pairwiseMatrix: buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS), weights: normalizedWeights }
-          : { assetType, limit: 250, weights: normalizedWeights }
+          ? { assetType, limit: 250, pairwiseMatrix: buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS), weights: normalizedWeights, saveHistory: options.persistHistory }
+          : { assetType, limit: 250, weights: normalizedWeights, saveHistory: options.persistHistory }
       )
       if (response.success) {
         setRankingResult(response.data)
@@ -452,7 +452,7 @@ export default function DssPage() {
                       <SelectItem value="non_medical" className="focus:bg-teal-600 focus:text-white focus:[&_svg]:text-white">Non-Medis</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
+                  <Button onClick={() => void loadRanking({ persistHistory: true })} disabled={isLoading} className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
                     <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                     Hitung Ulang
                   </Button>

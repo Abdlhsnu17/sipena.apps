@@ -60,6 +60,10 @@ export interface DssRankingRequest {
   pairwiseMatrix?: number[][];
   assetType?: DssAssetType;
   limit?: number;
+  // Only user-initiated recalculations ("Hitung Ulang") should be logged to
+  // "Riwayat Perhitungan" — background/auto loads (mount, filter defaults)
+  // omit this so the history isn't flooded with non-actions.
+  saveHistory?: boolean;
 }
 
 export interface DssRankingResponse {
