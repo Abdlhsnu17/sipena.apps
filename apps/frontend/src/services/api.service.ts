@@ -11,7 +11,13 @@ const envApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim();
 // and prevents the client from ever seeing an explicit localhost host in network requests.
 export const API_BASE_URL = envApiUrl ? normalizeApiBaseUrl(envApiUrl) : '/api';
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
-const LOGIN_REQUEST_TIMEOUT_MS = 8000;
+// Password verification can legitimately take several seconds on development
+// machines. Keep this aligned with the server-side proxy timeout so a successful login
+// is not cancelled by the browser just before the response arrives.
+const LOGIN_REQUEST_TIMEOUT_MS = Number.parseInt(
+  process.env.NEXT_PUBLIC_LOGIN_REQUEST_TIMEOUT_MS || '20000',
+  10,
+);
 
 interface RequestOptions {
   method?: string;

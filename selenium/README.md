@@ -48,7 +48,8 @@ ukuran normal konten aplikasi. Alias
 Variabel opsional:
 
 - `SELENIUM_BASE_URL`, default `http://localhost:3000`.
-- `SELENIUM_TIMEOUT_MS`, default `20000`.
+- `SELENIUM_TIMEOUT_MS`, default `20000` pada mode headless dan `60000` pada
+  mode headed agar kompilasi halaman development tidak memicu false timeout.
 - `SELENIUM_HEADLESS=false` untuk menampilkan Chrome.
 - `SELENIUM_EVIDENCE_DELAY_MS` untuk mengatur lama panel hasil tampil; default
   `2500` ms pada mode headed dan `0` pada mode headless. Panel selalu dihapus

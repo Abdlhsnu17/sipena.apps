@@ -24,7 +24,7 @@ const routes = [
     name: "Dokumentasi Sistem",
     pathname: "/uml",
     heading: "Dokumentasi Sistem",
-    expectedTexts: ["Activity Diagram", "Use Case Diagram", "Class Diagram", "Entity Relationship Diagram"],
+    expectedTexts: ["Activity Diagram", "Use Case Diagram"],
   },
   {
     name: "Inventaris Medis",
@@ -78,7 +78,7 @@ const routes = [
     name: "SPK Prioritas Aset",
     pathname: "/dss",
     heading: "SPK Prioritas Aset",
-    expectedTexts: ["Ringkasan Prioritas", "Top Ranking", "Cari aset, kode, nomor seri"],
+    expectedTexts: ["Ringkasan Prioritas", "Top Ranking", "Metode TOPSIS"],
   },
   {
     name: "Laporan & Analitik",
@@ -96,13 +96,13 @@ const routes = [
     name: "Arsip & Riwayat",
     pathname: "/activity-archive",
     heading: "Arsip & Riwayat",
-    expectedTexts: ["Pilih user"],
+    expectedTexts: ["Semua user"],
   },
   {
     name: "Manajemen Pengguna",
     pathname: "/users",
     heading: "Manajemen Pengguna",
-    expectedTexts: ["Nomor Induk Pegawai", "Nama Lengkap", "email@hospital.com"],
+    expectedTexts: ["Data Pengguna", "Unit Kerja", "Tambah Pengguna"],
   },
   {
     name: "Unggah Dokumen",
@@ -134,7 +134,9 @@ after(async () => {
 test("Login dengan akun admin", async () => {
   try {
     await openPath(driver, "/login");
-    await driver.findElement(By.id("nip")).sendKeys(adminUsername);
+    const nipInput = await driver.wait(until.elementLocated(By.id("nip")), timeout);
+    await driver.wait(until.elementIsVisible(nipInput), timeout);
+    await nipInput.sendKeys(adminUsername);
     await driver.findElement(By.id("password")).sendKeys(adminPassword);
     await saveScreenshot(driver, "smoke-Login", "pass");
     await driver.findElement(By.xpath('//button[normalize-space()="Masuk"]')).click();

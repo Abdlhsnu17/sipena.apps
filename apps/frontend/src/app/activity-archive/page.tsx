@@ -106,7 +106,7 @@ function ActivityDetailRow({ label, value }: { label: string; value?: string | n
   return (
     <div className="grid gap-1 border-b border-slate-100 py-2.5 last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)] dark:border-slate-800/60">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="break-words text-sm text-slate-900 dark:text-slate-100">{value === undefined || value === null || value === "" ? "-" : value}</p>
+      <p className="wrap-break-word text-sm text-slate-900 dark:text-slate-100">{value === undefined || value === null || value === "" ? "-" : value}</p>
     </div>
   )
 }

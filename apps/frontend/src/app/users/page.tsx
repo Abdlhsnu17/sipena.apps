@@ -986,7 +986,7 @@ export default function UsersPage() {
           </div>
 
           <div className="mobile-table-scroll rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/35 dark:bg-slate-900/60">
-            <table className="w-full min-w-[800px] table-fixed text-left text-sm leading-5">
+            <table className="w-full min-w-200 table-fixed text-left text-sm leading-5">
               <colgroup>
                 <col className="w-[36%]" />
                 <col className="w-[31%]" />

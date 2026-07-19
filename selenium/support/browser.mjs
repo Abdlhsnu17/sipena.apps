@@ -4,7 +4,8 @@ import { Builder, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 
 export const baseUrl = (process.env.SELENIUM_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
-export const timeout = Number(process.env.SELENIUM_TIMEOUT_MS || 20_000);
+const defaultTimeout = process.env.SELENIUM_HEADLESS === "false" ? 60_000 : 20_000;
+export const timeout = Number(process.env.SELENIUM_TIMEOUT_MS || defaultTimeout);
 const screenshotDir = process.env.SELENIUM_SCREENSHOT_DIR || "selenium/screenshots";
 
 export async function waitForApplication() {
@@ -26,7 +27,7 @@ export async function waitForApplication() {
   }
 
   throw new Error(
-    `SIPENA belum siap di ${baseUrl}. Jalankan frontend dan backend terlebih dahulu. ${lastError instanceof Error ? lastError.message : ""}`,
+    `SIPENA belum siap di ${baseUrl}. Jalankan \`npm run dev:backend\` dan \`npm run dev\` di terminal terpisah, atau nyalakan stack Docker terlebih dahulu. ${lastError instanceof Error ? lastError.message : ""}`,
   );
 }
 
