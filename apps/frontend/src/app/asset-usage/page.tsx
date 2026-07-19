@@ -1,6 +1,5 @@
 "use client";
 
-import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import { Badge } from "@/components/ui/badge";
 import InventoryPicker from "@/components/inventory-picker";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
@@ -19,8 +18,8 @@ import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { findMatchingAsset, parseScannedBarcode } from "@/utils/scanned-asset";
-import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Download, Eye, Pencil, Plus, Save, ScanLine, Search, Tag, Trash2, X } from "lucide-react";
+import { findMatchingAsset } from "@/utils/scanned-asset";
+import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Download, Eye, Pencil, Plus, Save, Search, Tag, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -410,7 +409,6 @@ export default function AssetUsagePage() {
   const { toast } = useToast();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const canDeleteAssetUsage = ["admin", "leader"].includes(normalizeRole(currentUser?.role));
   const [assets, setAssets] = useState<DetailInventoryItem[]>([]);
   const [logs, setLogs] = useState<AssetUsageLog[]>([]);
@@ -746,28 +744,6 @@ export default function AssetUsagePage() {
       roomName: nextRoomName || prev.roomName,
       usageContext: prev.usageContext === "emergency" ? "emergency" : nextUsageContext,
     }));
-  };
-
-  const handleBarcodeDetected = (rawValue: string) => {
-    const parsed = parseScannedBarcode(rawValue);
-    if (!parsed.query && !parsed.target) {
-      toast({ title: "Scan gagal", description: "Hasil scan kosong. Silakan coba lagi.", variant: "destructive" });
-      return;
-    }
-
-    const match = findAssetByScanTarget(selectableAssets, parsed.target, parsed.query, (assets, query) =>
-      findMatchingAsset(assets, query, buildInventorySearchKey),
-    );
-    if (!match) {
-      toast({
-        title: "Alat tidak ditemukan",
-        description: "Aset dari barcode tidak ditemukan di daftar yang tersedia untuk digunakan (mungkin sedang dipakai, dalam perbaikan, atau di luar akses Anda).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    handleAssetChange(getInventoryKey(match));
   };
 
   useEffect(() => {
@@ -1273,16 +1249,7 @@ export default function AssetUsagePage() {
               <div className="flex max-h-[90dvh] flex-col overflow-hidden text-sm">
                 <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
                   <h2 className="text-base font-semibold text-foreground">Tambah Penggunaan</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setScanDialogOpen(true)}
-                      className="gap-1.5 bg-teal-600 hover:bg-teal-700"
-                    >
-                      <ScanLine className="h-4 w-4" />
-                      Scan Barcode
-                    </Button>
+                  <div className="flex items-center">
                     <button
                       type="button"
                       aria-label="Tutup formulir penggunaan"
@@ -1985,12 +1952,6 @@ export default function AssetUsagePage() {
           </Button>
         </div>
       )}
-
-      <BarcodeScannerDialog
-        open={scanDialogOpen}
-        onOpenChange={setScanDialogOpen}
-        onDetected={handleBarcodeDetected}
-      />
 
       <div className="mt-8 pt-6 border-t border-border text-center">
         <p className="text-[13px] text-muted-foreground">

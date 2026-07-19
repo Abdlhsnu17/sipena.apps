@@ -1654,80 +1654,88 @@ export default function MaintenancePage() {
             </div>
           </section>
 
-          <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-dashboard>
-            <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-lg">Dashboard Pemeliharaan</CardTitle>
-                <CardDescription className="text-[13px] text-muted-foreground">
-                  Ringkasan status, keterlambatan, dan biaya pemeliharaan.
-                </CardDescription>
-              </div>
-              {isAdminOrLeaderRole(currentUser?.role) ? (
-                <Button variant="outline" size="sm" onClick={() => void handleDispatchReminders()}>
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Proses Reminder
+          <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-dashboard>
+            {isAdminOrLeaderRole(currentUser?.role) ? (
+              <CardHeader className="flex flex-row items-center justify-end border-b border-slate-100 px-4 py-2.5 dark:border-slate-800/60 sm:px-5">
+                <Button className="h-8 rounded-lg px-3" variant="outline" size="sm" onClick={() => void handleDispatchReminders()} title="Proses reminder pemeliharaan">
+                  <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                  Reminder
                 </Button>
+              </CardHeader>
+            ) : null}
+            <CardContent className="space-y-3 p-4 sm:p-5">
+              {maintenanceAnalytics?.summary ? (
+                <div className="grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50 px-1 py-2.5 dark:divide-slate-800 dark:bg-slate-950/35">
+                  {[
+                    ["Total", maintenanceAnalytics.summary.total],
+                    ["Terlambat", maintenanceAnalytics.summary.overdue],
+                    ["Biaya", `Rp ${Number(maintenanceAnalytics.summary.total_cost || 0).toLocaleString("id-ID")}`],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="min-w-0 px-3 sm:flex sm:items-baseline sm:justify-center sm:gap-2">
+                      <p className="truncate text-[11px] font-medium text-muted-foreground sm:text-xs">{label}</p>
+                      <p className="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-100 sm:mt-0 sm:text-lg">{value}</p>
+                    </div>
+                  ))}
+                </div>
               ) : null}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status Pemeliharaan</p>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-slate-50/70 p-3 dark:bg-slate-950/30">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Diajukan / Disetujui</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-700 dark:text-slate-300">{submissionCount.toLocaleString("id-ID")}</p>
-                  </div>
-                  <ShieldCheck className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Dalam Proses Perbaikan</p>
-                    <p className="mt-1 text-xl font-semibold text-teal-600">{inProgressCount.toLocaleString("id-ID")}</p>
-                  </div>
-                  <Wrench className="h-4 w-4 shrink-0 text-teal-500" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Laporan Selesai - Menunggu Verifikasi</p>
-                    <p className="mt-1 text-xl font-semibold text-foreground">{awaitingValidationCount.toLocaleString("id-ID")}</p>
-                  </div>
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-indigo-50/50 p-3 dark:bg-indigo-950/30">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Selesai Pemeliharaan Sarana</p>
-                    <p className="mt-1 text-xl font-semibold text-foreground">{completedCount.toLocaleString("id-ID")}</p>
-                  </div>
-                  <UserCheck className="h-4 w-4 shrink-0 text-indigo-500" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/60 p-3 dark:bg-rose-950/30">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Ditolak / Dibatalkan</p>
-                    <p className="mt-1 text-xl font-semibold text-rose-600">{cancelledCount.toLocaleString("id-ID")}</p>
-                  </div>
-                  <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
-                </div>
+
+              <div>
+                <h2 className="sr-only">Status pemeliharaan</h2>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                  {[
+                    {
+                      label: "Pengajuan",
+                      fullLabel: "Diajukan atau disetujui",
+                      value: submissionCount,
+                      icon: ShieldCheck,
+                      className: "bg-slate-50 text-slate-700 dark:bg-slate-950/35 dark:text-slate-300",
+                      iconClassName: "bg-white text-slate-500 dark:bg-slate-900",
+                    },
+                    {
+                      label: "Perbaikan",
+                      fullLabel: "Dalam proses perbaikan",
+                      value: inProgressCount,
+                      icon: Wrench,
+                      className: "bg-teal-50/70 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300",
+                      iconClassName: "bg-white/80 text-teal-600 dark:bg-teal-950/60",
+                    },
+                    {
+                      label: "Verifikasi",
+                      fullLabel: "Laporan selesai, menunggu verifikasi",
+                      value: awaitingValidationCount,
+                      icon: AlertCircle,
+                      className: "bg-amber-50/70 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
+                      iconClassName: "bg-white/80 text-amber-600 dark:bg-amber-950/60",
+                    },
+                    {
+                      label: "Selesai",
+                      fullLabel: "Selesai pemeliharaan sarana",
+                      value: completedCount,
+                      icon: UserCheck,
+                      className: "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300",
+                      iconClassName: "bg-white/80 text-indigo-600 dark:bg-indigo-950/60",
+                    },
+                    {
+                      label: "Dibatalkan",
+                      fullLabel: "Ditolak atau dibatalkan",
+                      value: cancelledCount,
+                      icon: XCircle,
+                      className: "col-span-2 bg-rose-50/70 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 sm:col-span-1",
+                      iconClassName: "bg-white/80 text-rose-600 dark:bg-rose-950/60",
+                    },
+                  ].map(({ label, fullLabel, value, icon: Icon, className, iconClassName }) => (
+                    <div key={label} className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-3 ${className}`} title={fullLabel}>
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClassName}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[11px] font-medium opacity-75 sm:text-xs">{label}</p>
+                        <p className="text-lg font-bold leading-tight">{value.toLocaleString("id-ID")}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {maintenanceAnalytics?.summary ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ringkasan Operasional</p>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {[
-                      ["Total", maintenanceAnalytics.summary.total],
-                      ["Terlambat", maintenanceAnalytics.summary.overdue],
-                      ["Biaya Aktual", `Rp ${Number(maintenanceAnalytics.summary.total_cost || 0).toLocaleString("id-ID")}`],
-                    ].map(([label, value]) => (
-                      <div key={String(label)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/30">
-                        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-                        <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </CardContent>
           </Card>
 

@@ -735,12 +735,12 @@ export default function MaintenanceForm({
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Foto Sebelum</label>
                 <input type="url" name="beforePhotoUrl" value={formData.beforePhotoUrl} onChange={handleChange} disabled={!canEditExecution} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="URL foto sebelum" />
-                <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={(event) => setBeforePhotoFile(event.target.files?.[0] ?? null)} disabled={!canEditExecution} className="mt-2 block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:text-sm file:font-medium file:text-white" />
+                <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={(event) => setBeforePhotoFile(event.target.files?.[0] ?? null)} disabled={!canEditExecution} className="mt-2 block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:text-sm file:font-medium file:text-white" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Foto Sesudah</label>
                 <input type="url" name="afterPhotoUrl" value={formData.afterPhotoUrl} onChange={handleChange} disabled={!canEditExecution} className="h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder="URL foto sesudah" />
-                <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={(event) => setAfterPhotoFile(event.target.files?.[0] ?? null)} disabled={!canEditExecution} className="mt-2 block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:text-sm file:font-medium file:text-white" />
+                <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={(event) => setAfterPhotoFile(event.target.files?.[0] ?? null)} disabled={!canEditExecution} className="mt-2 block w-full text-sm text-muted-foreground file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:text-sm file:font-medium file:text-white" />
               </div>
               <div className="md:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Diagnosis</label>

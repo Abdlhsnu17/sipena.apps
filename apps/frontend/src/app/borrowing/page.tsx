@@ -37,9 +37,8 @@ import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-import { findMatchingAsset, parseScannedBarcode } from "@/utils/scanned-asset";
+import { findMatchingAsset } from "@/utils/scanned-asset";
 
-import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import InventoryPicker from "@/components/inventory-picker";
@@ -76,7 +75,7 @@ import {
     type FormularData,
     type SectionLine,
 } from "@/utils/export-table";
-import { AlertTriangle, CalendarClock, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, HandHelping, MapPin, Pencil, Plus, Save, ScanLine, Search, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, HandHelping, MapPin, Pencil, Plus, Save, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -450,7 +449,6 @@ export default function BorrowingPage() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [borrowings, setBorrowings] = useState<ApiBorrowing[]>([])
   const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set())
   const [activeMaintenanceLocks, setActiveMaintenanceLocks] = useState<Set<string>>(new Set())
@@ -1978,28 +1976,6 @@ export default function BorrowingPage() {
   const borrowingAssetPickerRef = useRef<HTMLDivElement | null>(null)
   const borrowDateInputRef = useRef<HTMLInputElement | null>(null)
 
-  const handleBarcodeDetected = (rawValue: string) => {
-    const parsed = parseScannedBarcode(rawValue)
-    if (!parsed.query && !parsed.target) {
-      toast({ title: "Scan gagal", description: "Hasil scan kosong. Silakan coba lagi.", variant: "destructive" })
-      return
-    }
-
-    const match = findAssetByScanTarget(borrowableAssets, parsed.target, parsed.query, (assets, query) =>
-      findMatchingAsset(assets, query, buildInventorySearchKey),
-    )
-    if (!match) {
-      toast({
-        title: "Aset tidak ditemukan",
-        description: "Aset dari barcode tidak ditemukan di daftar yang tersedia untuk dipinjam (mungkin sedang dipakai, dalam perbaikan, atau di luar akses Anda).",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setSelectedBorrowableAssetIds([match.detailId])
-  }
-
   useEffect(() => {
     if (searchParams.get("openForm") !== "1") return
     const target = parseScanTargetFromSearchParams(searchParams)
@@ -2165,16 +2141,7 @@ export default function BorrowingPage() {
                     <div>
                       <h2 className="text-base font-semibold text-foreground">Tambah Peminjaman</h2>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => setScanDialogOpen(true)}
-                        className="gap-1.5 bg-teal-600 hover:bg-teal-700"
-                      >
-                        <ScanLine className="h-4 w-4" />
-                        Scan Barcode
-                      </Button>
+                    <div className="flex items-center">
                       <button
                         type="button"
                         onClick={() => {
@@ -3213,11 +3180,6 @@ export default function BorrowingPage() {
           setDeleteReason("")
         }}
         onConfirm={confirmRequestDeleteBorrowing}
-      />
-      <BarcodeScannerDialog
-        open={scanDialogOpen}
-        onOpenChange={setScanDialogOpen}
-        onDetected={handleBarcodeDetected}
       />
     </main>
   )

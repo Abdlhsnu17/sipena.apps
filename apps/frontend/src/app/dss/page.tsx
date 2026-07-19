@@ -30,7 +30,6 @@ import {
     Activity,
     AlertTriangle,
     ArrowDownUp,
-    Award,
     Building2,
     Calculator,
     CheckCircle2,
@@ -45,7 +44,6 @@ import {
     History,
     ListChecks,
     MapPin,
-    Medal,
     PauseCircle,
     RefreshCw,
     Save,
@@ -54,7 +52,6 @@ import {
     ShieldAlert,
     SlidersHorizontal,
     Stethoscope,
-    Trophy,
     Trash2,
     Wrench,
 } from "lucide-react";
@@ -101,6 +98,8 @@ const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 const formatScore = (value: number) => value.toFixed(4)
 
 const RANKINGS_PER_PAGE = 10
+
+const rankingBadgeClass = "min-h-6 max-w-full gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium shadow-xs [&>svg]:size-3 [&>svg]:shrink-0"
 
 const assetTypeLabel = (value: DssAssetType | DssAssetRanking["assetType"]) => {
   if (value === "medical") return "Medis"
@@ -162,13 +161,6 @@ const statusMeta = (value?: string | null) => {
     return { className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300", icon: CheckCircle2 }
   }
   return { className: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700/40 dark:bg-slate-800/40 dark:text-slate-300", icon: PauseCircle }
-}
-
-const rankMeta = (rank: number) => {
-  if (rank === 1) return { className: "bg-amber-400 text-amber-950 dark:bg-amber-400/80 dark:text-amber-950", icon: Trophy }
-  if (rank === 2) return { className: "bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200", icon: Medal }
-  if (rank === 3) return { className: "bg-orange-300 text-orange-900 dark:bg-orange-400/70 dark:text-orange-950", icon: Award }
-  return null
 }
 
 export default function DssPage() {
@@ -455,12 +447,12 @@ export default function DssPage() {
                       <SelectValue placeholder="Jenis aset" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Semua aset</SelectItem>
-                      <SelectItem value="medical">Medis</SelectItem>
-                      <SelectItem value="non_medical">Non-Medis</SelectItem>
+                      <SelectItem value="all" className="focus:bg-teal-600 focus:text-white focus:[&_svg]:text-white">Semua aset</SelectItem>
+                      <SelectItem value="medical" className="focus:bg-teal-600 focus:text-white focus:[&_svg]:text-white">Medis</SelectItem>
+                      <SelectItem value="non_medical" className="focus:bg-teal-600 focus:text-white focus:[&_svg]:text-white">Non-Medis</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2 rounded-2xl">
+                  <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
                     <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                     Hitung Ulang
                   </Button>
@@ -528,17 +520,12 @@ export default function DssPage() {
             <CardContent className="space-y-3 pt-0">
               {topRankings.length > 0 ? (
                 topRankings.map((item) => {
-                  const rankBadge = rankMeta(item.rank)
                   const recommendation = recommendationMeta(item.recommendation)
                   return (
                     <div key={`${item.assetType}-${item.assetId}-${item.detailId}`} className="grid gap-3 rounded-md border border-slate-200 dark:border-slate-800/35 bg-slate-50/60 dark:bg-slate-900/40 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start">
-                      {rankBadge ? (
-                        <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full", rankBadge.className)}>
-                          <rankBadge.icon className="h-4 w-4" />
-                        </span>
-                      ) : (
-                        <Badge className="w-fit bg-slate-950 text-white">#{item.rank}</Badge>
-                      )}
+                      <span className="inline-flex size-7 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:ring-slate-700">
+                        {item.rank}
+                      </span>
                       <div className="min-w-0">
                         <div className="line-clamp-1 text-sm font-semibold text-slate-950 dark:text-slate-50">{item.detailName}</div>
                         <div className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.detailCode} · {item.serialNumber || "-"}</div>
@@ -607,8 +594,7 @@ export default function DssPage() {
               {weightMode === "manual" && (
                 <Button
                   type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
                   onClick={() => setWeights(DEFAULT_WEIGHTS)}
                 >
                   Reset Bobot Default
@@ -617,8 +603,7 @@ export default function DssPage() {
               {weightMode === "ahp" && (
                 <Button
                   type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
                   onClick={() => setPairwiseValues(buildDefaultPairwiseValues(CRITERIA_IDS))}
                 >
                   Reset Matriks AHP
@@ -626,7 +611,7 @@ export default function DssPage() {
               )}
               <Button
                 type="button"
-                className="w-full gap-2 sm:w-auto"
+                className="w-full gap-2 bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
                 disabled={isSavingWeights}
                 onClick={() => void saveWeightsAsDefault()}
               >
@@ -638,8 +623,18 @@ export default function DssPage() {
           <CardContent className="space-y-4 pt-0">
             <Tabs value={weightMode} onValueChange={(value) => setWeightMode(value as "manual" | "ahp")}>
               <TabsList>
-                <TabsTrigger value="manual">Bobot Manual</TabsTrigger>
-                <TabsTrigger value="ahp">AHP (Perbandingan Berpasangan)</TabsTrigger>
+                <TabsTrigger
+                  value="manual"
+                  className="data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+                >
+                  Bobot Manual
+                </TabsTrigger>
+                <TabsTrigger
+                  value="ahp"
+                  className="data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+                >
+                  AHP (Perbandingan Berpasangan)
+                </TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -814,15 +809,20 @@ export default function DssPage() {
           </TabsContent>
 
           <TabsContent value="ranking" className="mt-0">
-            <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
-          <CardHeader className="gap-3 pb-3 lg:flex-row lg:items-center lg:justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ArrowDownUp className="h-4 w-4 text-teal-700" />
-              Ranking Prioritas
+            <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-800/35">
+          <CardHeader className="gap-4 border-b border-slate-100 bg-linear-to-r from-white via-white to-teal-50/70 pb-4 dark:border-slate-800/50 dark:from-slate-950 dark:via-slate-950 dark:to-teal-950/30 lg:flex-row lg:items-center lg:justify-between">
+            <CardTitle className="flex items-center gap-3 text-base">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700 ring-1 ring-teal-200/70 dark:bg-teal-400/10 dark:text-teal-300 dark:ring-teal-400/20">
+                <ArrowDownUp className="size-4" />
+              </span>
+              <span>
+                <span className="block font-semibold text-slate-950 dark:text-slate-50">Ranking Prioritas</span>
+                <span className="mt-0.5 block text-xs font-normal text-slate-500 dark:text-slate-400">Urutan aset berdasarkan skor keputusan</span>
+              </span>
             </CardTitle>
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
               <div className="relative w-full lg:w-80">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 shrink-0 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -832,8 +832,8 @@ export default function DssPage() {
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" className="w-full gap-2 sm:w-auto">
-                    <Download className="h-4 w-4" />
+                  <Button type="button" variant="outline" className="w-full gap-2 rounded-xl bg-white shadow-xs hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-950 dark:hover:bg-teal-400/10 dark:hover:text-teal-300 sm:w-auto">
+                    <Download className="size-4 shrink-0" />
                     Export
                   </Button>
                 </DropdownMenuTrigger>
@@ -862,18 +862,18 @@ export default function DssPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-275 text-left text-[13px]">
-                  <thead className="border-y border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">
+                <table className="w-full min-w-245 text-left text-xs">
+                  <thead className="border-y border-slate-200 bg-slate-50/90 text-[11px] uppercase tracking-wide text-slate-600 dark:border-slate-800/35 dark:bg-slate-800/60 dark:text-slate-300">
                     <tr>
-                      <th className="px-3 py-2.5">Rank</th>
-                      <th className="px-3 py-2.5">Aset Detail</th>
-                      <th className="px-3 py-2.5">Lokasi</th>
-                      <th className="px-3 py-2.5">Jenis</th>
-                      <th className="px-3 py-2.5">Kondisi</th>
-                      <th className="px-3 py-2.5">Status</th>
-                      <th className="px-3 py-2.5">Skor</th>
-                      <th className="px-3 py-2.5">Rekomendasi</th>
-                      <th className="px-3 py-2.5 text-right">Audit</th>
+                      <th className="w-14 px-2.5 py-2">Rank</th>
+                      <th className="px-2.5 py-2">Aset Detail</th>
+                      <th className="px-2.5 py-2">Lokasi</th>
+                      <th className="px-2.5 py-2">Jenis</th>
+                      <th className="px-2.5 py-2">Kondisi</th>
+                      <th className="px-2.5 py-2">Status</th>
+                      <th className="px-2.5 py-2">Skor</th>
+                      <th className="px-2.5 py-2">Rekomendasi</th>
+                      <th className="px-2.5 py-2 text-right">Audit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35 bg-white dark:bg-slate-900/60">
@@ -884,64 +884,67 @@ export default function DssPage() {
                       const status = statusMeta(statusLabel)
                       const recommendation = recommendationMeta(item.recommendation)
                       return (
-                        <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
-                          <td className="px-3 py-2.5 align-top">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/60 font-semibold text-slate-600 dark:text-slate-300">
+                        <tr key={`${item.assetType}-${item.assetId}-${item.detailId}-${item.rank}`} className="group transition-colors hover:bg-teal-50/35 dark:hover:bg-teal-950/10">
+                          <td className="px-2.5 py-2 align-top">
+                            <span
+                              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:ring-slate-700"
+                              aria-label={`Peringkat ${item.rank}`}
+                            >
                               {item.rank}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
-                            <div className="font-semibold text-slate-950 dark:text-slate-50">{item.detailName}</div>
-                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.detailCode} · {item.serialNumber || "-"}</div>
+                          <td className="px-2.5 py-2 align-top">
+                            <div className="font-semibold text-slate-950 transition-colors group-hover:text-teal-800 dark:text-slate-50 dark:group-hover:text-teal-300">{item.detailName}</div>
+                            <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{item.detailCode} · {item.serialNumber || "-"}</div>
                           </td>
-                          <td className="px-3 py-2.5 align-top text-slate-700 dark:text-slate-300">
-                            <Badge className={cn("gap-1", locationBadgeClass)}>
-                              <MapPin className="h-3.5 w-3.5" />
+                          <td className="px-2.5 py-2 align-top text-slate-700 dark:text-slate-300">
+                            <Badge className={cn(rankingBadgeClass, locationBadgeClass)}>
+                              <MapPin aria-hidden="true" />
                               {item.assetLocation || "-"}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
-                            <Badge variant="outline" className={cn("gap-1", jenis.className)}>
-                              <jenis.icon className="h-3.5 w-3.5" />
+                          <td className="px-2.5 py-2 align-top">
+                            <Badge variant="outline" className={cn(rankingBadgeClass, jenis.className)}>
+                              <jenis.icon aria-hidden="true" />
                               {assetTypeLabel(item.assetType)}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
-                            <Badge variant="outline" className={cn("gap-1", condition.className)}>
-                              <condition.icon className="h-3.5 w-3.5" />
+                          <td className="px-2.5 py-2 align-top">
+                            <Badge variant="outline" className={cn(rankingBadgeClass, condition.className)}>
+                              <condition.icon aria-hidden="true" />
                               {item.conditionLabel}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
-                            <Badge variant="outline" className={cn("gap-1", status.className)}>
-                              <status.icon className="h-3.5 w-3.5" />
+                          <td className="px-2.5 py-2 align-top">
+                            <Badge variant="outline" className={cn(rankingBadgeClass, status.className)}>
+                              <status.icon aria-hidden="true" />
                               {statusLabel}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
+                          <td className="px-2.5 py-2 align-top">
                             <div className="font-semibold text-slate-950 dark:text-slate-50">{formatScore(item.preferenceScore)}</div>
-                            <div className="mt-1 h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800/60">
+                            <div className="mt-1.5 h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/60 dark:bg-slate-800/60 dark:ring-slate-700/50">
                               <div
                                 className="h-full rounded-full bg-linear-to-r from-teal-400 to-teal-600"
                                 style={{ width: `${Math.min(100, Math.round(item.preferenceScore * 100))}%` }}
                               />
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
-                            <Badge variant="outline" className={cn("gap-1", recommendation.className)}>
-                              <recommendation.icon className="h-3.5 w-3.5" />
+                          <td className="px-2.5 py-2 align-top">
+                            <Badge variant="outline" className={cn(rankingBadgeClass, recommendation.className)}>
+                              <recommendation.icon aria-hidden="true" />
                               {item.recommendation}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 align-top text-right">
+                          <td className="px-2.5 py-2 align-top text-right">
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="gap-1"
+                              className="gap-1.5 rounded-xl bg-white shadow-xs transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-950 dark:hover:bg-teal-400/10 dark:hover:text-teal-300"
                               onClick={() => setAuditItem(item)}
                             >
-                              <Scale className="h-3.5 w-3.5" />
+                              <Scale className="size-3.5 shrink-0" />
                               Detail
                             </Button>
                           </td>
