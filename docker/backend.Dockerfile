@@ -1,28 +1,37 @@
-FROM node:20-bookworm-slim
+# ======================
+# 1. Build Stage
+# ======================
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-ENV CI=true
-
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json apps/backend/package.json
-COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/database/package.json packages/database/package.json
 
-RUN npm install -g npm@11.7.0
 RUN npm ci
 
-COPY tsconfig.json tsconfig.json
 COPY apps/backend apps/backend
 COPY packages/database packages/database
 
 RUN npm run build --workspace=inventory-backend
 
+# ======================
+# 2. Production Stage
+# ======================
+FROM node:20-alpine
+
+WORKDIR /app
+
 ENV NODE_ENV=production
 
-WORKDIR /app/apps/backend
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/apps/backend/package.json ./package.json
+
+RUN npm install --omit=dev
 
 RUN mkdir -p uploads/profiles uploads/reports
 
 EXPOSE 4000
 
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/index.js"]
