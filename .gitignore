@@ -4,6 +4,8 @@
 # Dependencies
 # ==========================
 node_modules/
+**/node_modules/
+
 
 # ==========================
 # Build outputs
@@ -14,47 +16,56 @@ out/
 .next/
 coverage/
 
+
 # ==========================
-# Test outputs (Jest / Playwright)
+# Test outputs
 # ==========================
 playwright-report/
 test-results/
 blob-report/
 .nyc_output/
+
 selenium/screenshots/
 selenium/reports/
 selenium.env.json
+
 
 # ==========================
 # TypeScript cache
 # ==========================
 *.tsbuildinfo
 
+
 # ==========================
 # Environment variables
-# NEVER COMMIT THESE FILES!
+# NEVER COMMIT THESE FILES
 # ==========================
 .env
+.env.*
+!.env.example
+
 .env.local
-.env.*.local
+.env.development
+.env.production
+.env.test
+
 .docker.env
 .docker.env.local
-env
-env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
 
 # ==========================
 # Logs
 # ==========================
 logs/
 *.log
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+report.*.json
+
 
 # ==========================
 # Runtime data
@@ -64,8 +75,39 @@ pids/
 *.seed
 *.pid.lock
 
-# Uploads (generated files)
+
+# ==========================
+# Upload files
+# NEVER COMMIT USER DATA
+# ==========================
+uploads/
 apps/backend/uploads/
+apps/*/uploads/
+
+public/uploads/
+storage/
+
+
+# ==========================
+# Database backup
+# NEVER COMMIT DATABASE DATA
+# ==========================
+*.sql
+*.dump
+*.mysql
+
+backup/
+backups/
+database-backup/
+db-backup/
+
+
+# ==========================
+# Docker local data
+# ==========================
+docker-data/
+*.tar
+
 
 # ==========================
 # Operating System files
@@ -75,8 +117,10 @@ Thumbs.db
 ._*
 .AppleDouble
 .LSOverride
+
 .Spotlight-V100/
 .Trashes/
+
 
 # ==========================
 # Temporary files
@@ -88,20 +132,24 @@ Thumbs.db
 *.orig
 *.rej
 
-# ==========================
-# Local backup folders
-# ==========================
-Downloads/
-**/Downloads/
-sipena/
-*-main/
 
 # ==========================
 # IDE / Editor
 # ==========================
 .idea/
 .vscode/
+
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
+
+
+# ==========================
+# Local folders
+# ==========================
+Downloads/
+**/Downloads/
+tmp/
+temp/
+.cache/
