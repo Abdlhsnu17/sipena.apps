@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AuthService } from '../services/auth.service';
+import { createScopedLogger } from '../utils/logger';
 import {
     LoginCredentials,
     PasswordResetConfirmPayload,
     PasswordResetRequestPayload,
     RegisterCredentials
 } from '../types/auth';
+
+const logger = createScopedLogger('controller:auth');
 
 const getAuthenticatedUserId = (req: Request): number | null => {
   const rawUserId = req.user?.id;
@@ -53,7 +56,7 @@ export class AuthController {
 
       res.json(result);
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -87,7 +90,7 @@ export class AuthController {
 
       res.status(201).json(result);
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -127,7 +130,7 @@ export class AuthController {
 
       res.json(result);
     } catch (error) {
-      console.error('Verify reset NIP error:', error);
+      logger.error('Verify reset NIP error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -161,7 +164,7 @@ export class AuthController {
 
       res.json(result);
     } catch (error) {
-      console.error('Reset password error:', error);
+      logger.error('Reset password error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -210,7 +213,7 @@ export class AuthController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -256,12 +259,12 @@ export class AuthController {
       }, photoPath);
 
       if (!result.success) {
-        console.error(`[Upload] Profile update failed: ${result.message}`);
+        logger.error('[Upload] Profile update failed', { message: result.message });
       }
 
       res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
-      console.error('[Upload] Update profile error:', error);
+      logger.error('[Upload] Update profile error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'

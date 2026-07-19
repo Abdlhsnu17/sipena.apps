@@ -3,6 +3,7 @@ import { randomInt } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
+import { createScopedLogger } from '../utils/logger';
 import {
     AuthResponse,
     LoginCredentials,
@@ -68,6 +69,8 @@ interface PasswordResetRequestResponse {
     previewCode?: string;
   };
 }
+
+const logger = createScopedLogger('service:auth');
 
 export class AuthService {
   private static readonly PASSWORD_RESET_EXPIRES_IN_MINUTES = 10;
@@ -260,7 +263,7 @@ export class AuthService {
         attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS
       });
     } catch (error) {
-      console.error('Save password reset session error:', error);
+      logger.error('Save password reset session error', { error });
       return {
         success: false,
         message: error instanceof Error
@@ -294,10 +297,10 @@ export class AuthService {
         });
         phoneDeliverySucceeded = !phoneDelivery.preview;
       } catch (error) {
-        console.error('Send password reset OTP error:', error);
+        logger.error('Send password reset OTP error', { error });
       }
     } else {
-      console.warn(`[RESET_PASSWORD] User ${user.id} has no valid phone number; falling back to email delivery.`);
+      logger.warn('[RESET_PASSWORD] User has no valid phone number; falling back to email delivery', { userId: user.id });
     }
 
     if (!phoneDeliverySucceeded) {
@@ -314,7 +317,7 @@ export class AuthService {
           target: this.maskEmail(user.email),
         });
       } catch (error) {
-        console.error('Send password reset email error:', error);
+        logger.error('Send password reset email error', { error });
       }
     }
 
@@ -490,7 +493,7 @@ export class AuthService {
     try {
       await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
     } catch (error: any) {
-      console.error(`[Service] Database error during profile update:`, error);
+      logger.error('[Service] Database error during profile update', { error });
       if (error.code === 'ER_DUP_ENTRY') {
         return { success: false, message: 'NIP atau email sudah digunakan' };
       }

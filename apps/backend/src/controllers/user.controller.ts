@@ -3,6 +3,9 @@ import { validationResult } from 'express-validator';
 import { UserService } from '../services/user.service';
 import { recordUserActivity } from '../services/user_activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:user');
 
 const getAuthenticatedUserId = (req: Request): number | null => {
   const rawUserId = req.user?.id;
@@ -49,7 +52,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get users error:', error);
+      logger.error('Get users error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -73,7 +76,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get user error:', error);
+      logger.error('Get user error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -114,7 +117,7 @@ export class UserController {
 
       res.status(201).json(result);
     } catch (error) {
-      console.error('Create user error:', error);
+      logger.error('Create user error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -173,7 +176,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Update user error:', error);
+      logger.error('Update user error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -242,7 +245,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Delete user error:', error);
+      logger.error('Delete user error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -281,7 +284,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Bulk delete users error:', error);
+      logger.error('Bulk delete users error', { error });
       res.status(500).json({
         success: false,
         message: 'Gagal menghapus pengguna secara massal',
@@ -351,7 +354,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Change password error:', error);
+      logger.error('Change password error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -420,7 +423,7 @@ export class UserController {
 
       res.json(result);
     } catch (error) {
-      console.error('Reset user password error:', error);
+      logger.error('Reset user password error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'

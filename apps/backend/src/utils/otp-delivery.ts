@@ -1,3 +1,7 @@
+import { createScopedLogger } from './logger';
+
+const logger = createScopedLogger('utils:otp-delivery');
+
 interface OtpDeliveryPayload {
   phoneNumber: string;
   code: string;
@@ -110,7 +114,7 @@ export const sendPasswordResetOtp = async ({
 
   if (configuredAttempts.length === 0) {
     if (!isProduction) {
-      console.log(`[DEV][RESET OTP] kode verifikasi untuk ${normalizedPhoneNumber}: ${code}`);
+      logger.debug('[DEV][RESET OTP] kode verifikasi', { to: normalizedPhoneNumber, code });
       return {
         channel: 'local_preview',
         preview: true,
@@ -130,12 +134,12 @@ export const sendPasswordResetOtp = async ({
         deliveryTarget,
       };
     } catch (error) {
-      console.error(`[OTP] Pengiriman ${attempt.channel} gagal:`, error);
+      logger.error('[OTP] Pengiriman gagal', { channel: attempt.channel, error });
     }
   }
 
   if (!isProduction) {
-    console.log(`[DEV][RESET OTP] kode verifikasi untuk ${normalizedPhoneNumber}: ${code}`);
+    logger.debug('[DEV][RESET OTP] kode verifikasi', { to: normalizedPhoneNumber, code });
     return {
       channel: 'local_preview',
       preview: true,

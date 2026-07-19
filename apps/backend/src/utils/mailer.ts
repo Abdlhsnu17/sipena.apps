@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer';
+import { createScopedLogger } from './logger';
+
+const logger = createScopedLogger('utils:mailer');
 
 interface PasswordResetEmailPayload {
   to: string;
@@ -57,7 +60,7 @@ export const sendPasswordResetCodeEmail = async ({
 
   if (!transporter || !from) {
     if (isPasswordResetPreviewMode()) {
-      console.log(`[DEV][RESET PASSWORD] kode verifikasi untuk ${to}: ${code}`);
+      logger.debug('[DEV][RESET PASSWORD] kode verifikasi', { to, code });
       return { preview: true };
     }
 

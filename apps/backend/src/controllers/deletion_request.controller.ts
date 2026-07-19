@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import deletionRequestService from '../services/deletion_request.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:deletion_request');
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -9,82 +12,102 @@ const getActorUserId = (req: Request): number | null => {
 
 class DeletionRequestController {
   getAll = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
+        return;
+      }
 
-    const result = await deletionRequestService.getAll({
-      status: req.query.status as string | undefined,
-      targetType: req.query.targetType as string | undefined,
-      page: req.query.page ? Number(req.query.page) : undefined,
-      limit: req.query.limit ? Number(req.query.limit) : undefined,
-    });
-    res.status(result.success ? 200 : 400).json(result);
+      const result = await deletionRequestService.getAll({
+        status: req.query.status as string | undefined,
+        targetType: req.query.targetType as string | undefined,
+        page: req.query.page ? Number(req.query.page) : undefined,
+        limit: req.query.limit ? Number(req.query.limit) : undefined,
+      });
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      logger.error('Get deletion requests error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
   };
 
   create = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
+        return;
+      }
 
-    const actorId = getActorUserId(req);
-    if (!actorId) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
-      return;
-    }
+      const actorId = getActorUserId(req);
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
 
-    const result = await deletionRequestService.create({
-      targetType: req.body.targetType,
-      targetId: Number(req.body.targetId),
-      targetLabel: req.body.targetLabel,
-      reason: req.body.reason,
-      requestedBy: actorId,
-    });
-    res.status(result.success ? 201 : 400).json(result);
+      const result = await deletionRequestService.create({
+        targetType: req.body.targetType,
+        targetId: Number(req.body.targetId),
+        targetLabel: req.body.targetLabel,
+        reason: req.body.reason,
+        requestedBy: actorId,
+      });
+      res.status(result.success ? 201 : 400).json(result);
+    } catch (error) {
+      logger.error('Create deletion request error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
   };
 
   approve = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
+        return;
+      }
 
-    const actorId = getActorUserId(req);
-    if (!actorId) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
-      return;
-    }
+      const actorId = getActorUserId(req);
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
 
-    const result = await deletionRequestService.approve(Number(req.params.id), {
-      reviewedBy: actorId,
-      reviewNotes: req.body.reviewNotes,
-    });
-    res.status(result.success ? 200 : 400).json(result);
+      const result = await deletionRequestService.approve(Number(req.params.id), {
+        reviewedBy: actorId,
+        reviewNotes: req.body.reviewNotes,
+      });
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      logger.error('Approve deletion request error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
   };
 
   reject = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
+        return;
+      }
 
-    const actorId = getActorUserId(req);
-    if (!actorId) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
-      return;
-    }
+      const actorId = getActorUserId(req);
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
 
-    const result = await deletionRequestService.reject(Number(req.params.id), {
-      reviewedBy: actorId,
-      reviewNotes: req.body.reviewNotes,
-    });
-    res.status(result.success ? 200 : 400).json(result);
+      const result = await deletionRequestService.reject(Number(req.params.id), {
+        reviewedBy: actorId,
+        reviewNotes: req.body.reviewNotes,
+      });
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      logger.error('Reject deletion request error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
   };
 }
 

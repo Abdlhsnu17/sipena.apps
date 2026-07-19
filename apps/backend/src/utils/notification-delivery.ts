@@ -1,3 +1,7 @@
+import { createScopedLogger } from './logger';
+
+const logger = createScopedLogger('utils:notification-delivery');
+
 interface PhoneNotificationPayload {
   phoneNumber: string;
   userName?: string;
@@ -94,7 +98,7 @@ export const sendPhoneNotification = async ({
 
   if (configuredAttempts.length === 0) {
     if (!isProduction) {
-      console.log(`[DEV][NOTIF] ${title} -> ${normalizedPhoneNumber}: ${message}`);
+      logger.debug('[DEV][NOTIF] message preview', { title, to: normalizedPhoneNumber, message });
       return {
         channel: 'local_preview',
         preview: true,
@@ -114,12 +118,12 @@ export const sendPhoneNotification = async ({
         deliveryTarget,
       };
     } catch (error) {
-      console.error(`[NOTIF] Pengiriman ${attempt.channel} gagal:`, error);
+      logger.error('[NOTIF] Pengiriman gagal', { channel: attempt.channel, error });
     }
   }
 
   if (!isProduction) {
-    console.log(`[DEV][NOTIF] ${title} -> ${normalizedPhoneNumber}: ${message}`);
+    logger.debug('[DEV][NOTIF] message preview', { title, to: normalizedPhoneNumber, message });
     return {
       channel: 'local_preview',
       preview: true,

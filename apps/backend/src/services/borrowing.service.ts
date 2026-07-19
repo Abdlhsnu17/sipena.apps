@@ -17,8 +17,11 @@ import {
     generateBorrowingCode,
     getOverdueDays
 } from '../utils/helpers';
+import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { DISPLAY_TIME_ZONE } from '../utils/time';
+
+const logger = createScopedLogger('service:borrowing');
 import { AssetService } from './asset.service';
 import { AssetUsageService } from './asset_usage.service';
 import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
@@ -1308,7 +1311,7 @@ export class BorrowingService {
         detailCode: data.assetDetailCode || null
       });
     } catch (syncError) {
-      console.error('Create borrowing asset sync error:', syncError);
+      logger.error('Create borrowing asset sync error', { error: syncError });
     }
 
 	    // Fetch hasil insert untuk dikembalikan (gunakan getById agar join tabel aset berjalan)
@@ -1394,7 +1397,7 @@ export class BorrowingService {
         detailCode: assetContext.assetDetailCode
       });
     } catch (syncError) {
-      console.error('Approve borrowing asset sync error:', syncError);
+      logger.error('Approve borrowing asset sync error', { error: syncError });
     }
 
     // Create asset usage log on approve if the borrowing should be considered started.
@@ -1568,7 +1571,7 @@ export class BorrowingService {
         assetDetailId: assetContext.assetDetailId
       });
     } catch (syncError) {
-      console.error('Reject borrowing asset master sync error:', syncError);
+      logger.error('Reject borrowing asset master sync error', { error: syncError });
     }
 
     await this.syncAssetDetailBorrowingState(assetContext.assetId, assetContext.assetType, {

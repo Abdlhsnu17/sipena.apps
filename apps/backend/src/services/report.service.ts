@@ -4,8 +4,11 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
+import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { getReportUploadsDir } from '../utils/storage-paths';
+
+const logger = createScopedLogger('service:report');
 
 const REPORT_BRAND_NAME = 'SiPeNa';
 const REPORT_SYSTEM_NAME = 'Sistem Inventaris Peminjaman serta Pemeliharaan sarana (SiPeNa)';
@@ -1030,7 +1033,7 @@ export class ReportService {
         try {
           await fsPromises.unlink(filePath);
         } catch (error) {
-          console.error('Delete upload file error:', error);
+          logger.error('Delete upload file error', { error });
         }
       }
     }

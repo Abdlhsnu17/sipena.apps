@@ -84,6 +84,7 @@ Thumbs.db
 *.tmp
 *.temp
 *.bak
+*.bak.*
 *.orig
 *.rej
 

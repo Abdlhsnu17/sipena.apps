@@ -1,4 +1,7 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('service:email');
 
 interface MailOptions {
   to: string | string[];
@@ -36,7 +39,7 @@ export async function sendEmail(opts: MailOptions): Promise<boolean> {
   const transporter = getTransporter();
   if (!transporter) {
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email PREVIEW] To: ${opts.to} | Subject: ${opts.subject}`);
+      logger.debug('[Email PREVIEW]', { to: opts.to, subject: opts.subject });
     }
     return false;
   }
@@ -51,7 +54,7 @@ export async function sendEmail(opts: MailOptions): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error('[Email Error]', err);
+    logger.error('[Email Error]', { error: err });
     return false;
   }
 }

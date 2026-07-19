@@ -3,6 +3,9 @@ import { promises as fsPromises } from 'fs';
 import { ReportService } from '../services/report.service';
 import { recordUserActivity } from '../services/user_activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:report');
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -95,7 +98,7 @@ export class ReportController {
       });
       res.json(result);
     } catch (error) {
-      console.error('Get dashboard error:', error);
+      logger.error('Get dashboard error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -119,7 +122,7 @@ export class ReportController {
         data
       });
     } catch (error) {
-      console.error('Get notifications error:', error);
+      logger.error('Get notifications error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -144,7 +147,7 @@ export class ReportController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get asset report error:', error);
+      logger.error('Get asset report error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -168,7 +171,7 @@ export class ReportController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get borrowing report error:', error);
+      logger.error('Get borrowing report error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -192,7 +195,7 @@ export class ReportController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance report error:', error);
+      logger.error('Get maintenance report error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -217,7 +220,7 @@ export class ReportController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get usage report error:', error);
+      logger.error('Get usage report error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -252,7 +255,7 @@ export class ReportController {
       );
       res.send(pdfBuffer);
     } catch (error) {
-      console.error('Export PDF error:', error);
+      logger.error('Export PDF error', { error });
       res.status(501).json({
         success: false,
         message: error instanceof Error ? error.message : 'Fitur export PDF belum tersedia'
@@ -287,7 +290,7 @@ export class ReportController {
       );
       res.send(excelBuffer);
     } catch (error) {
-      console.error('Export Excel error:', error);
+      logger.error('Export Excel error', { error });
       res.status(501).json({
         success: false,
         message: error instanceof Error ? error.message : 'Fitur export Excel belum tersedia'
@@ -321,7 +324,7 @@ export class ReportController {
       );
       res.send(csvBuffer);
     } catch (error) {
-      console.error('Export CSV error:', error);
+      logger.error('Export CSV error', { error });
       res.status(501).json({
         success: false,
         message: error instanceof Error ? error.message : 'Fitur export CSV belum tersedia'
@@ -380,7 +383,7 @@ export class ReportController {
       }
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
-      console.error('Upload report error:', error);
+      logger.error('Upload report error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -402,7 +405,7 @@ export class ReportController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get uploads error:', error);
+      logger.error('Get uploads error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -448,7 +451,7 @@ export class ReportController {
 
       res.download(filePath, record.data.filename);
     } catch (error) {
-      console.error('Download upload error:', error);
+      logger.error('Download upload error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -501,7 +504,7 @@ export class ReportController {
       res.setHeader('Content-Disposition', `inline; filename="${record.data.filename}"`);
       res.sendFile(filePath);
     } catch (error) {
-      console.error('Preview upload error:', error);
+      logger.error('Preview upload error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -555,7 +558,7 @@ export class ReportController {
       }
       res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
-      console.error('Delete upload error:', error);
+      logger.error('Delete upload error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'

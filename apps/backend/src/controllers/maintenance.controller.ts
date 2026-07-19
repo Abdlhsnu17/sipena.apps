@@ -4,6 +4,9 @@ import { AssetType } from '../models';
 import { MaintenanceService } from '../services/maintenance.service';
 import { recordUserActivity } from '../services/user_activity.service';
 import { canManageMaintenanceCompletion, hasAnyRole } from '../utils/role';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:maintenance');
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -38,7 +41,7 @@ export class MaintenanceController {
       const result = await this.maintenanceService.getTechnicianCandidates(search, limit);
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance technician candidates error:', error);
+      logger.error('Get maintenance technician candidates error', { error });
       res.status(500).json({ success: false, message: 'Daftar akun teknisi/PJ gagal dimuat' });
     }
   };
@@ -48,7 +51,7 @@ export class MaintenanceController {
       const result = await this.maintenanceService.getAnalytics();
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance analytics error:', error);
+      logger.error('Get maintenance analytics error', { error });
       res.status(500).json({ success: false, message: 'Dashboard pemeliharaan gagal dimuat' });
     }
   };
@@ -58,7 +61,7 @@ export class MaintenanceController {
       const result = await this.maintenanceService.dispatchDueReminders();
       res.json(result);
     } catch (error) {
-      console.error('Dispatch maintenance reminders error:', error);
+      logger.error('Dispatch maintenance reminders error', { error });
       res.status(500).json({ success: false, message: 'Reminder pemeliharaan gagal diproses' });
     }
   };
@@ -69,7 +72,7 @@ export class MaintenanceController {
       const result = await this.maintenanceService.getAttachments(id);
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance attachments error:', error);
+      logger.error('Get maintenance attachments error', { error });
       res.status(500).json({ success: false, message: 'Lampiran pemeliharaan gagal dimuat' });
     }
   };
@@ -92,7 +95,7 @@ export class MaintenanceController {
       });
       res.status(result.success ? 201 : 404).json(result);
     } catch (error) {
-      console.error('Upload maintenance attachment error:', error);
+      logger.error('Upload maintenance attachment error', { error });
       res.status(500).json({ success: false, message: 'Lampiran pemeliharaan gagal diunggah' });
     }
   };
@@ -130,7 +133,7 @@ export class MaintenanceController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance records error:', error);
+      logger.error('Get maintenance records error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -154,7 +157,7 @@ export class MaintenanceController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get maintenance error:', error);
+      logger.error('Get maintenance error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -235,11 +238,7 @@ export class MaintenanceController {
 
       res.status(201).json(result);
     } catch (error) {
-      console.error('Create maintenance error:', error);
-      console.error('Error details:', {
-        message: (error as Error).message,
-        stack: (error as Error).stack
-      });
+      logger.error('Create maintenance error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -482,7 +481,7 @@ export class MaintenanceController {
 
       res.json(result);
     } catch (error) {
-      console.error('Update maintenance error:', error);
+      logger.error('Update maintenance error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -542,7 +541,7 @@ export class MaintenanceController {
 
       res.json(result);
     } catch (error) {
-      console.error('Complete maintenance error:', error);
+      logger.error('Complete maintenance error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -596,7 +595,7 @@ export class MaintenanceController {
 
       res.json(result);
     } catch (error) {
-      console.error('Delete maintenance error:', error);
+      logger.error('Delete maintenance error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'

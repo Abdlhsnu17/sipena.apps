@@ -3,6 +3,9 @@ import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user_activity.service';
+import { createScopedLogger } from '../utils/logger';
+
+const logger = createScopedLogger('controller:borrowing');
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -40,7 +43,7 @@ export class BorrowingController {
       const result = await this.borrowingService.getOwnerCandidates(search, limit);
       res.json(result);
     } catch (error) {
-      console.error('Get borrowing owner candidates error:', error);
+      logger.error('Get borrowing owner candidates error', { error });
       res.status(500).json({ success: false, message: 'Daftar akun pemilik inventaris gagal dimuat' });
     }
   };
@@ -74,9 +77,8 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get borrowings error:', error);
+      logger.error('Get borrowings error', { error });
         if (error instanceof Error) {
-          console.error('Stack:', error.stack);
         }
       res.status(500).json({
         success: false,
@@ -117,7 +119,7 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Get borrowing error:', error);
+      logger.error('Get borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -188,15 +190,14 @@ export class BorrowingController {
             },
           });
         } catch (activityError) {
-          console.error('Record borrowing activity error:', activityError);
+          logger.error('Record borrowing activity error', { error: activityError });
         }
       }
 
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
-      console.error('Create borrowing error:', error);
+      logger.error('Create borrowing error', { error });
         if (error instanceof Error) {
-          console.error('Stack:', error.stack);
         }
       res.status(500).json({
         success: false,
@@ -295,7 +296,7 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Update borrowing error:', error);
+      logger.error('Update borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -360,13 +361,13 @@ export class BorrowingController {
             },
           });
         } catch (activityError) {
-          console.error('Record borrowing approval activity error:', activityError);
+          logger.error('Record borrowing approval activity error', { error: activityError });
         }
       }
 
       res.json(result);
     } catch (error) {
-      console.error('Approve borrowing error:', error);
+      logger.error('Approve borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -432,13 +433,13 @@ export class BorrowingController {
             },
           });
         } catch (activityError) {
-          console.error('Record borrowing rejection activity error:', activityError);
+          logger.error('Record borrowing rejection activity error', { error: activityError });
         }
       }
 
       res.json(result);
     } catch (error) {
-      console.error('Reject borrowing error:', error);
+      logger.error('Reject borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -507,7 +508,7 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Return borrowing error:', error);
+      logger.error('Return borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -573,7 +574,7 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Validate return error:', error);
+      logger.error('Validate return error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -627,7 +628,7 @@ export class BorrowingController {
 
       res.json(result);
     } catch (error) {
-      console.error('Delete borrowing error:', error);
+      logger.error('Delete borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -655,7 +656,7 @@ export class BorrowingController {
       const result = await this.borrowingService.getBlockingBorrowings(userIdNum);
       res.json(result);
     } catch (error) {
-      console.error('Get blocking borrowings error:', error);
+      logger.error('Get blocking borrowings error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -727,13 +728,13 @@ export class BorrowingController {
             },
           });
         } catch (activityError) {
-          console.error('Record borrowing extension activity error:', activityError);
+          logger.error('Record borrowing extension activity error', { error: activityError });
         }
       }
 
       res.json(result);
     } catch (error) {
-      console.error('Extend borrowing error:', error);
+      logger.error('Extend borrowing error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error'

@@ -13,10 +13,13 @@ import {
 } from '../models';
 import { formatCostLabel, formatDateTimeForMySQL, generateMaintenanceCode } from '../utils/helpers';
 import { sendPhoneNotification } from '../utils/notification-delivery';
+import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import * as MaintenanceHistoryService from './maintenance_history.service';
 import notificationService from './notification.service';
+
+const logger = createScopedLogger('service:maintenance');
 
 interface MaintenanceRow extends RowDataPacket, Maintenance {
   requester_name?: string | null;
@@ -316,7 +319,7 @@ export class MaintenanceService {
         [maintenanceId, fromStatus, toStatus, changedBy ?? null, note?.trim() || null]
       );
     } catch (error) {
-      console.error('Error recording maintenance status audit:', error);
+      logger.error('Error recording maintenance status audit', { error });
     }
   }
 
@@ -988,7 +991,7 @@ export class MaintenanceService {
         channels: ['whatsapp'],
       });
     } catch (error) {
-      console.error('[Maintenance Notification] Gagal mengirim notifikasi HP:', error);
+      logger.error('[Maintenance Notification] Gagal mengirim notifikasi HP', { error });
     }
   }
 
@@ -1344,7 +1347,7 @@ export class MaintenanceService {
         createdBy: newMaintenance.created_by || data.createdBy,
       });
     } catch (historyError) {
-      console.error('Error creating maintenance history:', historyError);
+      logger.error('Error creating maintenance history', { error: historyError });
       // Continue even if history fails, as the main record is created
     }
 
@@ -1594,7 +1597,7 @@ export class MaintenanceService {
         });
       }
     } catch (historyError) {
-      console.error('Error syncing maintenance history update:', historyError);
+      logger.error('Error syncing maintenance history update', { error: historyError });
     }
 
     if (
@@ -1721,7 +1724,7 @@ export class MaintenanceService {
         cost: data.cost,
       });
     } catch (historyError) {
-      console.error('Error syncing maintenance history completion:', historyError);
+      logger.error('Error syncing maintenance history completion', { error: historyError });
     }
 
     if (assetId) {
@@ -1819,7 +1822,7 @@ export class MaintenanceService {
     try {
       await MaintenanceHistoryService.validateByMaintenanceId(Number(id), validatedBy, validatedAt);
     } catch (historyError) {
-      console.error('Error syncing maintenance history validation:', historyError);
+      logger.error('Error syncing maintenance history validation', { error: historyError });
     }
 
     const assetId = this.normalizeAssetId(
@@ -1855,7 +1858,7 @@ export class MaintenanceService {
     try {
       await this.createNextRecurringMaintenance(maintenanceData, validatedBy);
     } catch (recurringError) {
-      console.error('Error creating next recurring maintenance:', recurringError);
+      logger.error('Error creating next recurring maintenance', { error: recurringError });
     }
 
     const updated = await this.getById(id);
