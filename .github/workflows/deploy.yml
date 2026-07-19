@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: sipena-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -50,6 +54,14 @@ jobs:
 
           script: |
             set -eu
+
+            # GitHub concurrency prevents overlapping workflow runs. This VPS
+            # lock also protects against manually re-run/older deploy scripts.
+            exec 9>/tmp/sipena-production-deploy.lock
+            if ! flock -w 900 9; then
+              echo "Another deployment still holds the VPS deploy lock." >&2
+              exit 1
+            fi
 
             deploy_path="${DEPLOY_PATH:-/var/www/sipena}"
             repo_url="git@github.com:${{ github.repository }}.git"
@@ -128,12 +140,35 @@ jobs:
               done
             }
 
+            release_mysql_volume() {
+              project_name="${COMPOSE_PROJECT_NAME:-sipena}"
+              mysql_volume="$(docker volume ls \
+                --filter "label=com.docker.compose.project=$project_name" \
+                --filter "label=com.docker.compose.volume=mysql_data" \
+                --format '{{.Name}}' | head -n 1)"
+
+              if [ -z "$mysql_volume" ]; then
+                return 0
+              fi
+
+              for container_id in $(docker ps -q --filter "volume=$mysql_volume"); do
+                container_name="$(docker inspect --format '{{.Name}}' "$container_id" | sed 's#^/##')"
+                echo "Removing stale container $container_name that still holds $mysql_volume." >&2
+                docker rm -f "$container_id" >&2
+              done
+            }
+
             git fetch origin
             git reset --hard origin/main
 
             free_host_port "${PHPMYADMIN_HOST_PORT:-8081}"
             free_host_port "${BACKEND_HOST_PORT:-4000}"
             free_host_port "${FRONTEND_HOST_PORT:-3000}"
+
+            # Preserve named volumes, but stop every old project container so
+            # only one mysqld process can lock InnoDB's ibdata1 file.
+            compose down --remove-orphans
+            release_mysql_volume
 
             # Start independent infrastructure first. Starting phpMyAdmin here
             # would make Compose abort immediately when MySQL is still warming
