@@ -27,10 +27,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # pakai standalone (WAJIB)
+# npm workspaces monorepo: standalone output nests under apps/frontend
 COPY --from=builder /app/apps/frontend/.next/standalone ./
-COPY --from=builder /app/apps/frontend/.next/static ./.next/static
-COPY --from=builder /app/apps/frontend/public ./public
+COPY --from=builder /app/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "apps/frontend/server.js"]
