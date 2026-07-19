@@ -79,7 +79,7 @@ jobs:
 
             wait_for_healthy() {
               service_name="$1"
-              max_attempts="${2:-60}"
+              max_attempts="${2:-90}"
 
               attempt=1
               while [ "$attempt" -le "$max_attempts" ]; do
@@ -90,6 +90,13 @@ jobs:
 
                   if [ "$health_status" = "healthy" ] || [ "$health_status" = "running" ]; then
                     return 0
+                  fi
+
+                  if [ "$health_status" = "unhealthy" ] || [ "$health_status" = "exited" ] || [ "$health_status" = "dead" ]; then
+                    echo "$service_name entered terminal state: $health_status" >&2
+                    docker inspect --format='{{range .State.Health.Log}}{{.End}} exit={{.ExitCode}} {{.Output}}{{println}}{{end}}' "$container_id" >&2 || true
+                    compose logs --no-color --tail=200 "$service_name" >&2 || true
+                    exit 1
                   fi
                 fi
 
@@ -128,8 +135,10 @@ jobs:
             free_host_port "${BACKEND_HOST_PORT:-4000}"
             free_host_port "${FRONTEND_HOST_PORT:-3000}"
 
-            compose up -d --force-recreate mysql
-            compose up -d redis phpmyadmin
+            # Start independent infrastructure first. Starting phpMyAdmin here
+            # would make Compose abort immediately when MySQL is still warming
+            # up, before our diagnostics can report the real database error.
+            compose up -d mysql redis
 
             wait_for_healthy mysql
             wait_for_healthy redis
@@ -174,6 +183,8 @@ jobs:
               echo "Fix apps/backend/.docker.env on the VPS, or intentionally recreate the MySQL volume after backing up data." >&2
               exit 1
             '
+
+            compose up -d phpmyadmin
 
             mkdir -p backups
             backup_file="backups/pre-migration-$(date +%Y%m%d%H%M%S).sql"

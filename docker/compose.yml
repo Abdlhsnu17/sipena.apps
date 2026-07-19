@@ -13,11 +13,14 @@ services:
       - mysql_data:/var/lib/mysql
       - ../packages/database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      # A reused volume can retain an older root password. Readiness should
+      # verify that MySQL accepts connections, while credential validation is
+      # handled explicitly by the deployment script.
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=socket --silent"]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 30s
+      retries: 18
+      start_period: 60s
 
   redis:
     image: redis:7-alpine
