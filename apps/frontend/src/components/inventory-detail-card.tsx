@@ -49,6 +49,7 @@ type InventoryDetailCardProps = {
   code: string
   serialNumber: string
   brand: string
+  model: string
   purchaseDateText: string
   maintenanceLabel: string
   maintenanceDateText: string
@@ -156,6 +157,7 @@ export function InventoryDetailCard({
   code,
   serialNumber,
   brand,
+  model,
   purchaseDateText,
   maintenanceLabel,
   maintenanceDateText,
@@ -188,6 +190,7 @@ export function InventoryDetailCard({
     { label: "Kode", value: code },
     { label: "SN", value: serialNumber },
     { label: "Merk", value: brand },
+    { label: "Tipe", value: model },
     { label: "Kategori", value: categoryLabel },
     { label: "Status", value: statusLabel },
     { label: "Kondisi", value: conditionLabel },
@@ -253,6 +256,7 @@ export function InventoryDetailCard({
             <DetailStat icon={ScanLine} label="Kode" value={code} />
             <DetailStat icon={QrCode} label="Nomor seri" value={serialNumber} />
             <DetailStat icon={Package2} label="Merk" value={brand} />
+            <DetailStat icon={Package2} label="Tipe" value={model} />
             <DetailStat icon={CalendarDays} label="Tanggal beli" value={purchaseDateText} />
             <DetailStat icon={Wrench} label={maintenanceLabel} value={maintenanceDateText} />
             <DetailStat icon={MapPin} label="Penggunaan" value={usageText} />

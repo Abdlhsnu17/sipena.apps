@@ -16,6 +16,7 @@ export interface NonMedicalAsset {
   inventoryName: string
   type: NonMedicalAssetType | string
   name: string
+  model: string
   serialNumber: string
   purchaseDate: string
   lastMaintenance: string

@@ -153,6 +153,7 @@ export interface MedicalAsset {
     | "dsa"
     | string
   name: string
+  model: string
   serialNumber: string
   purchaseDate: string
   lastMaintenance: string

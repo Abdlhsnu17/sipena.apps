@@ -2,6 +2,8 @@ export interface AssetLabelData {
   noId: string
   assetName: string
   assetCode?: string
+  brand?: string
+  model?: string
   serialNumber?: string
   location?: string
   condition?: string
@@ -69,6 +71,8 @@ export const buildManualAssetLabelHtml = (
   const rows = [
     { label: "No ID", value: data.noId },
     { label: "Kode Inventaris", value: data.assetCode },
+    { label: "Merk", value: data.brand },
+    { label: "Tipe", value: data.model },
     { label: "Kategori", value: data.sourceLabel },
     { label: "No Seri", value: data.serialNumber },
     { label: "Lokasi", value: data.location },

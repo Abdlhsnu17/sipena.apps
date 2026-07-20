@@ -35,6 +35,7 @@ const createInitialFormData = (defaultTypeValue: MedicalAsset["type"]) => ({
   inventoryName: "",
   type: defaultTypeValue,
   name: "",
+  model: "",
   serialNumber: "",
   purchaseDate: "",
   lastMaintenance: "",
@@ -123,6 +124,7 @@ export default function MedicalAssetForm({
         inventoryName: asset.inventoryName ?? "",
         type: resolvedTypeCategory,
         name: asset.name ?? "",
+        model: asset.model ?? "",
         serialNumber: asset.serialNumber ?? "",
         purchaseDate: toDateInputValue(asset.purchaseDate),
         lastMaintenance: toDateInputValue(asset.lastMaintenance),
@@ -177,6 +179,7 @@ export default function MedicalAssetForm({
       assetCode: formData.assetCode.trim(),
       inventoryName: formData.inventoryName.trim(),
       name: formData.name.trim(),
+      model: formData.model.trim(),
       serialNumber: formData.serialNumber.trim(),
       notes: formData.notes.trim(),
       usagePurpose: normalizeUsagePurpose(formData.usagePurpose, MEDICAL_USAGE_OPTIONS, MEDICAL_USAGE_ALIASES),
@@ -432,7 +435,7 @@ export default function MedicalAssetForm({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Merk/Model</label>
+              <label className="block text-sm font-medium mb-1">Merk</label>
               <input
                 type="text"
                 name="name"
@@ -440,6 +443,17 @@ export default function MedicalAssetForm({
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
                 placeholder="Philips, GE, Siemens"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipe</label>
+              <input
+                type="text"
+                name="model"
+                value={formData.model}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                placeholder="IntelliVue MX450, BeneFusion VP5"
               />
             </div>
             <div>

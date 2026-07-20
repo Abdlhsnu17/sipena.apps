@@ -93,6 +93,8 @@ const buildMedicalSpecifications = (row: ImportRow, code: string, status: string
       inventoryName: row.name,
       type: row.category,
       name: row.brand || '',
+      brand: row.brand || '',
+      model: row.model || '',
       brandModel: [row.brand, row.model].filter(Boolean).join(' / '),
       serialNumber: row.serialNumber || '',
       purchaseDate: normalizeDate(row.purchaseDate) || '',

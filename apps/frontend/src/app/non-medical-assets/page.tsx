@@ -151,6 +151,7 @@ export default function NonMedicalAssetsPage() {
             id: normalizeNonMedicalDetailId(detail, roomId, index),
             roomId,
             name: detail.name ?? detail.brandModel ?? "",
+            model: detail.model ?? "",
           }),
         )
         return {
@@ -862,6 +863,7 @@ export default function NonMedicalAssetsPage() {
                                 code={asset.assetCode || "-"}
                                 serialNumber={asset.serialNumber || "-"}
                                 brand={asset.name || "-"}
+                                model={asset.model || "-"}
                                 purchaseDateText={purchaseDateText}
                                 maintenanceLabel={maintenanceLabelText}
                                 maintenanceDateText={maintenanceDateText}
@@ -879,6 +881,8 @@ export default function NonMedicalAssetsPage() {
                                     assetName: asset.inventoryName || asset.name,
                                     assetCode: asset.assetCode,
                                     serialNumber: asset.serialNumber,
+                                    brand: asset.name,
+                                    model: asset.model,
                                     location: room.roomName,
                                     condition: asset.condition,
                                     status: asset.status,
@@ -893,6 +897,8 @@ export default function NonMedicalAssetsPage() {
                                     assetName: asset.inventoryName || asset.name,
                                     assetCode: asset.assetCode,
                                     serialNumber: asset.serialNumber,
+                                    brand: asset.name,
+                                    model: asset.model,
                                     location: room.roomName,
                                     condition: asset.condition,
                                     status: asset.status,
@@ -976,6 +982,8 @@ export default function NonMedicalAssetsPage() {
           assetType="non_medis"
           assetName={qrTarget.asset.inventoryName || qrTarget.asset.name}
           assetCode={qrTarget.asset.assetCode}
+          brand={qrTarget.asset.name}
+          model={qrTarget.asset.model}
           serialNumber={qrTarget.asset.serialNumber}
           location={qrTarget.location}
           condition={qrTarget.asset.condition}

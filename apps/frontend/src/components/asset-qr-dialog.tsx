@@ -20,6 +20,8 @@ export interface AssetQrDialogProps {
   assetType: DetailSource
   assetName: string
   assetCode?: string
+  brand?: string
+  model?: string
   serialNumber?: string
   location?: string
   condition?: string
@@ -104,6 +106,8 @@ export function AssetQrDialog({
   assetType,
   assetName,
   assetCode,
+  brand,
+  model,
   serialNumber,
   location,
   sourceLabel,
@@ -275,6 +279,8 @@ export function AssetQrDialog({
             <div>
               <IdentityPreviewRow label="No. ID" value={noId} />
               <IdentityPreviewRow label="Kode" value={assetCode} />
+              <IdentityPreviewRow label="Merk" value={brand} />
+              <IdentityPreviewRow label="Tipe" value={model} />
               <IdentityPreviewRow label="Nomor Seri" value={serialNumber} />
               <IdentityPreviewRow label="Lokasi" value={location} />
             </div>

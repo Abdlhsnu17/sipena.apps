@@ -43,6 +43,7 @@ const createInitialFormData = (defaultTypeValue: NonMedicalAsset["type"]) => ({
   inventoryName: "",
   type: defaultTypeValue,
   name: "",
+  model: "",
   serialNumber: "",
   purchaseDate: "",
   lastMaintenance: "",
@@ -143,6 +144,7 @@ export default function NonMedicalAssetForm({
         inventoryName: asset.inventoryName ?? "",
         type: resolvedTypeCategory,
         name: asset.name ?? (asset as NonMedicalAsset & { brandModel?: string }).brandModel ?? "",
+        model: asset.model ?? "",
         serialNumber: asset.serialNumber ?? "",
         purchaseDate: toDateInputValue(asset.purchaseDate),
         lastMaintenance: toDateInputValue(asset.lastMaintenance),
@@ -214,6 +216,7 @@ export default function NonMedicalAssetForm({
       assetCode: formData.assetCode.trim(),
       inventoryName: formData.inventoryName.trim(),
       name: formData.name.trim(),
+      model: formData.model.trim(),
       serialNumber: formData.serialNumber.trim(),
       notes: formData.notes.trim(),
       purchaseDate: formData.purchaseDate,
@@ -534,7 +537,7 @@ export default function NonMedicalAssetForm({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Merk/Model</label>
+              <label className="block text-sm font-medium mb-1">Merk</label>
               <input
                 type="text"
                 name="name"
@@ -542,6 +545,17 @@ export default function NonMedicalAssetForm({
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
                 placeholder="Caterpillar, Cummins, Yamaha"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipe</label>
+              <input
+                type="text"
+                name="model"
+                value={formData.model}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                placeholder="C15, C175, EF7200E"
               />
             </div>
             <div>
