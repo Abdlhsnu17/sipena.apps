@@ -1433,7 +1433,6 @@ export default function AssetUsagePage() {
                     <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => void exportUsageList("pdf")}>PDF</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void exportUsageList("word")}>Word</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
@@ -1595,9 +1594,6 @@ export default function AssetUsagePage() {
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
                                     PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("word", log)}>
-                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

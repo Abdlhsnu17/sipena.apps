@@ -1142,9 +1142,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                 <DropdownMenuItem onClick={() => handleHistoryExport("pdf")}>
                   PDF
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleHistoryExport("word")}>
-                  Word
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1305,9 +1302,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                       <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>
                           PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => exportSingleHistory("word", h)}>
-                          Word
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

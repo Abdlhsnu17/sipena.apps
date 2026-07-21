@@ -250,18 +250,69 @@ export const downloadBlob = (blob: Blob, fileName: string) => {
   URL.revokeObjectURL(link.href)
 }
 
+const waitForDocumentImages = async (documentRef: Document) => {
+  await Promise.all(
+    Array.from(documentRef.images).map((image) => {
+      if (image.complete) return Promise.resolve()
+      return new Promise<void>((resolve) => {
+        image.addEventListener('load', () => resolve(), { once: true })
+        image.addEventListener('error', () => resolve(), { once: true })
+      })
+    })
+  )
+}
+
+const downloadHtmlAsPdf = async (html: string, fileName: string) => {
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.position = 'fixed'
+  iframe.style.left = '-10000px'
+  iframe.style.top = '0'
+  iframe.style.width = '794px'
+  iframe.style.height = '1123px'
+  iframe.style.border = '0'
+  iframe.style.pointerEvents = 'none'
+  iframe.style.zIndex = '-1'
+  document.body.appendChild(iframe)
+
+  try {
+    const iframeDocument = iframe.contentDocument
+    if (!iframeDocument) throw new Error('Dokumen PDF tidak dapat disiapkan.')
+
+    iframeDocument.open()
+    iframeDocument.write(html)
+    iframeDocument.close()
+
+    await iframeDocument.fonts?.ready
+    await waitForDocumentImages(iframeDocument)
+
+    const { jsPDF } = await import('jspdf')
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true })
+    await pdf.html(iframeDocument.body, {
+      margin: [24, 24, 28, 24],
+      autoPaging: 'text',
+      html2canvas: {
+        backgroundColor: '#ffffff',
+        logging: false,
+        scale: 0.75,
+        useCORS: true,
+      },
+      width: 547,
+      windowWidth: 794,
+    })
+    pdf.save(fileName)
+  } finally {
+    iframe.remove()
+  }
+}
+
 export async function exportTableData(format: ExportFormat, options: ExportTableOptions) {
   const { title, columns, rows, filePrefix } = options
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
   if (format === 'pdf') {
     const html = buildHtml(title, columns, rows, colorMode)
-    const printWindow = window.open('', '_blank', 'width=900,height=700')
-    if (!printWindow) return
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    void printWindow.print()
+    await downloadHtmlAsPdf(html, `${slug}.pdf`)
     return
   }
 
@@ -829,12 +880,7 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
   const html = buildNarrativeHtml(title, entries, subtitle, buildSections, emptyMessage, colorMode, showEntryHeader)
 
   if (format === 'pdf') {
-    const printWindow = window.open('', '_blank', 'width=900,height=700')
-    if (!printWindow) return
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    void printWindow.print()
+    await downloadHtmlAsPdf(html, `${slug}.pdf`)
     return
   }
 
@@ -1156,12 +1202,7 @@ export async function exportFormularReport<T>(format: ExportFormat, options: For
   const html = buildFormularPageHtml(entries, buildFormular)
 
   if (format === 'pdf') {
-    const printWindow = window.open('', '_blank', 'width=900,height=700')
-    if (!printWindow) return
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    void printWindow.print()
+    await downloadHtmlAsPdf(html, `${filePrefix}.pdf`)
     return
   }
 

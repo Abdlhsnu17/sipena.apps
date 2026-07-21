@@ -1288,7 +1288,7 @@ export default function ReturnsPage() {
           <div
             role="tablist"
             aria-label="Daftar pengembalian"
-            className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm dark:border-slate-700/35 dark:bg-slate-900/70 sm:p-2"
+            className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200/80 bg-white/90 p-1 shadow-sm dark:border-slate-700/35 dark:bg-slate-900/70"
           >
             <button
               type="button"
@@ -1297,13 +1297,13 @@ export default function ReturnsPage() {
               aria-controls="active-returns-panel"
               id="active-returns-tab"
               onClick={() => setReturnView("active")}
-              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
+              className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-center text-[12px] font-semibold transition sm:min-h-10 sm:px-3 sm:text-[13px] ${
                 returnView === "active"
                   ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                   : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               }`}
             >
-              <RotateCcw className="h-5 w-5 shrink-0" />
+              <RotateCcw className="h-4 w-4 shrink-0" />
               <span>Alat yang Perlu Dikembalikan</span>
             </button>
             <button
@@ -1313,13 +1313,13 @@ export default function ReturnsPage() {
               aria-controls="return-history-panel"
               id="return-history-tab"
               onClick={() => setReturnView("history")}
-              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
+              className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-center text-[12px] font-semibold transition sm:min-h-10 sm:px-3 sm:text-[13px] ${
                 returnView === "history"
                   ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                   : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               }`}
             >
-              <History className="h-5 w-5 shrink-0" />
+              <History className="h-4 w-4 shrink-0" />
               <span>Riwayat Pengembalian</span>
             </button>
           </div>
@@ -1392,7 +1392,6 @@ export default function ReturnsPage() {
                       <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleActiveExport("pdf")}>PDF</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleActiveExport("word")}>Word</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
@@ -1518,9 +1517,6 @@ export default function ReturnsPage() {
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>
                                     PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Pengembalian", activeSelectedReturnColumns)}>
-                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1708,7 +1704,6 @@ export default function ReturnsPage() {
                       <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleHistoryExport("pdf")}>PDF</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleHistoryExport("word")}>Word</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -1927,9 +1922,6 @@ export default function ReturnsPage() {
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
                                     PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("word", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
-                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

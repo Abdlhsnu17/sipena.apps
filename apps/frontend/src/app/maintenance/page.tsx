@@ -1990,7 +1990,7 @@ export default function MaintenancePage() {
         <div
           role="tablist"
           aria-label="Daftar pemeliharaan"
-          className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm dark:border-slate-700/35 dark:bg-slate-900/70 sm:p-2"
+          className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200/80 bg-white/90 p-1 shadow-sm dark:border-slate-700/35 dark:bg-slate-900/70"
         >
           <button
             type="button"
@@ -1999,13 +1999,13 @@ export default function MaintenancePage() {
             aria-controls="active-maintenance-panel"
             id="active-maintenance-tab"
             onClick={() => setMaintenanceView("active")}
-            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
+            className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-center text-[12px] font-semibold transition sm:min-h-10 sm:px-3 sm:text-[13px] ${
               maintenanceView === "active"
                 ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                 : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             }`}
           >
-            <Wrench className="h-5 w-5 shrink-0" />
+            <Wrench className="h-4 w-4 shrink-0" />
             <span>Daftar Pemeliharaan Sarana</span>
           </button>
           <button
@@ -2015,13 +2015,13 @@ export default function MaintenancePage() {
             aria-controls="maintenance-history-panel"
             id="maintenance-history-tab"
             onClick={() => setMaintenanceView("history")}
-            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-[13px] font-semibold transition sm:min-h-12 sm:px-4 sm:text-sm ${
+            className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-center text-[12px] font-semibold transition sm:min-h-10 sm:px-3 sm:text-[13px] ${
               maintenanceView === "history"
                 ? "bg-teal-600 text-white shadow-sm hover:bg-teal-700"
                 : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             }`}
           >
-            <History className="h-5 w-5 shrink-0" />
+            <History className="h-4 w-4 shrink-0" />
             <span>Riwayat Pemeliharaan Sarana</span>
           </button>
         </div>
@@ -2084,7 +2084,6 @@ export default function MaintenancePage() {
                     <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void handleExport("word")}>Word</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -2313,9 +2312,6 @@ export default function MaintenancePage() {
                             <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>
                               PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("word", m)}>
-                              Word
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

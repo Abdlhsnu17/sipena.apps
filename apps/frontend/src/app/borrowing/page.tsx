@@ -2505,7 +2505,6 @@ export default function BorrowingPage() {
                       <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleExport("word")}>Word</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
@@ -2691,9 +2690,6 @@ export default function BorrowingPage() {
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}>
                                     PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("word", b)}>
-                                    Word
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
