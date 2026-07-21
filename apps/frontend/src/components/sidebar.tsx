@@ -694,7 +694,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           saveSidebarScrollTop(event.currentTarget.scrollTop)
         }}
         className={cn(
-          "flex-1 min-h-0 space-y-1.5 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
+          "flex-1 min-h-0 space-y-1.5 overflow-y-auto scrollbar-gutter-stable scrollbar-thin [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
           collapsed ? "p-2" : "p-3",
         )}
       >
@@ -774,7 +774,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <div
               className={cn(
-                "transition-all duration-300 ease-in-out overflow-hidden [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
+                "transition-all duration-300 ease-in-out overflow-hidden scrollbar-thin [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent",
                 isActivityHistoryExpanded ? "max-h-64 overflow-y-scroll pr-1" : "max-h-0"
               )}
             >

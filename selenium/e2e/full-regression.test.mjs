@@ -44,7 +44,7 @@ const state = {
   rejectionAssetId: 0,
   overdueAssetId: 0,
   timelyBorrowingId: 0,
-  scheduleId: 0,
+  maintenanceId: 0,
   borrowingIds: [],
 };
 
@@ -120,34 +120,17 @@ async function cleanupCreatedData() {
     }
   };
 
-  if (state.assetId && state.scheduleId) {
-    try {
-      const maintenance = await api(
-        "GET",
-        `/maintenance?assetId=${state.assetId}&assetType=medical&limit=100`,
-        token,
-      );
-      for (const item of extractRows(maintenance)) {
-        if (Number(item.scheduleId ?? item.schedule_id) === state.scheduleId) {
-          await safeApi("DELETE", `/maintenance/${item.id}`, {
-            deleteReason: "Pembersihan data Selenium",
-          });
-        }
-      }
-    } catch {
-      // Lanjutkan cleanup entitas lain.
-    }
+  if (state.maintenanceId) {
+    await safeApi("DELETE", `/maintenance/${state.maintenanceId}`, {
+      deleteReason: "Pembersihan data Selenium",
+    });
+    state.maintenanceId = 0;
   }
 
   for (const id of [...state.borrowingIds].reverse()) {
     await safeApi("DELETE", `/borrowing/${id}`);
   }
   state.borrowingIds = [];
-
-  if (state.scheduleId) {
-    await safeApi("DELETE", `/maintenance-schedule/${state.scheduleId}`);
-    state.scheduleId = 0;
-  }
 
   if (state.user?.user?.id) {
     await safeApi("DELETE", `/users/${state.user.user.id}`, {
@@ -583,28 +566,34 @@ scenario(15, "Pengembalian terlambat", "/returns", async () => {
   return `Peminjaman ID ${borrowingId}\nTerlambat: ${overdueDays} hari.`;
 });
 
-scenario(16, "Buat jadwal pemeliharaan", "/maintenance-schedule", async () => {
-  const tanggal = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 19).replace("T", " ");
-  const response = await api("POST", "/maintenance-schedule", state.admin.token, {
+scenario(16, "Buat pengajuan pemeliharaan", "/maintenance", async () => {
+  const scheduledDate = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const response = await api("POST", "/maintenance", state.admin.token, {
     assetId: state.assetId,
     assetType: "medical",
-    tanggal,
-    deskripsi: "Jadwal Selenium",
-    status: "terjadwal",
+    type: "preventive",
+    priority: "normal",
+    scheduledDate,
+    description: "Pemeliharaan preventif Selenium",
   });
   assertStatus(response, 201);
   assert.equal(response.body.success, true);
-  state.scheduleId = Number(response.body.data.id);
-  return `Jadwal ID ${state.scheduleId}\nTanggal: ${tanggal}`;
+  assert.equal(response.body.data.status, "requested");
+  state.maintenanceId = Number(response.body.data.id);
+  assert.ok(state.maintenanceId > 0);
+  return `Pemeliharaan ID ${state.maintenanceId}\nStatus: requested\nJadwal: ${scheduledDate}`;
 });
 
-scenario(17, "Update status pemeliharaan", "/maintenance", async () => {
-  const response = await api("PATCH", `/maintenance-schedule/${state.scheduleId}/status`, state.admin.token, {
-    status: "proses",
+scenario(17, "Jadwalkan pemeliharaan", "/maintenance", async () => {
+  const scheduledDate = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const response = await api("PUT", `/maintenance/${state.maintenanceId}`, state.admin.token, {
+    status: "scheduled",
+    scheduledDate,
   });
   assertStatus(response, 200);
-  assert.equal(response.body.data.status, "proses");
-  return `Jadwal ID ${state.scheduleId}\nStatus: proses`;
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.status, "scheduled");
+  return `Pemeliharaan ID ${state.maintenanceId}\nStatus: scheduled`;
 });
 
 scenario(18, "Input karakter tidak valid", "/users", async () => {
@@ -661,12 +650,6 @@ scenario(20, "Kontrol seluruh fitur dapat diklik", "/", async () => {
   await clickButton("Batal");
   checked.push("Inventaris Non-Medis: buka/tutup formulir");
 
-  await openEvidencePath("/maintenance-schedule");
-  const scheduleInputs = await driver.findElements(By.css('input[placeholder="ID aset"], input[type="datetime-local"], input[placeholder="Deskripsi"]'));
-  assert.equal(scheduleInputs.length, 3, "Kolom jadwal pemeliharaan tidak lengkap");
-  assert.equal(await driver.findElement(By.xpath('//button[normalize-space(.)="Simpan jadwal"]')).isEnabled(), false);
-  checked.push("Jadwal Pemeliharaan: validasi kolom dan tombol");
-
   await openEvidencePath("/reports");
   for (const label of ["Aset", "Pemeliharaan", "Peminjaman", "Penggunaan", "Ringkasan"]) await clickTab(label);
   checked.push("Laporan & Analitik: seluruh tab analitik");
@@ -682,9 +665,13 @@ scenario(20, "Kontrol seluruh fitur dapat diklik", "/", async () => {
   checked.push("Manajemen Sanksi: seluruh tab status");
 
   await openEvidencePath("/maintenance");
+  await expectVisibleText("Kalender Pemeliharaan");
+  await clickButton("Tambah Pemeliharaan");
+  await expectVisibleText("Tambah Pemeliharaan Sarana");
+  await clickVisibleByXpath('//*[@aria-label="Tutup formulir"]', "Tutup formulir pemeliharaan");
   await clickTab("Riwayat Pemeliharaan Sarana");
   await clickTab("Daftar Pemeliharaan Sarana");
-  checked.push("Pemeliharaan Sarana: perpindahan tab");
+  checked.push("Pemeliharaan Sarana: kalender, formulir, dan perpindahan tab");
 
   await openEvidencePath("/borrowing");
   await clickButton("Tambah Peminjaman");

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { By, until } from "selenium-webdriver";
 import {
-  baseUrl,
   createDriver,
   openPath,
   saveScreenshot,
@@ -61,12 +60,6 @@ const routes = [
     pathname: "/maintenance",
     heading: "Pemeliharaan Sarana",
     expectedTexts: ["Kalender Pemeliharaan", "Daftar Pemeliharaan Sarana", "Riwayat Pemeliharaan Sarana"],
-  },
-  {
-    name: "Jadwal Pemeliharaan",
-    pathname: "/maintenance-schedule",
-    heading: "Jadwal Pemeliharaan",
-    expectedTexts: ["Tambah jadwal", "ID aset", "Deskripsi", "Daftar jadwal"],
   },
   {
     name: "Penghapusan Aset",
