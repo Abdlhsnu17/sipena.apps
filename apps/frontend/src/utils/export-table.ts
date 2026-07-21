@@ -59,6 +59,29 @@ const normalizeCapsText = (value: string) => {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+const getDistinctNarrativeSubtitle = (title: string, subtitle: string) => {
+  const trimmedSubtitle = subtitle.trim()
+  if (!trimmedSubtitle) return ''
+
+  const toComparisonWords = (value: string) =>
+    normalizeCapsText(value)
+      .toLocaleLowerCase('id-ID')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+
+  const genericWords = new Set(['dokumen', 'laporan', 'operasional'])
+  const titleWords = new Set(toComparisonWords(title))
+  const subtitleWords = toComparisonWords(trimmedSubtitle).filter((word) => !genericWords.has(word))
+
+  if (subtitleWords.every((word) => titleWords.has(word))) {
+    return ''
+  }
+
+  return normalizeCapsText(trimmedSubtitle)
+}
+
 const pickExportColorMode = (): ExportColorMode => {
   return 'monochrome'
 }
@@ -515,7 +538,7 @@ const escapeHtml = (value: string) =>
 
 const buildNarrativeExportHeaderHtml = () => `
   <header class="export-header">
-    <div class="export-header__brand">${escapeHtml(EXPORT_BRAND_NAME)} · DOKUMEN OPERASIONAL</div>
+    <div class="export-header__brand">${escapeHtml(EXPORT_BRAND_NAME)}</div>
   </header>
 `
 
@@ -654,6 +677,7 @@ const buildNarrativeHtml = <T>(
   mode: ExportColorMode,
   showEntryHeader: boolean
 ) => {
+  const displaySubtitle = getDistinctNarrativeSubtitle(title, subtitle)
   const isMonochrome = mode === 'monochrome'
   const pageBg = '#ffffff'
   const bodyColor = '#0f172a'
@@ -716,6 +740,11 @@ const buildNarrativeHtml = <T>(
             font-weight: 700;
             letter-spacing: -.02em;
             margin: 0 0 10px;
+          }
+          h1.title-only {
+            border-bottom: 1px solid ${sectionBorder};
+            margin-bottom: 22px;
+            padding-bottom: 12px;
           }
           .subtitle {
             border-bottom: 1px solid ${sectionBorder};
@@ -873,8 +902,8 @@ const buildNarrativeHtml = <T>(
       </head>
       <body>
         ${buildNarrativeExportHeaderHtml()}
-        <h1>${escapeHtml(normalizeCapsText(title))}</h1>
-        <p class="subtitle">${escapeHtml(normalizeCapsText(subtitle))}</p>
+        <h1${displaySubtitle ? '' : ' class="title-only"'}>${escapeHtml(normalizeCapsText(title))}</h1>
+        ${displaySubtitle ? `<p class="subtitle">${escapeHtml(displaySubtitle)}</p>` : ''}
         ${entriesHtml}
         ${buildNarrativeExportFooterHtml()}
       </body>
@@ -890,9 +919,10 @@ const buildNarrativeRows = <T>(
   emptyMessage: string,
   showEntryHeader: boolean
 ): [string, string][] => {
+  const displaySubtitle = getDistinctNarrativeSubtitle(title, subtitle)
   const rows: [string, string][] = []
   rows.push([normalizeCapsText(title), ''])
-  rows.push([normalizeCapsText(subtitle), ''])
+  if (displaySubtitle) rows.push([displaySubtitle, ''])
   rows.push(['', ''])
   if (!entries.length) {
     rows.push([emptyMessage, ''])
@@ -943,6 +973,7 @@ const outputNarrativePdf = async <T>(
   paperSize: ExportPaperSize,
   shouldPrint: boolean
 ) => {
+  const displaySubtitle = getDistinctNarrativeSubtitle(title, subtitle)
   const printWindow = shouldPrint ? window.open('', '_blank', 'width=900,height=700') : null
   if (shouldPrint && !printWindow) return
   const { jsPDF } = await import('jspdf')
@@ -973,7 +1004,7 @@ const outputNarrativePdf = async <T>(
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(9)
     pdf.setTextColor(100, 116, 139)
-    pdf.text(`${EXPORT_BRAND_NAME} · DOKUMEN OPERASIONAL`, left, 31)
+    pdf.text(EXPORT_BRAND_NAME, left, 31)
     if (!includeTitle) {
       y = 50
       return
@@ -981,12 +1012,15 @@ const outputNarrativePdf = async <T>(
     pdf.setFontSize(20)
     pdf.setTextColor(15, 23, 42)
     pdf.text(normalizeCapsText(title), left, 60)
-    pdf.setFontSize(10)
-    pdf.setTextColor(100, 116, 139)
-    pdf.text(normalizeCapsText(subtitle).toUpperCase(), left, 84)
+    if (displaySubtitle) {
+      pdf.setFontSize(10)
+      pdf.setTextColor(100, 116, 139)
+      pdf.text(displaySubtitle.toUpperCase(), left, 84)
+    }
     pdf.setDrawColor(219, 228, 240)
-    pdf.line(left, 96, pageWidth - right, 96)
-    y = 118
+    const dividerY = displaySubtitle ? 96 : 76
+    pdf.line(left, dividerY, pageWidth - right, dividerY)
+    y = dividerY + 22
   }
 
   const drawSection = (section: DocumentSection, sectionIndex: number) => {
@@ -1009,7 +1043,9 @@ const outputNarrativePdf = async <T>(
       pdf.text(normalizeCapsText(line.label), left + 10, y)
       pdf.setTextColor(15, 23, 42)
       pdf.text(':', separatorX, y)
-      pdf.setFont('helvetica', 'bold')
+      // Keep exported/printed field values consistent with the HTML document,
+      // where values use a medium (non-bold) weight.
+      pdf.setFont('helvetica', 'normal')
       pdf.text(valueLines, valueX, y)
       pdf.setDrawColor(100, 116, 139)
       pdf.setLineDashPattern([1.5, 1.5], 0)
@@ -1380,7 +1416,7 @@ const buildFormularEntryHtml = (data: FormularData): string => {
 
   return `
   <div class="f-form">
-    <div class="f-brand">${escapeHtml(EXPORT_BRAND_NAME)} · DOKUMEN OPERASIONAL</div>
+    <div class="f-brand">${escapeHtml(EXPORT_BRAND_NAME)}</div>
     <div class="f-title">${escapeHtml(data.formTitle)}</div>
     ${data.formNo ? `<div class="f-no">Nomor: ${escapeHtml(data.formNo)}</div>` : '<div class="f-no">&nbsp;</div>'}
     ${data.introText ? `<div class="f-intro">${escapeHtml(data.introText)}</div>` : ''}

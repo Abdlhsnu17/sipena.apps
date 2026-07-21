@@ -1381,7 +1381,7 @@ export default function AssetUsagePage() {
                     </>
                   )}
                 </Button>
-                <PaperPrintMenu label="Cetak daftar pemakaian aset" onSelect={(paper) => void exportUsageList(paper === "a4" ? "print" : "print-f4")} />
+                <PaperPrintMenu label="Cetak daftar pemakaian aset" onPrint={() => void exportUsageList("print")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedUsageRows.length
                     ? `${selectedUsageRows.length} baris dipilih`
@@ -1525,25 +1525,18 @@ export default function AssetUsagePage() {
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               )}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                                    aria-label="Unduh penggunaan"
-                                    title="Unduh penggunaan"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>PDF A4</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf-f4", log)}>PDF F4</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <PaperPrintMenu compact label="Cetak penggunaan aset" onSelect={(paper) => void exportSingleUsageLetter(paper === "a4" ? "print" : "print-f4", log)} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                                aria-label="Unduh penggunaan"
+                                title="Unduh penggunaan"
+                                onClick={() => void exportSingleUsageLetter("pdf", log)}
+                              >
+                                <Download className="h-4 w-4" />
+                                Unduh
+                              </Button>
+                              <PaperPrintMenu compact label="Cetak penggunaan aset" onPrint={() => void exportSingleUsageLetter("print", log)} />
                               {canDeleteAssetUsage && (
                                 <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                   <Trash2 className="h-4 w-4" />

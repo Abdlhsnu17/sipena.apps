@@ -1084,7 +1084,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <PaperPrintMenu label="Cetak riwayat pemeliharaan" onSelect={(paper) => handleHistoryExport(paper === "a4" ? "print" : "print-f4")} />
+            <PaperPrintMenu label="Cetak riwayat pemeliharaan" onPrint={() => handleHistoryExport("print")} />
           </div>
         </div>
       </div>
@@ -1229,23 +1229,16 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                        >
-                          <Download className="h-4 w-4" />
-                          Unduh
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>PDF A4</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf-f4", h)}>PDF F4</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <PaperPrintMenu compact label="Cetak riwayat pemeliharaan" onSelect={(paper) => exportSingleHistory(paper === "a4" ? "print" : "print-f4", h)} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                      onClick={() => exportSingleHistory("pdf", h)}
+                    >
+                      <Download className="h-4 w-4" />
+                      Unduh
+                    </Button>
+                    <PaperPrintMenu compact label="Cetak riwayat pemeliharaan" onPrint={() => exportSingleHistory("print", h)} />
                     {canComplete && editId === h.id && (
                       <div className="grid w-full gap-2 pt-1 sm:grid-cols-2">
                         <input

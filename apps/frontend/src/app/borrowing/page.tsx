@@ -2448,7 +2448,7 @@ export default function BorrowingPage() {
                       </>
                     )}
                   </Button>
-                <PaperPrintMenu label="Cetak daftar peminjaman" onSelect={(paper) => void handleExport(paper === "a4" ? "print" : "print-f4")} />
+                <PaperPrintMenu label="Cetak daftar peminjaman" onPrint={() => void handleExport("print")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedBorrowings.length
                     ? `${selectedBorrowings.length} baris dipilih`
@@ -2618,23 +2618,16 @@ export default function BorrowingPage() {
                               ) : (
                                 <span className="text-[12px] text-muted-foreground">-</span>
                               )}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}>PDF A4</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf-f4", b)}>PDF F4</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <PaperPrintMenu compact label="Cetak peminjaman" onSelect={(paper) => void _exportSingleBorrowingNarrative(paper === "a4" ? "print" : "print-f4", b)} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                                onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}
+                              >
+                                <Download className="h-4 w-4" />
+                                Unduh
+                              </Button>
+                              <PaperPrintMenu compact label="Cetak peminjaman" onPrint={() => void _exportSingleBorrowingNarrative("print", b)} />
                             </SummaryResultFooter>
                           )}
                         >

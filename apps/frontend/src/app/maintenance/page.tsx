@@ -1900,7 +1900,7 @@ export default function MaintenancePage() {
                     </>
                   )}
                 </Button>
-                <PaperPrintMenu label="Cetak daftar pemeliharaan" onSelect={(paper) => void handleExport(paper === "a4" ? "print" : "print-f4")} />
+                <PaperPrintMenu label="Cetak daftar pemeliharaan" onPrint={() => void handleExport("print")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedMaintenanceRows.length
                     ? `${selectedMaintenanceRows.length} baris dipilih`
@@ -2105,23 +2105,16 @@ export default function MaintenancePage() {
                           )}
                         </div>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                            >
-                              <Download className="h-4 w-4" />
-                              Unduh
-                            </Button>
-                          </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>PDF A4</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf-f4", m)}>PDF F4</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <PaperPrintMenu compact label="Cetak pemeliharaan" onSelect={(paper) => void _exportSingleNarrative(paper === "a4" ? "print" : "print-f4", m)} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                          onClick={() => void _exportSingleNarrative("pdf", m)}
+                        >
+                          <Download className="h-4 w-4" />
+                          Unduh
+                        </Button>
+                        <PaperPrintMenu compact label="Cetak pemeliharaan" onPrint={() => void _exportSingleNarrative("print", m)} />
                       </SummaryResultFooter>
                     )}
                   >

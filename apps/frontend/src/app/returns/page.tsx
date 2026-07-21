@@ -1147,7 +1147,7 @@ export default function ReturnsPage() {
                       </>
                     )}
                   </Button>
-                  <PaperPrintMenu label="Cetak daftar pengembalian" onSelect={(paper) => void handleActiveExport(paper === "a4" ? "print" : "print-f4")} />
+                  <PaperPrintMenu label="Cetak daftar pengembalian" onPrint={() => void handleActiveExport("print")} />
                   <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                     {activeReturnSelectedRows.length
                       ? `${activeReturnSelectedRows.length} baris dipilih`
@@ -1257,23 +1257,16 @@ export default function ReturnsPage() {
                                   </Button>
                                 ) : null
                               })()}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>PDF A4</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf-f4", b, "Pengembalian", activeSelectedReturnColumns)}>PDF F4</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <PaperPrintMenu compact label="Cetak pengembalian" onSelect={(paper) => void exportSingleReturnNarrative(paper === "a4" ? "print" : "print-f4", b, "Pengembalian", activeSelectedReturnColumns)} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                                onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}
+                              >
+                                <Download className="h-4 w-4" />
+                                Unduh
+                              </Button>
+                              <PaperPrintMenu compact label="Cetak pengembalian" onPrint={() => void exportSingleReturnNarrative("print", b, "Pengembalian", activeSelectedReturnColumns)} />
                             </SummaryResultFooter>
                           )}
                         >
@@ -1424,7 +1417,7 @@ export default function ReturnsPage() {
               </div>
               <div className="flex w-full flex-col items-stretch gap-2 text-[13px] text-muted-foreground sm:w-auto sm:flex-row sm:items-center sm:gap-4">
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                <PaperPrintMenu label="Cetak riwayat pengembalian" onSelect={(paper) => void handleHistoryExport(paper === "a4" ? "print" : "print-f4")} />
+                <PaperPrintMenu label="Cetak riwayat pengembalian" onPrint={() => void handleHistoryExport("print")} />
                 <Button
                   variant="outline"
                   size="sm"
@@ -1627,23 +1620,16 @@ export default function ReturnsPage() {
                                     {validatingReturnId === b.id ? "Memvalidasi..." : "Validasi"}
                                   </Button>
                                 ))}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    Unduh
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>PDF A4</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf-f4", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>PDF F4</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <PaperPrintMenu compact label="Cetak riwayat pengembalian" onSelect={(paper) => void exportSingleReturnNarrative(paper === "a4" ? "print" : "print-f4", b, "Riwayat Pengembalian", historySelectedReturnColumns)} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-lg px-2 text-[12px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                                onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}
+                              >
+                                <Download className="h-4 w-4" />
+                                Unduh
+                              </Button>
+                              <PaperPrintMenu compact label="Cetak riwayat pengembalian" onPrint={() => void exportSingleReturnNarrative("print", b, "Riwayat Pengembalian", historySelectedReturnColumns)} />
                             </SummaryResultFooter>
                           )}
                         >
