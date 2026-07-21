@@ -17,7 +17,6 @@ export interface Maintenance {
   requesterSubWorkUnit?: string;
   validatorName?: string;
   validatorNip?: string;
-  scheduleId?: number;
   type: MaintenanceType;
   priority?: MaintenancePriority;
   status: MaintenanceStatus;
@@ -136,7 +135,6 @@ export interface CreateMaintenanceDTO {
   notes?: string;
   cancellationReason?: string;
   createdBy: number;
-  scheduleId?: number;
 }
 
 export interface UpdateMaintenanceDTO {

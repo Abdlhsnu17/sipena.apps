@@ -42,6 +42,7 @@ import { findMatchingAsset } from "@/utils/scanned-asset";
 import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import InventoryPicker from "@/components/inventory-picker";
+import { NotificationSummary } from "@/components/notification-summary";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
     Dialog,
@@ -2090,33 +2091,14 @@ export default function BorrowingPage() {
             </Alert>
           ) : null}
 
-          <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70">
-            <CardContent className="p-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Menunggu Persetujuan</p>
-                    <p className="text-xl font-semibold text-amber-600 mt-1">{pendingCount}</p>
-                  </div>
-                  <Search className="h-4 w-4 text-amber-500 shrink-0" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Sedang Dipinjam</p>
-                    <p className="text-xl font-semibold text-foreground mt-1">{activeBorrowings.length}</p>
-                  </div>
-                  <Sparkles className="h-4 w-4 text-teal-500 shrink-0" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Menunggu Validasi</p>
-                    <p className="text-xl font-semibold text-teal-600 mt-1">{pendingValidationCount}</p>
-                  </div>
-                  <CheckCircle className="h-4 w-4 text-teal-500 shrink-0" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationSummary
+            ariaLabel="Pemberitahuan peminjaman"
+            items={[
+              { label: "Menunggu Persetujuan", value: pendingCount, icon: Search, tone: "amber" },
+              { label: "Sedang Dipinjam", value: activeBorrowings.length, icon: Sparkles, tone: "teal" },
+              { label: "Menunggu Validasi", value: pendingValidationCount, icon: CheckCircle, tone: "indigo" },
+            ]}
+          />
 
           <Dialog
             open={showForm}

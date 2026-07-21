@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import { NotificationSummary } from "@/components/notification-summary";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
@@ -1270,35 +1271,19 @@ export default function ReturnsPage() {
             </div>
           </section>
 
-          <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70">
-            <CardContent className="p-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Perlu Dikembalikan</p>
-                    <p className="text-xl font-semibold text-foreground mt-1">{activeBorrowings.length}</p>
-                  </div>
-                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50/50 dark:bg-red-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Terlambat</p>
-                    <p className="text-xl font-semibold text-red-600 mt-1">
-                      {activeBorrowings.filter((b) => b.status === "overdue").length}
-                    </p>
-                  </div>
-                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-                </div>
-                <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/30 p-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground">Sudah dikembalikan</p>
-                    <p className="text-xl font-semibold text-teal-600 mt-1">{returnedBorrowings.length}</p>
-                  </div>
-                  <RotateCcw className="h-4 w-4 text-teal-500 shrink-0" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationSummary
+            ariaLabel="Pemberitahuan pengembalian"
+            items={[
+              { label: "Perlu Dikembalikan", value: activeBorrowings.length, icon: AlertCircle, tone: "amber" },
+              {
+                label: "Terlambat",
+                value: activeBorrowings.filter((b) => b.status === "overdue").length,
+                icon: AlertCircle,
+                tone: "rose",
+              },
+              { label: "Sudah Dikembalikan", value: returnedBorrowings.length, icon: RotateCcw, tone: "teal" },
+            ]}
+          />
 
           <div
             role="tablist"

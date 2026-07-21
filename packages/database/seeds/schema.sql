@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_attachments`, `maintenance_parts`, `maintenance_status_logs`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `jadwal_pemeliharaan`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_attachments`, `maintenance_parts`, `maintenance_status_logs`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -154,24 +154,6 @@ CREATE TABLE `borrowing_records` (
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `jadwal_pemeliharaan`
---
-
-CREATE TABLE `jadwal_pemeliharaan` (
-  `id` int(11) NOT NULL,
-  `asset_id` int(11) NOT NULL,
-  `asset_type` varchar(20) NOT NULL DEFAULT 'medical',
-  `tanggal` datetime NOT NULL,
-  `deskripsi` text DEFAULT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'terjadwal',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  CONSTRAINT `ck_jadwal_asset_type` CHECK (`asset_type` in ('medical','non_medical'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Struktur dari tabel `asset_usage_logs`
 --
 
@@ -246,7 +228,6 @@ CREATE TABLE `maintenance_records` (
   `asset_detail_id` varchar(100) DEFAULT NULL,
   `asset_detail_name` varchar(255) DEFAULT NULL,
   `asset_detail_code` varchar(100) DEFAULT NULL,
-  `schedule_id` int(11) DEFAULT NULL,
   `type` varchar(50) NOT NULL,
   `priority` varchar(20) NOT NULL DEFAULT 'normal',
   `status` varchar(20) NOT NULL DEFAULT 'scheduled',
@@ -626,13 +607,6 @@ ALTER TABLE `asset_usage_logs`
   ADD KEY `idx_asset_usage_deleted_at` (`deleted_at`);
 
 --
--- Indeks untuk tabel `jadwal_pemeliharaan`
---
-ALTER TABLE `jadwal_pemeliharaan`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_jadwal_asset_id_type` (`asset_id`, `asset_type`);
-
---
 -- Indeks untuk tabel `maintenance_history`
 --
 ALTER TABLE `maintenance_history`
@@ -653,8 +627,7 @@ ALTER TABLE `maintenance_records`
   ADD KEY `idx_maintenance_technician` (`technician_user_id`),
   ADD KEY `idx_maintenance_created_by` (`created_by`),
   ADD KEY `idx_maintenance_completed_by` (`completed_by`),
-  ADD KEY `idx_maintenance_validated_by` (`validated_by`),
-  ADD KEY `idx_maintenance_schedule_id` (`schedule_id`);
+  ADD KEY `idx_maintenance_validated_by` (`validated_by`);
 
 --
 -- Indeks untuk tabel `maintenance_status_logs`
@@ -791,12 +764,6 @@ ALTER TABLE `asset_usage_logs`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT untuk tabel `jadwal_pemeliharaan`
---
-ALTER TABLE `jadwal_pemeliharaan`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT untuk tabel `maintenance_history`
 --
 ALTER TABLE `maintenance_history`
@@ -928,8 +895,7 @@ ALTER TABLE `maintenance_history`
 ALTER TABLE `maintenance_records`
   ADD CONSTRAINT `fk_maintenance_completed_by` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_maintenance_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_maintenance_validated_by` FOREIGN KEY (`validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_maintenance_schedule_id` FOREIGN KEY (`schedule_id`) REFERENCES `jadwal_pemeliharaan` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_maintenance_validated_by` FOREIGN KEY (`validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `maintenance_status_logs`

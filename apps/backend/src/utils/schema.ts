@@ -18,7 +18,7 @@ let ensuredUserProfileColumns = false;
 let ensuredUserSessionVersionColumn = false;
 let ensuredUserPhoneNumberColumn = false;
 let ensuredNonMedicalAssetsTable = false;
-let ensuredScheduleAssetFkRemoved = false;
+let ensuredMaintenanceScheduleTableRemoved = false;
 let ensuredUserActivityLogsTable = false;
 let ensuredBorrowingWorkflowColumns = false;
 let ensuredAssetUsageLogsTable = false;
@@ -641,7 +641,7 @@ export async function ensureMaintenanceDetailColumns(): Promise<void> {
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
       AND TABLE_NAME = 'maintenance_records'
-      AND COLUMN_NAME IN ('asset_detail_id', 'asset_detail_name', 'asset_detail_code', 'schedule_id')
+      AND COLUMN_NAME IN ('asset_detail_id', 'asset_detail_name', 'asset_detail_code')
   `;
 
   const [rows] = await pool.query<RowDataPacket[]>(columnCheckQuery);
@@ -665,13 +665,6 @@ export async function ensureMaintenanceDetailColumns(): Promise<void> {
     await pool.query(`
       ALTER TABLE maintenance_records
       ADD COLUMN asset_detail_code VARCHAR(100) DEFAULT NULL AFTER asset_detail_name
-    `);
-  }
-
-  if (!existing.has('schedule_id')) {
-    await pool.query(`
-      ALTER TABLE maintenance_records
-      ADD COLUMN schedule_id INT(11) DEFAULT NULL AFTER asset_detail_code
     `);
   }
 
@@ -784,27 +777,45 @@ export async function ensureMaintenanceOperationsSchema(): Promise<void> {
   ensuredMaintenanceOperationsSchema = true;
 }
 
-export async function ensureScheduleAssetForeignKeyRemoved(): Promise<void> {
-  if (ensuredScheduleAssetFkRemoved) return;
+export async function ensureMaintenanceScheduleTableRemoved(): Promise<void> {
+  if (ensuredMaintenanceScheduleTableRemoved) return;
 
-  if (!(await tableExists('jadwal_pemeliharaan'))) return;
+  if (await tableExists('maintenance_records')) {
+    const [fkRows] = await pool.query<RowDataPacket[]>(
+      `
+        SELECT CONSTRAINT_NAME
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'maintenance_records'
+          AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+          AND CONSTRAINT_NAME = 'fk_maintenance_schedule_id'
+      `
+    );
 
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `
-      SELECT CONSTRAINT_NAME
-      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'jadwal_pemeliharaan'
-        AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-        AND CONSTRAINT_NAME = 'fk_jadwal_asset'
-    `
-  );
+    if (fkRows.length > 0) {
+      await pool.query('ALTER TABLE maintenance_records DROP FOREIGN KEY fk_maintenance_schedule_id');
+    }
 
-  if (rows.length > 0) {
-    await pool.query('ALTER TABLE jadwal_pemeliharaan DROP FOREIGN KEY fk_jadwal_asset');
+    const [columnRows] = await pool.query<RowDataPacket[]>(
+      `
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'maintenance_records'
+          AND COLUMN_NAME = 'schedule_id'
+      `
+    );
+
+    if (columnRows.length > 0) {
+      await pool.query('ALTER TABLE maintenance_records DROP COLUMN schedule_id');
+    }
   }
 
-  ensuredScheduleAssetFkRemoved = true;
+  if (await tableExists('jadwal_pemeliharaan')) {
+    await pool.query('DROP TABLE jadwal_pemeliharaan');
+  }
+
+  ensuredMaintenanceScheduleTableRemoved = true;
 }
 
 export async function ensureUserActivityLogsTable(): Promise<void> {

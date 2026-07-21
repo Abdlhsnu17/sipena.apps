@@ -41,7 +41,6 @@ const DEFAULT_MENUS = [
   { code: 'sanctions', label: 'Manajemen Sanksi', path: '/sanctions', sortOrder: 80 },
   { code: 'borrowing', label: 'Peminjaman', path: '/borrowing', sortOrder: 90 },
   { code: 'maintenance', label: 'Pemeliharaan Sarana', path: '/maintenance', sortOrder: 100 },
-  { code: 'maintenance_schedule', label: 'Jadwal Pemeliharaan', path: '/maintenance-schedule', sortOrder: 105 },
   { code: 'returns', label: 'Pengembalian', path: '/returns', sortOrder: 110 },
   { code: 'settings', label: 'Pengaturan', path: '/settings', sortOrder: 120 },
   { code: 'asset_usage', label: 'Penggunaan', path: '/asset-usage', sortOrder: 130 },
@@ -59,7 +58,6 @@ const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
     'medical_assets',
     'non_medical_assets',
     'maintenance',
-    'maintenance_schedule',
     'dss',
     'asset_usage',
     'reports',
@@ -75,7 +73,6 @@ const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
     'medical_assets',
     'non_medical_assets',
     'maintenance',
-    'maintenance_schedule',
     'dss',
     'asset_usage',
     'reports',
@@ -85,7 +82,7 @@ const DEFAULT_ROLE_MENU_CODES: Record<string, string[]> = {
     'returns',
     'settings',
   ],
-  teknisi: ['dashboard', 'uml', 'maintenance', 'maintenance_schedule', 'dss', 'reports', 'uploads', 'activity_archive', 'settings'],
+  teknisi: ['dashboard', 'uml', 'maintenance', 'dss', 'reports', 'uploads', 'activity_archive', 'settings'],
   user: [
     'dashboard',
     'uml',
@@ -121,6 +118,8 @@ export class AccessControlService {
         [menu.code, menu.label, menu.path, menu.sortOrder],
       );
     }
+
+    await pool.query(`DELETE FROM menus WHERE code = 'maintenance_schedule'`);
 
     for (const [roleCode, menuCodes] of Object.entries(DEFAULT_ROLE_MENU_CODES)) {
       // Only seed defaults the first time a role has no permissions configured yet.

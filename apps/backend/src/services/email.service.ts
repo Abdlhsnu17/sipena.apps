@@ -136,23 +136,6 @@ export async function sendBorrowingOverdueEmail(
   await sendEmail({ to, subject: `[${BRAND}] Pengingat: Peminjaman Overdue – ${data.borrowingCode}`, html: base('Peminjaman Melewati Jatuh Tempo', body) });
 }
 
-export async function sendMaintenanceScheduledEmail(
-  to: string,
-  data: { technicianName: string; assetName: string; scheduledDate: string; description: string; maintenanceCode: string }
-) {
-  const body = `
-    <p style="color:#475569;font-size:14px">Yth. <strong>${data.technicianName}</strong>,</p>
-    <p style="color:#475569;font-size:14px">Anda memiliki jadwal pemeliharaan baru.</p>
-    <table style="margin:16px 0;width:100%">
-      ${row('Kode', data.maintenanceCode)}
-      ${row('Aset', data.assetName)}
-      ${row('Tanggal', data.scheduledDate)}
-      ${row('Deskripsi', data.description || '-')}
-    </table>
-    <p style="color:#475569;font-size:14px">Pastikan pemeliharaan dilaksanakan tepat waktu.</p>`;
-  await sendEmail({ to, subject: `[${BRAND}] Jadwal Pemeliharaan – ${data.maintenanceCode}`, html: base('Jadwal Pemeliharaan Baru', body) });
-}
-
 export async function sendDisposalReviewedEmail(
   to: string,
   data: { requesterName: string; assetName: string; requestCode: string; approved: boolean; reviewNotes?: string }

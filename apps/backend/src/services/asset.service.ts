@@ -711,7 +711,6 @@ export class AssetService {
         const maintenanceHistory = await this.deleteTableRows(transaction, 'maintenance_history');
         const assetUsageLogs = await this.deleteTableRows(transaction, 'asset_usage_logs');
         const maintenanceRecords = await this.deleteTableRows(transaction, 'maintenance_records');
-        const maintenanceSchedules = await this.deleteTableRows(transaction, 'jadwal_pemeliharaan');
         const borrowingRecords = await this.deleteTableRows(transaction, 'borrowing_records');
         const medicalAssets = await this.deleteTableRows(transaction, 'medical_assets');
         const nonMedicalAssets = await this.deleteTableRows(transaction, 'non_medical_assets');
@@ -721,7 +720,6 @@ export class AssetService {
           maintenanceHistory +
           assetUsageLogs +
           maintenanceRecords +
-          maintenanceSchedules +
           borrowingRecords +
           medicalAssets +
           nonMedicalAssets;
@@ -731,7 +729,6 @@ export class AssetService {
           maintenanceHistory,
           assetUsageLogs,
           maintenanceRecords,
-          maintenanceSchedules,
           borrowingRecords,
           medicalAssets,
           nonMedicalAssets,

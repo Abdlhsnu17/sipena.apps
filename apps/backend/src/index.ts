@@ -26,8 +26,8 @@ import {
     ensureMaintenanceOperationsSchema,
     ensureNonMedicalSpecificationsColumn,
     ensureReportUploadsTable,
+    ensureMaintenanceScheduleTableRemoved,
     ensureRoleMenuAccessControlTables,
-    ensureScheduleAssetForeignKeyRemoved,
     ensureUserAccessControlColumns,
     ensureUserActivityLogsTable,
     ensureUserLoginSecurityColumns,
@@ -48,7 +48,6 @@ import deletionRequestRoutes from './routes/deletion_request.routes';
 import dssRoutes from './routes/dss.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
-import maintenanceScheduleRoutes from './routes/maintenance_schedule.routes';
 import { MaintenanceService } from './services/maintenance.service';
 import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
@@ -339,7 +338,6 @@ app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
 app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/uml', authMiddleware, umlRoutes);
-app.use('/api/maintenance-schedule', authMiddleware, maintenanceScheduleRoutes);
 app.use('/api/user-activities', authMiddleware, userActivityRoutes);
 app.use('/api/sanctions', authMiddleware, sanctionsRoutes);
 app.use('/api/asset-disposal', authMiddleware, assetDisposalRoutes);
@@ -447,7 +445,7 @@ const initializeInfrastructure = async (): Promise<void> => {
         await ensureNonMedicalSpecificationsColumn();
         await ensureAssetCategoryUmbrellaValues();
         await ensureReportUploadsTable();
-        await ensureScheduleAssetForeignKeyRemoved();
+        await ensureMaintenanceScheduleTableRemoved();
         await ensureUserProfileColumns();
         await ensureUserAccessControlColumns();
         await ensureUserLoginSecurityColumns();

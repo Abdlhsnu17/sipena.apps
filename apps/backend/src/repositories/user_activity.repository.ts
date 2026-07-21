@@ -129,26 +129,6 @@ export class UserActivityRepository {
 
     return rows[0] ?? null;
   }
-
-  async findMaintenanceRecordInfoByScheduleId(scheduleId: number): Promise<MaintenanceRecordInfoRow | null> {
-    const [rows] = await pool.query<MaintenanceRecordInfoRow[]>(
-      `SELECT
-         mr.maintenance_code,
-         COALESCE(mr.asset_detail_name, ma.name, na.name) AS asset_name,
-         COALESCE(mr.asset_detail_code, ma.asset_code, na.asset_code) AS asset_code
-       FROM maintenance_records mr
-       LEFT JOIN medical_assets ma
-         ON (mr.asset_type = 'medical' OR mr.asset_type IS NULL) AND mr.asset_id = ma.id
-       LEFT JOIN non_medical_assets na
-         ON mr.asset_type = 'non_medical' AND mr.asset_id = na.id
-       WHERE mr.schedule_id = ?
-       ORDER BY mr.id DESC
-       LIMIT 1`,
-      [scheduleId]
-    );
-
-    return rows[0] ?? null;
-  }
 }
 
 export const userActivityRepository = new UserActivityRepository();

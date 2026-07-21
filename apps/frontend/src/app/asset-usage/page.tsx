@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import InventoryPicker from "@/components/inventory-picker";
+import { NotificationSummary } from "@/components/notification-summary";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
@@ -1182,51 +1183,42 @@ export default function AssetUsagePage() {
         </div>
       </section>
 
-        <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70">
-          <CardContent className="p-4">
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
-                <div>
-                  <p className="text-[12px] text-muted-foreground">Total Catatan</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.totalRecords}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Semua riwayat pemakaian</p>
-                </div>
-                <Activity className="h-4 w-4 shrink-0 text-amber-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
-                <div>
-                  <p className="text-[12px] text-muted-foreground">Selesai Penggunaan</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.completedUsage}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Alat sudah dikembalikan aktif</p>
-                </div>
-                <Check className="h-4 w-4 shrink-0 text-teal-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/70 p-3 dark:bg-rose-950/30">
-                <div className="min-w-0">
-                  <p className="text-[12px] text-muted-foreground">Belum Diselesaikan</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{summary.activeUsage}</p>
-                  <p className="truncate text-xs text-slate-600 dark:text-slate-300">
-                    {summary.activeUsage > 0
-                      ? `${summary.activeAssetLabels.slice(0, 2).join(", ")} masih digunakan`
-                      : "Tidak ada alat tertahan"}
-                  </p>
-                </div>
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-cyan-50/50 p-3 dark:bg-cyan-950/30">
-                <div className="min-w-0">
-                  <p className="text-[12px] text-muted-foreground">Paling Sering</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-foreground">{summary.topAsset?.label || "-"}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{summary.topAsset ? `${summary.topAsset.count} kali` : "Belum ada data"}</p>
-                </div>
-                <Check className="h-4 w-4 shrink-0 text-cyan-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <NotificationSummary
+        ariaLabel="Pemberitahuan penggunaan"
+        items={[
+          {
+            label: "Total Catatan",
+            value: summary.totalRecords,
+            icon: Activity,
+            tone: "slate",
+            description: "Semua riwayat pemakaian",
+          },
+          {
+            label: "Selesai Penggunaan",
+            value: summary.completedUsage,
+            icon: Check,
+            tone: "teal",
+            description: "Alat sudah selesai digunakan",
+          },
+          {
+            label: "Belum Diselesaikan",
+            value: summary.activeUsage,
+            icon: AlertCircle,
+            tone: "rose",
+            description:
+              summary.activeUsage > 0
+                ? `${summary.activeAssetLabels.slice(0, 2).join(", ")} masih digunakan`
+                : "Tidak ada alat tertahan",
+          },
+          {
+            label: "Paling Sering",
+            value: summary.topAsset?.count ?? 0,
+            icon: Check,
+            tone: "cyan",
+            description: summary.topAsset?.label || "Belum ada data",
+          },
+        ]}
+      />
 
       <div className="flex flex-col gap-4">
         <Dialog

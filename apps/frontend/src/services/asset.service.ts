@@ -53,7 +53,6 @@ export interface ResetInventorySummary {
   maintenanceHistory: number;
   assetUsageLogs: number;
   maintenanceRecords: number;
-  maintenanceSchedules: number;
   borrowingRecords: number;
   medicalAssets: number;
   nonMedicalAssets: number;

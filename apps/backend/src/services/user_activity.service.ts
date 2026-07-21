@@ -134,17 +134,6 @@ const resolveMaintenanceRecordInfoByMaintenanceId = async (maintenanceId: number
   };
 };
 
-const resolveMaintenanceRecordInfoByScheduleId = async (scheduleId: number): Promise<ActivityRecordInfo | null> => {
-  const record = await userActivityRepository.findMaintenanceRecordInfoByScheduleId(scheduleId);
-  if (!record) return null;
-
-  return {
-    recordNoId: record.maintenance_code ?? null,
-    recordItemName: record.asset_name ?? null,
-    recordItemCode: record.asset_code ?? null,
-  };
-};
-
 const enrichActivityMetadata = async (activity: UserActivity): Promise<UserActivity> => {
   const metadata = activity.metadata ?? null;
   if (!metadata) return activity;
@@ -180,15 +169,9 @@ const enrichActivityMetadata = async (activity: UserActivity): Promise<UserActiv
       resolvedInfo = await resolveMaintenanceRecordInfoByMaintenanceId(maintenanceId);
     }
   } else if (activity.feature === 'jadwal_pemeliharaan') {
-    const maintenanceId = getNumericMetadataValue(metadata, ['maintenanceId', 'maintenance_id']);
-    const scheduleId = getNumericMetadataValue(metadata, ['scheduleId', 'schedule_id', 'transactionId', 'transaction_id']);
-
+    const maintenanceId = getNumericMetadataValue(metadata, ['maintenanceId', 'maintenance_id', 'transactionId', 'transaction_id']);
     if (maintenanceId) {
       resolvedInfo = await resolveMaintenanceRecordInfoByMaintenanceId(maintenanceId);
-    }
-
-    if ((!resolvedInfo?.recordNoId || !resolvedInfo.recordItemName || !resolvedInfo.recordItemCode) && scheduleId) {
-      resolvedInfo = await resolveMaintenanceRecordInfoByScheduleId(scheduleId);
     }
   }
 

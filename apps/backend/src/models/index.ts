@@ -6,7 +6,6 @@ export * from './deletion_request.model';
 export * from './dss.model';
 export * from './maintenance.model';
 export * from './maintenance_history.model';
-export * from './maintenance_schedule.model';
 export * from './notification.model';
 export * from './user.model';
 export * from './user_activity.model';

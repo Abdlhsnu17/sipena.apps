@@ -1218,7 +1218,6 @@ export class MaintenanceService {
          asset_detail_id,
          asset_detail_name,
          asset_detail_code,
-         schedule_id,
          type,
          priority,
          status,
@@ -1258,7 +1257,7 @@ export class MaintenanceService {
          cancellation_reason,
          created_by
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         maintenanceCode,
         data.assetId,
@@ -1266,7 +1265,6 @@ export class MaintenanceService {
         data.assetDetailId || null,
         data.assetDetailName || null,
         data.assetDetailCode || null,
-        data.scheduleId || null,
         data.type,
         data.priority || 'normal',
         statusValue,
