@@ -12,12 +12,14 @@ import {
 import { ASSET_LABEL_SIZES, type AssetLabelSizeId } from "@/utils/asset-label";
 import { cn } from "@/utils";
 import {
+    Activity,
+    Barcode,
     CalendarDays,
     Check,
     Download,
+    Factory,
     Gauge,
     History,
-    MapPin,
     MessageSquareText,
     Package2,
     PencilLine,
@@ -25,6 +27,7 @@ import {
     QrCode,
     ScanLine,
     ShieldCheck,
+    Shapes,
     SquareStack,
     Tags,
     Trash2,
@@ -86,7 +89,7 @@ const pillClassName =
   "inline-flex min-h-8 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
 const chipIconClassName = "size-4 shrink-0"
 const metaLabelClassName = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
-const metaValueClassName = "mt-1.5 whitespace-pre-line text-sm font-semibold leading-5 text-slate-950 dark:text-slate-100"
+const metaValueClassName = "mt-1.5 whitespace-pre-line text-sm font-normal leading-5 text-slate-950 dark:text-slate-100"
 
 function ActionTile({ action }: { action: ActionConfig }) {
   const Icon = action.icon
@@ -254,12 +257,12 @@ export function InventoryDetailCard({
         <div className="flex flex-1 flex-col pt-5">
           <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
             <DetailStat icon={ScanLine} label="Kode" value={code} />
-            <DetailStat icon={QrCode} label="Nomor seri" value={serialNumber} />
-            <DetailStat icon={Package2} label="Merk" value={brand} />
-            <DetailStat icon={Package2} label="Tipe" value={model} />
+            <DetailStat icon={Barcode} label="Nomor seri" value={serialNumber} />
+            <DetailStat icon={Factory} label="Merk" value={brand} />
+            <DetailStat icon={Shapes} label="Tipe" value={model} />
             <DetailStat icon={CalendarDays} label="Tanggal beli" value={purchaseDateText} />
             <DetailStat icon={Wrench} label={maintenanceLabel} value={maintenanceDateText} />
-            <DetailStat icon={MapPin} label="Penggunaan" value={usageText} />
+            <DetailStat icon={Activity} label="Penggunaan" value={usageText} />
             {usageSummaryText ? (
               <DetailStat icon={Gauge} label="Frekuensi" value={usageSummaryText} />
             ) : null}

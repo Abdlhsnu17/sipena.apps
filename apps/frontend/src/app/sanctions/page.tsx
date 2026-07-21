@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { NotificationSummary } from "@/components/notification-summary"
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -226,51 +227,40 @@ export default function SanctionsPage() {
       </section>
 
       {stats && (
-        <Card className="rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70">
-          <CardContent className="p-4">
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-amber-50/50 p-3 dark:bg-amber-950/30">
-                <div>
-                  <p className="text-[12px] text-muted-foreground">Total Sanksi</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.active + stats.resolved}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Semua riwayat sanksi</p>
-                </div>
-                <Activity className="h-4 w-4 shrink-0 text-amber-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-teal-50/50 p-3 dark:bg-teal-950/30">
-                <div>
-                  <p className="text-[12px] text-muted-foreground">Sanksi Selesai</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.resolved}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Sudah diselesaikan</p>
-                </div>
-                <Check className="h-4 w-4 shrink-0 text-teal-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-rose-50/70 p-3 dark:bg-rose-950/30">
-                <div className="min-w-0">
-                  <p className="text-[12px] text-muted-foreground">Sanksi Aktif</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.active}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    {stats.active > 0 ? "Perlu tindak lanjut" : "Tidak ada sanksi aktif"}
-                  </p>
-                </div>
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 rounded-lg bg-cyan-50/50 p-3 dark:bg-cyan-950/30">
-                <div className="min-w-0">
-                  <p className="text-[12px] text-muted-foreground">Pengguna Terdampak</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">{stats.totalAffectedUsers}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    {stats.totalAffectedUsers > 0 ? "Pengguna dengan sanksi aktif" : "Tidak ada pengguna terdampak"}
-                  </p>
-                </div>
-                <Users className="h-4 w-4 shrink-0 text-cyan-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <NotificationSummary
+          ariaLabel="Pemberitahuan manajemen sanksi"
+          items={[
+            {
+              label: "Total Sanksi",
+              value: stats.active + stats.resolved,
+              icon: Activity,
+              tone: "slate",
+              description: "Semua riwayat sanksi",
+            },
+            {
+              label: "Sanksi Selesai",
+              value: stats.resolved,
+              icon: Check,
+              tone: "teal",
+              description: "Sudah diselesaikan",
+            },
+            {
+              label: "Sanksi Aktif",
+              value: stats.active,
+              icon: AlertCircle,
+              tone: "rose",
+              description: stats.active > 0 ? "Perlu tindak lanjut" : "Tidak ada sanksi aktif",
+            },
+            {
+              label: "Pengguna Terdampak",
+              value: stats.totalAffectedUsers,
+              icon: Users,
+              tone: "cyan",
+              description:
+                stats.totalAffectedUsers > 0 ? "Pengguna dengan sanksi aktif" : "Tidak ada pengguna terdampak",
+            },
+          ]}
+        />
       )}
 
       <Card className="rounded-3xl border border-slate-200 bg-white/70 shadow-xl dark:border-slate-700/35 dark:bg-slate-900/70">

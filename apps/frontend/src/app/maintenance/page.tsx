@@ -1655,33 +1655,22 @@ export default function MaintenancePage() {
           </section>
 
           <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg dark:border-slate-700/35 dark:bg-slate-900/70" data-maintenance-dashboard>
-            {isAdminOrLeaderRole(currentUser?.role) ? (
-              <CardHeader className="flex flex-row items-center justify-end border-b border-slate-100 px-4 py-2.5 dark:border-slate-800/60 sm:px-5">
+            <CardHeader className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3.5 dark:border-slate-800/60 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-semibold text-foreground">Ringkasan Pemeliharaan</h2>
+                <p className="text-xs text-muted-foreground">Ikhtisar biaya, keterlambatan, dan progres penanganan.</p>
+              </div>
+              {isAdminOrLeaderRole(currentUser?.role) ? (
                 <Button className="h-8 rounded-lg px-3" variant="outline" size="sm" onClick={() => void handleDispatchReminders()} title="Proses reminder pemeliharaan">
                   <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
                   Reminder
                 </Button>
-              </CardHeader>
-            ) : null}
-            <CardContent className="space-y-3 p-4 sm:p-5">
-              {maintenanceAnalytics?.summary ? (
-                <div className="grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50 px-1 py-2.5 dark:divide-slate-800 dark:bg-slate-950/35">
-                  {[
-                    ["Total", maintenanceAnalytics.summary.total],
-                    ["Terlambat", maintenanceAnalytics.summary.overdue],
-                    ["Biaya", `Rp ${Number(maintenanceAnalytics.summary.total_cost || 0).toLocaleString("id-ID")}`],
-                  ].map(([label, value]) => (
-                    <div key={String(label)} className="min-w-0 px-3 sm:flex sm:items-baseline sm:justify-center sm:gap-2">
-                      <p className="truncate text-[11px] font-medium text-muted-foreground sm:text-xs">{label}</p>
-                      <p className="mt-0.5 truncate text-base font-bold text-slate-900 dark:text-slate-100 sm:mt-0 sm:text-lg">{value}</p>
-                    </div>
-                  ))}
-                </div>
               ) : null}
-
+            </CardHeader>
+            <CardContent className="space-y-4 p-4 sm:p-5">
               <div>
                 <h2 className="sr-only">Status pemeliharaan</h2>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {[
                     {
                       label: "Pengajuan",
@@ -1720,11 +1709,11 @@ export default function MaintenancePage() {
                       fullLabel: "Ditolak atau dibatalkan",
                       value: cancelledCount,
                       icon: XCircle,
-                      className: "col-span-2 bg-rose-50/70 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 sm:col-span-1",
+                      className: "bg-rose-50/70 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300",
                       iconClassName: "bg-white/80 text-rose-600 dark:bg-rose-950/60",
                     },
                   ].map(({ label, fullLabel, value, icon: Icon, className, iconClassName }) => (
-                    <div key={label} className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-3 ${className}`} title={fullLabel}>
+                    <div key={label} className={`flex min-h-20 min-w-0 items-center gap-3 rounded-xl px-3 py-3 ${className}`} title={fullLabel}>
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClassName}`}>
                         <Icon className="h-4 w-4" />
                       </span>
@@ -1736,6 +1725,21 @@ export default function MaintenancePage() {
                   ))}
                 </div>
               </div>
+
+              {maintenanceAnalytics?.summary ? (
+                <div className="grid grid-cols-1 divide-y divide-slate-200 rounded-xl bg-slate-50 px-1 py-1 dark:divide-slate-800 dark:bg-slate-950/35 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                  {[
+                    ["Total", maintenanceAnalytics.summary.total],
+                    ["Terlambat", maintenanceAnalytics.summary.overdue],
+                    ["Biaya", `Rp ${Number(maintenanceAnalytics.summary.total_cost || 0).toLocaleString("id-ID")}`],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="flex min-w-0 flex-col items-center justify-center px-3 py-2 text-center">
+                      <p className="truncate text-[11px] font-medium text-muted-foreground sm:text-xs">{label}</p>
+                      <p className="mt-0.5 truncate text-lg font-bold leading-tight text-slate-900 dark:text-slate-100">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
