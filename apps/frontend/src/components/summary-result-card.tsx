@@ -129,15 +129,16 @@ export function SummaryResultFooter({
 }: SummaryResultFooterProps) {
   return (
     <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-      <label className="flex items-center gap-2.5 text-[12px] font-medium text-slate-800 dark:text-slate-200">
+      <label className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60">
         <input
           type="checkbox"
           checked={selected}
           onChange={onSelectedChange}
-          className="h-4 w-4 rounded border border-slate-300 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-300"
+          className="h-4 w-4 cursor-pointer rounded border border-slate-300 bg-white text-blue-600 accent-blue-600 dark:bg-slate-900/60"
           aria-label={selectionLabel}
+          title={selectionLabel}
         />
-        Pilih kartu
+        <span className="sr-only">{selectionLabel}</span>
       </label>
       <div className="flex flex-wrap items-center justify-end gap-1.5 text-[12px] text-slate-700 dark:text-slate-300">{children}</div>
     </div>

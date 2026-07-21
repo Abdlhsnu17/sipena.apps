@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import MaintenanceForm from "@/components/maintenance-form";
 import MaintenanceHistoryList from "@/components/maintenance-history-list";
+import { PaperPrintMenu } from "@/components/paper-print-menu";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,16 +38,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ExportFormat, exportFormularReport, FormularData, TableExportColumn } from "@/utils/export-table";
+import { ExportFormat, exportFormularReport, FormularData } from "@/utils/export-table";
 
 import { useToast } from "@/hooks/use-toast";
 import { assetUsageService } from "@/services/asset-usage.service";
@@ -63,10 +61,6 @@ import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
 import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole, normalizeUserRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
-
-type MaintenanceExportColumn = TableExportColumn<Maintenance> & {
-  defaultSelected?: boolean
-}
 
 const CARD_ROWS_PER_PAGE = 2
 
@@ -1168,139 +1162,6 @@ export default function MaintenancePage() {
     return [...baseAssets, currentAsset]
   }, [availableAssetsForForm, editingMaintenance, resolveDetailForMaintenance, prefillAsset])
 
-  const maintenanceExportColumnDefinitions = useMemo<MaintenanceExportColumn[]>(
-    () => [
-      {
-        key: "noId",
-        label: "No ID",
-        getValue: (item) => getMaintenanceNoId(item),
-        defaultSelected: true,
-      },
-      {
-        key: "jenisInventaris",
-        label: "Jenis Inventaris",
-        getValue: (item) => {
-          const detail = resolveDetailForMaintenance(item)
-          const source = deriveAssetSource(detail?.assetType ?? item.assetType, detail?.detailCode ?? item.assetCode)
-          return assetSourceLabel(source)
-        },
-        defaultSelected: true,
-      },
-      {
-        key: "namaAlat",
-        label: "Nama Alat",
-        getValue: (item) => {
-          const detail = resolveDetailForMaintenance(item)
-          return detail?.detailInventoryName || detail?.detailName || item.assetDetailName || item.assetName || "-"
-        },
-        defaultSelected: true,
-      },
-      {
-        key: "kode",
-        label: "Kode",
-        getValue: (item) => {
-          const detail = resolveDetailForMaintenance(item)
-          return detail?.detailCode || item.assetDetailCode || item.assetCode || "-"
-        },
-        defaultSelected: true,
-      },
-      {
-        key: "tipeLayanan",
-        label: "Tipe Layanan",
-        getValue: (item) => maintenanceTypeLabel(item.type),
-        defaultSelected: true,
-      },
-      {
-        key: "merek",
-        label: "Merek / Model",
-        getValue: (item) => {
-          const detail = resolveDetailForMaintenance(item)
-          return detail?.detailBrandModel || detail?.detailName || item.assetDetailName || item.assetName || "-"
-        },
-        defaultSelected: true,
-      },
-      {
-        key: "peminjam",
-        label: "Nama Pengirim",
-        getValue: (item) => item.requesterName || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "nip",
-        label: "NIP Pengirim",
-        getValue: (item) => item.requesterNip || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "tanggalPinjam",
-        label: "Jadwal Pemeliharaan",
-        getValue: (item) => formatDayTimeLabel(item.scheduledDate, { showWeekday: false }),
-        defaultSelected: true,
-      },
-      {
-        key: "tanggalKembali",
-        label: "Waktu Selesai",
-        getValue: (item) => formatDayTimeLabel(item.completedDate, { showWeekday: false }),
-        defaultSelected: true,
-      },
-      {
-        key: "ruangan",
-        label: "Nama Ruangan Alat",
-        getValue: (item) => {
-          const detail = resolveDetailForMaintenance(item)
-          return detail?.roomName || detail?.assetLocation || item.assetLocation || "-"
-        },
-        defaultSelected: true,
-      },
-      {
-        key: "catatanPendaftaran",
-        label: "Catatan Pendaftaran",
-        getValue: (item) => item.description || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "teknisi",
-        label: "Teknisi Pelaksana",
-        getValue: (item) => item.technician || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "biaya",
-        label: "Biaya Pemeliharaan",
-        getValue: (item) => (item.cost ? formatCostLabel(item.cost) : "-"),
-        defaultSelected: true,
-      },
-      {
-        key: "catatanAfter",
-        label: "Catatan (After)",
-        getValue: (item) => item.notes || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "alasanPembatalan",
-        label: "Alasan Pembatalan",
-        getValue: (item) => item.cancellationReason || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "catatan",
-        label: "Ringkasan Catatan",
-        getValue: (item) => item.notes || item.description || "-",
-        defaultSelected: true,
-      },
-      {
-        key: "status",
-        label: "Status",
-        getValue: (item) => maintenanceStatusLabel(item.status, item.type),
-        defaultSelected: true,
-      },
-    ],
-    [resolveDetailForMaintenance]
-  )
-
-  const [selectedMaintenanceColumns, setSelectedMaintenanceColumns] = useState<string[]>(() =>
-    maintenanceExportColumnDefinitions.filter((column) => column.defaultSelected ?? true).map((column) => column.key)
-  )
   const [selectedMaintenanceIds, setSelectedMaintenanceIds] = useState<Set<number>>(() => new Set())
   const [expandedMaintenanceIds, setExpandedMaintenanceIds] = useState<Set<number>>(() => new Set())
 
@@ -1441,17 +1302,6 @@ export default function MaintenancePage() {
   const maintenanceRowsToExport =
     selectedMaintenanceRows.length > 0 ? selectedMaintenanceRows : filteredMaintenance
 
-  const allMaintenanceSelected =
-    filteredMaintenance.length > 0 && filteredMaintenance.every((item) => selectedMaintenanceIds.has(item.id))
-
-  const handleSelectAllMaintenance = () => {
-    if (allMaintenanceSelected) {
-      setSelectedMaintenanceIds(new Set())
-      return
-    }
-    setSelectedMaintenanceIds(new Set(filteredMaintenance.map((item) => item.id)))
-  }
-
   const toggleMaintenanceSelection = (id: number) => {
     setSelectedMaintenanceIds((prev) => {
       const next = new Set(prev)
@@ -1461,16 +1311,6 @@ export default function MaintenancePage() {
         next.add(id)
       }
       return next
-    })
-  }
-
-  const handleMaintenanceExportColumnToggle = (columnKey: string) => {
-    setSelectedMaintenanceColumns((previous) => {
-      if (previous.includes(columnKey)) {
-        if (previous.length === 1) return previous
-        return previous.filter((item) => item !== columnKey)
-      }
-      return [...previous, columnKey]
     })
   }
 
@@ -2060,40 +1900,7 @@ export default function MaintenancePage() {
                     </>
                   )}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
-                      <Download className="mr-2 h-4 w-4" />
-                      Ekspor
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
-                    <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                    <div className="max-h-52 overflow-y-auto">
-                      {maintenanceExportColumnDefinitions.map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={`maintenance-column-${column.key}`}
-                          checked={selectedMaintenanceColumns.includes(column.key)}
-                          onCheckedChange={() => handleMaintenanceExportColumnToggle(column.key)}
-                        >
-                          {column.label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full rounded-2xl px-3 text-[14px] font-semibold sm:w-auto"
-                  onClick={handleSelectAllMaintenance}
-                >
-                  {allMaintenanceSelected ? "Batal pilih semua" : "Pilih semua"}
-                </Button>
+                <PaperPrintMenu label="Cetak daftar pemeliharaan" onSelect={(paper) => void handleExport(paper === "a4" ? "print" : "print-f4")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedMaintenanceRows.length
                     ? `${selectedMaintenanceRows.length} baris dipilih`
@@ -2310,11 +2117,11 @@ export default function MaintenancePage() {
                             </Button>
                           </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>
-                              PDF
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf", m)}>PDF A4</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => void _exportSingleNarrative("pdf-f4", m)}>PDF F4</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        <PaperPrintMenu compact label="Cetak pemeliharaan" onSelect={(paper) => void _exportSingleNarrative(paper === "a4" ? "print" : "print-f4", m)} />
                       </SummaryResultFooter>
                     )}
                   >

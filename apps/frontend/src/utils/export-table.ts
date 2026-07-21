@@ -2,7 +2,8 @@
 
 import { getFeaturePresentation, isFeatureColumn } from '@/utils/feature-presentation'
 
-export type ExportFormat = 'pdf' | 'word' | 'excel'
+export type ExportFormat = 'pdf' | 'pdf-f4' | 'word' | 'excel' | 'print' | 'print-f4'
+export type ExportPaperSize = 'a4' | 'f4'
 
 export interface ExportTableOptions {
   title: string
@@ -262,13 +263,54 @@ const waitForDocumentImages = async (documentRef: Document) => {
   )
 }
 
-const downloadHtmlAsPdf = async (html: string, fileName: string) => {
+const applyPdfRenderStyles = (documentRef: Document) => {
+  const style = documentRef.createElement('style')
+  style.dataset.pdfRenderStyles = 'true'
+  style.textContent = `
+    html, body {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .export-header, .export-footer {
+      position: static !important;
+      inset: auto !important;
+    }
+    .entry-card, .section-block, .signature-block, .f-section, .f-signature {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  `
+  documentRef.head.appendChild(style)
+}
+
+const getPdfPageMargins = (html: string): [number, number, number, number] => {
+  const pageMargin = html.match(/@page\s*\{[^}]*margin:\s*([\d.]+)mm(?:\s+([\d.]+)mm)?(?:\s+([\d.]+)mm)?(?:\s+([\d.]+)mm)?/i)
+  if (!pageMargin) return [24, 24, 28, 24]
+
+  const values = pageMargin.slice(1).filter(Boolean).map((value) => Number(value) * 2.83465)
+  if (values.length === 1) return [values[0], values[0], values[0], values[0]]
+  if (values.length === 2) return [values[0], values[1], values[0], values[1]]
+  if (values.length === 3) return [values[0], values[1], values[2], values[1]]
+  return [values[0], values[1], values[2], values[3]]
+}
+
+const getPdfPageFormat = (paperSize: ExportPaperSize): 'a4' | [number, number] =>
+  paperSize === 'f4' ? [595.28, 935.43] : 'a4'
+
+const renderHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') => {
+  const margins = getPdfPageMargins(html)
+  const a4WidthPoints = 595.28
+  const contentWidthPoints = a4WidthPoints - margins[1] - margins[3]
+  const contentWidthPixels = Math.round(contentWidthPoints * (96 / 72))
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.position = 'fixed'
   iframe.style.left = '-10000px'
   iframe.style.top = '0'
-  iframe.style.width = '794px'
+  iframe.style.width = `${contentWidthPixels}px`
   iframe.style.height = '1123px'
   iframe.style.border = '0'
   iframe.style.pointerEvents = 'none'
@@ -282,27 +324,56 @@ const downloadHtmlAsPdf = async (html: string, fileName: string) => {
     iframeDocument.open()
     iframeDocument.write(html)
     iframeDocument.close()
+    applyPdfRenderStyles(iframeDocument)
 
     await iframeDocument.fonts?.ready
     await waitForDocumentImages(iframeDocument)
 
     const { jsPDF } = await import('jspdf')
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true })
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: getPdfPageFormat(paperSize), compress: true })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const availableHeightPixels = (pageHeight - margins[0] - margins[2]) * (96 / 72)
+    const renderedHeight = iframeDocument.documentElement.scrollHeight
+    const fitScale = renderedHeight > availableHeightPixels ? availableHeightPixels / renderedHeight : 1
+    iframeDocument.body.style.zoom = String(fitScale)
     await pdf.html(iframeDocument.body, {
-      margin: [24, 24, 28, 24],
-      autoPaging: 'text',
+      margin: margins,
+      autoPaging: 'slice',
       html2canvas: {
         backgroundColor: '#ffffff',
         logging: false,
-        scale: 0.75,
         useCORS: true,
       },
-      width: 547,
-      windowWidth: 794,
+      width: pageWidth - margins[1] - margins[3],
+      windowWidth: contentWidthPixels,
     })
-    pdf.save(fileName)
+    return pdf
   } finally {
     iframe.remove()
+  }
+}
+
+const downloadHtmlAsPdf = async (html: string, fileName: string, paperSize: ExportPaperSize = 'a4') => {
+  const pdf = await renderHtmlAsPdf(html, paperSize)
+  pdf.save(fileName)
+}
+
+const printHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') => {
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  if (!printWindow) return
+  printWindow.document.write('<!doctype html><title>Menyiapkan cetak...</title><p style="font-family:Arial,sans-serif;padding:24px">Menyiapkan dokumen cetak...</p>')
+  printWindow.document.close()
+
+  try {
+    const pdf = await renderHtmlAsPdf(html, paperSize)
+    pdf.autoPrint()
+    const pdfUrl = URL.createObjectURL(pdf.output('blob'))
+    printWindow.location.href = pdfUrl
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000)
+  } catch (error) {
+    printWindow.close()
+    throw error
   }
 }
 
@@ -310,13 +381,19 @@ export async function exportTableData(format: ExportFormat, options: ExportTable
   const { title, columns, rows, filePrefix } = options
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
-  if (format === 'pdf') {
+  const paperSize: ExportPaperSize = format.endsWith('-f4') ? 'f4' : 'a4'
+  if (format === 'pdf' || format === 'pdf-f4') {
     const html = buildHtml(title, columns, rows, colorMode)
-    await downloadHtmlAsPdf(html, `${slug}.pdf`)
+    await downloadHtmlAsPdf(html, `${slug}.pdf`, paperSize)
     return
   }
 
   const html = buildHtml(title, columns, rows, colorMode)
+
+  if (format === 'print' || format === 'print-f4') {
+    await printHtmlAsPdf(html, paperSize)
+    return
+  }
 
   if (format === 'word') {
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
@@ -855,6 +932,181 @@ const buildEntryHeaderLabel = <T>(entry: T, fallbackIndex: number) => {
   return `Data ${fallbackIndex + 1}`
 }
 
+const outputNarrativePdf = async <T>(
+  title: string,
+  subtitle: string,
+  entries: T[],
+  fileName: string,
+  buildSections: SectionBuilder<T>,
+  emptyMessage: string,
+  showEntryHeader: boolean,
+  paperSize: ExportPaperSize,
+  shouldPrint: boolean
+) => {
+  const printWindow = shouldPrint ? window.open('', '_blank', 'width=900,height=700') : null
+  if (shouldPrint && !printWindow) return
+  const { jsPDF } = await import('jspdf')
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: getPdfPageFormat(paperSize), compress: true })
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const left = 40
+  const right = 40
+  const contentWidth = pageWidth - left - right
+  const labelWidth = 165
+  const separatorX = left + labelWidth
+  const valueX = separatorX + 16
+  const valueWidth = pageWidth - right - valueX
+  const contentBottom = pageHeight - 62
+  const estimatedContentHeight = Math.max(1, entries.reduce((total, entry) => {
+    const sectionsHeight = buildSections(entry).reduce((sectionTotal, section) =>
+      sectionTotal + 33 + section.lines.reduce((lineTotal, line) => lineTotal + Math.max(23, Math.ceil((line.value || '-').length / 68) * 23), 0), 0)
+    return total + sectionsHeight + 142 + (showEntryHeader ? 24 : 0) + 20
+  }, 0))
+  const verticalScale = Math.min(1, (contentBottom - 118) / estimatedContentHeight)
+  const scaled = (value: number) => value * verticalScale
+  let y = 0
+
+  const drawPageHeader = (includeTitle: boolean) => {
+    pdf.setDrawColor(148, 163, 184)
+    pdf.setLineWidth(0.6)
+    pdf.line(left, 18, pageWidth - right, 18)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(9)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(`${EXPORT_BRAND_NAME} · DOKUMEN OPERASIONAL`, left, 31)
+    if (!includeTitle) {
+      y = 50
+      return
+    }
+    pdf.setFontSize(20)
+    pdf.setTextColor(15, 23, 42)
+    pdf.text(normalizeCapsText(title), left, 60)
+    pdf.setFontSize(10)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(normalizeCapsText(subtitle).toUpperCase(), left, 84)
+    pdf.setDrawColor(219, 228, 240)
+    pdf.line(left, 96, pageWidth - right, 96)
+    y = 118
+  }
+
+  const drawSection = (section: DocumentSection, sectionIndex: number) => {
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(Math.max(6, scaled(11.5)))
+    pdf.setTextColor(15, 23, 42)
+    pdf.text(`${toRomanNumeral(sectionIndex + 1)}. ${normalizeCapsText(section.title)}`, left + 10, y)
+    pdf.setDrawColor(219, 228, 240)
+    pdf.setLineWidth(0.6)
+    pdf.line(left + 10, y + scaled(8), pageWidth - right, y + scaled(8))
+    y += scaled(25)
+
+    section.lines.forEach((line) => {
+      const valueLines = pdf.splitTextToSize(line.value || '-', valueWidth) as string[]
+      const rowHeight = scaled(Math.max(23, valueLines.length * 14 + 9))
+
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(Math.max(5.5, scaled(10.5)))
+      pdf.setTextColor(100, 116, 139)
+      pdf.text(normalizeCapsText(line.label), left + 10, y)
+      pdf.setTextColor(15, 23, 42)
+      pdf.text(':', separatorX, y)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(valueLines, valueX, y)
+      pdf.setDrawColor(100, 116, 139)
+      pdf.setLineDashPattern([1.5, 1.5], 0)
+      pdf.line(valueX, y + scaled(valueLines.length * 14 - 9), pageWidth - right, y + scaled(valueLines.length * 14 - 9))
+      pdf.setLineDashPattern([], 0)
+      y += rowHeight
+    })
+    y += scaled(8)
+  }
+
+  const drawSignature = (entry: T) => {
+    const submitterName = getEntryText(entry, ['userName', 'operatorName', 'requesterName', 'createdByName']) || '................................'
+    const submitterNip = getEntryText(entry, ['userNip', 'operatorNip', 'requesterNip'])
+    const reviewerName = getEntryText(entry, ['ownerName', 'validatorName', 'technician', 'approvedByName', 'returnValidatorName']) || '................................'
+    const reviewerNip = getEntryText(entry, ['ownerNip', 'validatorNip', 'technicianNip', 'approvedByNip', 'returnValidatorNip'])
+    const submitterRole = getEntryText(entry, ['userName'])
+      ? 'Peminjam / Pengguna'
+      : getEntryText(entry, ['operatorName'])
+        ? 'Pengguna Alat'
+        : 'Yang Mengajukan'
+    const reviewerRole = getEntryText(entry, ['ownerName'])
+      ? 'Pemilik Alat'
+      : getEntryText(entry, ['technician'])
+        ? 'Teknisi / Petugas'
+        : 'Mengetahui'
+    const dateLabel = `Jakarta, ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}`
+    const leftCenter = left + contentWidth * 0.25
+    const rightCenter = left + contentWidth * 0.75
+
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(Math.max(6, scaled(10)))
+    pdf.setTextColor(15, 23, 42)
+    pdf.text(dateLabel, pageWidth - right, y, { align: 'right' })
+    y += scaled(24)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(submitterRole, leftCenter, y, { align: 'center' })
+    pdf.text(reviewerRole, rightCenter, y, { align: 'center' })
+    y += scaled(58)
+    pdf.setDrawColor(15, 23, 42)
+    pdf.line(left + 28, y, left + contentWidth / 2 - 28, y)
+    pdf.line(left + contentWidth / 2 + 28, y, pageWidth - right - 28, y)
+    y += scaled(13)
+    pdf.text(submitterName, leftCenter, y, { align: 'center' })
+    pdf.text(reviewerName, rightCenter, y, { align: 'center' })
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(Math.max(5.5, scaled(8.5)))
+    if (submitterNip) pdf.text(`NIP. ${submitterNip}`, leftCenter, y + 13, { align: 'center' })
+    if (reviewerNip) pdf.text(`NIP. ${reviewerNip}`, rightCenter, y + 13, { align: 'center' })
+    y += scaled(30)
+  }
+
+  drawPageHeader(true)
+  if (!entries.length) {
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(11)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(emptyMessage, left, y)
+  } else {
+    entries.forEach((entry, entryIndex) => {
+      if (entryIndex > 0) {
+        pdf.setDrawColor(148, 163, 184)
+        pdf.line(left, y, pageWidth - right, y)
+        y += scaled(20)
+      }
+      if (showEntryHeader) {
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(Math.max(6, scaled(11)))
+        pdf.setTextColor(15, 23, 42)
+        pdf.text(buildEntryHeaderLabel(entry, entryIndex), left, y)
+        y += scaled(24)
+      }
+      buildSections(entry).forEach(drawSection)
+      drawSignature(entry)
+    })
+  }
+
+  const pageCount = pdf.getNumberOfPages()
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    pdf.setPage(pageNumber)
+    pdf.setDrawColor(219, 228, 240)
+    pdf.line(left, pageHeight - 36, pageWidth - right, pageHeight - 36)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(8)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(EXPORT_SYSTEM_NAME, pageWidth / 2, pageHeight - 23, { align: 'center' })
+  }
+
+  if (shouldPrint && printWindow) {
+    pdf.autoPrint()
+    const pdfUrl = URL.createObjectURL(pdf.output('blob'))
+    printWindow.location.href = pdfUrl
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000)
+    return
+  }
+  pdf.save(fileName)
+}
+
 export interface NarrativeReportOptions<T> {
   title: string
   subtitle?: string
@@ -878,9 +1130,15 @@ export async function exportNarrativeReport<T>(format: ExportFormat, options: Na
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
   const html = buildNarrativeHtml(title, entries, subtitle, buildSections, emptyMessage, colorMode, showEntryHeader)
+  const paperSize: ExportPaperSize = format.endsWith('-f4') ? 'f4' : 'a4'
 
-  if (format === 'pdf') {
-    await downloadHtmlAsPdf(html, `${slug}.pdf`)
+  if (format === 'pdf' || format === 'pdf-f4') {
+    await outputNarrativePdf(title, subtitle, entries, `${slug}.pdf`, buildSections, emptyMessage, showEntryHeader, paperSize, false)
+    return
+  }
+
+  if (format === 'print' || format === 'print-f4') {
+    await outputNarrativePdf(title, subtitle, entries, `${slug}.pdf`, buildSections, emptyMessage, showEntryHeader, paperSize, true)
     return
   }
 
@@ -1200,9 +1458,15 @@ export async function exportFormularReport<T>(format: ExportFormat, options: For
   if (!entries.length) return
 
   const html = buildFormularPageHtml(entries, buildFormular)
+  const paperSize: ExportPaperSize = format.endsWith('-f4') ? 'f4' : 'a4'
 
-  if (format === 'pdf') {
-    await downloadHtmlAsPdf(html, `${filePrefix}.pdf`)
+  if (format === 'pdf' || format === 'pdf-f4') {
+    await downloadHtmlAsPdf(html, `${filePrefix}.pdf`, paperSize)
+    return
+  }
+
+  if (format === 'print' || format === 'print-f4') {
+    await printHtmlAsPdf(html, paperSize)
     return
   }
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import { NotificationSummary } from "@/components/notification-summary";
+import { PaperPrintMenu } from "@/components/paper-print-menu";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
@@ -31,11 +32,8 @@ import {
 } from "@/components/ui/dialog";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +48,6 @@ import {
     SectionBuilder,
     type DocumentSection,
     type SectionLine,
-    type TableExportColumn,
 } from "@/utils/export-table";
 import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
@@ -72,8 +69,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
-type ReturnExportColumn = TableExportColumn<ApiBorrowing>
 
 const RETURN_ROWS_PER_PAGE = 2
 
@@ -209,10 +204,10 @@ export default function ReturnsPage() {
     "kondisi",
     "status",
   ]
-  const [activeSelectedReturnColumns, setActiveSelectedReturnColumns] = useState<string[]>(() =>
+  const [activeSelectedReturnColumns] = useState<string[]>(() =>
     activeReturnDefaultColumns
   )
-  const [historySelectedReturnColumns, setHistorySelectedReturnColumns] = useState<string[]>(() =>
+  const [historySelectedReturnColumns] = useState<string[]>(() =>
     historyReturnDefaultColumns
   )
   const [expandedActiveReturnIds, setExpandedActiveReturnIds] = useState<Set<number>>(() => new Set())
@@ -695,13 +690,6 @@ export default function ReturnsPage() {
     selectedHistoryReturnIds.has(b.id)
   )
 
-  const activeAllSelected =
-    filteredActiveBorrowings.length > 0 &&
-    filteredActiveBorrowings.every((b) => selectedActiveReturnIds.has(b.id))
-  const historyAllSelected =
-    filteredReturnedBorrowings.length > 0 &&
-    filteredReturnedBorrowings.every((b) => selectedHistoryReturnIds.has(b.id))
-
   const toggleActiveReturnSelection = (id: number) => {
     setSelectedActiveReturnIds((prev) => {
       const next = new Set(prev)
@@ -750,22 +738,6 @@ export default function ReturnsPage() {
     })
   }
 
-  const handleActiveSelectAll = () => {
-    if (activeAllSelected) {
-      setSelectedActiveReturnIds(new Set())
-      return
-    }
-    setSelectedActiveReturnIds(new Set(filteredActiveBorrowings.map((b) => b.id)))
-  }
-
-  const handleHistorySelectAll = () => {
-    if (historyAllSelected) {
-      setSelectedHistoryReturnIds(new Set())
-      return
-    }
-    setSelectedHistoryReturnIds(new Set(filteredReturnedBorrowings.map((b) => b.id)))
-  }
-
   const detailLookup = useMemo(() => {
     const lookup = new Map<string, DetailInventoryItem>()
     for (const detail of inventoryDetails) {
@@ -793,169 +765,6 @@ export default function ReturnsPage() {
     }
     return inventoryDetails.find((item) => item.assetId === borrowing.assetId)
   }
-
-  const returnExportColumnDefinitions = useMemo<ReturnExportColumn[]>(
-    () => [
-      {
-        key: "noId",
-        label: "No ID",
-        getValue: (borrowing) => getReturnNoId(borrowing),
-      },
-      {
-        key: "jenisInventaris",
-        label: "Jenis Inventaris",
-        getValue: (borrowing) => assetSourceLabel(deriveAssetSource(borrowing.assetType, borrowing.assetCode)),
-      },
-      {
-        key: "alat",
-        label: "Alat",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailInventoryName || detail?.detailName || borrowing.assetDetailName || borrowing.assetName || "-"
-        },
-      },
-      {
-        key: "kode",
-        label: "Kode",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailCode || borrowing.assetDetailCode || borrowing.assetCode || "-"
-        },
-      },
-      {
-        key: "ruanganAlat",
-        label: "Nama Ruangan Alat",
-        getValue: (borrowing) => resolveDetailForBorrowing(borrowing)?.assetLocation || borrowing.assetLocation || "-",
-      },
-      {
-        key: "merek",
-        label: "Merek / Model",
-        getValue: (borrowing) => {
-          const detail = resolveDetailForBorrowing(borrowing)
-          return detail?.detailBrandModel || detail?.detailName || "-"
-        },
-      },
-      {
-        key: "peminjam",
-        label: "Peminjam",
-        getValue: (borrowing) => borrowing.userName || "-",
-      },
-      {
-        key: "jabatanPeminjam",
-        label: "Jabatan Peminjam",
-        getValue: (borrowing) => borrowing.borrowerPosition || "-",
-      },
-      {
-        key: "unitKerjaPeminjam",
-        label: "Unit Kerja Peminjam",
-        getValue: (borrowing) => borrowing.borrowerWorkUnit || "-",
-      },
-      {
-        key: "pengembali",
-        label: "Nama Pengembali",
-        getValue: (borrowing) => borrowing.returnedByName || "-",
-      },
-      {
-        key: "nipPengembali",
-        label: "NIP Pengembali",
-        getValue: (borrowing) => borrowing.returnedByNip || "-",
-      },
-      {
-        key: "nip",
-        label: "NIP",
-        getValue: (borrowing) => borrowing.userNip || "-",
-      },
-      {
-        key: "tanggalPinjam",
-        label: "Tanggal Pinjam",
-        getValue: (borrowing) => formatDayTimeLabel(borrowing.borrowDate),
-      },
-      {
-        key: "pemilikAlat",
-        label: "Pemilik / PJ Inventaris",
-        getValue: (borrowing) => borrowing.ownerName || "-",
-      },
-      {
-        key: "nipPemilikAlat",
-        label: "NIP Pemilik / PJ",
-        getValue: (borrowing) => borrowing.ownerNip || "-",
-      },
-      {
-        key: "jabatanPemilikAlat",
-        label: "Jabatan Pemilik / PJ",
-        getValue: (borrowing) => borrowing.ownerPosition || "-",
-      },
-      {
-        key: "unitPemilikAlat",
-        label: "Unit Pemilik / PJ",
-        getValue: (borrowing) => borrowing.ownerWorkUnit || "-",
-      },
-      {
-        key: "jenisKeperluan",
-        label: "Jenis Keperluan",
-        getValue: (borrowing) => formatBorrowingPurposeType(borrowing.purposeType),
-      },
-      {
-        key: "tujuanPeminjaman",
-        label: "Ruang / Tujuan",
-        getValue: (borrowing) => borrowing.destinationRoom || "-",
-      },
-      {
-        key: "keperluanPeminjaman",
-        label: "Keperluan Peminjaman",
-        getValue: (borrowing) => borrowing.purpose || "-",
-      },
-      {
-        key: "durasiPeminjaman",
-        label: "Lama Peminjaman",
-        getValue: (borrowing) => formatBorrowingDuration(borrowing.loanDurationValue, borrowing.loanDurationUnit),
-      },
-      {
-        key: "jumlahPeminjaman",
-        label: "Jumlah",
-        getValue: (borrowing) => String(borrowing.quantity || 1),
-      },
-      {
-        key: "catatanPeminjaman",
-        label: "Catatan Peminjaman",
-        getValue: (borrowing) => borrowing.notes || "-",
-      },
-      {
-        key: "catatanPengembalian",
-        label: "Catatan Pengembalian",
-        getValue: (borrowing) => borrowing.returnNotes || "-",
-      },
-      {
-        key: "waktuKembali",
-        label: "Waktu Kembali",
-        getValue: (borrowing) => formatDayTimeLabel(borrowing.returnDate),
-      },
-      {
-        key: "validasi",
-        label: "Validasi",
-        getValue: (borrowing) =>
-          borrowing.returnValidatorName || borrowing.returnValidatorNip
-            ? `${borrowing.returnValidatorName || ""} ${borrowing.returnValidatorNip || ""}`.trim()
-            : "Menunggu Validasi",
-      },
-      {
-        key: "validatorNip",
-        label: "NIP Validator",
-        getValue: (borrowing) => borrowing.returnValidatorNip || "-",
-      },
-      {
-        key: "kondisi",
-        label: "Kondisi Pengembalian",
-        getValue: (borrowing) => borrowing.returnCondition || "-",
-      },
-      {
-        key: "status",
-        label: "Status",
-        getValue: (borrowing) => borrowingStatusLabel(borrowing.status),
-      },
-    ],
-    [deriveAssetSource, resolveDetailForBorrowing]
-  )
 
   const getReturnValidatorLabel = (borrowing: ApiBorrowing) => {
     const name = borrowing.returnValidatorName?.trim()
@@ -1155,26 +964,6 @@ export default function ReturnsPage() {
   }
 
 
-  const toggleActiveReturnColumn = (columnKey: string) => {
-    setActiveSelectedReturnColumns((previous) => {
-      if (previous.includes(columnKey)) {
-        if (previous.length === 1) return previous
-        return previous.filter((item) => item !== columnKey)
-      }
-      return [...previous, columnKey]
-    })
-  }
-
-  const toggleHistoryReturnColumn = (columnKey: string) => {
-    setHistorySelectedReturnColumns((previous) => {
-      if (previous.includes(columnKey)) {
-        if (previous.length === 1) return previous
-        return previous.filter((item) => item !== columnKey)
-      }
-      return [...previous, columnKey]
-    })
-  }
-
   const activeReturnRowsToExport =
     activeReturnSelectedRows.length > 0 ? activeReturnSelectedRows : filteredActiveBorrowings
   const historyReturnRowsToExport =
@@ -1340,16 +1129,6 @@ export default function ReturnsPage() {
                   </CardDescription>
                 </div>
                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      aria-label="Pilih semua peminjaman aktif"
-                      className="h-4 w-4 accent-blue-600"
-                      checked={activeAllSelected}
-                      onChange={handleActiveSelectAll}
-                    />
-                    Pilih semua
-                  </label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1368,32 +1147,7 @@ export default function ReturnsPage() {
                       </>
                     )}
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
-                        <Download className="mr-2 h-4 w-4" />
-                        Ekspor
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
-                      <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                      <div className="max-h-44 overflow-y-auto">
-                        {returnExportColumnDefinitions.map((column) => (
-                          <DropdownMenuCheckboxItem
-                            key={`active-column-${column.key}`}
-                            checked={activeSelectedReturnColumns.includes(column.key)}
-                            onCheckedChange={() => toggleActiveReturnColumn(column.key)}
-                          >
-                            {column.label}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => void handleActiveExport("pdf")}>PDF</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <PaperPrintMenu label="Cetak daftar pengembalian" onSelect={(paper) => void handleActiveExport(paper === "a4" ? "print" : "print-f4")} />
                   <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                     {activeReturnSelectedRows.length
                       ? `${activeReturnSelectedRows.length} baris dipilih`
@@ -1515,11 +1269,11 @@ export default function ReturnsPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>
-                                    PDF
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Pengembalian", activeSelectedReturnColumns)}>PDF A4</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf-f4", b, "Pengembalian", activeSelectedReturnColumns)}>PDF F4</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              <PaperPrintMenu compact label="Cetak pengembalian" onSelect={(paper) => void exportSingleReturnNarrative(paper === "a4" ? "print" : "print-f4", b, "Pengembalian", activeSelectedReturnColumns)} />
                             </SummaryResultFooter>
                           )}
                         >
@@ -1669,43 +1423,8 @@ export default function ReturnsPage() {
                 </CardDescription>
               </div>
               <div className="flex w-full flex-col items-stretch gap-2 text-[13px] text-muted-foreground sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-                <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    aria-label="Pilih semua riwayat pengembalian"
-                    className="h-4 w-4"
-                    checked={historyAllSelected}
-                    onChange={handleHistorySelectAll}
-                  />
-                  Pilih semua
-                </label>
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
-                        <Download className="mr-2 h-4 w-4" />
-                        Ekspor
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
-                      <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                      <div className="max-h-52 overflow-y-auto">
-                        {returnExportColumnDefinitions.map((column) => (
-                          <DropdownMenuCheckboxItem
-                            key={`history-column-${column.key}`}
-                            checked={historySelectedReturnColumns.includes(column.key)}
-                            onCheckedChange={() => toggleHistoryReturnColumn(column.key)}
-                          >
-                            {column.label}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => void handleHistoryExport("pdf")}>PDF</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <PaperPrintMenu label="Cetak riwayat pengembalian" onSelect={(paper) => void handleHistoryExport(paper === "a4" ? "print" : "print-f4")} />
                 <Button
                   variant="outline"
                   size="sm"
@@ -1920,11 +1639,11 @@ export default function ReturnsPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>
-                                    PDF
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>PDF A4</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleReturnNarrative("pdf-f4", b, "Riwayat Pengembalian", historySelectedReturnColumns)}>PDF F4</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              <PaperPrintMenu compact label="Cetak riwayat pengembalian" onSelect={(paper) => void exportSingleReturnNarrative(paper === "a4" ? "print" : "print-f4", b, "Riwayat Pengembalian", historySelectedReturnColumns)} />
                             </SummaryResultFooter>
                           )}
                         >

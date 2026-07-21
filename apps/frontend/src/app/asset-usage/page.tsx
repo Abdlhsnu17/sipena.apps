@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import InventoryPicker from "@/components/inventory-picker";
 import { NotificationSummary } from "@/components/notification-summary";
+import { PaperPrintMenu } from "@/components/paper-print-menu";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
@@ -29,11 +30,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -420,7 +418,7 @@ export default function AssetUsagePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [usageSourceFilter, setUsageSourceFilter] = useState<UsageSourceFilter>("all");
   const [selectedUsageIds, setSelectedUsageIds] = useState<number[]>([]);
-  const [selectedUsageColumns, setSelectedUsageColumns] = useState<UsageExportColumnKey[]>(
+  const [selectedUsageColumns] = useState<UsageExportColumnKey[]>(
     usageExportColumnDefinitions.map((column) => column.key)
   );
   const [showForm, setShowForm] = useState(false);
@@ -692,25 +690,9 @@ export default function AssetUsagePage() {
     () => filteredLogs.filter((log) => selectedUsageIds.includes(log.id)),
     [filteredLogs, selectedUsageIds]
   );
-  const usageAllSelected = filteredLogs.length > 0 && selectedUsageRows.length === filteredLogs.length;
-  const handleUsageSelectAll = () => {
-    setSelectedUsageIds((prev) => {
-      const filteredIds = filteredLogs.map((log) => log.id);
-      const allSelected = filteredIds.every((id) => prev.includes(id));
-      if (allSelected) return prev.filter((id) => !filteredIds.includes(id));
-      return Array.from(new Set([...prev, ...filteredIds]));
-    });
-  };
   const toggleUsageSelection = (id: number) => {
     setSelectedUsageIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
-  const toggleUsageColumn = (key: UsageExportColumnKey) => {
-    setSelectedUsageColumns((prev) => {
-      if (prev.includes(key)) return prev.length === 1 ? prev : prev.filter((item) => item !== key);
-      return [...prev, key];
-    });
-  };
-
   useEffect(() => {
     setSelectedUsageIds((prev) => prev.filter((id) => filteredLogs.some((log) => log.id === id)));
   }, [filteredLogs]);
@@ -1381,16 +1363,6 @@ export default function AssetUsagePage() {
                 </CardDescription>
               </div>
               <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-                <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    aria-label="Pilih semua riwayat penggunaan"
-                    className="h-4 w-4 accent-blue-600"
-                    checked={usageAllSelected}
-                    onChange={handleUsageSelectAll}
-                  />
-                  Pilih semua
-                </label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1409,32 +1381,7 @@ export default function AssetUsagePage() {
                     </>
                   )}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
-                      <Download className="mr-2 h-4 w-4" />
-                      Ekspor
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
-                    <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                    <div className="max-h-44 overflow-y-auto">
-                      {usageExportColumnDefinitions.map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={`usage-column-${column.key}`}
-                          checked={selectedUsageColumns.includes(column.key)}
-                          onCheckedChange={() => toggleUsageColumn(column.key)}
-                        >
-                          {column.label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => void exportUsageList("pdf")}>PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <PaperPrintMenu label="Cetak daftar pemakaian aset" onSelect={(paper) => void exportUsageList(paper === "a4" ? "print" : "print-f4")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedUsageRows.length
                     ? `${selectedUsageRows.length} baris dipilih`
@@ -1592,11 +1539,11 @@ export default function AssetUsagePage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>
-                                    PDF
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf", log)}>PDF A4</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void exportSingleUsageLetter("pdf-f4", log)}>PDF F4</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              <PaperPrintMenu compact label="Cetak penggunaan aset" onSelect={(paper) => void exportSingleUsageLetter(paper === "a4" ? "print" : "print-f4", log)} />
                               {canDeleteAssetUsage && (
                                 <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10" onClick={() => handleDelete(log)} aria-label="Hapus log penggunaan">
                                   <Trash2 className="h-4 w-4" />

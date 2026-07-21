@@ -43,6 +43,7 @@ import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
 import InventoryPicker from "@/components/inventory-picker";
 import { NotificationSummary } from "@/components/notification-summary";
+import { PaperPrintMenu } from "@/components/paper-print-menu";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import {
     Dialog,
@@ -54,11 +55,8 @@ import {
 } from "@/components/ui/dialog";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -461,7 +459,7 @@ export default function BorrowingPage() {
   const [isBorrowingListMinimized, setIsBorrowingListMinimized] = useState(false)
   const [borrowingPage, setBorrowingPage] = useState(1)
   const [selectedBorrowingIds, setSelectedBorrowingIds] = useState<Set<number>>(() => new Set())
-  const [selectedBorrowingExportColumns, setSelectedBorrowingExportColumns] = useState<string[]>(() =>
+  const [selectedBorrowingExportColumns] = useState<string[]>(() =>
     borrowingExportColumnDefinitions.map((column) => column.key)
   )
   const [expandedBorrowingIds, setExpandedBorrowingIds] = useState<Set<number>>(() => new Set())
@@ -1766,17 +1764,6 @@ export default function BorrowingPage() {
     })
   }
 
-  const allBorrowingsSelected =
-    filteredBorrowings.length > 0 && filteredBorrowings.every((b) => selectedBorrowingIds.has(b.id))
-
-  const handleSelectAllBorrowings = () => {
-    if (allBorrowingsSelected) {
-      setSelectedBorrowingIds(new Set())
-      return
-    }
-    setSelectedBorrowingIds(new Set(filteredBorrowings.map((b) => b.id)))
-  }
-
   const toggleBorrowingSelection = (id: number) => {
     setSelectedBorrowingIds((prev) => {
       const next = new Set(prev)
@@ -1786,16 +1773,6 @@ export default function BorrowingPage() {
         next.add(id)
       }
       return next
-    })
-  }
-
-  const handleBorrowingExportColumnToggle = (columnKey: string) => {
-    setSelectedBorrowingExportColumns((previous) => {
-      if (previous.includes(columnKey)) {
-        if (previous.length === 1) return previous
-        return previous.filter((item) => item !== columnKey)
-      }
-      return [...previous, columnKey]
     })
   }
 
@@ -2453,16 +2430,6 @@ export default function BorrowingPage() {
                 </CardDescription>
               </div>
                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      aria-label="Pilih semua peminjaman"
-                      className="h-4 w-4 accent-blue-600"
-                      checked={allBorrowingsSelected}
-                      onChange={handleSelectAllBorrowings}
-                    />
-                    Pilih semua
-                  </label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2481,32 +2448,7 @@ export default function BorrowingPage() {
                       </>
                     )}
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full rounded-2xl px-3 sm:w-auto">
-                        <Download className="mr-2 h-4 w-4" />
-                        Ekspor
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={8} className="w-[min(92vw,13rem)]">
-                      <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                      <div className="max-h-44 overflow-y-auto">
-                        {borrowingExportColumnDefinitions.map((column) => (
-                          <DropdownMenuCheckboxItem
-                            key={column.key}
-                            checked={selectedBorrowingExportColumns.includes(column.key)}
-                            onCheckedChange={() => handleBorrowingExportColumnToggle(column.key)}
-                          >
-                            {column.label}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => void handleExport("pdf")}>PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <PaperPrintMenu label="Cetak daftar peminjaman" onSelect={(paper) => void handleExport(paper === "a4" ? "print" : "print-f4")} />
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedBorrowings.length
                     ? `${selectedBorrowings.length} baris dipilih`
@@ -2688,11 +2630,11 @@ export default function BorrowingPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}>
-                                    PDF
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf", b)}>PDF A4</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => void _exportSingleBorrowingNarrative("pdf-f4", b)}>PDF F4</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              <PaperPrintMenu compact label="Cetak peminjaman" onSelect={(paper) => void _exportSingleBorrowingNarrative(paper === "a4" ? "print" : "print-f4", b)} />
                             </SummaryResultFooter>
                           )}
                         >

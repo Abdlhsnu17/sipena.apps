@@ -1,6 +1,7 @@
 "use client"
 
 import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import { PaperPrintMenu } from "@/components/paper-print-menu";
 import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,11 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
@@ -767,7 +765,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     [findDetailInfo]
   );
 
-  const [selectedHistoryColumns, setSelectedHistoryColumns] = useState<string[]>(() =>
+  const [selectedHistoryColumns] = useState<string[]>(() =>
     historyExportColumnDefinitions.filter((column) => column.defaultSelected ?? true).map((column) => column.key)
   );
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<number>>(() => new Set());
@@ -1002,29 +1000,9 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
     };
   };
 
-  const toggleHistoryColumn = (columnKey: string) => {
-    setSelectedHistoryColumns((previous) => {
-      if (previous.includes(columnKey)) {
-        if (previous.length === 1) return previous;
-        return previous.filter((item) => item !== columnKey);
-      }
-      return [...previous, columnKey];
-    });
-  };
-
-  const historyAllSelected =
-    filteredHistories.length > 0 && filteredHistories.every((history) => selectedHistoryIds.has(history.id));
   const selectedVisibleHistoryCount = filteredHistories.filter((history) =>
     selectedHistoryIds.has(history.id)
   ).length;
-
-  const handleHistorySelectAll = () => {
-    if (historyAllSelected) {
-      setSelectedHistoryIds(new Set());
-      return;
-    }
-    setSelectedHistoryIds(new Set(filteredHistories.map((history) => history.id)));
-  };
 
   const toggleHistorySelection = (id: number) => {
     setSelectedHistoryIds((prev) => {
@@ -1099,16 +1077,6 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       <div className="border-b border-border px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2 text-[13px] text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
-            <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-              <input
-                type="checkbox"
-                aria-label="Pilih semua riwayat pemeliharaan"
-                className="h-4 w-4"
-                checked={historyAllSelected}
-                onChange={handleHistorySelectAll}
-              />
-              Pilih semua
-            </label>
             <span className="text-[13px] text-muted-foreground">
               {selectedVisibleHistoryCount
                 ? `${selectedVisibleHistoryCount} baris dipilih`
@@ -1116,34 +1084,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-2xl px-3">
-                  <Download className="mr-2 h-4 w-4" />
-                  Ekspor
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8} className="w-56">
-                <DropdownMenuLabel>Pilih kolom</DropdownMenuLabel>
-                <div className="max-h-44 overflow-y-auto">
-                  {historyExportColumnDefinitions.map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.key}
-                      checked={selectedHistoryColumns.includes(column.key)}
-                      onCheckedChange={() => toggleHistoryColumn(column.key)}
-                    >
-                      {column.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Ekspor daftar</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleHistoryExport("pdf")}>
-                  PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <PaperPrintMenu label="Cetak riwayat pemeliharaan" onSelect={(paper) => handleHistoryExport(paper === "a4" ? "print" : "print-f4")} />
           </div>
         </div>
       </div>
@@ -1300,11 +1241,11 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>
-                          PDF
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf", h)}>PDF A4</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportSingleHistory("pdf-f4", h)}>PDF F4</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <PaperPrintMenu compact label="Cetak riwayat pemeliharaan" onSelect={(paper) => exportSingleHistory(paper === "a4" ? "print" : "print-f4", h)} />
                     {canComplete && editId === h.id && (
                       <div className="grid w-full gap-2 pt-1 sm:grid-cols-2">
                         <input
