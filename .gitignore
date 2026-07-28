@@ -1,40 +1,37 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # ==========================
+# PHP / Laravel
+# ==========================
+/vendor
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+.phpunit.result.cache
+/.phpunit.cache
+/auth.json
+Homestead.json
+Homestead.yaml
+
+# ==========================
 # Dependencies
 # ==========================
-node_modules/
+/node_modules
 **/node_modules/
-
-
-# ==========================
-# Build outputs
-# ==========================
-dist/
-build/
-out/
-.next/
-coverage/
-
 
 # ==========================
 # Test outputs
 # ==========================
+selenium/screenshots/
+selenium/reports/
+selenium.env.json
 playwright-report/
 test-results/
 blob-report/
 .nyc_output/
-
-selenium/screenshots/
-selenium/reports/
-selenium.env.json
-
-
-# ==========================
-# TypeScript cache
-# ==========================
-*.tsbuildinfo
-
+report.*.json
 
 # ==========================
 # Environment variables
@@ -43,50 +40,17 @@ selenium.env.json
 .env
 .env.*
 !.env.example
-
-.env.local
-.env.development
-.env.production
-.env.test
-
 .docker.env
 .docker.env.local
-
 
 # ==========================
 # Logs
 # ==========================
 logs/
 *.log
-
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 lerna-debug.log*
-
-report.*.json
-
-
-# ==========================
-# Runtime data
-# ==========================
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-
-# ==========================
-# Upload files
-# NEVER COMMIT USER DATA
-# ==========================
-uploads/
-apps/backend/uploads/
-apps/*/uploads/
-
-public/uploads/
-storage/
-
 
 # ==========================
 # Database backup
@@ -95,23 +59,18 @@ storage/
 *.sql
 *.dump
 *.mysql
-
-# SQL migrations and seeds are source files, not database backups.
-!packages/database/migrations/**/*.sql
-!packages/database/seeds/**/*.sql
-
+!database/seeders/**/*.sql
 backup/
 backups/
 database-backup/
 db-backup/
-
+*.sqlite
 
 # ==========================
 # Docker local data
 # ==========================
 docker-data/
 *.tar
-
 
 # ==========================
 # Operating System files
@@ -121,10 +80,8 @@ Thumbs.db
 ._*
 .AppleDouble
 .LSOverride
-
 .Spotlight-V100/
 .Trashes/
-
 
 # ==========================
 # Temporary files
@@ -136,18 +93,18 @@ Thumbs.db
 *.orig
 *.rej
 
-
 # ==========================
 # IDE / Editor
 # ==========================
 .idea/
 .vscode/
-
+.fleet/
+.nova/
+.zed/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-
 
 # ==========================
 # Local folders
