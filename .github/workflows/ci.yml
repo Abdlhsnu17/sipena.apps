@@ -14,29 +14,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, pdo_mysql, gd, zip, bcmath
+          coverage: none
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: '20.19.0'
           cache: npm
 
-      - name: Install dependencies
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install Node dependencies
         run: npm ci
 
-      - name: Backend lint
-        run: npm run lint --workspace=inventory-backend
+      - name: Build frontend assets
+        run: npm run build
 
-      - name: Backend build
-        run: npm run build:backend
-
-      - name: Backend test
-        run: npm run test:backend
-
-      - name: Frontend lint
-        run: npm run lint --workspace=inventory-frontend
-
-      - name: Frontend type-check
-        run: npm run type-check --workspace=inventory-frontend
-
-      - name: Frontend build
-        run: npm run build --workspace=inventory-frontend
+      - name: Run PHP tests
+        run: php artisan test
