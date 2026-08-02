@@ -1,6 +1,6 @@
 "use client"
 
-import { ConfirmDialogContext } from "@/components/confirm-provider"
+import { ConfirmDialogContext } from "@/components/common/confirm-provider"
 import { useContext } from "react"
 
 export const useConfirm = () => {

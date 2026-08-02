@@ -1,5 +1,5 @@
 
-import { ThemeScript } from "@/components/theme-script";
+import { ThemeScript } from "@/components/theme/theme-script";
 import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 import type React from "react";

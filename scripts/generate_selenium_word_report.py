@@ -15,8 +15,8 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 SCREENSHOT_DIR = ROOT / "selenium" / "screenshots"
-OUTPUT_DIR = ROOT / "reports"
-OUTPUT_PATH = OUTPUT_DIR / "Laporan_Hasil_Selenium_SIPENA.docx"
+OUTPUT_DIR = ROOT / "docs" / "reports"
+OUTPUT_PATH = OUTPUT_DIR / "Laporan-Hasil-Selenium-SIPENA.docx"
 
 BLUE = "2E74B5"
 DARK_BLUE = "1F4D78"

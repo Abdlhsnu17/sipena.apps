@@ -1,0 +1,23 @@
+-- Template migration baru (idempotent)
+-- Ganti nama file ini sesuai fitur, contoh:
+-- 20260802_add_example_columns.sql
+
+-- Contoh pola add column idempotent:
+-- SET @col_exists := (
+--   SELECT COUNT(*)
+--   FROM INFORMATION_SCHEMA.COLUMNS
+--   WHERE TABLE_SCHEMA = DATABASE()
+--     AND TABLE_NAME = 'example_table'
+--     AND COLUMN_NAME = 'example_column'
+-- );
+--
+-- SET @sql := IF(
+--   @col_exists = 0,
+--   'ALTER TABLE example_table ADD COLUMN example_column VARCHAR(100) NULL',
+--   'SELECT 1'
+-- );
+-- PREPARE stmt FROM @sql;
+-- EXECUTE stmt;
+-- DEALLOCATE PREPARE stmt;
+
+-- Tulis SQL migrasi fitur di bawah ini.

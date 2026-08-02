@@ -8,7 +8,7 @@
 | Versi aplikasi | 2.5.0 |
 | Status | Baseline implementasi aktif |
 | Terakhir diperbarui | 15 Juli 2026 |
-| Sumber kebenaran teknis | Implementasi di `apps/frontend`, `apps/backend`, dan `packages/database` |
+| Sumber kebenaran teknis | Implementasi di `apps/frontend`, `apps/backend`, dan `database/` |
 
 ## 1. Tujuan Dokumen
 
@@ -374,9 +374,9 @@ Browser
            -> email/kanal OTP bila dikonfigurasi
 ```
 
-- Skema, migrasi, dan seed database berada di `packages/database`.
+- Skema, migrasi, dan seed database berada di `database/`.
 - Konfigurasi infrastruktur berada di `docker/`.
-- Shared types, config, database client, dan utilities berada di `packages/*`.
+- Shared types dan utilities berada di dalam masing-masing workspace (`apps/*/src/types`, `apps/*/src/utils`).
 - API utama menggunakan prefix `/api`.
 
 ## 11. Acceptance Criteria Tingkat Produk
@@ -451,13 +451,13 @@ Baseline rilis dinyatakan memenuhi PRD bila:
 - `apps/frontend/src/app` — halaman dan alur UI.
 - `apps/frontend/src/utils/role.ts` — fallback akses route dan helper role.
 - `apps/backend/src/routes` — kontrak endpoint dan batas role tindakan.
-- `apps/backend/src/services/access_control.service.ts` — menu dan matriks akses default.
+- `apps/backend/src/services/access-control.service.ts` — menu dan matriks akses default.
 - `apps/backend/src/services` — aturan bisnis modul.
-- `packages/database` — skema, seed, dan migrasi database.
+- `database/` — skema, seed, dan migrasi database.
 - `docker` — konfigurasi runtime container.
 
 Migrasi penting untuk baseline 1.1:
 
-- `packages/database/migrations/20260621_add_borrowing_sanction_resolution_columns.sql` — audit penyelesaian dan pembebasan sanksi.
-- `packages/database/migrations/20260622_add_asset_usage_audit_columns.sql` — arsip lunak serta sumber manual/sinkron peminjaman pada Penggunaan.
-- `packages/database/migrations/20260714_link_borrowing_owner_accounts.sql` — relasi akun dan snapshot identitas Pemilik/PJ peminjaman.
+- `database/migrations/20260621_add_borrowing_sanction_resolution_columns.sql` — audit penyelesaian dan pembebasan sanksi.
+- `database/migrations/20260622_add_asset_usage_audit_columns.sql` — arsip lunak serta sumber manual/sinkron peminjaman pada Penggunaan.
+- `database/migrations/20260714_link_borrowing_owner_accounts.sql` — relasi akun dan snapshot identitas Pemilik/PJ peminjaman.

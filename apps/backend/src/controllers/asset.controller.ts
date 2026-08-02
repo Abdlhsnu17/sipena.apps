@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { importAssetsFromBuffer, generateImportTemplate } from '../services/asset_import.service';
+import { importAssetsFromBuffer, generateImportTemplate } from '../services/asset-import.service';
 import { AssetService } from '../services/asset.service';
 import { createScopedLogger } from '../utils/logger';
 

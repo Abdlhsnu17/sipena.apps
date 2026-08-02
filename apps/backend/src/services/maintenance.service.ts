@@ -16,7 +16,7 @@ import { sendPhoneNotification } from '../utils/notification-delivery';
 import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
-import * as MaintenanceHistoryService from './maintenance_history.service';
+import * as MaintenanceHistoryService from './maintenance-history.service';
 import notificationService from './notification.service';
 
 const logger = createScopedLogger('service:maintenance');

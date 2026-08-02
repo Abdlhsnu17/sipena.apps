@@ -79,9 +79,9 @@ Peran backend:
 
 ### Database
 
-Database utama menggunakan MySQL. Skema lokal dan artefak database disimpan terpisah di paket `packages/database` agar mudah diatur dan diimpor ulang.
+Database utama menggunakan MySQL. Skema lokal dan artefak database disimpan terpisah di folder `database/` pada root repositori agar mudah diatur dan diimpor ulang.
 
-Isi paket database:
+Isi folder database:
 
 - `seeds/schema.sql` sebagai skema utama lokal.
 - `migrations/` untuk perubahan tabel tambahan, termasuk keamanan pengguna, ekstensi peminjaman, penyelesaian sanksi, audit penggunaan aset, kontrol akses, notifikasi, operasi pemeliharaan, dan penautan akun Pemilik/PJ.
@@ -114,7 +114,7 @@ Isi paket database:
 
 Baseline 19 Juli 2026 mencakup pembaruan berikut:
 
-- Struktur proyek telah dipisahkan menjadi workspace `apps/frontend`, `apps/backend`, dan paket bersama di `packages/*`; konfigurasi Docker, script runtime, dan Selenium berada di folder khusus masing-masing.
+- Struktur proyek telah dipisahkan menjadi workspace `apps/frontend`, `apps/backend`, dan artefak database di `database/`; konfigurasi Docker, script runtime, dan Selenium berada di folder khusus masing-masing.
 - Pemeliharaan kini mencatat estimasi, waktu aktual, vendor/garansi, diagnosis dan tindakan, checklist/suku cadang, bukti foto atau lampiran, hasil verifikasi, kondisi akhir, dan tanggal pemeliharaan berikutnya.
 - Pemeliharaan prioritas kritis atau berestimasi minimal Rp5.000.000 masuk ke alur persetujuan. Admin/leader juga dapat membuat notifikasi pengingat H-7, H-3, dan H-1 serta mengaktifkan pekerjaan berulang.
 - SPK Prioritas Aset mendukung bobot manual dan AHP. Matriks AHP yang tidak konsisten (`CR > 0,1`) menggunakan bobot manual/default sebagai fallback; hasil akhir tetap dihitung dengan TOPSIS.
@@ -146,7 +146,7 @@ SIPENA memakai monorepo berbasis clean architecture secara bertahap:
 
 1. Frontend Next.js berada di `apps/frontend` dan hanya berkomunikasi dengan API.
 2. Backend Express berada di `apps/backend` dengan lapisan `controllers`, `services`, `repositories`, `middlewares`, `config`, dan `utils`.
-3. Shared packages berada di `packages/*` untuk database client, tipe bersama, utilitas umum, dan konfigurasi aplikasi.
+3. Artefak skema database (seed dan migrasi) berada di `database/` pada root repositori.
 4. Infrastruktur Docker berada di `docker/`, sedangkan otomasi runtime berada di `scripts/`.
 
 Kontrak utama backend:
@@ -172,25 +172,37 @@ Kontrak utama backend:
 │   │       ├── services/
 │   │       └── utils/
 │   └── frontend/
-├── packages/
-│   ├── config/
-│   ├── database/
-│   ├── types/
-│   └── utils/
+│       └── src/
+│           ├── app/
+│           ├── components/   # ui/ (shadcn) + subfolder per domain
+│           ├── constants/
+│           ├── hooks/
+│           ├── services/
+│           ├── types/
+│           └── utils/
+├── database/
+│   ├── migrations/
+│   └── seeds/
 ├── docker/
+├── docs/
+│   ├── diagrams/
+│   └── reports/
 ├── scripts/
+├── selenium/
 ├── .env.example
 ├── package.json
 └── README.md
 ```
 
-`packages/database` menyimpan `migrations/`, `seeds/`, dan shared database client. Migrasi query SQL dari service lama ke repository dilakukan per modul agar alur produksi yang sudah berjalan tidak berubah secara massal dalam satu perubahan.
+`database/` menyimpan `migrations/` dan `seeds/` sebagai lokasi kanonis skema. Migrasi query SQL dari service lama ke repository dilakukan per modul agar alur produksi yang sudah berjalan tidak berubah secara massal dalam satu perubahan.
+
+Konvensi penamaan file: seluruh workspace memakai `kebab-case`, dengan sufiks peran pada backend (`*.controller.ts`, `*.service.ts`, `*.routes.ts`, `*.model.ts`, `*.repository.ts`, `*.middleware.ts`).
 
 Dokumentasi teknis per bagian:
 
 - [`apps/frontend/README.md`](apps/frontend/README.md) — halaman, proxy API, konfigurasi, dan perintah frontend.
 - [`apps/backend/README.md`](apps/backend/README.md) — tanggung jawab API, infrastruktur, environment, endpoint, migrasi, dan penyimpanan file.
-- [`packages/database/README.md`](packages/database/README.md) — database client, seed, urutan migrasi, dan inisialisasi database.
+- [`database/README.md`](database/README.md) — database client, seed, urutan migrasi, dan inisialisasi database.
 - [`selenium/README.md`](selenium/README.md) — persiapan dan cakupan pengujian end-to-end.
 
 ## Menjalankan Secara Lokal
@@ -210,7 +222,7 @@ Pada terminal lain:
 npm run dev
 ```
 
-Frontend tersedia di `http://localhost:3000`, backend di `http://localhost:4000`, dan health check di `http://localhost:4000/api/health`. Siapkan skema dan migrasi database mengikuti [`packages/database/README.md`](packages/database/README.md). Untuk menjalankan seluruh stack menggunakan container, salin konfigurasi dari `apps/backend/.docker.env.example` ke `docker/.env`, ganti semua kredensial contoh, lalu jalankan:
+Frontend tersedia di `http://localhost:3000`, backend di `http://localhost:4000`, dan health check di `http://localhost:4000/api/health`. Siapkan skema dan migrasi database mengikuti [`database/README.md`](database/README.md). Untuk menjalankan seluruh stack menggunakan container, salin konfigurasi dari `apps/backend/.docker.env.example` ke `docker/.env`, ganti semua kredensial contoh, lalu jalankan:
 
 ```bash
 docker compose --env-file docker/.env -f docker/compose.yml up --build

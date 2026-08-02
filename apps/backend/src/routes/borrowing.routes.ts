@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import borrowingController from '../controllers/borrowing.controller';
-import { authMiddleware, requireRole } from '../middlewares/authMiddleware';
+import { authMiddleware, requireRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 

@@ -3,10 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
-import { NotificationSummary } from "@/components/notification-summary";
-import { PaperPrintMenu } from "@/components/paper-print-menu";
-import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
+import DeleteReasonDialog from "@/components/common/delete-reason-dialog";
+import { NotificationSummary } from "@/components/common/notification-summary";
+import { PaperPrintMenu } from "@/components/common/paper-print-menu";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/common/summary-result-card";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
 import { borrowingService, type Borrowing as ApiBorrowing } from "@/services/borrowing.service";
 import deletionRequestService from "@/services/deletion-request.service";
@@ -69,50 +69,10 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { buildVisiblePageItems } from "@/utils/pagination";
+import { formatBorrowingDuration, formatBorrowingPurposeType } from "@/utils/borrowing";
 
 const RETURN_ROWS_PER_PAGE = 2
-
-const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
-  const sortedPages = Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right)
-
-  return sortedPages.flatMap((page, index) => {
-    const previousPage = sortedPages[index - 1]
-    if (index > 0 && previousPage && page - previousPage > 1) {
-      return [`ellipsis-${previousPage}-${page}`, page]
-    }
-    return [page]
-  })
-}
-
-const borrowingPurposeTypeLabels = {
-  inside_hospital: "Penggunaan di dalam Rumah Sakit",
-  outside_hospital: "Penggunaan di luar Rumah Sakit",
-} as const
-
-const borrowingDurationUnitLabels = {
-  day: "Hari",
-  month: "Bulan",
-  year: "Tahun",
-} as const
-
-const formatBorrowingPurposeType = (value?: keyof typeof borrowingPurposeTypeLabels | null) =>
-  value ? borrowingPurposeTypeLabels[value] ?? "-" : "-"
-
-const formatBorrowingDuration = (
-  value?: number | null,
-  unit?: keyof typeof borrowingDurationUnitLabels | null
-) => {
-  if (!value || !unit) return "-"
-  const label = borrowingDurationUnitLabels[unit]
-  return label ? `${value} ${label}` : String(value)
-}
 
 export default function ReturnsPage() {
   const router = useRouter()

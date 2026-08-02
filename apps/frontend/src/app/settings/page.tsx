@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/theme/theme-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
 import notificationService, { type NotificationDeliveryStatus } from "@/services/notification.service";
 import { userService } from "@/services/user.service";
-import { toPublicPhotoUrl } from "@/utils/photoUrl";
+import { toPublicPhotoUrl } from "@/utils/photo-url";
 import { isStrongPassword } from "@/utils/validation";
 // ...existing code...
 import { Eye, EyeOff, Monitor, Moon, Save, Settings, Smartphone, Sun } from "lucide-react";

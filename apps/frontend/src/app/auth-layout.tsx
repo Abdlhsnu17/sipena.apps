@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import Sidebar from "@/components/sidebar"
-import Topbar from "@/components/topbar"
+import Sidebar from "@/components/layout/sidebar"
+import Topbar from "@/components/layout/topbar"
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"

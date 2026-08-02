@@ -1,16 +1,13 @@
 # dependencies
 node_modules
 **/node_modules
-packages/*/node_modules
 
 # build
 .next
 **/.next
 .next/cache
-packages/*/.next
 dist
 **/dist
-packages/*/dist
 
 # logs
 *.log
@@ -21,14 +18,10 @@ yarn-error.log*
 # test
 coverage
 **/coverage
-packages/*/coverage
 
 # env
 .env
 .env.*
-packages/*/.env
-packages/*/.env.local
-packages/*/.docker.env
 
 # git
 .git
@@ -51,5 +44,5 @@ docker-compose.yml
 uploads
 public/uploads
 selenium
-reports
+docs
 backups

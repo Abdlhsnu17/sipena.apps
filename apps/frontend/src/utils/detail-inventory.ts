@@ -198,3 +198,46 @@ export const getDetailInventoryStatusLabel = (item: Pick<DetailInventoryItem, "s
       return "Tersedia"
   }
 }
+
+/** Normalisasi identifier detail inventaris menjadi string yang sudah di-trim. */
+export const normalizeDetailIdentifier = (value?: string | number | null) => {
+  if (value === undefined || value === null) return ""
+  return String(value).trim()
+}
+
+/**
+ * Kunci penguncian (lock) untuk satu aset atau satu detail aset.
+ *
+ * Tanpa `detailId` menghasilkan kunci tingkat aset, dengan `detailId`
+ * menghasilkan kunci tingkat detail.
+ */
+export const getInventoryLockKey = (
+  assetType: string | undefined,
+  assetId: number,
+  detailId?: string | number | null,
+) => {
+  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical"
+  const baseKey = `${normalizedAssetType}|${assetId}`
+  const normalizedDetailId = normalizeDetailIdentifier(detailId)
+  return normalizedDetailId ? `${baseKey}|${normalizedDetailId}` : baseKey
+}
+
+/**
+ * Identifier detail sintetis untuk aset yang belum memiliki baris detail.
+ * Dipakai sebagai penanda "detail semu" agar aset tetap bisa dikunci.
+ */
+export const getAssetFallbackDetailIds = (assetId: number, assetType?: string) => {
+  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical"
+  return [`asset-${assetId}`, `asset-${normalizedAssetType}-${assetId}`]
+}
+
+/** Menentukan apakah `detailId` merupakan detail semu hasil `getAssetFallbackDetailIds`. */
+export const isAssetFallbackDetailId = (
+  detailId: string | number | undefined | null,
+  assetId: number,
+  assetType?: string,
+) => {
+  const normalizedDetailId = normalizeDetailIdentifier(detailId)
+  if (!normalizedDetailId) return false
+  return getAssetFallbackDetailIds(assetId, assetType).includes(normalizedDetailId)
+}

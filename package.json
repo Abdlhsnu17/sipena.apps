@@ -8,13 +8,11 @@
     "npm": ">=11.7.0"
   },
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=inventory-frontend",
-    "build": "npm run build:packages && npm run build:backend && npm run build:frontend",
-    "build:packages": "npm run build --workspace=@sipena/types && npm run build --workspace=@sipena/utils && npm run build --workspace=@sipena/config && npm run build --workspace=@sipena/database",
+    "build": "npm run build:backend && npm run build:frontend",
     "lint": "npm run lint --workspace=inventory-backend && npm run lint --workspace=inventory-frontend",
     "type-check": "npm run type-check --workspace=inventory-frontend",
     "test:backend": "npm run test --workspace=inventory-backend",

@@ -7,9 +7,9 @@ import { Server } from 'http';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
 import { connectRedis, disconnectRedis } from './config/redis';
-import { authMiddleware, sseTicketMiddleware } from './middlewares/authMiddleware';
-import { errorHandler } from './middlewares/errorHandler';
-import { requestContextMiddleware } from './middlewares/requestContext';
+import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middleware';
+import { errorHandler } from './middlewares/error-handler.middleware';
+import { requestContextMiddleware } from './middlewares/request-context.middleware';
 import { createScopedLogger } from './utils/logger';
 import { notificationStreamHub } from './utils/notification-stream';
 import {
@@ -24,9 +24,9 @@ import {
     ensureMaintenanceCancellationReasonColumn,
     ensureMaintenanceDetailColumns,
     ensureMaintenanceOperationsSchema,
+    ensureMaintenanceScheduleTableRemoved,
     ensureNonMedicalSpecificationsColumn,
     ensureReportUploadsTable,
-    ensureMaintenanceScheduleTableRemoved,
     ensureRoleMenuAccessControlTables,
     ensureUserAccessControlColumns,
     ensureUserActivityLogsTable,
@@ -38,23 +38,23 @@ import { getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-
 import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
-import accessControlRoutes from './routes/access_control.routes';
+import accessControlRoutes from './routes/access-control.routes';
+import assetDisposalRoutes from './routes/asset-disposal.routes';
+import assetUsageRoutes from './routes/asset-usage.routes';
 import assetRoutes from './routes/asset.routes';
-import assetDisposalRoutes from './routes/asset_disposal.routes';
-import assetUsageRoutes from './routes/asset_usage.routes';
 import authRoutes from './routes/auth.routes';
 import borrowingRoutes from './routes/borrowing.routes';
-import deletionRequestRoutes from './routes/deletion_request.routes';
+import deletionRequestRoutes from './routes/deletion-request.routes';
 import dssRoutes from './routes/dss.routes';
+import maintenanceHistoryRoutes from './routes/maintenance-history.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
-import maintenanceHistoryRoutes from './routes/maintenance_history.routes';
-import { MaintenanceService } from './services/maintenance.service';
 import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
 import sanctionsRoutes from './routes/sanctions.routes';
 import umlRoutes from './routes/uml.routes';
+import userActivityRoutes from './routes/user-activity.routes';
 import userRoutes from './routes/user.routes';
-import userActivityRoutes from './routes/user_activity.routes';
+import { MaintenanceService } from './services/maintenance.service';
 // Import notification controller for the standalone SSE stream route mounted
 // outside the header-authenticated notification router.
 import notificationController from './controllers/notification.controller';
@@ -330,9 +330,9 @@ app.use('/api/dss', authMiddleware, dssRoutes);
 // Set ALLOW_DSS_DEBUG=true in your local env to enable this route.
 if (!isProduction && process.env.ALLOW_DSS_DEBUG === 'true') {
   app.use('/api/dss-debug', dssRoutes);
-  logger.warn('DSS debug routes mounted at /api/dss-debug (dev only)');
+  logger.warn('⚠️ DSS debug routes mounted at /api/dss-debug (dev only)');
 } else if (!isProduction && process.env.ALLOW_DSS_DEBUG !== 'true') {
-  logger.info('DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
+  logger.info('ℹ️ DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
 }
 app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
 app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
@@ -391,7 +391,7 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
 
     server.on('listening', () => {
       activeHttpServer = server;
-      logger.info('Server started', {
+      logger.info('🚀 Backend is LIVE - Server started', {
         port,
         environment: process.env.NODE_ENV || 'development',
         frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -432,7 +432,7 @@ const initializeInfrastructure = async (): Promise<void> => {
     try {
       await connectDatabase();
       infrastructureStatus.database = 'up';
-      logger.info('Database connected successfully');
+      logger.info('✅ Database connected successfully');
 
       await withSchemaLock(async () => {
         await ensureCoreSchemaInitialized();
@@ -460,17 +460,17 @@ const initializeInfrastructure = async (): Promise<void> => {
       const redisConnected = await connectRedis();
       if (redisConnected) {
         infrastructureStatus.redis = 'up';
-        logger.info('Redis connected successfully');
+        logger.info('✅ Redis connected successfully');
       } else {
         if (isProduction) {
           infrastructureStatus.redis = 'down';
           throw new Error('Redis wajib aktif di production');
         }
         infrastructureStatus.redis = 'optional-down';
-        logger.warn('Redis not available - continuing without Redis');
+        logger.warn('⚠️ Redis not available - continuing without Redis');
       }
 
-      logger.info('Startup initialization complete');
+      logger.info('✅ Startup initialization complete');
       return;
     } catch (error) {
       logger.error('Startup initialization attempt failed', {

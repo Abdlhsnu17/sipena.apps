@@ -1,6 +1,6 @@
 "use client"
 
-import { ScanChoiceButtons, type ScanChoice } from "@/components/scan-choice-dialog"
+import { ScanChoiceButtons, type ScanChoice } from "@/components/scan/scan-choice-dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils"
 import type { User } from "@/types/auth-types"

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import sanctionsController, { sanctionsValidators } from '../controllers/sanctions.controller';
-import { requireRole } from '../middlewares/authMiddleware';
+import { requireRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 

@@ -7,12 +7,11 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json apps/backend/package.json
-COPY packages/database/package.json packages/database/package.json
 
 RUN npm ci
 
 COPY apps/backend apps/backend
-COPY packages/database packages/database
+COPY database database
 
 RUN npm run build --workspace=inventory-backend
 
@@ -27,7 +26,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/package.json ./package.json
-COPY --from=builder /app/packages/database/migrations /database/migrations
+COPY --from=builder /app/database/migrations /database/migrations
 
 RUN npm install --omit=dev
 

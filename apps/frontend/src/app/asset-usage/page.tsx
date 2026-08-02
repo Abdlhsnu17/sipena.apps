@@ -1,10 +1,10 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import InventoryPicker from "@/components/inventory-picker";
-import { NotificationSummary } from "@/components/notification-summary";
-import { PaperPrintMenu } from "@/components/paper-print-menu";
-import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
+import InventoryPicker from "@/components/asset/inventory-picker";
+import { NotificationSummary } from "@/components/common/notification-summary";
+import { PaperPrintMenu } from "@/components/common/paper-print-menu";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/common/summary-result-card";
 import { assetUsageService, type AssetUsageContext, type AssetUsageLog } from "@/services/asset-usage.service";
 import { assetService } from "@/services/asset.service";
 import { authService } from "@/services/auth.service";
@@ -39,364 +39,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { appendLine, ExportFormat, exportNarrativeReport, type DocumentSection, type SectionLine } from "@/utils/export-table";
-
-const usageContextLabels: Record<AssetUsageContext, string> = {
-  own_room: "Ruangan",
-  same_unit_cross_room: "Antar Sub Ruangan",
-  cross_room: "Antar Instalasi",
-  emergency: "Emergency",
-  procedure: "Antar Sub Ruangan",
-  rounding: "Antar Instalasi",
-  other: "Lainnya",
-};
-
-const usageContextOptions: Array<{ value: AssetUsageContext; label: string }> = [
-  { value: "own_room", label: "Ruangan sendiri" },
-  { value: "same_unit_cross_room", label: "Antar sub ruangan" },
-  { value: "cross_room", label: "Antar instalasi" },
-  { value: "emergency", label: "Emergency" },
-  { value: "procedure", label: "Tindakan/prosedur" },
-  { value: "rounding", label: "Rounding" },
-  { value: "other", label: "Lainnya" },
-];
-
-const HISTORY_ROWS_PER_PAGE = 2;
-const usageExportColumnDefinitions = [
-  { key: "basic", label: "Data Alat Digunakan" },
-  { key: "usage", label: "Data Pemakaian" },
-  { key: "operator", label: "Operator Pemakaian" },
-  { key: "notes", label: "Catatan Pemakaian" },
-  { key: "status", label: "Status Pemakaian" },
-] as const;
-
-type UsageExportColumnKey = (typeof usageExportColumnDefinitions)[number]["key"];
-type UsageSourceFilter = "all" | "manual" | "borrowing_sync";
-
-const usageSourceFilterOptions: Array<{ value: UsageSourceFilter; label: string }> = [
-  { value: "manual", label: "Input Manual" },
-  { value: "borrowing_sync", label: "Dari Peminjaman" },
-  { value: "all", label: "Semua" },
-];
-
-const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
-  const sortedPages = Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
-
-  return sortedPages.flatMap((page, index) => {
-    const previousPage = sortedPages[index - 1];
-    if (index > 0 && previousPage && page - previousPage > 1) {
-      return [`ellipsis-${previousPage}-${page}`, page];
-    }
-    return [page];
-  });
-};
-
-const getAssetRoomOptions = (item?: DetailInventoryItem) => {
-  if (!item) return [];
-  return Array.from(
-    new Set(
-      [item.roomName, item.assetLocation]
-        .map((value) => (value || "").trim())
-        .filter(Boolean)
-    )
-  );
-};
-
-const getUsageRoomDisplay = (log: AssetUsageLog) => {
-  const roomName = (log.roomName || "").trim();
-  const assetLocation = (log.assetLocation || "").trim();
-  const [workUnit, ...roomParts] = roomName.split(" - ").map((part) => part.trim()).filter(Boolean);
-  const roomDetail = roomParts.join(" - ");
-
-  if (workUnit && roomDetail) {
-    return {
-      primary: workUnit,
-      secondary: roomDetail,
-    };
-  }
-
-  if (roomName && assetLocation && roomName.toLowerCase() !== assetLocation.toLowerCase()) {
-    return {
-      primary: roomName,
-      secondary: assetLocation,
-    };
-  }
-
-  return {
-    primary: roomName || assetLocation || "-",
-    secondary: "",
-  };
-};
-
-const toDateTimeLocalInputValue = (date = new Date()) => {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
-type FormState = {
-  inventoryKey: string;
-  roomName: string;
-  usageContext: AssetUsageContext;
-  startedAt: string;
-  endedAt: string;
-  usageCount: number;
-  conditionBefore: string;
-  notes: string;
-};
-
-type EditFormState = {
-  id: number | string;
-  roomName: string;
-  startedAt: string;
-  endedAt: string;
-  usageCount: number;
-  conditionBefore: string;
-  conditionAfter: string;
-  notes: string;
-  isBorrowingSync: boolean;
-};
-
-type CompleteFormState = {
-  id: number | string;
-  assetLabel: string;
-  endedAt: string;
-  conditionAfter: string;
-  notes: string;
-};
-
-type UsageDetailLine = {
-  label: string;
-  value: string;
-};
-
-type UsageDetailSection = {
-  title: string;
-  lines: UsageDetailLine[];
-};
-
-const initialForm: FormState = {
-  inventoryKey: "",
-  roomName: "",
-  usageContext: "procedure",
-  startedAt: toDateTimeLocalInputValue(),
-  endedAt: "",
-  usageCount: 1,
-  conditionBefore: "Baik",
-  notes: "",
-};
-
-const getInventoryKey = (item: DetailInventoryItem) => `${item.assetType}|${item.assetId}|${item.detailId}`;
-
-const activeMaintenanceStatuses = new Set(["requested", "scheduled", "in_progress", "completed"]);
-
-const formatUsageAssetLabel = (asset: DetailInventoryItem) => {
-  const inventoryLabel = asset.detailInventoryName || asset.detailName || asset.assetName || "";
-  const brandLabel = asset.detailBrandModel;
-  const codeLabel = asset.detailCode || asset.assetCode;
-  const locationLabel = asset.assetLocation ? ` (${asset.assetLocation})` : "";
-  const brandSuffix = brandLabel ? ` (${brandLabel})` : "";
-  const codeSuffix = codeLabel ? ` - ${codeLabel}` : "";
-  return `${inventoryLabel}${brandSuffix}${codeSuffix}${locationLabel}`.trim();
-};
-
-const getConditionLabel = (asset: DetailInventoryItem) => {
-  if (asset.condition === "damaged") return "Rusak";
-  if (asset.condition === "poor") return "Kurang";
-  if (asset.condition === "fair") return "Cukup";
-  return "Baik";
-};
-
-const getInventoryLockKey = (assetType: string | undefined, assetId: number, detailId?: string | number | null) => {
-  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical";
-  const baseKey = `${normalizedAssetType}|${assetId}`;
-  const normalizedDetailId = String(detailId || "").trim();
-  return normalizedDetailId ? `${baseKey}|${normalizedDetailId}` : baseKey;
-};
-
-const normalizeDetailIdentifier = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "";
-  return String(value).trim();
-};
-
-const isAssetFallbackDetailId = (
-  detailId: string | number | undefined | null,
-  assetId: number,
-  assetType?: string
-) => {
-  const normalizedDetailId = normalizeDetailIdentifier(detailId);
-  if (!normalizedDetailId) return false;
-  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical";
-  return (
-    normalizedDetailId === `asset-${assetId}` ||
-    normalizedDetailId === `asset-${normalizedAssetType}-${assetId}`
-  );
-};
-
-const isBorrowingLockRecord = (record: { status: string; returnValidatedAt?: string | null }) =>
-  ["pending", "approved", "borrowed", "overdue"].includes(record.status) ||
-  (record.status === "returned" && !record.returnValidatedAt);
-
-const getEffectiveAvailability = (
-  item: DetailInventoryItem,
-  activeUsageLocks: Set<string>,
-  activeMaintenanceLocks: Set<string>,
-  activeBorrowingLocks: Set<string>,
-  options: { ignoreBorrowing?: boolean } = {}
-) => {
-  const baseKey = getInventoryLockKey(item.assetType, item.assetId);
-  const detailKey = getInventoryLockKey(item.assetType, item.assetId, item.detailId);
-  const isFallbackAssetItem = isAssetFallbackDetailId(item.detailId, item.assetId, item.assetType);
-
-  if (item.availability === "disposed") return "disposed";
-  if (activeUsageLocks.has(baseKey) || activeUsageLocks.has(detailKey)) return "in_use";
-  if (item.availability === "maintenance" || activeMaintenanceLocks.has(baseKey) || activeMaintenanceLocks.has(detailKey)) {
-    return "maintenance";
-  }
-  if (item.availability === "in_use") return "in_use";
-  if (!options.ignoreBorrowing && (activeBorrowingLocks.has(baseKey) || activeBorrowingLocks.has(detailKey))) return "borrowed";
-
-  if (isFallbackAssetItem) {
-    if (item.assetStatus === "disposed") return "disposed";
-    if (item.assetStatus === "maintenance") return "maintenance";
-    if (item.assetStatus === "in_use") return "in_use";
-    if (!options.ignoreBorrowing && item.assetStatus === "borrowed") return "borrowed";
-  }
-
-  if (!options.ignoreBorrowing && item.availability === "borrowed") return "borrowed";
-
-  return "available";
-};
-
-const normalizeLocationText = (value?: string | null) =>
-  (value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const locationIncludes = (source: string, target?: string | null) => {
-  const normalizedTarget = normalizeLocationText(target);
-  return Boolean(normalizedTarget && source.includes(normalizedTarget));
-};
-
-const ROOM_MATCH_IGNORED_WORDS = new Set(["ruang", "ruangan", "ranap", "rawat", "inap", "kamar", "unit", "sub", "instalasi"]);
-
-const getMeaningfulRoomTokens = (value: string) =>
-  normalizeLocationText(value)
-    .split(" ")
-    .filter((token) => token && !ROOM_MATCH_IGNORED_WORDS.has(token) && (token.length >= 3 || token === "ok"));
-
-const roomMatchesSubRoom = (assetRoomText: string, subRoom?: string | null) => {
-  const normalizedAssetRoom = normalizeLocationText(assetRoomText);
-  const normalizedSubRoom = normalizeLocationText(subRoom);
-  if (!normalizedAssetRoom || !normalizedSubRoom) return false;
-  if (normalizedAssetRoom.includes(normalizedSubRoom)) return true;
-
-  const subRoomSegments = String(subRoom || "")
-    .split(/[\/,;]/)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  return subRoomSegments.some((segment) => {
-    const normalizedSegment = normalizeLocationText(segment);
-    if (!normalizedSegment) return false;
-    if (normalizedAssetRoom.includes(normalizedSegment)) return true;
-
-    const meaningfulTokens = getMeaningfulRoomTokens(segment);
-    return meaningfulTokens.length > 0 && meaningfulTokens.some((token) => normalizedAssetRoom.includes(token));
-  });
-};
-
-const getUserUsageRoom = (user?: User | null) =>
-  [user?.workUnit, user?.subWorkUnit].filter(Boolean).join(" - ");
-
-const getAutoUsageRoom = (item: DetailInventoryItem | undefined, user: User | null) =>
-  getUserUsageRoom(user) || getAssetRoomOptions(item)[0] || "";
-
-const getAssetRoomSearchText = (item: DetailInventoryItem) =>
-  normalizeLocationText([item.roomName, item.assetLocation].filter(Boolean).join(" "));
-
-const isAssetInUserSubRoom = (item: DetailInventoryItem, user: User | null) => {
-  const userSubRoom = user?.subWorkUnit?.trim();
-  if (!userSubRoom) return false;
-
-  const assetRoomText = getAssetRoomSearchText(item);
-  return roomMatchesSubRoom(assetRoomText, userSubRoom);
-};
-
-const deriveUsageContextFromProfile = (
-  item: DetailInventoryItem | undefined,
-  user: User | null
-): AssetUsageContext => {
-  if (!item || !user?.workUnit) return "own_room";
-
-  const assetLocation = normalizeLocationText(
-    [
-      item.roomName,
-      item.assetLocation,
-      item.assetName,
-      item.detailName,
-      item.detailInventoryName,
-    ].filter(Boolean).join(" ")
-  );
-  const sameUnit = locationIncludes(assetLocation, user.workUnit);
-  const sameSubRoom = roomMatchesSubRoom(assetLocation, user.subWorkUnit);
-
-  // Banyak data inventaris memakai nama ruangan detail saja, misalnya
-  // "Ruangan Mawar Atas", tanpa menyimpan induk "Instalasi Rawat Inap".
-  // Jika sub ruangan profil cocok dengan lokasi alat, alat tetap dianggap
-  // milik ruangan sendiri.
-  if (sameSubRoom) return "own_room";
-  if (sameUnit && !user.subWorkUnit) return "own_room";
-  if (sameUnit) return "same_unit_cross_room";
-  return "cross_room";
-};
-
-const getUsageNoId = (log: Pick<AssetUsageLog, "id">) => formatNoId("PMG", log.id);
-
-const isBorrowingUsageLog = (log: AssetUsageLog): boolean => {
-  return log.sourceType === "borrowing_sync" || Boolean(log.borrowingId);
-};
-
-const normalizeRole = (role?: string | null) =>
-  (role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
-
-const canManageUsageRecord = (actor: User | null, log: AssetUsageLog): boolean => {
-  if (!actor) return false;
-  const role = normalizeRole(actor.role);
-  if (role === "admin" || role === "leader") return true;
-
-  const actorId = Number(actor.id);
-  if (!Number.isFinite(actorId) || actorId <= 0) return false;
-
-  return [log.operatorUserId, log.createdBy].some((value) => Number(value) === actorId);
-};
-
-const canCompleteUsage = (actor: User | null, log: AssetUsageLog): boolean =>
-  !isBorrowingUsageLog(log) && canManageUsageRecord(actor, log);
-
-const borrowingMatchesInventory = (borrowing: Borrowing, item: DetailInventoryItem) => {
-  const borrowingType = borrowing.assetType === "non_medical" ? "non_medical" : "medical";
-  if (borrowing.assetId !== item.assetId || borrowingType !== item.assetType) return false;
-
-  const borrowingDetailId = normalizeDetailIdentifier(borrowing.assetDetailId);
-  if (!borrowingDetailId || isAssetFallbackDetailId(borrowingDetailId, borrowing.assetId, borrowingType)) return true;
-  return borrowingDetailId === normalizeDetailIdentifier(item.detailId);
-};
-
-const canUseOverdueAssetForEmergency = (actor: User | null, borrowing?: Borrowing) => {
-  if (!actor || !borrowing) return false;
-  const actorRole = normalizeRole(actor.role);
-  if (actorRole === "admin" || actorRole === "leader") return true;
-  if (Number(actor.id) === Number(borrowing.userId)) return true;
-  return Boolean(borrowing.borrowerRole) && actorRole === normalizeRole(borrowing.borrowerRole);
-};
+import { buildVisiblePageItems } from "@/utils/pagination";
+import { isBorrowingLockRecord } from "@/utils/borrowing";
+import { formatLocalDateTimeInputValue } from "@/utils/date-input";
+import { getInventoryLockKey, isAssetFallbackDetailId, normalizeDetailIdentifier } from "@/utils/detail-inventory";
+import { HISTORY_ROWS_PER_PAGE, UsageExportColumnKey, UsageSourceFilter, usageContextLabels, usageContextOptions, usageExportColumnDefinitions, usageSourceFilterOptions } from "./_lib/constants";
+import { CompleteFormState, EditFormState, FormState, UsageDetailSection, activeMaintenanceStatuses, borrowingMatchesInventory, canCompleteUsage, canManageUsageRecord, canUseOverdueAssetForEmergency, deriveUsageContextFromProfile, formatUsageAssetLabel, getAutoUsageRoom, getConditionLabel, getEffectiveAvailability, getInventoryKey, getUsageNoId, getUsageRoomDisplay, initialForm, isAssetInUserSubRoom, isBorrowingUsageLog, normalizeRole } from "./_lib/usage-rules";
 
 const dispatchInventoryRefresh = () => {
   window.dispatchEvent(new Event("inventory-refresh"));
@@ -806,7 +454,7 @@ export default function AssetUsagePage() {
 
       if (response.success) {
         toast({ title: "Penggunaan alat dicatat", description: "Frekuensi pemakaian alat berhasil ditambahkan." });
-        setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+        setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
         setShowForm(false);
         await loadData();
         dispatchInventoryRefresh();
@@ -861,8 +509,8 @@ export default function AssetUsagePage() {
     setEditForm({
       id: log.id,
       roomName: log.roomName || "",
-      startedAt: toDateTimeLocalInputValue(log.startedAt ? new Date(log.startedAt) : new Date()),
-      endedAt: log.endedAt ? toDateTimeLocalInputValue(new Date(log.endedAt)) : "",
+      startedAt: formatLocalDateTimeInputValue(log.startedAt ? new Date(log.startedAt) : new Date()),
+      endedAt: log.endedAt ? formatLocalDateTimeInputValue(new Date(log.endedAt)) : "",
       usageCount: log.usageCount || 1,
       conditionBefore: log.conditionBefore || "Baik",
       conditionAfter: log.conditionAfter || "",
@@ -917,7 +565,7 @@ export default function AssetUsagePage() {
     setCompleteForm({
       id: log.id,
       assetLabel: log.assetDetailName || log.assetName || "Alat",
-      endedAt: toDateTimeLocalInputValue(),
+      endedAt: formatLocalDateTimeInputValue(),
       conditionAfter: log.conditionAfter || log.conditionBefore || "Baik",
       notes: log.notes || "",
     });
@@ -1155,7 +803,7 @@ export default function AssetUsagePage() {
             size="sm"
             className="w-full rounded-2xl bg-teal-600 px-4 text-white hover:bg-teal-700 sm:w-auto"
             onClick={() => {
-              setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+              setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
               setShowForm(true);
             }}
           >
@@ -1208,7 +856,7 @@ export default function AssetUsagePage() {
           onOpenChange={(open) => {
             if (open) return;
             setShowForm(false);
-            setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+            setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
           }}
         >
           {showForm && (
@@ -1229,7 +877,7 @@ export default function AssetUsagePage() {
                       aria-label="Tutup formulir penggunaan"
                       onClick={() => {
                         setShowForm(false);
-                        setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+                        setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                     >
@@ -1334,7 +982,7 @@ export default function AssetUsagePage() {
                     variant="outline"
                     onClick={() => {
                       setShowForm(false);
-                      setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+                      setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
                     }}
                     disabled={isSaving}
                   >
@@ -1871,7 +1519,7 @@ export default function AssetUsagePage() {
             size="sm"
             className="h-11 rounded-full bg-teal-600 px-4 text-white shadow-xl hover:bg-teal-700"
             onClick={() => {
-              setForm({ ...initialForm, startedAt: toDateTimeLocalInputValue() });
+              setForm({ ...initialForm, startedAt: formatLocalDateTimeInputValue() });
               setShowForm(true);
             }}
           >

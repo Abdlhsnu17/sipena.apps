@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { MaintenanceService } from '../services/maintenance.service';
-import { recordUserActivity } from '../services/user_activity.service';
+import { recordUserActivity } from '../services/user-activity.service';
 import { canManageMaintenanceCompletion, hasAnyRole } from '../utils/role';
 import { createScopedLogger } from '../utils/logger';
 

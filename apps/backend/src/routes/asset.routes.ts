@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import multer from 'multer';
 import assetController from '../controllers/asset.controller';
-import { requireRole } from '../middlewares/authMiddleware';
+import { requireRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 const importUpload = multer({

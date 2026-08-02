@@ -1,7 +1,7 @@
 "use client"
 
-import { NON_MEDICAL_ASSET_CATEGORIES } from "@/components/non-medical-asset-categories";
-import NonMedicalAssetForm from "@/components/non-medical-asset-form";
+import { NON_MEDICAL_ASSET_CATEGORIES } from "@/components/asset/non-medical-asset-categories";
+import NonMedicalAssetForm from "@/components/asset/non-medical-asset-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,10 +20,10 @@ import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usa
 
 import type { NonMedicalAsset, NonMedicalRoom } from "@/types/non-medical-assets-types";
 
-import { AssetImportDialog } from "@/components/asset-import-dialog";
-import { AssetQrDialog } from "@/components/asset-qr-dialog";
-import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
-import { InventoryDetailCard } from "@/components/inventory-detail-card";
+import { AssetImportDialog } from "@/components/asset/asset-import-dialog";
+import { AssetQrDialog } from "@/components/asset/asset-qr-dialog";
+import { DisposalRequestDialog } from "@/components/asset/disposal-request-dialog";
+import { InventoryDetailCard } from "@/components/asset/inventory-detail-card";
 import { USAGE_OPTIONS, USAGE_PURPOSE_ALIASES } from "@/utils/asset-usage";
 import { Building, ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";

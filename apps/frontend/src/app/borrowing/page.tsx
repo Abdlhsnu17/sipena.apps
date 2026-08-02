@@ -39,12 +39,12 @@ import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTe
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { findMatchingAsset } from "@/utils/scanned-asset";
 
-import BorrowingOwnerPicker from "@/components/borrowing-owner-picker";
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
-import InventoryPicker from "@/components/inventory-picker";
-import { NotificationSummary } from "@/components/notification-summary";
-import { PaperPrintMenu } from "@/components/paper-print-menu";
-import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
+import BorrowingOwnerPicker from "@/components/borrowing/borrowing-owner-picker";
+import DeleteReasonDialog from "@/components/common/delete-reason-dialog";
+import InventoryPicker from "@/components/asset/inventory-picker";
+import { NotificationSummary } from "@/components/common/notification-summary";
+import { PaperPrintMenu } from "@/components/common/paper-print-menu";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/common/summary-result-card";
 import {
     Dialog,
     DialogContent,
@@ -77,345 +77,36 @@ import {
 import { AlertTriangle, CalendarClock, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, HandHelping, MapPin, Pencil, Plus, Save, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildVisiblePageItems } from "@/utils/pagination";
+
+import { borrowingExportColumnDefinitions, type BorrowingExportColumn } from "./_lib/export-columns";
+import { getDefaultFormData, resolveDefaultDestinationRoom } from "./_lib/form";
+import {
+  parseLocalDateTimeInput,
+  toDateTimeLocalInputValue,
+  toLocalInputValue,
+} from "@/utils/date-input";
+import {
+  formatBorrowingDuration,
+  formatBorrowingPurposeType,
+  formatDurationDiff,
+  getRecommendedExtensionDateValue,
+  isBorrowingLockRecord,
+  isOverdueBorrowingBlock,
+} from "@/utils/borrowing";
+import {
+  getAssetFallbackDetailIds,
+  isAssetFallbackDetailId,
+  normalizeDetailIdentifier,
+} from "@/utils/detail-inventory";
 
 type BorrowableAsset = DetailInventoryItem
-
-type BorrowingExportColumn = TableExportColumn<ApiBorrowing> & {
-  defaultSelected?: boolean
-}
 
 const INVENTORY_REFRESH_EVENT = "inventory-refresh"
 const BORROWING_REFRESH_SOURCE = "borrowing-page"
 
 const BORROWING_ROWS_PER_PAGE = 2
 
-const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
-  const sortedPages = Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right)
-
-  return sortedPages.flatMap((page, index) => {
-    const previousPage = sortedPages[index - 1]
-    if (index > 0 && previousPage && page - previousPage > 1) {
-      return [`ellipsis-${previousPage}-${page}`, page]
-    }
-    return [page]
-  })
-}
-
-const toDateTimeLocalInputValue = (value?: string | Date | null) => {
-  const date = parseServerDateTimeValue(value)
-  if (!date) return ""
-  const offsetMs = date.getTimezoneOffset() * 60000
-  const localDate = new Date(date.getTime() - offsetMs)
-  return localDate.toISOString().slice(0, 16)
-}
-
-const toLocalInputValue = (value?: string | Date | null): string => {
-  if (!value) return ""
-  const result = toLocalDateTimeString(value)
-  if (result) return result
-  // If toLocalDateTimeString fails, convert Date to string if needed
-  if (value instanceof Date) {
-    const offsetMs = value.getTimezoneOffset() * 60000
-    const localDate = new Date(value.getTime() - offsetMs)
-    return localDate.toISOString().slice(0, 16)
-  }
-  return String(value)
-}
-
-const parseLocalDateTimeInput = (value?: string | null): Date | null => {
-  if (!value) return null
-  const raw = String(value).trim()
-  if (!raw) return null
-
-  const matched = raw.match(/^((\d{4})-(\d{2})-(\d{2}))[T ](\d{2}):(\d{2})(?::(\d{2}))?$/)
-  if (!matched) {
-    const fallback = new Date(raw)
-    return Number.isNaN(fallback.getTime()) ? null : fallback
-  }
-
-  const [, , year, month, day, hour, minute, second = "0"] = matched
-  const parsed = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second)
-  )
-  return Number.isNaN(parsed.getTime()) ? null : parsed
-}
-
-const getRecommendedExtensionDateValue = (borrowing?: Pick<ApiBorrowing, "dueDate"> | null) => {
-  const now = new Date()
-  const currentDueDate = parseServerDateTimeValue(borrowing?.dueDate)
-  const base = currentDueDate && currentDueDate > now ? currentDueDate : now
-  const recommended = new Date(base)
-
-  recommended.setDate(recommended.getDate() + 1)
-  recommended.setSeconds(0, 0)
-
-  return toDateTimeLocalInputValue(recommended)
-}
-
-const formatDurationDiff = (diffMs: number): string => {
-  if (!Number.isFinite(diffMs) || diffMs <= 0) return "0 menit"
-
-  const totalSeconds = Math.floor(diffMs / 1000)
-  const days = Math.floor(totalSeconds / (24 * 60 * 60))
-  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60))
-  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60)
-  const seconds = totalSeconds % 60
-
-  const parts: string[] = []
-  if (days > 0) parts.push(`${days} hari`)
-  if (hours > 0) parts.push(`${hours} jam`)
-  if (minutes > 0) parts.push(`${minutes} menit`)
-  if (seconds > 0 && days === 0) parts.push(`${seconds} detik`)
-
-  return parts.length > 0 ? parts.join(" ") : "0 menit"
-}
-
-const borrowingPurposeTypeLabels = {
-  inside_hospital: "Penggunaan di dalam Rumah Sakit",
-  outside_hospital: "Penggunaan di luar Rumah Sakit",
-} as const
-
-const borrowingDurationUnitLabels = {
-  day: "Hari",
-  month: "Bulan",
-  year: "Tahun",
-} as const
-
-const formatBorrowingPurposeType = (value?: keyof typeof borrowingPurposeTypeLabels | null) =>
-  value ? borrowingPurposeTypeLabels[value] ?? "-" : "-"
-
-const formatBorrowingDuration = (
-  value?: number | null,
-  unit?: keyof typeof borrowingDurationUnitLabels | null
-) => {
-  if (!value || !unit) return "-"
-  const label = borrowingDurationUnitLabels[unit]
-  return label ? `${value} ${label}` : String(value)
-}
-
-const normalizeDetailIdentifier = (value?: string | number | null) => {
-  if (value === undefined || value === null) return ""
-  return String(value).trim()
-}
-
-const getAssetFallbackDetailIds = (
-  assetId: number,
-  assetType: "medical" | "non_medical"
-) => [`asset-${assetId}`, `asset-${assetType}-${assetId}`]
-
-const isAssetFallbackDetailId = (
-  detailId?: string | null,
-  assetId?: number,
-  assetType?: "medical" | "non_medical"
-) => {
-  if (!detailId || !assetId || !assetType) return false
-  return getAssetFallbackDetailIds(assetId, assetType).includes(normalizeDetailIdentifier(detailId))
-}
-
-const isBorrowingLockRecord = (borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt">) =>
-  ["pending", "approved", "borrowed", "overdue"].includes(borrowing.status) ||
-  (borrowing.status === "returned" && !borrowing.returnValidatedAt)
-
-const isOverdueBorrowingBlock = (
-  borrowing: Pick<ApiBorrowing, "status" | "returnValidatedAt" | "dueDate" | "overdueDays">
-) => {
-  if (borrowing.status === "overdue") return true
-  if (borrowing.status !== "returned" || borrowing.returnValidatedAt) return false
-  if ((borrowing.overdueDays || 0) > 0) return true
-
-  const dueDate = parseServerDateTimeValue(borrowing.dueDate)
-  return Boolean(dueDate && Date.now() > dueDate.getTime())
-}
-
-const resolveDefaultDestinationRoom = (currentUser?: User | null) => {
-  const subWorkUnit = currentUser?.subWorkUnit?.trim()
-  if (subWorkUnit) return subWorkUnit
-  const workUnit = currentUser?.workUnit?.trim()
-  return workUnit || ""
-}
-
-const getDefaultFormData = (currentUser?: User | null) => ({
-  assetId: "",
-  assetType: "medical" as "medical" | "non_medical",
-  assetDetailId: "",
-  assetDetailName: "",
-  assetDetailCode: "",
-  borrowDate: "",
-  dueDate: "",
-  durationValue: "1",
-  durationType: "day" as "day" | "month" | "year",
-  borrowerPosition: currentUser ? getUserRoleLabel(currentUser.role) : "",
-  borrowerWorkUnit: currentUser?.workUnit ?? "",
-  ownerUserId: "",
-  ownerName: "",
-  ownerNip: "",
-  ownerPosition: "",
-  ownerWorkUnit: "",
-  purposeType: "inside_hospital" as "inside_hospital" | "outside_hospital",
-  destinationRoom: resolveDefaultDestinationRoom(currentUser),
-  purpose: "",
-  quantity: "1",
-  notes: "",
-})
- 
-const borrowingExportColumnDefinitions: BorrowingExportColumn[] = [
-  {
-    key: "noId",
-    label: "No ID",
-    getValue: (borrowing) => formatNoId("PMJ", borrowing.id, borrowing.borrowingCode),
-    defaultSelected: true,
-  },
-  {
-    key: "jenisInventaris",
-    label: "Jenis Inventaris",
-    getValue: (borrowing) =>
-      borrowing.assetType === "medical"
-        ? "Medis"
-        : borrowing.assetType === "non_medical"
-          ? "Non-Medis"
-          : "-",
-    defaultSelected: true,
-  },
-  {
-    key: "namaAlat",
-    label: "Nama Inventaris",
-    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "kode",
-    label: "Kode",
-    getValue: (borrowing) => borrowing.assetDetailCode || borrowing.assetCode || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "merek",
-    label: "Merek / Model",
-    getValue: (borrowing) => borrowing.assetDetailName || borrowing.assetName || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "ruanganAlat",
-    label: "Nama Ruangan Inventaris",
-    getValue: (borrowing) => borrowing.assetLocation || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "peminjam",
-    label: "Peminjam",
-    getValue: (borrowing) => borrowing.userName || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "jabatanPeminjam",
-    label: "Jabatan Peminjam",
-    getValue: (borrowing) => borrowing.borrowerPosition || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "unitKerjaPeminjam",
-    label: "Unit Kerja Peminjam",
-    getValue: (borrowing) => borrowing.borrowerWorkUnit || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "nip",
-    label: "NIP",
-    getValue: (borrowing) => borrowing.userNip || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "tanggalPinjam",
-    label: "Tanggal Pinjam",
-    getValue: (borrowing) => formatDayTimeLabel(borrowing.borrowDate, { showWeekday: false }),
-    defaultSelected: true,
-  },
-  {
-    key: "tanggalKembali",
-    label: "Batas Pengembalian",
-    getValue: (borrowing) =>
-      borrowing.dueDate ? formatDayTimeLabel(borrowing.dueDate, { showWeekday: false }) : "-",
-    defaultSelected: true,
-  },
-  {
-    key: "pemilikAlat",
-    label: "Pemilik Inventaris",
-    getValue: (borrowing) => borrowing.ownerName || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "nipPemilikAlat",
-    label: "NIP Pemilik Inventaris",
-    getValue: (borrowing) => borrowing.ownerNip || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "jabatanPemilikAlat",
-    label: "Jabatan Pemilik Inventaris",
-    getValue: (borrowing) => borrowing.ownerPosition || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "unitPemilikAlat",
-    label: "Unit Pemilik Inventaris",
-    getValue: (borrowing) => borrowing.ownerWorkUnit || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "jenisKeperluan",
-    label: "Jenis Keperluan",
-    getValue: (borrowing) => formatBorrowingPurposeType(borrowing.purposeType),
-    defaultSelected: true,
-  },
-  {
-    key: "keperluan",
-    label: "Keperluan",
-    getValue: (borrowing) => borrowing.purpose || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "tujuan",
-    label: "Ruang / Instalasi Tujuan",
-    getValue: (borrowing) => borrowing.destinationRoom || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "jumlah",
-    label: "Jumlah",
-    getValue: (borrowing) => String(borrowing.quantity || 1),
-    defaultSelected: true,
-  },
-  {
-    key: "durasi",
-    label: "Lama Peminjaman",
-    getValue: (borrowing) => formatBorrowingDuration(borrowing.loanDurationValue, borrowing.loanDurationUnit),
-    defaultSelected: true,
-  },
-  {
-    key: "catatan",
-    label: "Catatan",
-    getValue: (borrowing) => borrowing.notes || "-",
-    defaultSelected: true,
-  },
-  {
-    key: "status",
-    label: "Status",
-    getValue: (borrowing) => borrowingStatusLabel(borrowing.status),
-    defaultSelected: true,
-  },
-]
 
 export default function BorrowingPage() {
     const handleValidateReturn = async (borrowing: ApiBorrowing) => {

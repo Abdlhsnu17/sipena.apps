@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
-import { recordUserActivity } from '../services/user_activity.service';
+import { recordUserActivity } from '../services/user-activity.service';
 import { createScopedLogger } from '../utils/logger';
 
 const logger = createScopedLogger('controller:borrowing');

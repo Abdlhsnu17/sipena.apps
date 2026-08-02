@@ -16,9 +16,8 @@ RUN npm ci
 
 COPY apps/backend apps/backend
 COPY apps/frontend apps/frontend
-COPY packages/database packages/database
+COPY database database
 COPY scripts scripts
-COPY tsconfig.json tsconfig.json
 
 RUN npm run build
 

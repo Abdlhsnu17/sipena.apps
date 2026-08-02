@@ -3,10 +3,10 @@
 
 import type React from "react";
 
-import ConfirmProvider from "@/components/confirm-provider";
-import Sidebar from "@/components/sidebar";
-import { ThemeProvider } from "@/components/theme-provider";
-import Topbar from "@/components/topbar";
+import ConfirmProvider from "@/components/common/confirm-provider";
+import Sidebar from "@/components/layout/sidebar";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import Topbar from "@/components/layout/topbar";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import accessControlService from "@/services/access-control.service";
