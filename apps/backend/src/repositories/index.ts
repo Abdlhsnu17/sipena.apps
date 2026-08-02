@@ -1,1 +1,1 @@
-export { UserActivityRepository, userActivityRepository } from './user_activity.repository';
+export { UserActivityRepository, userActivityRepository } from './user-activity.repository';

@@ -11,7 +11,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../packages/database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../database/seeds/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       # A reused volume can retain an older root password. Readiness should
       # verify that MySQL accepts connections, while credential validation is

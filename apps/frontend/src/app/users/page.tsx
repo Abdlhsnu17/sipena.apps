@@ -4,7 +4,7 @@
 import type React from "react";
 
 import { Button } from "@/components/ui/button";
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
+import DeleteReasonDialog from "@/components/common/delete-reason-dialog";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
 import accessControlService, { type AccessMatrix } from "@/services/access-control.service";

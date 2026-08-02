@@ -26,11 +26,11 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import DeleteReasonDialog from "@/components/delete-reason-dialog";
-import MaintenanceForm from "@/components/maintenance-form";
-import MaintenanceHistoryList from "@/components/maintenance-history-list";
-import { PaperPrintMenu } from "@/components/paper-print-menu";
-import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card";
+import DeleteReasonDialog from "@/components/common/delete-reason-dialog";
+import MaintenanceForm from "@/components/maintenance/maintenance-form";
+import MaintenanceHistoryList from "@/components/maintenance/maintenance-history-list";
+import { PaperPrintMenu } from "@/components/common/paper-print-menu";
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/common/summary-result-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -61,27 +61,20 @@ import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
 import { formatNoId } from "@/utils/record-id";
 import { canCreateMaintenanceRole, canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole, normalizeUserRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
+import { buildVisiblePageItems } from "@/utils/pagination";
+import { getInventoryLockKey, isAssetFallbackDetailId, normalizeDetailIdentifier } from "@/utils/detail-inventory";
+import { isBorrowingLockRecord } from "@/utils/borrowing";
+import { calendarWeekDays, getCalendarStartOffset, isSameCalendarDate, parseCalendarDate } from "./_lib/calendar";
+import {
+  MAINTENANCE_STATUS_TRANSITIONS,
+  canCancelMaintenance,
+  canOpenMaintenanceWorkflow,
+  maintenanceSlaBadgeClass,
+  maintenanceSlaLabel,
+  maintenanceWorkflowActionLabel,
+} from "./_lib/status";
 
 const CARD_ROWS_PER_PAGE = 2
-
-const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
-  const sortedPages = Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right)
-
-  return sortedPages.flatMap((page, index) => {
-    const previousPage = sortedPages[index - 1]
-    if (index > 0 && previousPage && page - previousPage > 1) {
-      return [`ellipsis-${previousPage}-${page}`, page]
-    }
-    return [page]
-  })
-}
 
 const SectionHeader = ({ label }: { label: string }) => (
   <div className="rounded-lg border border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300">
@@ -102,117 +95,6 @@ const InfoRow = ({ label, children }: InfoRowProps) => (
     <span className="font-medium text-slate-900 dark:text-slate-100 leading-snug">{children}</span>
   </div>
 )
-
-const getInventoryLockKey = (assetType: string | undefined, assetId: number, detailId?: string | null) => {
-  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical"
-  const baseKey = `${normalizedAssetType}|${assetId}`
-  const normalizedDetailId = String(detailId || "").trim()
-  return normalizedDetailId ? `${baseKey}|${normalizedDetailId}` : baseKey
-}
-
-const normalizeDetailIdentifier = (value?: string | number | null) => {
-  if (value === undefined || value === null) return ""
-  return String(value).trim()
-}
-
-const isAssetFallbackDetailId = (
-  detailId: string | undefined | null,
-  assetId: number,
-  assetType?: string
-) => {
-  const normalizedDetailId = String(detailId || "").trim()
-  if (!normalizedDetailId) return false
-  const normalizedAssetType = assetType === "non_medical" ? "non_medical" : "medical"
-  return (
-    normalizedDetailId === `asset-${assetId}` ||
-    normalizedDetailId === `asset-${normalizedAssetType}-${assetId}`
-  )
-}
-
-const isBorrowingLockRecord = (record: { status: string; returnValidatedAt?: string | null }) =>
-  ["pending", "approved", "borrowed", "overdue"].includes(record.status) ||
-  (record.status === "returned" && !record.returnValidatedAt)
-
-const MAINTENANCE_STATUS_TRANSITIONS: Record<string, string[]> = {
-  requested: ["scheduled", "cancelled"],
-  scheduled: ["in_progress", "cancelled"],
-  in_progress: ["completed"],
-  completed: ["validated", "in_progress"],
-  validated: [],
-  cancelled: ["scheduled"],
-}
-
-const canCancelMaintenance = (currentStatus: string, role?: string | null) => {
-  const normalizedRole = normalizeUserRole(role)
-  if (!["requested", "scheduled"].includes(currentStatus)) return false
-  if (["admin", "leader"].includes(normalizedRole)) return true
-  if (normalizedRole === "staff_pj") return ["requested", "scheduled"].includes(currentStatus)
-  return normalizedRole === "teknisi" && currentStatus === "scheduled"
-}
-
-const canOpenMaintenanceWorkflow = (status: Maintenance["status"], role?: string | null) => {
-  const normalizedRole = normalizeUserRole(role)
-  if (["validated", "cancelled"].includes(status)) return false
-  if (status === "requested") return false
-  if (status === "scheduled") return ["admin", "leader", "staff_pj", "teknisi"].includes(normalizedRole)
-  return ["admin", "leader", "teknisi"].includes(normalizedRole)
-}
-
-const maintenanceWorkflowActionLabel = (status: Maintenance["status"]) => {
-  if (status === "requested") return "Tinjau Pengajuan"
-  if (status === "scheduled") return "Atur Penugasan"
-  if (status === "in_progress") return "Isi Laporan"
-  if (status === "completed") return "Verifikasi Hasil"
-  return "Buka Proses"
-}
-
-const maintenanceSlaLabel = (status?: Maintenance["slaStatus"]) => {
-  switch (status) {
-    case "on_track":
-      return "SLA Aman"
-    case "at_risk":
-      return "SLA Risiko"
-    case "overdue":
-      return "Lewat SLA"
-    case "met":
-      return "SLA Tercapai"
-    case "met_late":
-      return "SLA Tercapai Terlambat"
-    default:
-      return "-"
-  }
-}
-
-const maintenanceSlaBadgeClass = (status?: Maintenance["slaStatus"]) => {
-  switch (status) {
-    case "on_track":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
-    case "at_risk":
-      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
-    case "overdue":
-    case "met_late":
-      return "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
-    case "met":
-      return "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300"
-    default:
-      return "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700/35 dark:bg-slate-900/40 dark:text-slate-300"
-  }
-}
-
-const calendarWeekDays = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
-
-const parseCalendarDate = (value?: string | null) => {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-const isSameCalendarDate = (left: Date, right: Date) =>
-  left.getFullYear() === right.getFullYear() &&
-  left.getMonth() === right.getMonth() &&
-  left.getDate() === right.getDate()
-
-const getCalendarStartOffset = (date: Date) => (date.getDay() + 6) % 7
 
 export default function MaintenancePage() {
   const router = useRouter()

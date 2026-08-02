@@ -1,6 +1,6 @@
 "use client"
 
-import MedicalAssetForm from "@/components/medical-asset-form";
+import MedicalAssetForm from "@/components/asset/medical-asset-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,10 +20,10 @@ import { parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
 
 
-import { AssetImportDialog } from "@/components/asset-import-dialog";
-import { AssetQrDialog } from "@/components/asset-qr-dialog";
-import { DisposalRequestDialog } from "@/components/disposal-request-dialog";
-import { InventoryDetailCard } from "@/components/inventory-detail-card";
+import { AssetImportDialog } from "@/components/asset/asset-import-dialog";
+import { AssetQrDialog } from "@/components/asset/asset-qr-dialog";
+import { DisposalRequestDialog } from "@/components/asset/disposal-request-dialog";
+import { InventoryDetailCard } from "@/components/asset/inventory-detail-card";
 import { ChevronDown, ChevronUp, Edit2, FileSpreadsheet, Plus, Search, Sparkles, Stethoscope, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";

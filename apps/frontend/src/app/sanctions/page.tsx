@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { NotificationSummary } from "@/components/notification-summary"
-import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/summary-result-card"
+import { NotificationSummary } from "@/components/common/notification-summary"
+import { SummaryResultBody, SummaryResultCard, SummaryResultFooter } from "@/components/common/summary-result-card"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,27 +19,9 @@ import { canManageSanctionsRole } from "@/utils/role"
 import { Activity, AlertCircle, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Eye, Search, Shield, Users, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { buildVisiblePageItems } from "@/utils/pagination";
 
 const CARD_ROWS_PER_PAGE = 2
-
-const buildVisiblePageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])
-  const sortedPages = Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right)
-
-  return sortedPages.flatMap((page, index) => {
-    const previousPage = sortedPages[index - 1]
-    if (index > 0 && previousPage && page - previousPage > 1) {
-      return [`ellipsis-${previousPage}-${page}`, page]
-    }
-    return [page]
-  })
-}
 
 const sanctionStatusLabel: Record<string, string> = {
   active: "Aktif",

@@ -23,7 +23,7 @@ import { DISPLAY_TIME_ZONE } from '../utils/time';
 
 const logger = createScopedLogger('service:borrowing');
 import { AssetService } from './asset.service';
-import { AssetUsageService } from './asset_usage.service';
+import { AssetUsageService } from './asset-usage.service';
 import { sendBorrowingApprovedEmail, sendBorrowingRejectedEmail } from './email.service';
 import notificationService from './notification.service';
 

@@ -1,14 +1,14 @@
 export * from './asset.model';
-export * from './asset_disposal.model';
-export * from './asset_usage.model';
+export * from './asset-disposal.model';
+export * from './asset-usage.model';
 export * from './borrowing.model';
-export * from './deletion_request.model';
+export * from './deletion-request.model';
 export * from './dss.model';
 export * from './maintenance.model';
-export * from './maintenance_history.model';
+export * from './maintenance-history.model';
 export * from './notification.model';
 export * from './user.model';
-export * from './user_activity.model';
+export * from './user-activity.model';
 
 // Common response types
 export interface ApiResponse<T = any> {

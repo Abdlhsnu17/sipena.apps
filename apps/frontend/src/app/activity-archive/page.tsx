@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { InventoryHistoryArchive } from "@/components/inventory-history-archive";
+import { InventoryHistoryArchive } from "@/components/asset/inventory-history-archive";
 import {
   Dialog,
   DialogContent,

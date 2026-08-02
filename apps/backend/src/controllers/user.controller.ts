@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { UserService } from '../services/user.service';
-import { recordUserActivity } from '../services/user_activity.service';
+import { recordUserActivity } from '../services/user-activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
 import { createScopedLogger } from '../utils/logger';
 

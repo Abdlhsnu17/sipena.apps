@@ -10,10 +10,14 @@ applyDevelopmentEnvDefaults();
 
 const resolveMigrationsDir = (): string => {
   const candidates = [
+    // Production image: migrations are copied to /database/migrations next to /app.
     path.resolve(process.cwd(), '../database/migrations'),
-    path.resolve(process.cwd(), '../../packages/database/migrations'),
+    // Repository root, whether run from apps/backend (npm run migrate) or the root.
+    path.resolve(process.cwd(), '../../database/migrations'),
+    path.resolve(process.cwd(), 'database/migrations'),
+    // Fallbacks relative to this file, for src/ (tsx) and dist/ (compiled) layouts.
+    path.resolve(__dirname, '../../../../database/migrations'),
     path.resolve(__dirname, '../../../database/migrations'),
-    path.resolve(__dirname, '../../../../packages/database/migrations'),
   ];
 
   const matchedPath = candidates.find((candidate) => {

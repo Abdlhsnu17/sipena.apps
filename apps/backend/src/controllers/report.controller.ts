@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { promises as fsPromises } from 'fs';
 import { ReportService } from '../services/report.service';
-import { recordUserActivity } from '../services/user_activity.service';
+import { recordUserActivity } from '../services/user-activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
 import { createScopedLogger } from '../utils/logger';
 

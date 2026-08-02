@@ -3,7 +3,7 @@ import { query } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import reportController from '../controllers/report.controller';
-import { requireRole } from '../middlewares/authMiddleware';
+import { requireRole } from '../middlewares/auth.middleware';
 import { getReportUploadsDir } from '../utils/storage-paths';
 
 const router = Router();

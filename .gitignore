@@ -97,8 +97,8 @@ storage/
 *.mysql
 
 # SQL migrations and seeds are source files, not database backups.
-!packages/database/migrations/**/*.sql
-!packages/database/seeds/**/*.sql
+!database/migrations/**/*.sql
+!database/seeds/**/*.sql
 
 backup/
 backups/

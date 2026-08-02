@@ -3,7 +3,7 @@ import { body, param, query } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import maintenanceController from '../controllers/maintenance.controller';
-import { requireRole } from '../middlewares/authMiddleware';
+import { requireRole } from '../middlewares/auth.middleware';
 import { getMaintenanceUploadsDir } from '../utils/storage-paths';
 
 const router = Router();
