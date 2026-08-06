@@ -10,9 +10,12 @@ import {
     waitForApplication,
     waitForPath,
 } from "../support/browser.mjs";
+import { ensureTestAdmin } from "../support/bootstrap-admin.mjs";
+import { createAssetStatusScenarios } from "../support/asset-status-scenarios.mjs";
 import { adminPassword, adminUsername } from "../support/config.mjs";
 
 const runId = `${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
+const testClientIp = `198.51.100.${Number(String(runId).replace(/\D/g, "").slice(-2) || "1") % 254 || 1}`;
 const configuredEvidenceDelay = Number(process.env.SELENIUM_EVIDENCE_DELAY_MS);
 const evidenceDelayMs = Number.isFinite(configuredEvidenceDelay)
   ? Math.max(0, configuredEvidenceDelay)
@@ -51,6 +54,7 @@ const state = {
 let driver;
 
 before(async () => {
+  await ensureTestAdmin();
   await waitForApplication();
   driver = await createDriver();
 });
@@ -83,6 +87,8 @@ async function api(method, endpoint, token, body) {
       const headers = {};
       if (bodyArg !== null) headers["Content-Type"] = "application/json";
       if (tokenArg) headers.Authorization = `Bearer ${tokenArg}`;
+      headers["X-Forwarded-For"] = testClientIp;
+      headers["X-Real-IP"] = testClientIp;
 
       fetch(endpointArg, {
         method: methodArg,
@@ -126,6 +132,8 @@ async function cleanupCreatedData() {
     });
     state.maintenanceId = 0;
   }
+
+  await statusScenarios.cleanup();
 
   for (const id of [...state.borrowingIds].reverse()) {
     await safeApi("DELETE", `/borrowing/${id}`);
@@ -347,16 +355,26 @@ async function readBrowserSession() {
   });
 }
 
-async function createAuxiliaryAsset(suffix, name) {
+async function createAuxiliaryAsset(suffix, name, overrides = {}) {
   const response = await api("POST", "/assets", state.admin.token, {
     ...asset,
     assetCode: `${asset.assetCode}-${suffix}`,
     name,
+    ...overrides,
   });
   assertStatus(response, 201);
   assert.equal(response.body.success, true);
   return Number(response.body.data.id);
 }
+
+// Skenario penguncian status aset dipakai bersama dengan suite smoke agar
+// aturan bisnisnya hanya ditulis satu kali.
+const statusScenarios = createAssetStatusScenarios({
+  getDriver: () => driver,
+  runId,
+  openFeaturePath: openEvidencePath,
+  pauseStep,
+});
 
 scenario(1, "Login dengan akun valid", "/", async () => {
   await openPath(driver, "/login");
@@ -596,7 +614,17 @@ scenario(17, "Jadwalkan pemeliharaan", "/maintenance", async () => {
   return `Pemeliharaan ID ${state.maintenanceId}\nStatus: scheduled`;
 });
 
-scenario(18, "Input karakter tidak valid", "/users", async () => {
+// Skenario 18-22 berasal dari modul bersama sehingga suite smoke menguji aturan
+// penguncian status yang identik.
+statusScenarios.scenarios.forEach((statusScenario, index) => {
+  scenario(18 + index, statusScenario.title, statusScenario.evidencePath, async () => {
+    const setupDetail = index === 0 ? await statusScenarios.setup() : "";
+    const detail = await statusScenario.run();
+    return setupDetail ? `${setupDetail}\n${detail}` : detail;
+  });
+});
+
+scenario(23, "Input karakter tidak valid", "/users", async () => {
   const response = await api("POST", "/users", state.admin.token, {
     ...normalUser,
     nip: "<script>",
@@ -610,13 +638,13 @@ scenario(18, "Input karakter tidak valid", "/users", async () => {
   return `HTTP ${response.status}\nKarakter terlarang pada NIP ditolak.`;
 });
 
-scenario(19, "User biasa akses halaman admin", "/users", async () => {
+scenario(24, "User biasa akses halaman admin", "/users", async () => {
   const response = await api("GET", "/users", state.user.token);
   assertStatus(response, 403);
   return `HTTP ${response.status}\nRole user tidak dapat mengakses data admin.`;
 });
 
-scenario(20, "Kontrol seluruh fitur dapat diklik", "/", async () => {
+scenario(25, "Kontrol seluruh fitur dapat diklik", "/", async () => {
   const checked = [];
 
   await openEvidencePath("/activity-archive");
@@ -709,7 +737,7 @@ scenario(20, "Kontrol seluruh fitur dapat diklik", "/", async () => {
   return `${checked.length} kelompok fitur diverifikasi lewat kontrol UI.\n${checked.join("\n")}`;
 });
 
-scenario(21, "Logout dari sistem", "/login", async () => {
+scenario(26, "Logout dari sistem", "/login", async () => {
   await cleanupCreatedData();
 
   await driver.executeScript(() => document.getElementById("selenium-evidence")?.remove());

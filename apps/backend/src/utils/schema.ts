@@ -504,6 +504,9 @@ export async function ensureInitialAdminAccount(): Promise<void> {
   const email = process.env.INITIAL_ADMIN_EMAIL;
   const password = process.env.INITIAL_ADMIN_PASSWORD;
   const phoneNumber = process.env.INITIAL_ADMIN_PHONE;
+  const mustChangePassword = String(process.env.INITIAL_ADMIN_MUST_CHANGE_PASSWORD || 'true')
+    .trim()
+    .toLowerCase() !== 'false';
 
   if (!nip || !name || !email || !password || !phoneNumber) {
     logger.warn(
@@ -517,8 +520,8 @@ export async function ensureInitialAdminAccount(): Promise<void> {
 
   await pool.query(
     `INSERT INTO users (nip, name, email, password, role, phone_number, account_status, must_change_password)
-     VALUES (?, ?, ?, ?, 'admin', ?, 'active', 1)`,
-    [nip, name, email, hashedPassword, phoneNumber]
+     VALUES (?, ?, ?, ?, 'admin', ?, 'active', ?)`,
+    [nip, name, email, hashedPassword, phoneNumber, mustChangePassword ? 1 : 0]
   );
 
   logger.info('Bootstrapped initial admin account from INITIAL_ADMIN_* environment variables', { nip, email });

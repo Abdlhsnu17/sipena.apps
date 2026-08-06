@@ -227,7 +227,7 @@ export function InventoryPicker<T>({
         avoidCollisions
         collisionPadding={12}
         updatePositionStrategy="always"
-        className={`${popoverClassName} max-h-[var(--radix-popover-content-available-height)]`}
+        className={`${popoverClassName} max-h-(--radix-popover-content-available-height)`}
       >
         <Command
           className="h-[min(22rem,var(--radix-popover-content-available-height))] min-h-0"
@@ -277,7 +277,7 @@ export function InventoryPicker<T>({
             </div>
           )}
           <CommandList
-            className={`min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-contain space-y-1 border-none bg-transparent px-2 pb-2 pt-1 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent ${listClassName ?? ''}`}
+            className={`min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-contain space-y-1 border-none bg-transparent px-2 pb-2 pt-1 [-webkit-overflow-scrolling:touch] scrollbar-gutter-stable scrollbar-thin [scrollbar-color:rgb(13_148_136)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-teal-500/70 [&::-webkit-scrollbar-track]:bg-transparent ${listClassName ?? ''}`}
             onWheelCapture={(event) => event.stopPropagation()}
             onTouchMoveCapture={(event) => event.stopPropagation()}
           >

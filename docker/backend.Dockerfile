@@ -26,6 +26,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/package.json ./package.json
+COPY apps/backend/scripts ./scripts
 COPY --from=builder /app/database/migrations /database/migrations
 
 RUN npm install --omit=dev

@@ -16,12 +16,21 @@ const DEVELOPMENT_JWT_SECRET = 'sipena-local-dev-jwt-secret-change-in-production
 
 const getCandidateEnvPaths = (): string[] => {
   const backendRoot = path.resolve(__dirname, '../../');
+  // `.env` diprioritaskan di atas `.docker.env`: file docker memakai hostname
+  // jaringan container (mis. DB_HOST=mysql) yang tidak dapat di-resolve saat
+  // backend dijalankan langsung di host. Di dalam image, `.env` tidak pernah
+  // ikut ter-copy (lihat .dockerignore), sehingga `.docker.env` tetap terpakai.
   const candidates = [
     path.resolve(backendRoot, '.env'),
     path.resolve(process.cwd(), '.env'),
     path.resolve(__dirname, '../../.env'),
     path.resolve(__dirname, '../../../.env'),
     path.resolve(__dirname, '../../../../.env'),
+    path.resolve(backendRoot, '.docker.env'),
+    path.resolve(process.cwd(), '.docker.env'),
+    path.resolve(__dirname, '../../.docker.env'),
+    path.resolve(__dirname, '../../../.docker.env'),
+    path.resolve(__dirname, '../../../../.docker.env'),
   ];
 
   return [...new Set(candidates)];

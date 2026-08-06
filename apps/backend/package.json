@@ -17,6 +17,8 @@
     "build": "tsc",
     "migrate": "tsx src/scripts/run-migrations.ts",
     "migrate:user-security-columns": "tsx scripts/migrate-user-security-columns.ts",
+    "bootstrap:test-admin": "node scripts/bootstrap-test-admin.mjs",
+    "bootstrap:test-admin:docker": "node ../../scripts/bootstrap-test-admin.mjs",
     "migrate:prod": "node dist/scripts/run-migrations.js",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",

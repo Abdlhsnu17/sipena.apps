@@ -40,6 +40,7 @@ npm run dev:backend
 Backend default berjalan pada `http://localhost:4000`. Endpoint `GET /health` dan `GET /api/health` menampilkan status server, database, Redis, dan schema. Redis bersifat opsional pada development, tetapi production mewajibkan konfigurasinya dan `ALLOW_IN_MEMORY_PASSWORD_RESET_STORE=false`.
 
 Untuk database baru, set kelima variabel `INITIAL_ADMIN_*` sebelum startup pertama. Akun admin hanya dibuat bila tabel `users` belum memiliki admin. Lihat [`../../packages/database/README.md`](../../packages/database/README.md) untuk seed dan migrasi.
+Jika akun admin awal dipakai untuk Selenium atau demo lokal, set `INITIAL_ADMIN_MUST_CHANGE_PASSWORD=false` agar login langsung masuk ke dashboard.
 
 ## Environment Penting
 

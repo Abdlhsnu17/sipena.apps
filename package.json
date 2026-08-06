@@ -24,6 +24,7 @@
     "test:selenium:smoke": "node selenium/support/clean-screenshots.mjs && node --test --test-concurrency=1 selenium/e2e/navigation-smoke.test.mjs",
     "test:selenium:smoke:headed": "SELENIUM_HEADLESS=false npm run test:selenium:smoke",
     "selenium:smoke:headed": "npm run test:selenium:smoke:headed",
+    "bootstrap:test-admin": "npm run bootstrap:test-admin --workspace=inventory-backend",
     "start": "sh scripts/start-production.sh",
     "configure:notifications": "sh scripts/configure-notification-channels.sh",
     "dev:backend": "npm run dev --workspace=inventory-backend",

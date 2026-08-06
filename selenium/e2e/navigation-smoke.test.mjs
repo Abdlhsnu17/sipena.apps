@@ -3,17 +3,27 @@ import { after, before, test } from "node:test";
 import { By, until } from "selenium-webdriver";
 import {
   createDriver,
+  navigationTimeout,
   openPath,
   saveScreenshot,
   timeout,
   waitForApplication,
   waitForPath,
+  warmUpRoutes,
 } from "../support/browser.mjs";
+import { ensureTestAdmin } from "../support/bootstrap-admin.mjs";
+import { createAssetStatusScenarios } from "../support/asset-status-scenarios.mjs";
 import { adminPassword, adminUsername } from "../support/config.mjs";
 
 // Kontrak tampilan utama setiap fitur. Test tidak cukup hanya memastikan halaman
 // tidak kosong: judul dan label fitur/kolom penting juga harus tetap tersedia.
 const routes = [
+  {
+    name: "Arsip & Riwayat",
+    pathname: "/activity-archive",
+    heading: "Arsip & Riwayat",
+    expectedTexts: ["Semua user"],
+  },
   {
     name: "Dashboard",
     pathname: "/",
@@ -38,10 +48,28 @@ const routes = [
     expectedTexts: ["Cari No ID, ruangan, nama alat, kode barang"],
   },
   {
-    name: "Penggunaan",
-    pathname: "/asset-usage",
-    heading: "Penggunaan",
-    expectedTexts: ["Riwayat Pemakaian", "Cari No ID, aset, atau operator"],
+    name: "Laporan & Analitik",
+    pathname: "/reports",
+    heading: "Laporan & Analitik",
+    expectedTexts: ["Ekspor Laporan", "Inventaris Terinput", "Pemeliharaan"],
+  },
+  {
+    name: "Manajemen Pengguna",
+    pathname: "/users",
+    heading: "Manajemen Pengguna",
+    expectedTexts: ["Data Pengguna", "Unit Kerja", "Tambah Pengguna"],
+  },
+  {
+    name: "Manajemen Sanksi",
+    pathname: "/sanctions",
+    heading: "Manajemen Sanksi",
+    expectedTexts: ["Daftar Manajemen Sanksi", "Cari No ID, aset, nama, atau NIP"],
+  },
+  {
+    name: "Pemeliharaan Sarana",
+    pathname: "/maintenance",
+    heading: "Pemeliharaan Sarana",
+    expectedTexts: ["Kalender Pemeliharaan", "Daftar Pemeliharaan Sarana", "Riwayat Pemeliharaan Sarana"],
   },
   {
     name: "Peminjaman",
@@ -50,16 +78,22 @@ const routes = [
     expectedTexts: ["Daftar Peminjaman", "Cari No ID, aset, atau peminjam"],
   },
   {
+    name: "Pengaturan",
+    pathname: "/settings",
+    heading: "Pengaturan",
+    expectedTexts: ["Profil Akun", "Ganti Sandi", "Informasi Sistem"],
+  },
+  {
     name: "Pengembalian",
     pathname: "/returns",
     heading: "Pengembalian",
     expectedTexts: ["Alat yang Perlu Dikembalikan", "Riwayat Pengembalian"],
   },
   {
-    name: "Pemeliharaan Sarana",
-    pathname: "/maintenance",
-    heading: "Pemeliharaan Sarana",
-    expectedTexts: ["Kalender Pemeliharaan", "Daftar Pemeliharaan Sarana", "Riwayat Pemeliharaan Sarana"],
+    name: "Penggunaan",
+    pathname: "/asset-usage",
+    heading: "Penggunaan",
+    expectedTexts: ["Riwayat Pemakaian", "Cari No ID, aset, atau operator"],
   },
   {
     name: "Penghapusan Aset",
@@ -74,56 +108,46 @@ const routes = [
     expectedTexts: ["Ringkasan Prioritas", "Top Ranking", "Metode TOPSIS"],
   },
   {
-    name: "Laporan & Analitik",
-    pathname: "/reports",
-    heading: "Laporan & Analitik",
-    expectedTexts: ["Ekspor Laporan", "Inventaris Terinput", "Pemeliharaan"],
-  },
-  {
-    name: "Manajemen Sanksi",
-    pathname: "/sanctions",
-    heading: "Manajemen Sanksi",
-    expectedTexts: ["Daftar Manajemen Sanksi", "Cari No ID, aset, nama, atau NIP"],
-  },
-  {
-    name: "Arsip & Riwayat",
-    pathname: "/activity-archive",
-    heading: "Arsip & Riwayat",
-    expectedTexts: ["Semua user"],
-  },
-  {
-    name: "Manajemen Pengguna",
-    pathname: "/users",
-    heading: "Manajemen Pengguna",
-    expectedTexts: ["Data Pengguna", "Unit Kerja", "Tambah Pengguna"],
-  },
-  {
     name: "Unggah Dokumen",
     pathname: "/unggahan",
     heading: "Unggah Dokumen",
     expectedTexts: ["Keterangan dokumen", "Riwayat Dokumen"],
   },
-  {
-    name: "Pengaturan",
-    pathname: "/settings",
-    heading: "Pengaturan",
-    expectedTexts: ["Profil Akun", "Ganti Sandi", "Informasi Sistem"],
-  },
-].sort((left, right) => left.name.localeCompare(right.name, "id"));
+];
+
+const runId = `${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
 
 let driver;
 
+// Aturan penguncian status aset dipakai bersama dengan suite regresi penuh agar
+// keduanya memverifikasi perilaku yang sama persis.
+const statusScenarios = createAssetStatusScenarios({
+  getDriver: () => driver,
+  runId,
+  openFeaturePath: async (pathname) => {
+    await openPath(driver, pathname);
+    await driver.wait(until.elementLocated(By.css("body")), timeout);
+  },
+});
+
 before(async () => {
+  await ensureTestAdmin();
   await waitForApplication();
+  await warmUpRoutes(["/login", ...routes.map((route) => route.pathname)]);
   driver = await createDriver();
 });
 
 after(async () => {
-  if (driver) await driver.quit();
+  try {
+    await statusScenarios.cleanup();
+  } finally {
+    if (driver) await driver.quit();
+  }
 });
 
 // Urutan pengujian mengikuti alur nyata pengguna: login lebih dulu, lalu
-// menjelajah seluruh fitur (diurutkan abjad), dan diakhiri dengan logout.
+// menjelajah seluruh fitur sesuai alur menu pada regresi penuh, dan diakhiri
+// dengan logout.
 test("Login dengan akun admin", async () => {
   try {
     await openPath(driver, "/login");
@@ -159,28 +183,63 @@ async function getPageContractText() {
   });
 }
 
-async function navigateByFeatureClick(pathname, menuName) {
-  const links = await driver.findElements(By.css(`a[href="${pathname}"]`));
-  let link = null;
+// Pencarian dibatasi pada daftar menu sidebar. Tanpa batasan ini, pintasan pada
+// dashboard yang menunjuk ke rute yang sama ikut terpilih sehingga test mengklik
+// elemen lain daripada menu yang sedang diuji.
+async function findSidebarLink(pathname, menuName) {
+  const links = await driver.findElements(By.css(`[data-sidebar-nav] a[href="${pathname}"]`));
+  let fallback = null;
+
   for (const candidate of links) {
-    if (await candidate.isDisplayed()) {
-      const text = normalizeText(await candidate.getText());
-      if (text === normalizeText(menuName)) {
-        link = candidate;
-        break;
-      }
-      if (!link && text) link = candidate;
-    }
+    if (!(await candidate.isDisplayed())) continue;
+    const text = normalizeText(await candidate.getText());
+    if (text === normalizeText(menuName)) return candidate;
+    if (!fallback) fallback = candidate;
   }
 
-  assert.ok(link, `Menu sidebar untuk ${pathname} tidak ditemukan atau tidak terlihat`);
-  await driver.executeScript(
-    "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'})",
-    link,
+  return fallback;
+}
+
+// Setiap test menu berangkat dari halaman yang ditinggalkan test sebelumnya.
+// Bila test sebelumnya berhenti pada keadaan tanpa sidebar, kembalikan dulu ke
+// dashboard supaya kegagalan tidak menular ke menu berikutnya.
+async function ensureSidebarReady(pathname, menuName) {
+  let link = await findSidebarLink(pathname, menuName);
+  if (link) return link;
+
+  await openPath(driver, "/");
+  await driver.wait(
+    async () => Boolean(await findSidebarLink(pathname, menuName)),
+    timeout,
+    `Menu sidebar untuk ${pathname} tidak muncul setelah kembali ke dashboard`,
   );
-  await driver.wait(until.elementIsEnabled(link), timeout);
-  await link.click();
-  await waitForPath(driver, pathname);
+  link = await findSidebarLink(pathname, menuName);
+  assert.ok(link, `Menu sidebar untuk ${pathname} tidak ditemukan atau tidak terlihat`);
+  return link;
+}
+
+async function navigateByFeatureClick(pathname, menuName) {
+  // Sidebar memulihkan posisi gulir daftar menu beberapa saat setelah rute
+  // berganti. Klik yang jatuh tepat pada saat itu dapat kehilangan sasarannya,
+  // karena itu percobaan kedua mencari ulang elemennya sebelum menyerah.
+  const attempts = 2;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const link = await ensureSidebarReady(pathname, menuName);
+    try {
+      await driver.executeScript(
+        "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'})",
+        link,
+      );
+      await driver.wait(until.elementIsEnabled(link), timeout);
+      await link.click();
+      await waitForPath(driver, pathname);
+      return;
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      await openPath(driver, "/");
+    }
+  }
 }
 
 for (const { name, pathname, heading, expectedTexts } of routes) {
@@ -218,6 +277,25 @@ for (const { name, pathname, heading, expectedTexts } of routes) {
     }
   });
 }
+
+// Setelah seluruh menu terbukti dapat dibuka, jalankan verifikasi aturan
+// penguncian status aset dari modul bersama.
+statusScenarios.scenarios.forEach((statusScenario) => {
+  test(`Aturan status aset: ${statusScenario.title}`, async () => {
+    try {
+      await statusScenario.run();
+      await openPath(driver, statusScenario.evidencePath);
+      await saveScreenshot(driver, `smoke-${statusScenario.key}`, "pass");
+    } catch (error) {
+      await saveScreenshot(driver, `smoke-${statusScenario.key}`, "fail");
+      throw error;
+    }
+  });
+});
+
+test("Bersihkan data uji aturan status aset", async () => {
+  await statusScenarios.cleanup();
+});
 
 test("Logout dari sistem", async () => {
   try {
