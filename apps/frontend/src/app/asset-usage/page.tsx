@@ -18,7 +18,6 @@ import { flattenDetailInventories, getDetailInventoryStatusLabel } from "@/utils
 import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
-import { formatNoId } from "@/utils/record-id";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { findMatchingAsset } from "@/utils/scanned-asset";
 import { Activity, AlertCircle, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Download, Eye, Pencil, Plus, Save, Search, Tag, Trash2, X } from "lucide-react";
@@ -28,12 +27,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";

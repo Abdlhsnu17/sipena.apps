@@ -29,8 +29,6 @@ import {
 import { flattenDetailInventories } from "@/utils/detail-inventory";
 import {
     formatDayTimeLabel,
-    parseServerDateTimeValue,
-    toLocalDateTimeString,
 } from "@/utils/format";
 import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
 import { buildInventorySearchKey } from "@/utils/inventory-search";
@@ -52,12 +50,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -68,7 +60,6 @@ import {
     exportFormularReport,
     exportNarrativeReport,
     SectionBuilder,
-    TableExportColumn,
     type DocumentSection,
     type FormularData,
     type SectionLine,
@@ -78,7 +69,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildVisiblePageItems } from "@/utils/pagination";
 
-import { borrowingExportColumnDefinitions, type BorrowingExportColumn } from "./_lib/export-columns";
+import { borrowingExportColumnDefinitions } from "./_lib/export-columns";
 import { getDefaultFormData, resolveDefaultDestinationRoom } from "./_lib/form";
 import {
   parseLocalDateTimeInput,
@@ -92,11 +83,7 @@ import {
   getRecommendedExtensionDateValue,
   isOverdueBorrowingBlock,
 } from "@/utils/borrowing";
-import {
-  getAssetFallbackDetailIds,
-  isAssetFallbackDetailId,
-  normalizeDetailIdentifier,
-} from "@/utils/detail-inventory";
+import { isAssetFallbackDetailId, normalizeDetailIdentifier } from "@/utils/detail-inventory";
 
 type BorrowableAsset = DetailInventoryItem
 

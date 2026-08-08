@@ -9,7 +9,6 @@ import {
   normalizeDetailIdentifier,
 } from "@/utils/detail-inventory";
 import { formatNoId } from "@/utils/record-id";
-import { usageContextLabels } from "./constants";
 
 export const getAssetRoomOptions = (item?: DetailInventoryItem) => {
   if (!item) return [];
