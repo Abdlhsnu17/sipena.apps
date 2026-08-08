@@ -187,28 +187,39 @@ class RequestBuilder {
 
       (res as any).json = ((body: unknown) => {
         sentBodyResponse = true;
-        const result = originalJson(body as never);
         if (!bodySnapshot) {
+          const text = JSON.stringify(body ?? null);
           bodySnapshot = {
             statusCode: res.statusCode,
-            text: Buffer.concat(responseChunks).toString('utf8'),
-            headers: normalizeHeaders(res.getHeaders()),
+            text: text ?? '',
+            headers: {
+              ...normalizeHeaders(res.getHeaders()),
+              'content-type': 'application/json; charset=utf-8',
+            },
           };
         }
+        const result = originalJson(body as never);
         finalizeNow(bodySnapshot);
         return result;
       });
 
       (res as any).send = ((body?: unknown) => {
         sentBodyResponse = true;
-        const result = originalSend(body as never);
         if (!bodySnapshot) {
+          const text = Buffer.isBuffer(body)
+            ? body.toString('utf8')
+            : body === undefined || body === null
+              ? ''
+              : typeof body === 'string'
+                ? body
+                : String(body);
           bodySnapshot = {
             statusCode: res.statusCode,
-            text: Buffer.concat(responseChunks).toString('utf8'),
+            text,
             headers: normalizeHeaders(res.getHeaders()),
           };
         }
+        const result = originalSend(body as never);
         finalizeNow(bodySnapshot);
         return result;
       });
@@ -224,12 +235,19 @@ class RequestBuilder {
         }
         (req as any).complete = true;
         const result = originalEnd(chunk as never, encoding as never, cb as never);
-        socket.end();
+        process.nextTick(() => {
+          if (!socket.destroyed) {
+            socket.end();
+          }
+        });
         return result;
       }) as typeof res.end;
 
       const finalize = () => {
         if (settled) {
+          return;
+        }
+        if (!(res.writableEnded || (res as any).finished)) {
           return;
         }
         finalizeNow(bodySnapshot);

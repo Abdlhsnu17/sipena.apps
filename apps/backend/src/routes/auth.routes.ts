@@ -46,8 +46,13 @@ const profileUpload = multer({
 router.post(
   '/login',
   [
-    body('nip').exists({ checkFalsy: true }).trim().notEmpty().withMessage('Username atau email wajib diisi'),
-    body('password').exists({ checkFalsy: true }).notEmpty().withMessage('Password wajib diisi'),
+    body('nip')
+      .exists({ checkFalsy: true }).withMessage('Username atau email wajib diisi')
+      .trim()
+      .notEmpty().withMessage('Username atau email wajib diisi'),
+    body('password')
+      .exists({ checkFalsy: true }).withMessage('Password wajib diisi')
+      .notEmpty().withMessage('Password wajib diisi'),
     validateRequest
   ],
   authController.login
@@ -59,7 +64,10 @@ router.post(
     body('nip').exists({ checkFalsy: true }).trim().notEmpty().isLength({ min: 8, max: 20 }),
     body('name').exists({ checkFalsy: true }).trim().notEmpty(),
     body('email').exists({ checkFalsy: true }).trim().isEmail(),
-    body('phoneNumber').exists({ checkFalsy: true }).trim().notEmpty().withMessage('Nomor WhatsApp/SMS wajib diisi'),
+    body('phoneNumber')
+      .exists({ checkFalsy: true }).withMessage('Nomor WhatsApp/SMS wajib diisi')
+      .trim()
+      .notEmpty().withMessage('Nomor WhatsApp/SMS wajib diisi'),
     body('password').exists({ checkFalsy: true }).matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.password) {
