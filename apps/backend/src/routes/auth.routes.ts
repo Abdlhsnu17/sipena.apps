@@ -46,8 +46,8 @@ const profileUpload = multer({
 router.post(
   '/login',
   [
-    body('nip').trim().notEmpty().withMessage('Username atau email wajib diisi'),
-    body('password').notEmpty().withMessage('Password wajib diisi'),
+    body('nip').exists({ checkFalsy: true }).trim().notEmpty().withMessage('Username atau email wajib diisi'),
+    body('password').exists({ checkFalsy: true }).notEmpty().withMessage('Password wajib diisi'),
     validateRequest
   ],
   authController.login
@@ -56,11 +56,11 @@ router.post(
 router.post(
   '/register',
   [
-    body('nip').trim().notEmpty().isLength({ min: 8, max: 20 }),
-    body('name').trim().notEmpty(),
-    body('email').trim().isEmail(),
-    body('phoneNumber').trim().notEmpty().withMessage('Nomor WhatsApp/SMS wajib diisi'),
-    body('password').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
+    body('nip').exists({ checkFalsy: true }).trim().notEmpty().isLength({ min: 8, max: 20 }),
+    body('name').exists({ checkFalsy: true }).trim().notEmpty(),
+    body('email').exists({ checkFalsy: true }).trim().isEmail(),
+    body('phoneNumber').exists({ checkFalsy: true }).trim().notEmpty().withMessage('Nomor WhatsApp/SMS wajib diisi'),
+    body('password').exists({ checkFalsy: true }).matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.password) {
         throw new Error('Password confirmation does not match');
@@ -74,16 +74,16 @@ router.post(
 
 router.post(
   '/reset-password/verify',
-  [body('nip').trim().notEmpty(), validateRequest],
+  [body('nip').exists({ checkFalsy: true }).trim().notEmpty(), validateRequest],
   authController.verifyResetNip
 );
 
 router.post(
   '/reset-password',
   [
-    body('nip').trim().notEmpty(),
-    body('verificationCode').trim().isLength({ min: 6, max: 6 }).isNumeric(),
-    body('newPassword').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
+    body('nip').exists({ checkFalsy: true }).trim().notEmpty(),
+    body('verificationCode').exists({ checkFalsy: true }).trim().isLength({ min: 6, max: 6 }).isNumeric(),
+    body('newPassword').exists({ checkFalsy: true }).matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.newPassword) {
         throw new Error('Password confirmation does not match');

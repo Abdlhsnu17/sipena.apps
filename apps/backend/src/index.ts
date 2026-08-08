@@ -1,15 +1,10 @@
-import compression from 'compression';
-import cors from 'cors';
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import { Server } from 'http';
+import { createApp } from './app';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
+import { infrastructureStatus } from './config/infrastructure-status';
 import { connectRedis, disconnectRedis } from './config/redis';
-import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middleware';
-import { errorHandler } from './middlewares/error-handler.middleware';
-import { requestContextMiddleware } from './middlewares/request-context.middleware';
+import { MaintenanceService } from './services/maintenance.service';
 import { createScopedLogger } from './utils/logger';
 import { notificationStreamHub } from './utils/notification-stream';
 import {
@@ -34,30 +29,6 @@ import {
     ensureUserProfileColumns,
     withSchemaLock
 } from './utils/schema';
-import { getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
-import { getServerTimeSnapshot } from './utils/time';
-
-// Routes
-import accessControlRoutes from './routes/access-control.routes';
-import assetDisposalRoutes from './routes/asset-disposal.routes';
-import assetUsageRoutes from './routes/asset-usage.routes';
-import assetRoutes from './routes/asset.routes';
-import authRoutes from './routes/auth.routes';
-import borrowingRoutes from './routes/borrowing.routes';
-import deletionRequestRoutes from './routes/deletion-request.routes';
-import dssRoutes from './routes/dss.routes';
-import maintenanceHistoryRoutes from './routes/maintenance-history.routes';
-import maintenanceRoutes from './routes/maintenance.routes';
-import notificationRoutes from './routes/notification.routes';
-import reportRoutes from './routes/report.routes';
-import sanctionsRoutes from './routes/sanctions.routes';
-import umlRoutes from './routes/uml.routes';
-import userActivityRoutes from './routes/user-activity.routes';
-import userRoutes from './routes/user.routes';
-import { MaintenanceService } from './services/maintenance.service';
-// Import notification controller for the standalone SSE stream route mounted
-// outside the header-authenticated notification router.
-import notificationController from './controllers/notification.controller';
 
 // Load environment variables
 loadEnvironment();
@@ -134,234 +105,11 @@ const validateEnvironment = () => {
 
 validateEnvironment();
 
-const app = express();
+const app = createApp();
 const PORT = process.env.PORT || 4000;
 const isProduction = (process.env.NODE_ENV || 'development') === 'production';
 const STARTUP_RETRY_ATTEMPTS = Number.parseInt(process.env.STARTUP_RETRY_ATTEMPTS || '12', 10);
 const STARTUP_RETRY_DELAY_MS = Number.parseInt(process.env.STARTUP_RETRY_DELAY_MS || '5000', 10);
-const infrastructureStatus = {
-  database: 'initializing' as 'initializing' | 'up' | 'down',
-  redis: 'initializing' as 'initializing' | 'up' | 'down' | 'optional-down',
-  schema: 'initializing' as 'initializing' | 'up' | 'down',
-};
-
-const resolveTrustProxy = (value: string | undefined): boolean | number => {
-  if (!value) {
-    return 1;
-  }
-
-  const normalizedValue = value.trim().toLowerCase();
-  if (normalizedValue === 'true') {
-    return true;
-  }
-
-  if (normalizedValue === 'false') {
-    return false;
-  }
-
-  const parsedValue = Number.parseInt(normalizedValue, 10);
-  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : 1;
-};
-const trustProxySetting = resolveTrustProxy(process.env.TRUST_PROXY_HOPS);
-
-// Trust proxy - important for rate limiting behind reverse proxy (e.g., Railway)
-app.set('trust proxy', trustProxySetting);
-
-// Security middleware
-// This backend serves JSON APIs plus static profile photos under /uploads/profiles,
-// never an HTML document, so the CSP can be locked down to "nothing is allowed to load".
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'none'"],
-      imgSrc: ["'self'"],
-      frameAncestors: ["'none'"],
-    },
-  },
-  crossOriginResourcePolicy: { policy: 'same-site' },
-}));
-app.use(compression({
-  // Never compress Server-Sent Events: compression buffers the response and
-  // would delay (or withhold) real-time notification events.
-  filter: (req, res) => {
-    if (res.getHeader('Content-Type') === 'text/event-stream') {
-      return false;
-    }
-    return compression.filter(req, res);
-  },
-}));
-app.use(requestContextMiddleware);
-
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const isDev = !isProduction;
-const parseRateLimitMax = (value: string | undefined, fallback: number): number => {
-  const parsedValue = Number.parseInt(value || '', 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
-};
-// Selenium/regression suites emit a lot of legitimate API traffic in dev mode,
-// so keep the general limiter comfortably above the default production-like cap
-// when running locally.
-const generalRateLimitMax = isDev
-  ? Math.max(parseRateLimitMax(process.env.GENERAL_RATE_LIMIT_MAX, 10000), 10000)
-  : parseRateLimitMax(process.env.GENERAL_RATE_LIMIT_MAX, 2000);
-const loginRateLimitMax = parseRateLimitMax(process.env.LOGIN_RATE_LIMIT_MAX, isDev ? 1000 : 40);
-const registerRateLimitMax = parseRateLimitMax(process.env.REGISTER_RATE_LIMIT_MAX, isDev ? 1000 : 20);
-const passwordResetRateLimitMax = parseRateLimitMax(process.env.PASSWORD_RESET_RATE_LIMIT_MAX, isDev ? 1000 : 20);
-
-// CORS configuration
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || isDev) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Rate limiting
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: generalRateLimitMax,
-  skip: (req) => req.path === '/auth/login' || req.path === '/health',
-  message: {
-    success: false,
-    message: 'Terlalu banyak permintaan. Silakan coba lagi beberapa saat.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: loginRateLimitMax,
-  skipSuccessfulRequests: true,
-  message: {
-    success: false,
-    message: 'Terlalu banyak percobaan login. Silakan coba lagi beberapa menit.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: registerRateLimitMax,
-  message: {
-    success: false,
-    message: 'Terlalu banyak permintaan pendaftaran. Silakan coba lagi nanti.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const passwordResetLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: passwordResetRateLimitMax,
-  message: {
-    success: false,
-    message: 'Terlalu banyak permintaan reset password. Silakan coba lagi beberapa menit.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth/register', registerLimiter);
-app.use('/api/auth/reset-password', passwordResetLimiter);
-app.use('/api', generalLimiter);
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Only profile photos remain directly reachable; report files must go through protected routes.
-// Profile photos are public assets loaded via <img>, so they must not be blocked by Helmet's
-// same-origin Cross-Origin-Resource-Policy when the frontend is served from a different origin.
-app.use('/uploads/profiles', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-});
-app.use('/uploads/profiles', express.static(getProfileUploadsDir()));
-app.use('/uploads/maintenance', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-});
-app.use('/uploads/maintenance', express.static(getMaintenanceUploadsDir()));
-
-const healthHandler = (req: express.Request, res: express.Response) => {
-  const status = infrastructureStatus.database === 'up' && infrastructureStatus.schema === 'up'
-    ? 'OK'
-    : 'DEGRADED';
-
-  res.status(200).json({
-    status,
-    timestamp: getServerTimeSnapshot().now,
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    services: infrastructureStatus,
-    requestId: req.requestId,
-  });
-};
-
-// Health check endpoints
-app.get('/health', healthHandler);
-app.get('/api/health', healthHandler);
-app.get('/api/time', (_req: express.Request, res: express.Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server time synchronized',
-    data: getServerTimeSnapshot(),
-  });
-});
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/access-control', authMiddleware, accessControlRoutes);
-app.use('/api/users', authMiddleware, userRoutes);
-app.use('/api/assets', authMiddleware, assetRoutes);
-app.use('/api/asset-usage', authMiddleware, assetUsageRoutes);
-app.use('/api/borrowing', authMiddleware, borrowingRoutes);
-app.use('/api/deletion-requests', authMiddleware, deletionRequestRoutes);
-app.use('/api/dss', authMiddleware, dssRoutes);
-// Development-only: expose DSS routes without auth for debugging only when explicitly allowed
-// Set ALLOW_DSS_DEBUG=true in your local env to enable this route.
-if (!isProduction && process.env.ALLOW_DSS_DEBUG === 'true') {
-  app.use('/api/dss-debug', dssRoutes);
-  logger.warn('⚠️ DSS debug routes mounted at /api/dss-debug (dev only)');
-} else if (!isProduction && process.env.ALLOW_DSS_DEBUG !== 'true') {
-  logger.info('ℹ️ DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
-}
-app.use('/api/maintenance', authMiddleware, maintenanceRoutes);
-app.use('/api/maintenance-history', authMiddleware, maintenanceHistoryRoutes);
-app.use('/api/reports', authMiddleware, reportRoutes);
-app.use('/api/uml', authMiddleware, umlRoutes);
-app.use('/api/user-activities', authMiddleware, userActivityRoutes);
-app.use('/api/sanctions', authMiddleware, sanctionsRoutes);
-app.use('/api/asset-disposal', authMiddleware, assetDisposalRoutes);
-// EventSource cannot set Authorization headers, so this route consumes a
-// short-lived, one-use ticket issued by the authenticated notification router.
-app.get('/api/notifications/stream', sseTicketMiddleware, notificationController.stream);
-app.use('/api/notifications', authMiddleware, notificationRoutes);
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`
-  });
-});
-
-// Global error handler
-app.use(errorHandler);
-
 
 const sleep = async (delayMs: number): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, delayMs));

@@ -21,8 +21,21 @@ const GENERIC_VALIDATOR_MESSAGE = 'Invalid value';
 export const validateRequest = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
 
+  if (process.env.DEBUG_ROUTE_TESTS === 'true') {
+    const errorCount = errors.isEmpty() ? 0 : errors.array().length;
+    // Debug-only trace for in-memory route tests.
+    // eslint-disable-next-line no-console
+    console.log('[validateRequest]', req.method, req.originalUrl, 'errors=', errorCount);
+  }
+
   if (!errors.isEmpty()) {
     const validationErrors = errors.array();
+    const safeValidationErrors = validationErrors.map((error) => ({
+      type: error.type,
+      msg: error.msg,
+      path: (error as { path?: string }).path,
+      location: (error as { location?: string }).location,
+    }));
     // Form di frontend menampilkan `message` apa adanya, jadi utamakan pesan
     // eksplisit dari .withMessage() (mis. "Password wajib diisi") agar pengguna
     // tahu field mana yang salah.
@@ -34,8 +47,12 @@ export const validateRequest = (req: Request, res: Response, next: NextFunction)
         firstMessage && firstMessage !== GENERIC_VALIDATOR_MESSAGE
           ? firstMessage
           : 'Validation failed',
-      errors: validationErrors,
+      errors: safeValidationErrors,
     });
+    if (process.env.DEBUG_ROUTE_TESTS === 'true') {
+      // eslint-disable-next-line no-console
+      console.log('[validateRequest] response sent');
+    }
     return;
   }
 
