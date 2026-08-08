@@ -5,6 +5,8 @@ import path from 'path';
 import reportController from '../controllers/report.controller';
 import { requireRole } from '../middlewares/auth.middleware';
 import { getReportUploadsDir } from '../utils/storage-paths';
+import { buildStoredFileName } from '../utils/upload-filename';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 const uploadDir = getReportUploadsDir();
@@ -34,19 +36,9 @@ const GENERIC_UPLOAD_MIME_TYPES = new Set([
   'binary/octet-stream',
 ]);
 
-const sanitizeFileName = (filename: string): string => {
-  const parsed = path.parse(path.basename(filename));
-  const baseName = parsed.name.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  const extension = parsed.ext.toLowerCase().replace(/[^a-z0-9.]/g, '');
-  return `${baseName || 'file'}${extension}`;
-};
-
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const safeName = sanitizeFileName(file.originalname);
-    cb(null, `${Date.now()}-${safeName}`);
-  }
+  filename: (_req, file, cb) => cb(null, buildStoredFileName(file.originalname))
 });
 
 const upload = multer({
@@ -78,7 +70,8 @@ router.get(
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
     query('category').optional().trim(),
-    query('type').optional().trim()
+    query('type').optional().trim(),
+    validateRequest
   ],
   reportController.getAssetReport
 );
@@ -88,7 +81,8 @@ router.get(
   [
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
-    query('status').optional().trim()
+    query('status').optional().trim(),
+    validateRequest
   ],
   reportController.getBorrowingReport
 );
@@ -98,7 +92,8 @@ router.get(
   [
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
-    query('type').optional().trim()
+    query('type').optional().trim(),
+    validateRequest
   ],
   reportController.getMaintenanceReport
 );
@@ -109,7 +104,8 @@ router.get(
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
     query('type').optional().trim(),
-    query('status').optional().trim()
+    query('status').optional().trim(),
+    validateRequest
   ],
   reportController.getUsageReport
 );
@@ -129,7 +125,8 @@ router.get(
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),
-    query('userId').optional().isInt({ min: 1 })
+    query('userId').optional().isInt({ min: 1 }),
+    validateRequest
   ],
   reportController.exportPdf
 );
@@ -143,7 +140,8 @@ router.get(
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),
-    query('userId').optional().isInt({ min: 1 })
+    query('userId').optional().isInt({ min: 1 }),
+    validateRequest
   ],
   reportController.exportExcel
 );
@@ -157,7 +155,8 @@ router.get(
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),
-    query('userId').optional().isInt({ min: 1 })
+    query('userId').optional().isInt({ min: 1 }),
+    validateRequest
   ],
   reportController.exportCsv
 );

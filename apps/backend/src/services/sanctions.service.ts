@@ -51,7 +51,7 @@ interface SanctionRow extends RowDataPacket {
   resolved_notes: string | null;
 }
 
-const mapRow = (row: SanctionRow): SanctionRecord => ({
+export const mapRow = (row: SanctionRow): SanctionRecord => ({
   id: row.id,
   borrowingCode: row.borrowing_code,
   userId: row.user_id,

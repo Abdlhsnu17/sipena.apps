@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator';
 import multer from 'multer';
 import assetController from '../controllers/asset.controller';
 import { requireRole } from '../middlewares/auth.middleware';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 const importUpload = multer({
@@ -32,14 +33,15 @@ router.get(
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1 }).toInt(),
     query('status').optional().isIn(ASSET_STATUSES),
-    query('type').optional().isIn(ASSET_TYPES)
+    query('type').optional().isIn(ASSET_TYPES),
+    validateRequest
   ],
   assetController.getAll
 );
 
 router.get('/import/template', assetController.downloadTemplate);
 
-router.get('/:id', [param('id').isInt({ min: 1 })], assetController.getById);
+router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], assetController.getById);
 
 router.post(
   '/',
@@ -49,7 +51,8 @@ router.post(
     body('category').trim().notEmpty(),
     body('type').isIn(ASSET_TYPES),
     body('status').optional().isIn(ASSET_STATUSES),
-    body('condition').optional().isIn(ASSET_CONDITIONS)
+    body('condition').optional().isIn(ASSET_CONDITIONS),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'staff_pj', 'staff pj']),
   assetController.create
@@ -61,14 +64,15 @@ router.put(
     param('id').isInt({ min: 1 }),
     body('status').optional().isIn(ASSET_STATUSES),
     body('condition').optional().isIn(ASSET_CONDITIONS),
-    body('type').optional().isIn(ASSET_TYPES)
+    body('type').optional().isIn(ASSET_TYPES),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'staff_pj', 'staff pj']),
   assetController.update
 );
 
 router.delete('/reset/all', requireRole(['admin']), assetController.resetInventory);
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), assetController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), assetController.delete);
 
 router.post(
   '/import',

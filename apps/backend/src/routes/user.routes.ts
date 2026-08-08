@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import userController from '../controllers/user.controller';
 import { requireRole } from '../middlewares/auth.middleware';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 
@@ -25,13 +26,14 @@ router.get(
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1 }).toInt(),
     query('role').optional().isIn(USER_ROLES),
-    query('search').optional().trim()
+    query('search').optional().trim(),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'staff', 'staff_pj']),
   userController.getAll
 );
 
-router.get('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), userController.getById);
+router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), userController.getById);
 
 router.post(
   '/',
@@ -48,7 +50,8 @@ router.post(
     body('subWorkUnit').optional({ checkFalsy: true }).trim().isLength({ max: 255 }),
     body('homeAddress').optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
     body('accountStatus').optional().isIn(ACCOUNT_STATUSES),
-    body('mustChangePassword').optional().isBoolean()
+    body('mustChangePassword').optional().isBoolean(),
+    validateRequest
   ],
   requireRole(['admin', 'leader']),
   userController.create
@@ -60,6 +63,7 @@ router.post(
     body('userIds').isArray({ min: 1, max: 5000 }).withMessage('Daftar pengguna wajib berisi 1 sampai 5000 ID'),
     body('userIds.*').isInt({ min: 1 }).toInt(),
     body('deleteReason').trim().isLength({ min: 5, max: 500 }).withMessage('Alasan penghapusan wajib diisi (5-500 karakter)'),
+    validateRequest
   ],
   requireRole(['admin']),
   userController.bulkDelete,
@@ -80,19 +84,21 @@ router.put(
     body('homeAddress').optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
     body('accountStatus').optional().isIn(ACCOUNT_STATUSES),
     body('mustChangePassword').optional().isBoolean(),
-    body('umlAccess').optional().isBoolean()
+    body('umlAccess').optional().isBoolean(),
+    validateRequest
   ],
   requireRole(['admin', 'leader']),
   userController.update
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), userController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), userController.delete);
 
 router.patch(
   '/:id/password/reset',
   [
     param('id').isInt({ min: 1 }),
-    body('newPassword').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE)
+    body('newPassword').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
+    validateRequest
   ],
   requireRole(['admin', 'leader']),
   userController.resetPassword
@@ -103,7 +109,8 @@ router.patch(
   [
     param('id').isInt({ min: 1 }),
     body('currentPassword').trim().notEmpty(),
-    body('newPassword').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE)
+    body('newPassword').matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
+    validateRequest
   ],
   userController.changePassword
 );

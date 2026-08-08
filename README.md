@@ -239,6 +239,45 @@ npm run test:backend
 
 Gunakan `npm run verify` untuk menjalankan keempat pemeriksaan tersebut secara berurutan. Pengujian browser dijalankan terpisah dengan `npm run test:selenium` setelah frontend, backend, dan database pengujian aktif.
 
+### Akun Pengujian Selenium
+
+Suite Selenium login memakai akun admin khusus pengujian. Akun ini dibuat atau diperbarui otomatis oleh `npm run bootstrap:test-admin`, yang mencocokkan baris berdasarkan **NIP atau email** — pastikan nilainya tidak menyerupai akun asli, karena baris yang cocok akan ditimpa (termasuk passwordnya).
+
+| Kolom | Nilai |
+| --- | --- |
+| NIP (dipakai sebagai username saat login) | `99999999` |
+| Password | `SeleniumE2E#2026` |
+| Nama | `Admin Selenium` |
+| Email | `admin.selenium@sipena.test` |
+| Role | `admin` |
+
+> **Khusus lingkungan lokal.** Kredensial ini hanya untuk database pengembangan dan sengaja dicantumkan agar pengujian mudah diulang. Jangan pernah memakainya di server bersama atau produksi, dan jangan mendaftarkan akun ini pada database yang memuat data nyata. Bila membutuhkan kredensial yang tidak ikut ter-commit, isi `selenium.env.json` (sudah masuk `.gitignore`) mengikuti [`selenium.env.example.json`](selenium.env.example.json).
+
+Jalankan suite setelah frontend (`http://localhost:3000`), backend, dan database aktif:
+
+```bash
+export INITIAL_ADMIN_NIP=99999999
+export INITIAL_ADMIN_NAME="Admin Selenium"
+export INITIAL_ADMIN_EMAIL="admin.selenium@sipena.test"
+export INITIAL_ADMIN_PASSWORD="SeleniumE2E#2026"
+export INITIAL_ADMIN_PHONE="081200000000"
+export INITIAL_ADMIN_MUST_CHANGE_PASSWORD=false
+
+export SELENIUM_E2E_USERNAME=99999999
+export SELENIUM_E2E_PASSWORD="SeleniumE2E#2026"
+export SELENIUM_AUTO_START_LOCAL_STACK=false
+export SELENIUM_HEADLESS=true
+
+npm run test:selenium:smoke   # 24 skenario navigasi dan aturan status aset
+npm run test:selenium:core    # 26 skenario regresi alur utama
+```
+
+Catatan penting:
+
+- Variabel `INITIAL_ADMIN_*` tetap wajib meski akunnya sudah ada, karena suite memanggil ulang `bootstrap:test-admin` sebelum login.
+- `SELENIUM_AUTO_START_LOCAL_STACK=false` mencegah suite menyalakan stack Docker Compose ketika aplikasi sudah dijalankan manual.
+- Tambahkan `:headed` pada nama skrip (mis. `npm run test:selenium:smoke:headed`) untuk melihat jalannya pengujian di browser.
+
 ## Endpoint Backend
 
 Endpoint utama yang aktif mencakup:

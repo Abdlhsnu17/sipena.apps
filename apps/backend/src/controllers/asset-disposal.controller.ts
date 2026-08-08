@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import disposalService from '../services/asset-disposal.service';
 import { createScopedLogger } from '../utils/logger';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const logger = createScopedLogger('controller:asset-disposal');
 
@@ -12,11 +13,6 @@ const getAuthenticatedUserId = (req: Request): number | null => {
 
 class AssetDisposalController {
   getAll = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const result = await disposalService.getAll({
         status: req.query.status as string | undefined,
@@ -32,11 +28,6 @@ class AssetDisposalController {
   };
 
   getById = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const result = await disposalService.getById(Number(req.params.id));
       res.status(result.success ? 200 : 404).json(result);
@@ -47,11 +38,6 @@ class AssetDisposalController {
   };
 
   create = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const requestedBy = getAuthenticatedUserId(req);
       if (!requestedBy) {
@@ -71,11 +57,6 @@ class AssetDisposalController {
   };
 
   approve = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const reviewedBy = getAuthenticatedUserId(req);
       if (!reviewedBy) {
@@ -95,11 +76,6 @@ class AssetDisposalController {
   };
 
   reject = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const reviewedBy = getAuthenticatedUserId(req);
       if (!reviewedBy) {
@@ -119,11 +95,6 @@ class AssetDisposalController {
   };
 
   delete = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const result = await disposalService.delete(Number(req.params.id));
       res.status(result.success ? 200 : 400).json(result);
@@ -140,8 +111,9 @@ export const disposalValidators = {
     query('assetType').optional().isIn(['medical', 'non_medical']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    validateRequest
   ],
-  getById: [param('id').isInt({ min: 1 })],
+  getById: [param('id').isInt({ min: 1 }), validateRequest],
   create: [
     body('assetId').isInt({ min: 1 }),
     body('assetType').isIn(['medical', 'non_medical']),
@@ -150,10 +122,12 @@ export const disposalValidators = {
     body('assetDetailCode').optional().trim(),
     body('reason').trim().notEmpty().withMessage('Alasan penghapusan wajib diisi'),
     body('conditionNotes').optional().trim(),
+    validateRequest
   ],
   review: [
     param('id').isInt({ min: 1 }),
     body('reviewNotes').optional().trim(),
+    validateRequest
   ],
 };
 

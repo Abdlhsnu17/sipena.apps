@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { AuthService } from '../services/auth.service';
 import { createScopedLogger } from '../utils/logger';
 import {
@@ -34,17 +33,6 @@ export class AuthController {
    */
   login = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        const validationErrors = errors.array();
-        res.status(400).json({
-          success: false,
-          message: String(validationErrors[0]?.msg || 'Validation failed'),
-          errors: validationErrors
-        });
-        return;
-      }
-
       const credentials: LoginCredentials = req.body;
       const result = await this.authService.login(credentials);
 
@@ -70,16 +58,6 @@ export class AuthController {
    */
   register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const credentials: RegisterCredentials = req.body;
       const result = await this.authService.register(credentials);
 
@@ -104,16 +82,6 @@ export class AuthController {
    */
   verifyResetNip = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const payload: PasswordResetRequestPayload = req.body;
       const result = await this.authService.requestPasswordResetCode(payload.nip);
 
@@ -144,16 +112,6 @@ export class AuthController {
    */
   resetPassword = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const payload: PasswordResetConfirmPayload = req.body;
       const result = await this.authService.resetPasswordWithCode(payload);
 
@@ -230,16 +188,6 @@ export class AuthController {
       const userId = getAuthenticatedUserId(req);
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
-        return;
-      }
-
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
         return;
       }
 

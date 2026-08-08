@@ -59,12 +59,16 @@ export function createAssetStatusScenarios({
 
   async function api(method, endpoint, token, body) {
     return getDriver().executeAsyncScript(
-      function request(methodArg, endpointArg, tokenArg, bodyArg, done) {
+      // Fungsi ini diserialisasi lalu dijalankan di dalam browser, sehingga tidak
+      // dapat mengakses variabel dari scope Node. `testClientIp` wajib dikirim
+      // sebagai argumen; sebelumnya dirujuk langsung dan selalu melempar
+      // ReferenceError, membuat seluruh skenario status aset gagal saat penyiapan.
+      function request(methodArg, endpointArg, tokenArg, bodyArg, clientIpArg, done) {
         const headers = {};
         if (bodyArg !== null) headers["Content-Type"] = "application/json";
         if (tokenArg) headers.Authorization = `Bearer ${tokenArg}`;
-        headers["X-Forwarded-For"] = testClientIp;
-        headers["X-Real-IP"] = testClientIp;
+        headers["X-Forwarded-For"] = clientIpArg;
+        headers["X-Real-IP"] = clientIpArg;
 
         fetch(endpointArg, {
           method: methodArg,
@@ -87,6 +91,7 @@ export function createAssetStatusScenarios({
       `/api${endpoint}`,
       token || null,
       body ?? null,
+      testClientIp,
     );
   }
 

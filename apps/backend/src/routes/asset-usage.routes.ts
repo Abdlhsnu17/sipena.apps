@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import assetUsageController from '../controllers/asset-usage.controller';
 import { requireRole } from '../middlewares/auth.middleware';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 
@@ -19,7 +20,8 @@ router.get(
     query('roomName').optional().trim(),
     query('usageContext').optional().isIn(USAGE_CONTEXTS),
     query('dateFrom').optional().isISO8601(),
-    query('dateTo').optional().isISO8601()
+    query('dateTo').optional().isISO8601(),
+    validateRequest
   ],
   assetUsageController.getAll
 );
@@ -32,11 +34,12 @@ router.get(
     query('assetType').optional().isIn(ASSET_TYPES),
     query('state').optional().isIn(['all', 'warning', 'mandatory_check']),
     query('keyword').optional().trim(),
+    validateRequest
   ],
   assetUsageController.getThresholdOverview
 );
 
-router.get('/:id', [param('id').isInt({ min: 1 })], assetUsageController.getById);
+router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], assetUsageController.getById);
 
 router.post(
   '/',
@@ -56,7 +59,8 @@ router.post(
     body('usageCount').optional().isInt({ min: 1 }).toInt(),
     body('conditionBefore').optional().trim(),
     body('conditionAfter').optional().trim(),
-    body('notes').optional().trim()
+    body('notes').optional().trim(),
+    validateRequest
   ],
   assetUsageController.create
 );
@@ -74,7 +78,8 @@ router.patch(
     body('usageCount').optional().isInt({ min: 1 }).toInt(),
     body('conditionBefore').optional().trim(),
     body('conditionAfter').optional().trim(),
-    body('notes').optional().trim()
+    body('notes').optional().trim(),
+    validateRequest
   ],
   assetUsageController.update
 );
@@ -83,7 +88,8 @@ router.delete(
   '/:id',
   [
     param('id').isInt({ min: 1 }),
-    body('deleteReason').trim().notEmpty().withMessage('Alasan pengarsipan wajib diisi')
+    body('deleteReason').trim().notEmpty().withMessage('Alasan pengarsipan wajib diisi'),
+    validateRequest
   ],
   requireRole(['admin', 'leader']),
   assetUsageController.delete

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { AssetUsageService } from '../services/asset-usage.service';
 import { recordUserActivity } from '../services/user-activity.service';
@@ -96,12 +95,6 @@ export class AssetUsageController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       if (!actorId) {
         res.status(401).json({ success: false, message: 'User not authenticated' });
@@ -136,12 +129,6 @@ export class AssetUsageController {
 
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       const result = await this.assetUsageService.update(req.params.id, {
         ...req.body,
@@ -176,12 +163,6 @@ export class AssetUsageController {
 
   delete = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       const existing = await this.assetUsageService.getById(req.params.id);
       const result = await this.assetUsageService.delete(req.params.id, actorId ?? undefined, req.body?.deleteReason);

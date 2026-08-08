@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { UserService } from '../services/user.service';
 import { recordUserActivity } from '../services/user-activity.service';
 import { hasAnyRole, normalizeRole } from '../utils/role';
@@ -90,16 +89,6 @@ export class UserController {
    */
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       if (normalizeRole(req.user?.role) === 'leader' && normalizeRole(req.body.role) === 'admin') {
         res.status(403).json({
           success: false,
@@ -131,16 +120,6 @@ export class UserController {
    */
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const actorRole = normalizeRole(req.user?.role);
       if (actorRole === 'leader' && req.body.role !== undefined && normalizeRole(req.body.role) === 'admin') {
@@ -259,16 +238,6 @@ export class UserController {
    */
   bulkDelete = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-        return;
-      }
-
       const actorId = getAuthenticatedUserId(req);
       if (!actorId) {
         res.status(401).json({
@@ -298,16 +267,6 @@ export class UserController {
    */
   changePassword = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const { currentPassword, newPassword } = req.body;
       const actorId = getAuthenticatedUserId(req);
@@ -368,16 +327,6 @@ export class UserController {
    */
   resetPassword = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const { newPassword } = req.body;
       const actorId = getAuthenticatedUserId(req);

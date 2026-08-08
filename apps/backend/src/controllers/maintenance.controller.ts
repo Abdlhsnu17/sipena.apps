@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { MaintenanceService } from '../services/maintenance.service';
 import { recordUserActivity } from '../services/user-activity.service';
@@ -30,12 +29,6 @@ export class MaintenanceController {
 
   getTechnicianCandidates = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Parameter pencarian akun tidak valid', errors: errors.array() });
-        return;
-      }
-
       const search = typeof req.query.search === 'string' ? req.query.search : '';
       const limit = Number(req.query.limit) || 20;
       const result = await this.maintenanceService.getTechnicianCandidates(search, limit);
@@ -114,7 +107,8 @@ export class MaintenanceController {
         assetId,
         assetType,
         type,
-        automationSource
+        automationSource,
+        search
       } = req.query;
 
       const result = await this.maintenanceService.getAll({
@@ -126,6 +120,7 @@ export class MaintenanceController {
         assetType: normalizeAssetType(assetType),
         type: type as string,
         automationSource: automationSource as 'usage_threshold' | 'manual' | undefined,
+        search: search as string,
         actorUserId: getActorUserId(req),
         actorRole: req.user?.role,
         actorWorkUnit: req.user?.workUnit
@@ -171,16 +166,6 @@ export class MaintenanceController {
    */
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const createdBy = getActorUserId(req);
       if (!createdBy) {
         res.status(401).json({
@@ -253,16 +238,6 @@ export class MaintenanceController {
    */
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const requester = req.user;
       const requesterRole = requester?.role;

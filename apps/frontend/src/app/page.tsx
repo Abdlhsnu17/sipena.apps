@@ -4,13 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { assetUsageService } from "@/services/asset-usage.service";
-import { assetService, type Asset } from "@/services/asset.service";
 import { buildLoginRedirectUrl, clearAuthSession, getCurrentUser, isLocalAuthSession } from "@/services/auth-utils";
-import { borrowingService } from "@/services/borrowing.service";
-import { maintenanceService } from "@/services/maintenance.service";
 import reportService from "@/services/report.service";
 import type { User } from "@/types/auth-types";
-import { getSpecificationDetails } from "@/utils/api-mappers";
 import { canAccessRoute, normalizeUserRole } from "@/utils/role";
 import { Archive, ArrowRight, BarChart3, Building2, ClipboardList, FileText, HandHelping, ListChecks, RotateCcw, Settings, Shield, Stethoscope, Trash2, UploadCloud, Users, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -155,21 +151,6 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [allowedMenus, setAllowedMenus] = useState<AccessMenu[] | null>(null)
 
-  const collectRoomKeys = (assets: Asset[]): Set<string> => {
-    const rooms = new Set<string>()
-    assets.forEach((asset) => {
-      const normalizedLocation = asset.location?.trim()
-      if (normalizedLocation) {
-        rooms.add(normalizedLocation.toLowerCase())
-      } else if (asset.assetCode) {
-        rooms.add(asset.assetCode)
-      } else {
-        rooms.add(`asset-${asset.id}`)
-      }
-    })
-    return rooms
-  }
-
   const [stats, setStats] = useState({
     totalNonMedicalAssets: 0,
     activeNonMedicalAssets: 0,
@@ -286,7 +267,6 @@ export default function DashboardPage() {
   const loadStats = async () => {
     const user = currentUser
     const isPrivilegedDashboard = ["admin", "leader"].includes(normalizeUserRole(user?.role))
-    const currentUserId = user?.id ? String(user.id) : undefined
 
     if (isLocalAuthSession()) {
       setStats({
@@ -315,83 +295,46 @@ export default function DashboardPage() {
     }
 
     try {
-      const [medicalResponse, nonMedicalResponse, maintenanceResponse, borrowingResponse, usageResponse, reportResponse] = await Promise.all([
-        assetService.getMedicalAssets({ page: 1, limit: 1000 }),
-        assetService.getNonMedicalAssets({ page: 1, limit: 1000 }),
-        maintenanceService.getAll({ page: 1, limit: 1000 }),
-        borrowingService.getAll({
-          page: 1,
-          limit: 1000,
-          ...(isPrivilegedDashboard || !currentUserId ? {} : { userId: currentUserId }),
-        }),
-        assetUsageService.getAll({ page: 1, limit: 1000 }),
-        reportService.getDashboard(),
-      ])
+      // Seluruh angka kartu dihitung di database lewat satu request. Sebelumnya
+      // halaman ini menarik lima endpoint pada `limit: 1000` lalu menghitung di
+      // browser, dan karena loadStats berulang setiap 30 detik, ribuan baris
+      // ditarik terus-menerus hanya untuk menampilkan belasan angka.
+      const reportResponse = await reportService.getDashboard()
 
-      const medicalAssets = medicalResponse.success ? medicalResponse.data : []
-      const nonMedicalAssets = nonMedicalResponse.success ? nonMedicalResponse.data : []
-      const maintenanceData = maintenanceResponse.success ? maintenanceResponse.data : []
-      const borrowingsData = borrowingResponse.success ? borrowingResponse.data : []
-      const usageLogs = usageResponse.success ? usageResponse.data : []
+      if (!reportResponse.success) {
+        return
+      }
 
-      const totalNonMedicalAssets = nonMedicalAssets.length
-      const nonMedicalRoomAssets = nonMedicalAssets.filter((a) => a.status !== "disposed")
-      const nonMedicalRoomSet = collectRoomKeys(nonMedicalRoomAssets)
-      const activeNonMedicalAssets = nonMedicalRoomSet.size
-
-      const totalMedicalAssets = medicalAssets.length
-      const medicalRoomAssets = medicalAssets.filter((a) => a.status !== "disposed")
-      const medicalRoomSet = collectRoomKeys(medicalRoomAssets)
-      const activeMedicalAssets = medicalRoomSet.size
-      const nonMedicalDetailsCount = nonMedicalAssets.reduce(
-        (sum, asset) => sum + getSpecificationDetails(asset.specifications).length,
-        0
-      )
-      const medicalDetailsCount = medicalAssets.reduce(
-        (sum, asset) => sum + getSpecificationDetails(asset.specifications).length,
-        0
-      )
-
-      const maintenanceDue = maintenanceData.filter((m) =>
-        ["requested", "scheduled", "completed"].includes(m.status)
-      ).length
-      const completedMaintenance = maintenanceData.filter((m) => m.status === "validated").length
-      const activeBorrowings = borrowingsData.filter((b) =>
-        ["approved", "borrowed", "overdue"].includes(b.status)
-      ).length
-      const returnedBorrowings = borrowingsData.filter((b) => b.status === "returned").length
-      const totalUsageLogs = usageLogs.reduce((sum, log) => sum + (log.usageCount || 0), 0)
-      const usedAssetCount = new Set(
-        usageLogs.map((log) => log.assetDetailName || log.assetName || String(log.assetId))
-      ).size
-
-      const totalRoomCount = new Set([...nonMedicalRoomSet, ...medicalRoomSet]).size
+      const operational = reportResponse.data.operational
 
       setStats({
-        totalNonMedicalAssets,
-        activeNonMedicalAssets,
-        totalMedicalAssets,
-        activeMedicalAssets,
-        maintenanceDue,
-        completedMaintenance,
-        activeBorrowings,
-        returnedBorrowings,
-        totalUsageLogs,
-        usedAssetCount,
-        nonMedicalDetailsCount,
-        medicalDetailsCount,
-        nonMedicalRoomCount: nonMedicalRoomSet.size,
-        medicalRoomCount: medicalRoomSet.size,
-        totalRoomCount,
-        overdueBorrowings: isPrivilegedDashboard && reportResponse.success
-          ? reportResponse.data.overdueBorrowings
-          : borrowingsData.filter((b) => b.status === "overdue").length,
-        pendingBorrowings: isPrivilegedDashboard && reportResponse.success
-          ? reportResponse.data.pendingBorrowings
-          : borrowingsData.filter((b) => b.status === "pending").length,
-        availableAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.availableAssets : 0,
-        borrowedAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.borrowedAssets : 0,
-        maintenanceAssets: isPrivilegedDashboard && reportResponse.success ? reportResponse.data.maintenanceAssets : 0,
+        totalNonMedicalAssets: operational.totalNonMedicalAssets,
+        // "Aktif" di kartu ini berarti jumlah ruangan berbeda yang memakai aset,
+        // bukan jumlah asetnya.
+        activeNonMedicalAssets: operational.nonMedicalRoomCount,
+        totalMedicalAssets: operational.totalMedicalAssets,
+        activeMedicalAssets: operational.medicalRoomCount,
+        maintenanceDue: operational.maintenanceDue,
+        completedMaintenance: operational.completedMaintenance,
+        activeBorrowings: operational.activeBorrowings,
+        returnedBorrowings: operational.returnedBorrowings,
+        totalUsageLogs: operational.totalUsageLogs,
+        usedAssetCount: operational.usedAssetCount,
+        nonMedicalDetailsCount: operational.nonMedicalDetailsCount,
+        medicalDetailsCount: operational.medicalDetailsCount,
+        nonMedicalRoomCount: operational.nonMedicalRoomCount,
+        medicalRoomCount: operational.medicalRoomCount,
+        totalRoomCount: operational.totalRoomCount,
+        // Backend sudah membatasi cakupan sesuai hak akses aktor, sehingga angka
+        // ini otomatis bersifat global untuk admin/leader dan terbatas pada data
+        // sendiri untuk role lain.
+        overdueBorrowings: operational.overdueBorrowings,
+        pendingBorrowings: operational.pendingBorrowings,
+        // Tiga angka berikut adalah rekap seluruh aset, jadi tetap hanya
+        // ditampilkan untuk admin/leader seperti sebelumnya.
+        availableAssets: isPrivilegedDashboard ? reportResponse.data.availableAssets : 0,
+        borrowedAssets: isPrivilegedDashboard ? reportResponse.data.borrowedAssets : 0,
+        maintenanceAssets: isPrivilegedDashboard ? reportResponse.data.maintenanceAssets : 0,
       })
 
     } catch (error: any) {

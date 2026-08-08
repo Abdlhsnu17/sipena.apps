@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { param, query, validationResult } from 'express-validator';
+import { param, query } from 'express-validator';
 import notificationService from '../services/notification.service';
 import { notificationStreamHub } from '../utils/notification-stream';
 import { createSseTicket } from '../utils/sse-ticket';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const getActorUserId = (req: Request): number | null => {
   const parsed = Number(req.user?.id);
@@ -56,12 +57,6 @@ class NotificationController {
   };
 
   getMine = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
-
     const actorId = getActorUserId(req);
     if (!actorId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -89,12 +84,6 @@ class NotificationController {
   };
 
   markAsRead = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
-
     const actorId = getActorUserId(req);
     if (!actorId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -117,12 +106,6 @@ class NotificationController {
   };
 
   remove = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
-
     const actorId = getActorUserId(req);
     if (!actorId) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -177,8 +160,9 @@ export const notificationValidators = {
       .isIn(['borrowing', 'maintenance', 'disposal', 'deletion', 'asset', 'system']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    validateRequest
   ],
-  id: [param('id').isInt({ min: 1 })],
+  id: [param('id').isInt({ min: 1 }), validateRequest],
 };
 
 export default new NotificationController();

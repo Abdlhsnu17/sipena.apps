@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user-activity.service';
@@ -33,11 +32,6 @@ export class BorrowingController {
 
   getOwnerCandidates = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Parameter pencarian akun tidak valid', errors: errors.array() });
-        return;
-      }
       const search = typeof req.query.search === 'string' ? req.query.search : '';
       const limit = Number(req.query.limit) || 20;
       const result = await this.borrowingService.getOwnerCandidates(search, limit);
@@ -60,7 +54,10 @@ export class BorrowingController {
         status,
         userId,
         assetId,
-        assetType
+        assetType,
+        search,
+        lockedOnly,
+        source
       } = req.query;
 
       const result = await this.borrowingService.getAll({
@@ -70,6 +67,9 @@ export class BorrowingController {
         userId: userId as string,
         assetId: assetId as string,
         assetType: normalizeAssetType(assetType),
+        search: search as string,
+        lockedOnly: lockedOnly === 'true',
+        source: source as 'medis' | 'non_medis' | undefined,
         actorUserId: getActorUserId(req),
         actorRole: req.user?.role,
         actorWorkUnit: req.user?.workUnit
@@ -133,16 +133,6 @@ export class BorrowingController {
    */
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const authUser = req.user;
       const userId = authUser && authUser.id !== undefined ? (typeof authUser.id === 'number' ? authUser.id : Number(authUser.id)) : undefined;
 
@@ -213,16 +203,6 @@ export class BorrowingController {
    */
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const {
         borrowDate,
@@ -640,6 +620,27 @@ export class BorrowingController {
    * Get blocking borrowings for a user (peminjaman yang menghalangi peminjaman baru)
    * GET /api/borrowing/user/:userId/blocking
    */
+  /**
+   * Kunci ketersediaan inventaris dari peminjaman aktif.
+   * GET /api/borrowing/locks
+   */
+  getInventoryLocks = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.borrowingService.getInventoryLocks({
+        actorUserId: getActorUserId(req),
+        actorRole: req.user?.role,
+        actorWorkUnit: req.user?.workUnit
+      });
+      res.json(result);
+    } catch (error) {
+      logger.error('Get borrowing inventory locks error', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
   getBlockingBorrowings = async (req: Request, res: Response): Promise<void> => {
     try {
       const { userId } = req.params;
@@ -670,16 +671,6 @@ export class BorrowingController {
    */
   extend = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const actorId = getActorUserId(req);
 

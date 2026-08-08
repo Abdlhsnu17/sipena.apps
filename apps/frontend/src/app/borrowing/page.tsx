@@ -36,7 +36,6 @@ import { findAssetByScanTarget, parseScanTargetFromSearchParams } from "@/utils/
 import { buildInventorySearchKey } from "@/utils/inventory-search";
 import { formatNoId } from "@/utils/record-id";
 import { getUserRoleLabel, isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
-import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { findMatchingAsset } from "@/utils/scanned-asset";
 
 import BorrowingOwnerPicker from "@/components/borrowing/borrowing-owner-picker";
@@ -76,7 +75,7 @@ import {
 } from "@/utils/export-table";
 import { AlertTriangle, CalendarClock, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, HandHelping, MapPin, Pencil, Plus, Save, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildVisiblePageItems } from "@/utils/pagination";
 
 import { borrowingExportColumnDefinitions, type BorrowingExportColumn } from "./_lib/export-columns";
@@ -91,7 +90,6 @@ import {
   formatBorrowingPurposeType,
   formatDurationDiff,
   getRecommendedExtensionDateValue,
-  isBorrowingLockRecord,
   isOverdueBorrowingBlock,
 } from "@/utils/borrowing";
 import {
@@ -106,6 +104,10 @@ const INVENTORY_REFRESH_EVENT = "inventory-refresh"
 const BORROWING_REFRESH_SOURCE = "borrowing-page"
 
 const BORROWING_ROWS_PER_PAGE = 2
+
+// Batas aman saat mengekspor seluruh hasil filter; sama dengan batas maksimum
+// yang diizinkan endpoint daftar peminjaman.
+const BORROWING_EXPORT_LIMIT = 1000
 
 
 export default function BorrowingPage() {
@@ -139,7 +141,16 @@ export default function BorrowingPage() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  // Hanya berisi baris halaman yang sedang tampil. Penyaringan (kunci inventaris,
+  // kata kunci, asal aset) dan pagination dikerjakan server agar tidak perlu
+  // menarik seluruh peminjaman ke browser.
   const [borrowings, setBorrowings] = useState<ApiBorrowing[]>([])
+  const [borrowingTotal, setBorrowingTotal] = useState(0)
+  const [borrowingSummary, setBorrowingSummary] = useState({ active: 0, pending: 0, pendingValidation: 0 })
+  const [blockingBorrowings, setBlockingBorrowings] = useState<ApiBorrowing[]>([])
+  const [borrowingLocks, setBorrowingLocks] = useState<{ assetLocks: Set<string>; detailLocks: Set<string> }>(
+    () => ({ assetLocks: new Set(), detailLocks: new Set() })
+  )
   const [activeUsageLocks, setActiveUsageLocks] = useState<Set<string>>(new Set())
   const [activeMaintenanceLocks, setActiveMaintenanceLocks] = useState<Set<string>>(new Set())
   const [availableAssets, setAvailableAssets] = useState<BorrowableAsset[]>([])
@@ -408,16 +419,97 @@ export default function BorrowingPage() {
     }
   }
 
-  const loadBorrowings = async () => {
+  /** Filter daftar peminjaman yang dikirim ke server. */
+  const buildBorrowingQuery = useCallback(
+    () => ({
+      lockedOnly: true,
+      ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+      ...(filterSource !== "Semua" ? { source: filterSource } : {}),
+    }),
+    [searchTerm, filterSource]
+  )
+
+  const loadBorrowings = useCallback(async () => {
     try {
-      const response = await borrowingService.getAll({ page: 1, limit: 1000 })
+      const response = await borrowingService.getAll({
+        ...buildBorrowingQuery(),
+        page: borrowingPage,
+        limit: BORROWING_ROWS_PER_PAGE,
+      })
+
       if (response.success) {
         setBorrowings(response.data)
+        setBorrowingTotal(response.pagination?.total ?? response.data.length)
       }
     } catch (error) {
       console.error("Error loading borrowings:", error)
     }
-  }
+  }, [borrowingPage, buildBorrowingQuery])
+
+  /**
+   * Angka pada kartu pemberitahuan.
+   *
+   * Sengaja tidak mengikuti kata kunci maupun filter sumber, sama seperti
+   * sebelumnya ketika angka ini dihitung dari seluruh peminjaman yang mengunci
+   * inventaris. Hanya `pagination.total` yang dipakai, jadi `limit: 1` cukup.
+   */
+  const loadBorrowingSummary = useCallback(async () => {
+    try {
+      const [activeResponse, pendingResponse, validationResponse] = await Promise.all([
+        borrowingService.getAll({ lockedOnly: true, page: 1, limit: 1 }),
+        borrowingService.getAll({ lockedOnly: true, page: 1, limit: 1, status: "pending" }),
+        // `lockedOnly` menyisakan hanya pengembalian yang belum divalidasi.
+        borrowingService.getAll({ lockedOnly: true, page: 1, limit: 1, status: "returned" }),
+      ])
+
+      setBorrowingSummary({
+        active: activeResponse.success ? activeResponse.pagination?.total ?? 0 : 0,
+        pending: pendingResponse.success ? pendingResponse.pagination?.total ?? 0 : 0,
+        pendingValidation: validationResponse.success ? validationResponse.pagination?.total ?? 0 : 0,
+      })
+    } catch (error) {
+      console.error("Error loading borrowing summary:", error)
+    }
+  }, [])
+
+  const loadBorrowingLocks = useCallback(async () => {
+    try {
+      const response = await borrowingService.getInventoryLocks()
+      setBorrowingLocks(
+        response.success
+          ? {
+              assetLocks: new Set(response.data.assetLocks),
+              detailLocks: new Set(response.data.detailLocks),
+            }
+          : { assetLocks: new Set(), detailLocks: new Set() }
+      )
+    } catch (error) {
+      console.error("Error loading borrowing locks:", error)
+      setBorrowingLocks({ assetLocks: new Set(), detailLocks: new Set() })
+    }
+  }, [])
+
+  /**
+   * Peminjaman milik pengguna yang memblokir peminjaman baru.
+   *
+   * Memakai endpoint khusus, bukan menyaring daftar tabel, karena tabel kini
+   * hanya memuat satu halaman sehingga blokir bisa terlewat.
+   */
+  const loadBlockingBorrowings = useCallback(async () => {
+    const userId = Number(currentUser?.id)
+    if (!Number.isFinite(userId) || userId <= 0) {
+      setBlockingBorrowings([])
+      return
+    }
+
+    try {
+      const response = await borrowingService.getBlockingBorrowings(userId)
+      setBlockingBorrowings(response.success ? response.data : [])
+    } catch (error) {
+      console.error("Error loading blocking borrowings:", error)
+      setBlockingBorrowings([])
+    }
+  }, [currentUser?.id])
 
   const loadActiveMaintenanceLocks = async () => {
     try {
@@ -464,6 +556,9 @@ export default function BorrowingPage() {
     await Promise.all([
       loadAssets(),
       loadBorrowings(),
+      loadBorrowingSummary(),
+      loadBorrowingLocks(),
+      loadBlockingBorrowings(),
       loadActiveUsageLocks(),
       loadActiveMaintenanceLocks(),
     ])
@@ -483,19 +578,33 @@ export default function BorrowingPage() {
         if (!isMounted) return
         await Promise.all([
           loadAssets(),
-          loadBorrowings(),
+          loadBorrowingSummary(),
+          loadBorrowingLocks(),
+          loadBlockingBorrowings(),
           loadActiveUsageLocks(),
           loadActiveMaintenanceLocks()
         ])
       }
-      
+
       loadAllData()
-      
+
       return () => {
         isMounted = false
       }
     }
   }, [currentUser])
+
+  // Daftar peminjaman dimuat ulang saat halaman, kata kunci, atau filter sumber
+  // berubah. Kata kunci ditunda 300 ms agar tiap ketikan tidak memicu request.
+  useEffect(() => {
+    if (!currentUser) return
+
+    const timeoutId = window.setTimeout(() => {
+      void loadBorrowings()
+    }, searchTerm ? 300 : 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [currentUser, loadBorrowings, searchTerm])
 
   useEffect(() => {
     const handleInventoryRefresh = (event: Event) => {
@@ -1137,46 +1246,18 @@ export default function BorrowingPage() {
   const getBorrowingNoId = (borrowing: ApiBorrowing) =>
     formatNoId("PMJ", borrowing.id, borrowing.borrowingCode)
 
-  const visibleBorrowings = borrowings.filter((b) => isBorrowingLockRecord(b))
-
-  const filteredBorrowings = visibleBorrowings.filter((b) => {
-    const assetName = b.assetDetailName || b.assetName || ""
-    const borrowerName = b.userName || ""
-    const matchesSearch = matchesSearchKeyword(searchTerm, [
-      getBorrowingNoId(b),
-      b.borrowingCode,
-      assetName,
-      borrowerName,
-      b.userNip,
-      b.borrowerPosition,
-      b.borrowerWorkUnit,
-      b.ownerName,
-      b.ownerWorkUnit,
-      b.assetDetailCode,
-      b.assetCode,
-      b.purpose,
-      b.destinationRoom,
-      b.notes,
-    ])
-
-    const assetSource = deriveAssetSource(b.assetType, b.assetCode)
-    const matchesSource = filterSource === "Semua" || assetSource === filterSource
-    return matchesSearch && matchesSource
-  })
-
-  const selectedBorrowings = filteredBorrowings.filter((b) => selectedBorrowingIds.has(b.id))
+  // Server sudah menerapkan penyaringan kunci inventaris, kata kunci, dan asal
+  // aset, lalu mengembalikan tepat satu halaman.
+  const paginatedBorrowings = borrowings
+  const selectedBorrowings = borrowings.filter((b) => selectedBorrowingIds.has(b.id))
 
   useEffect(() => {
     setBorrowingPage(1)
-  }, [visibleBorrowings.length, filterSource, searchTerm])
+  }, [filterSource, searchTerm])
 
-  const totalBorrowingPages = Math.max(1, Math.ceil(filteredBorrowings.length / BORROWING_ROWS_PER_PAGE))
+  const totalBorrowingPages = Math.max(1, Math.ceil(borrowingTotal / BORROWING_ROWS_PER_PAGE))
   const currentBorrowingPage = Math.min(borrowingPage, totalBorrowingPages)
   const borrowingStartIndex = (currentBorrowingPage - 1) * BORROWING_ROWS_PER_PAGE
-  const paginatedBorrowings = filteredBorrowings.slice(
-    borrowingStartIndex,
-    borrowingStartIndex + BORROWING_ROWS_PER_PAGE,
-  )
   const visibleBorrowingPages = buildVisiblePageItems(currentBorrowingPage, totalBorrowingPages)
   const goToBorrowingPage = (page: number) => {
     setBorrowingPage(Math.min(totalBorrowingPages, Math.max(1, page)))
@@ -1413,8 +1494,36 @@ export default function BorrowingPage() {
     }
   }
 
-  const handleExport = (format: ExportFormat) => {
-    const rowsToExport = selectedBorrowings.length ? selectedBorrowings : filteredBorrowings
+  /**
+   * Baris untuk diekspor.
+   *
+   * Bila tidak ada baris yang dipilih, ekspor mencakup seluruh hasil filter —
+   * bukan hanya halaman yang tampil — sehingga datanya diambil ulang dari server
+   * saat tombol ekspor ditekan.
+   */
+  const collectBorrowingRowsToExport = async (): Promise<ApiBorrowing[]> => {
+    if (selectedBorrowings.length) return selectedBorrowings
+
+    try {
+      const response = await borrowingService.getAll({
+        ...buildBorrowingQuery(),
+        page: 1,
+        limit: BORROWING_EXPORT_LIMIT,
+      })
+      return response.success ? response.data : []
+    } catch (error) {
+      console.error("Error collecting borrowings to export:", error)
+      toast({
+        title: "Gagal menyiapkan ekspor",
+        description: "Data peminjaman tidak dapat diambil. Coba lagi.",
+        variant: "destructive",
+      })
+      return []
+    }
+  }
+
+  const handleExport = async (format: ExportFormat) => {
+    const rowsToExport = await collectBorrowingRowsToExport()
     if (!rowsToExport.length) return
     if (format === 'excel') {
       void exportNarrativeReport(format, {
@@ -1477,12 +1586,12 @@ export default function BorrowingPage() {
   const currentUserBlockingBorrowings = useMemo(() => {
     if (!Number.isFinite(currentUserId) || currentUserId <= 0) return []
 
-    return borrowings.filter(
+    return blockingBorrowings.filter(
       (borrowing) =>
         Number(borrowing.userId) === currentUserId &&
         isOverdueBorrowingBlock(borrowing)
     )
-  }, [borrowings, currentUser?.id])
+  }, [blockingBorrowings, currentUserId])
 
   const hasBorrowingOverdueBlock = currentUserBlockingBorrowings.length > 0
   const overdueBorrowingBlockMessage = hasBorrowingOverdueBlock
@@ -1493,26 +1602,12 @@ export default function BorrowingPage() {
       : `Anda masih memiliki peminjaman yang sudah melewati batas waktu. Kembalikan alat tersebut terlebih dahulu, atau perbarui batas waktu peminjaman bila alat masih digunakan.`
     : ""
 
-  const pendingCount = visibleBorrowings.filter((b) => b.status === "pending").length
-  const pendingValidationCount = visibleBorrowings.filter(
-    (b) => b.status === "returned" && !b.returnValidatedAt
-  ).length
-  const activeBorrowings = visibleBorrowings.filter(isBorrowingLockRecord)
-  const activeBorrowingAssetLocks = new Set<string>()
-  const activeBorrowingDetailLocks = new Set<string>()
-
-  activeBorrowings.forEach((borrowing) => {
-    const assetType = borrowing.assetType === "non_medical" ? "non_medical" : "medical"
-    const baseLockKey = `${assetType}|${borrowing.assetId}`
-    const detailId = normalizeDetailIdentifier(borrowing.assetDetailId)
-
-    if (!detailId || isAssetFallbackDetailId(detailId, borrowing.assetId, assetType)) {
-      activeBorrowingAssetLocks.add(baseLockKey)
-      return
-    }
-
-    activeBorrowingDetailLocks.add(`${baseLockKey}|${detailId}`)
-  })
+  const pendingCount = borrowingSummary.pending
+  const pendingValidationCount = borrowingSummary.pendingValidation
+  // Kunci ini harus mencakup seluruh peminjaman aktif, bukan hanya halaman yang
+  // tampil, sehingga dihitung server lewat endpoint khusus.
+  const activeBorrowingAssetLocks = borrowingLocks.assetLocks
+  const activeBorrowingDetailLocks = borrowingLocks.detailLocks
 
   const isMaintenanceLockedAsset = (asset: BorrowableAsset) => {
     const baseLockKey = `${asset.assetType}|${asset.assetId}`
@@ -1763,7 +1858,7 @@ export default function BorrowingPage() {
             ariaLabel="Pemberitahuan peminjaman"
             items={[
               { label: "Menunggu Persetujuan", value: pendingCount, icon: Search, tone: "amber" },
-              { label: "Sedang Dipinjam", value: activeBorrowings.length, icon: Sparkles, tone: "teal" },
+              { label: "Sedang Dipinjam", value: borrowingSummary.active, icon: Sparkles, tone: "teal" },
               { label: "Menunggu Validasi", value: pendingValidationCount, icon: CheckCircle, tone: "indigo" },
             ]}
           />
@@ -2117,7 +2212,7 @@ export default function BorrowingPage() {
                 <div>
                 <CardTitle className="text-lg">Daftar Peminjaman</CardTitle>
                 <CardDescription className="text-[13px] text-muted-foreground">
-                  Total: {filteredBorrowings.length} peminjaman
+                  Total: {borrowingTotal} peminjaman
                 </CardDescription>
               </div>
                 <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -2143,7 +2238,7 @@ export default function BorrowingPage() {
                 <span className="text-[12px] text-muted-foreground sm:text-right sm:text-[13px]">
                   {selectedBorrowings.length
                     ? `${selectedBorrowings.length} baris dipilih`
-                    : `Semua ${filteredBorrowings.length} baris`}
+                    : `Semua ${borrowingTotal} baris`}
                 </span>
               </div>
               </div>
@@ -2179,7 +2274,7 @@ export default function BorrowingPage() {
                       <option value="non_medis">Inventaris Non-Medis</option>
                     </select>
                   </div>
-                  {filteredBorrowings.length === 0 ? (
+                  {borrowingTotal === 0 ? (
                     <p className="text-muted-foreground text-center py-8 text-[13px]">Belum ada data peminjaman aktif atau yang menunggu validasi</p>
                   ) : (
                     <div className="px-3 pb-4 sm:px-4 sm:pb-4">
@@ -2409,7 +2504,7 @@ export default function BorrowingPage() {
                       </div>
                       <div className="flex flex-col gap-3 border-t border-slate-200 dark:border-slate-800/35 pt-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          Menampilkan {borrowingStartIndex + 1}-{Math.min(borrowingStartIndex + BORROWING_ROWS_PER_PAGE, filteredBorrowings.length)} dari {filteredBorrowings.length} peminjaman
+                          Menampilkan {borrowingStartIndex + 1}-{Math.min(borrowingStartIndex + BORROWING_ROWS_PER_PAGE, borrowingTotal)} dari {borrowingTotal} peminjaman
                         </div>
                         <div className="flex flex-wrap items-center gap-1">
                           <Button

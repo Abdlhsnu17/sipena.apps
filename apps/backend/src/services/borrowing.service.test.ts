@@ -1,11 +1,111 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BorrowingService,
   getRoleLabel,
   normalizeBorrowingDateFields,
   normalizeComparableText,
   normalizeDateInput,
   normalizeOptionalText,
 } from './borrowing.service';
+
+// getOverdueBorrowingInfo bersifat private; diakses lewat `as any` mengikuti pola
+// yang sudah dipakai pada test SLA pemeliharaan, agar aturan sanksi keterlambatan
+// bisa diuji tanpa menjadikannya bagian dari API publik service.
+type BorrowingServiceInternals = {
+  getOverdueBorrowingInfo: (
+    dueDate?: Date | string | null,
+    referenceDate?: Date
+  ) => {
+    overdueDays: number;
+    sanctionStatus: 'none' | 'active' | 'resolved';
+    sanctionNotes: string | null;
+    sanctionAppliedAt: Date | null;
+  };
+};
+
+const asInternals = (service: BorrowingService): BorrowingServiceInternals =>
+  service as unknown as BorrowingServiceInternals;
+
+describe('BorrowingService aturan sanksi keterlambatan', () => {
+  const service = asInternals(new BorrowingService());
+
+  it('tidak memberi sanksi ketika pengembalian tepat waktu', () => {
+    const due = new Date('2026-07-18T17:00:00');
+    const returnedAt = new Date('2026-07-18T15:00:00');
+    const info = service.getOverdueBorrowingInfo(due, returnedAt);
+
+    expect(info.overdueDays).toBe(0);
+    expect(info.sanctionStatus).toBe('none');
+    expect(info.sanctionNotes).toBeNull();
+    expect(info.sanctionAppliedAt).toBeNull();
+  });
+
+  it('tidak memberi sanksi ketika tidak ada tanggal jatuh tempo', () => {
+    const info = service.getOverdueBorrowingInfo(null, new Date('2026-07-30T09:00:00'));
+
+    expect(info.overdueDays).toBe(0);
+    expect(info.sanctionStatus).toBe('none');
+  });
+
+  it('tidak memberi sanksi tepat pada batas jatuh tempo', () => {
+    const due = new Date('2026-07-18T17:00:00');
+    const info = service.getOverdueBorrowingInfo(due, due);
+
+    expect(info.overdueDays).toBe(0);
+    expect(info.sanctionStatus).toBe('none');
+  });
+
+  it('mengaktifkan sanksi 1 hari untuk keterlambatan kurang dari 24 jam', () => {
+    const due = new Date('2026-07-18T17:00:00');
+    const returnedAt = new Date('2026-07-18T18:00:00'); // terlambat 1 jam
+    const info = service.getOverdueBorrowingInfo(due, returnedAt);
+
+    // Keterlambatan sekecil apa pun dihitung minimal 1 hari.
+    expect(info.overdueDays).toBe(1);
+    expect(info.sanctionStatus).toBe('active');
+    expect(info.sanctionNotes).toBe('Terlambat 1 hari');
+    expect(info.sanctionAppliedAt).toBe(returnedAt);
+  });
+
+  it('menghitung jumlah hari keterlambatan dan menuliskannya di catatan sanksi', () => {
+    const due = new Date('2026-07-18T09:00:00');
+    const returnedAt = new Date('2026-07-21T09:00:00'); // terlambat 3 hari
+    const info = service.getOverdueBorrowingInfo(due, returnedAt);
+
+    expect(info.overdueDays).toBe(3);
+    expect(info.sanctionStatus).toBe('active');
+    expect(info.sanctionNotes).toBe('Terlambat 3 hari');
+  });
+
+  it('memakai tanggal acuan sebagai waktu penerapan sanksi', () => {
+    const due = new Date('2026-07-01T09:00:00');
+    const referenceDate = new Date('2026-07-05T09:00:00');
+    const info = service.getOverdueBorrowingInfo(due, referenceDate);
+
+    expect(info.sanctionAppliedAt).toBe(referenceDate);
+    expect(info.overdueDays).toBe(4);
+  });
+
+  it('menerima tanggal jatuh tempo berformat string MySQL', () => {
+    const info = service.getOverdueBorrowingInfo(
+      '2026-07-18 09:00:00',
+      new Date('2026-07-20T09:00:00')
+    );
+
+    expect(info.overdueDays).toBe(2);
+    expect(info.sanctionStatus).toBe('active');
+  });
+
+  it('tidak pernah menetapkan status resolved secara otomatis', () => {
+    // 'resolved' hanya boleh terjadi lewat tindakan admin di SanctionsService,
+    // bukan sebagai hasil perhitungan keterlambatan.
+    const due = new Date('2026-07-01T09:00:00');
+    const info = service.getOverdueBorrowingInfo(due, new Date('2026-08-01T09:00:00'));
+
+    expect(info.sanctionStatus).toBe('active');
+    expect(info.sanctionStatus).not.toBe('resolved');
+  });
+});
 
 describe('normalizeDateInput', () => {
   it('returns undefined for empty/nullish input', () => {

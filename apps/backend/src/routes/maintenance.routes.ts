@@ -5,6 +5,8 @@ import path from 'path';
 import maintenanceController from '../controllers/maintenance.controller';
 import { requireRole } from '../middlewares/auth.middleware';
 import { getMaintenanceUploadsDir } from '../utils/storage-paths';
+import { buildStoredFileName } from '../utils/upload-filename';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 const uploadDir = getMaintenanceUploadsDir();
@@ -15,17 +17,10 @@ const MAINTENANCE_PRIORITIES = ['low', 'normal', 'high', 'critical'];
 const MAINTENANCE_RECURRENCE = ['none', 'monthly', 'quarterly', 'yearly'];
 const MAINTENANCE_APPROVAL = ['not_required', 'pending', 'approved', 'rejected'];
 
-const sanitizeFileName = (filename: string): string => {
-  const parsed = path.parse(path.basename(filename));
-  const baseName = parsed.name.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  const extension = parsed.ext.toLowerCase().replace(/[^a-z0-9.]/g, '');
-  return `${baseName || 'maintenance'}${extension}`;
-};
-
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadDir),
-    filename: (_req, file, cb) => cb(null, `${Date.now()}-${sanitizeFileName(file.originalname)}`)
+    filename: (_req, file, cb) => cb(null, buildStoredFileName(file.originalname, 'maintenance'))
   }),
   fileFilter: (_req, file, cb) => {
     const extension = path.extname(file.originalname).toLowerCase();
@@ -43,13 +38,15 @@ router.get(
   '/',
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
-    query('limit').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 1000 }).toInt(),
     query('view').optional().isIn(['active', 'history']),
     query('status').optional().isIn(MAINTENANCE_STATUSES),
     query('assetId').optional().isInt({ min: 1 }).toInt(),
     query('assetType').optional().isIn(['medical', 'non_medical']),
     query('type').optional().isIn(MAINTENANCE_TYPES),
-    query('automationSource').optional().isIn(['usage_threshold', 'manual'])
+    query('automationSource').optional().isIn(['usage_threshold', 'manual']),
+    query('search').optional().trim().isLength({ max: 200 }),
+    validateRequest
   ],
   maintenanceController.getAll
 );
@@ -58,7 +55,8 @@ router.get(
   '/technician-candidates',
   [
     query('search').optional().trim().isLength({ max: 100 }),
-    query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
+    validateRequest
   ],
   maintenanceController.getTechnicianCandidates
 );
@@ -66,16 +64,16 @@ router.get(
 router.get('/analytics', maintenanceController.getAnalytics);
 router.post('/dispatch-reminders', requireRole(['admin', 'leader']), maintenanceController.dispatchReminders);
 
-router.get('/:id/attachments', [param('id').isInt({ min: 1 })], maintenanceController.getAttachments);
+router.get('/:id/attachments', [param('id').isInt({ min: 1 }), validateRequest], maintenanceController.getAttachments);
 router.post(
   '/:id/attachments',
-  [param('id').isInt({ min: 1 })],
+  [param('id').isInt({ min: 1 }), validateRequest],
   requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi']),
   upload.single('file'),
   maintenanceController.uploadAttachment
 );
 
-router.get('/:id', [param('id').isInt({ min: 1 })], maintenanceController.getById);
+router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], maintenanceController.getById);
 
 router.post(
   '/',
@@ -119,7 +117,8 @@ router.post(
     body('approvalNotes').optional().trim(),
     body('cost').optional().isFloat({ min: 0 }),
     body('notes').optional().trim(),
-    body('cancellationReason').optional().trim()
+    body('cancellationReason').optional().trim(),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj']),
   maintenanceController.create
@@ -168,7 +167,8 @@ router.put(
     body('approvalNotes').optional().trim(),
     body('cost').optional().isFloat({ min: 0 }),
     body('notes').optional().trim(),
-    body('cancellationReason').optional().trim()
+    body('cancellationReason').optional().trim(),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'teknisi']),
   maintenanceController.update
@@ -179,12 +179,13 @@ router.patch(
   [
     param('id').isInt({ min: 1 }),
     body('notes').optional().trim(),
-    body('cost').optional().isFloat({ min: 0 })
+    body('cost').optional().isFloat({ min: 0 }),
+    validateRequest
   ],
   requireRole(['admin', 'leader', 'teknisi']),
   maintenanceController.complete
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), maintenanceController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), maintenanceController.delete);
 
 export default router;

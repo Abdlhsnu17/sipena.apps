@@ -68,6 +68,15 @@ export interface BorrowingFilters {
   userId?: string;
   assetId?: string;
   assetType?: 'medical' | 'non_medical';
+  /** Kata kunci bebas; dicocokkan server ke kode, aset, peminjam, dan catatan. */
+  search?: string;
+  /**
+   * Hanya peminjaman yang masih mengunci inventaris: status aktif, atau
+   * `returned` yang pengembaliannya belum divalidasi.
+   */
+  lockedOnly?: boolean;
+  /** Asal aset yang ditampilkan pada filter "Sumber". */
+  source?: 'medis' | 'non_medis';
 }
 
 export interface BorrowingResponse {
@@ -295,6 +304,18 @@ class BorrowingService {
     const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
+  }
+
+  /**
+   * Kunci ketersediaan inventaris dari peminjaman aktif, dihitung di server.
+   * Menggantikan penurunan kunci dari seluruh daftar peminjaman di browser.
+   */
+  async getInventoryLocks(): Promise<{
+    success: boolean;
+    message: string;
+    data: { assetLocks: string[]; detailLocks: string[] };
+  }> {
+    return apiService.get('/borrowing/locks');
   }
 
   async getBlockingBorrowings(userId: number | string): Promise<BorrowingResponse> {

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import { importAssetsFromBuffer, generateImportTemplate } from '../services/asset-import.service';
 import { AssetService } from '../services/asset.service';
 import { createScopedLogger } from '../utils/logger';
@@ -78,16 +77,6 @@ export class AssetController {
    */
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const result = await this.assetService.create(req.body);
       res.status(201).json(result);
     } catch (error) {
@@ -105,16 +94,6 @@ export class AssetController {
    */
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-        return;
-      }
-
       const { id } = req.params;
       const { type = 'medical' } = req.body;
       const result = await this.assetService.update(id, req.body, type);

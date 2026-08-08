@@ -200,4 +200,14 @@ export interface MaintenanceFilters {
   actorUserId?: number | string | null;
   actorRole?: string | null;
   actorWorkUnit?: string | null;
+  /**
+   * Kata kunci bebas; dicocokkan ke kode tiket, nama/kode aset, nama detail
+   * inventaris, dan pemohon.
+   *
+   * Catatan: pencarian di browser juga menjangkau merek/model detail inventaris
+   * yang tersimpan di dalam JSON `specifications` aset. Itu tidak dapat dicari
+   * per-detail di MariaDB 10.4 karena JSON_TABLE belum tersedia, sehingga
+   * pencarian sisi server sengaja dibatasi pada kolom nyata.
+   */
+  search?: string;
 }

@@ -17,6 +17,13 @@ import {
     generateBorrowingCode,
     getOverdueDays
 } from '../utils/helpers';
+import { resolveActorScope } from '../utils/actor-scope';
+import { buildInventoryLockKeys, type InventoryLockKeys } from '../utils/inventory-lock';
+import {
+  buildAssetSourceExpression,
+  buildKeywordSearchCondition,
+  buildRecordNoIdExpression,
+} from '../utils/keyword-search';
 import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { DISPLAY_TIME_ZONE } from '../utils/time';
@@ -74,6 +81,38 @@ export const normalizeOptionalText = (value?: string | null): string | null => {
 export const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
+
+/**
+ * Peminjaman yang masih "mengunci" inventaris: status aktif, atau `returned`
+ * yang pengembaliannya belum divalidasi. Padanan SQL dari isBorrowingLockRecord
+ * di frontend.
+ */
+export const BORROWING_LOCK_CONDITION =
+  "(b.status IN ('pending', 'approved', 'borrowed', 'overdue') OR (b.status = 'returned' AND b.return_validated_at IS NULL))";
+
+/**
+ * Kolom yang ikut dicari oleh kata kunci pada daftar peminjaman. Urutannya
+ * mengikuti daftar nilai yang sebelumnya dicocokkan di browser.
+ */
+export const BORROWING_SEARCH_COLUMNS = [
+  buildRecordNoIdExpression('PMJ', 'b.borrowing_code', 'b.id'),
+  'b.borrowing_code',
+  // Tabel menampilkan `assetDetailName || assetName`, jadi keduanya dikolapskan
+  // menjadi satu nilai yang dicari. Bila dicari terpisah, sebuah baris bisa
+  // muncul karena nama aset induk yang tidak pernah tampil di layar.
+  "COALESCE(NULLIF(b.asset_detail_name, ''), ma.name, na.name)",
+  'u.name',
+  'u.nip',
+  'b.borrower_position',
+  'b.borrower_work_unit',
+  'b.owner_name',
+  'b.owner_work_unit',
+  'b.asset_detail_code',
+  'COALESCE(ma.asset_code, na.asset_code)',
+  'b.purpose',
+  'b.destination_room',
+  'b.notes',
+];
 
 export const getRoleLabel = (role?: string | null): string => {
   switch (String(role || '').trim().toLowerCase().replace(/[\s-]+/g, '_')) {
@@ -911,88 +950,116 @@ export class BorrowingService {
   async getAll(filters: BorrowingFilters): Promise<PaginatedResponse<Borrowing>> {
     await this.syncOverdueBorrowings();
 
-    const { page, limit, status, userId, assetId, assetType, actorUserId, actorRole, actorWorkUnit } = filters;
+    const {
+      page,
+      limit,
+      status,
+      userId,
+      assetId,
+      assetType,
+      actorUserId,
+      actorRole,
+      actorWorkUnit,
+      search,
+      lockedOnly,
+      source,
+    } = filters;
     const offset = (page - 1) * limit;
-    const scopedActorId = Number(actorUserId);
-    const hasValidActorId = Number.isFinite(scopedActorId) && scopedActorId > 0;
-    const isFullAccess = hasAnyRole(actorRole, ['admin', 'leader']);
-    const isStaffPj = hasAnyRole(actorRole, ['staff_pj', 'staff pj']);
-    const scopedWorkUnit = normalizeComparableText(actorWorkUnit);
-    const shouldScopeToWorkUnit = isStaffPj && hasValidActorId && Boolean(scopedWorkUnit);
-    const shouldScopeToActor = hasValidActorId && !isFullAccess && !shouldScopeToWorkUnit;
+    const actorScope = resolveActorScope({
+      actorUserId,
+      actorRole,
+      actorWorkUnit,
+      fullAccessRoles: ['admin', 'leader'],
+    });
+    const shouldScopeToWorkUnit = actorScope.mode === 'work_unit';
+    const shouldScopeToActor = actorScope.mode === 'own_records';
+    const scopedWorkUnit = actorScope.workUnit;
+    const scopedActorId = actorScope.actorUserId;
 
     // Perbaikan QUERY: Menggunakan logika JOIN yang lebih ketat terhadap asset_type
-    // dan mengambil data dari tabel yang sesuai (medical vs non-medical)
-    let query = `
-      SELECT b.*,
-        COALESCE(ma.name, na.name) as asset_name,
-        COALESCE(ma.asset_code, na.asset_code) as asset_code,
-        COALESCE(ma.location, na.location) as asset_location,
-        COALESCE(b.asset_type, 'medical') as asset_type, 
-        u.name as user_name, u.nip as user_nip, u.email as user_email, u.role as borrower_role, u.work_unit as borrower_current_work_unit,
-        v.name as return_validator_name, v.nip as return_validator_nip,
-        r.name as returned_by_name, r.nip as returned_by_nip
+    // dan mengambil data dari tabel yang sesuai (medical vs non-medical).
+    // Query data dan query hitung memakai FROM serta WHERE yang sama supaya
+    // `total` tidak pernah menyimpang dari baris yang benar-benar dikembalikan —
+    // sebelumnya keduanya memelihara dua string kondisi yang terpisah.
+    const fromClause = `
       FROM borrowing_records b
-      LEFT JOIN medical_assets ma 
-        ON b.asset_id = ma.id 
+      LEFT JOIN medical_assets ma
+        ON b.asset_id = ma.id
         AND (b.asset_type = 'medical' OR b.asset_type IS NULL)
-      LEFT JOIN non_medical_assets na 
-        ON b.asset_id = na.id 
+      LEFT JOIN non_medical_assets na
+        ON b.asset_id = na.id
         AND b.asset_type = 'non_medical'
       JOIN users u ON b.user_id = u.id
       LEFT JOIN users v ON b.return_validated_by = v.id
       LEFT JOIN users r ON b.returned_by = r.id
-      WHERE b.deleted_at IS NULL
     `;
 
-    let countQuery = 'SELECT COUNT(*) as count FROM borrowing_records WHERE deleted_at IS NULL';
+    const conditions: string[] = ['b.deleted_at IS NULL'];
     const params: any[] = [];
-    const countParams: any[] = [];
 
     if (status) {
-      query += ' AND b.status = ?';
-      countQuery += ' AND status = ?';
+      conditions.push('b.status = ?');
       params.push(status);
-      countParams.push(status);
     }
 
     if (shouldScopeToWorkUnit) {
-      query += ' AND LOWER(TRIM(b.borrower_work_unit)) = ?';
-      countQuery += ' AND LOWER(TRIM(borrower_work_unit)) = ?';
+      conditions.push('LOWER(TRIM(b.borrower_work_unit)) = ?');
       params.push(scopedWorkUnit);
-      countParams.push(scopedWorkUnit);
     } else if (shouldScopeToActor) {
-      query += ' AND b.user_id = ?';
-      countQuery += ' AND user_id = ?';
+      conditions.push('b.user_id = ?');
       params.push(scopedActorId);
-      countParams.push(scopedActorId);
     } else if (userId) {
-      query += ' AND b.user_id = ?';
-      countQuery += ' AND user_id = ?';
+      conditions.push('b.user_id = ?');
       params.push(userId);
-      countParams.push(userId);
     }
 
     if (assetId) {
-      query += ' AND b.asset_id = ?';
-      countQuery += ' AND asset_id = ?';
+      conditions.push('b.asset_id = ?');
       params.push(assetId);
-      countParams.push(assetId);
     }
 
     // Filter berdasarkan asset_type (medis/non-medis)
     if (assetType) {
-      query += " AND COALESCE(b.asset_type, 'medical') = ?";
-      countQuery += " AND COALESCE(asset_type, 'medical') = ?";
+      conditions.push("COALESCE(b.asset_type, 'medical') = ?");
       params.push(assetType);
-      countParams.push(assetType);
     }
 
-    query += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    if (lockedOnly) {
+      conditions.push(BORROWING_LOCK_CONDITION);
+    }
 
-    const [dataRows] = await pool.query<BorrowingRow[]>(query, params);
-    const [countRows] = await pool.query<CountRow[]>(countQuery, countParams);
+    if (source) {
+      conditions.push(
+        `${buildAssetSourceExpression('b.asset_type', 'COALESCE(ma.asset_code, na.asset_code)')} = ?`
+      );
+      params.push(source);
+    }
+
+    const searchCondition = buildKeywordSearchCondition(search, BORROWING_SEARCH_COLUMNS);
+    if (searchCondition) {
+      conditions.push(searchCondition.sql);
+      params.push(...searchCondition.params);
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const query = `
+      SELECT b.*,
+        COALESCE(ma.name, na.name) as asset_name,
+        COALESCE(ma.asset_code, na.asset_code) as asset_code,
+        COALESCE(ma.location, na.location) as asset_location,
+        COALESCE(b.asset_type, 'medical') as asset_type,
+        u.name as user_name, u.nip as user_nip, u.email as user_email, u.role as borrower_role, u.work_unit as borrower_current_work_unit,
+        v.name as return_validator_name, v.nip as return_validator_nip,
+        r.name as returned_by_name, r.nip as returned_by_nip
+      ${fromClause}
+      ${whereClause}
+      ORDER BY b.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    const countQuery = `SELECT COUNT(*) as count ${fromClause} ${whereClause}`;
+
+    const [dataRows] = await pool.query<BorrowingRow[]>(query, [...params, limit, offset]);
+    const [countRows] = await pool.query<CountRow[]>(countQuery, params);
 
     const total = countRows[0].count;
 
@@ -1001,6 +1068,57 @@ export class BorrowingService {
       message: 'Borrowings retrieved successfully',
       data: dataRows.map((row) => normalizeBorrowingDateFields(row)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    };
+  }
+
+  /**
+   * Kunci ketersediaan inventaris dari peminjaman yang masih aktif.
+   *
+   * Halaman peminjaman dulu menghitung ini dengan menarik seluruh peminjaman ke
+   * browser. Endpoint ini mengembalikan hanya kuncinya (beberapa ratus byte),
+   * dengan cakupan aktor yang sama seperti daftar peminjaman sehingga perilaku
+   * yang terlihat tidak berubah.
+   */
+  async getInventoryLocks(
+    filters: Pick<BorrowingFilters, 'actorUserId' | 'actorRole' | 'actorWorkUnit'>
+  ): Promise<ApiResponse<InventoryLockKeys>> {
+    await this.syncOverdueBorrowings();
+
+    const actorScope = resolveActorScope({
+      actorUserId: filters.actorUserId,
+      actorRole: filters.actorRole,
+      actorWorkUnit: filters.actorWorkUnit,
+      fullAccessRoles: ['admin', 'leader'],
+    });
+
+    const conditions = ['b.deleted_at IS NULL', BORROWING_LOCK_CONDITION];
+    const params: Array<string | number> = [];
+
+    if (actorScope.mode === 'work_unit') {
+      conditions.push('LOWER(TRIM(b.borrower_work_unit)) = ?');
+      params.push(actorScope.workUnit as string);
+    } else if (actorScope.mode === 'own_records') {
+      conditions.push('b.user_id = ?');
+      params.push(actorScope.actorUserId as number);
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT b.asset_id, b.asset_type, b.asset_detail_id
+       FROM borrowing_records b
+       WHERE ${conditions.join(' AND ')}`,
+      params
+    );
+
+    return {
+      success: true,
+      message: 'Borrowing inventory locks retrieved successfully',
+      data: buildInventoryLockKeys(
+        rows.map((row) => ({
+          assetId: Number(row.asset_id),
+          assetType: row.asset_type,
+          assetDetailId: row.asset_detail_id,
+        }))
+      ),
     };
   }
 

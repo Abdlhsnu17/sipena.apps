@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { param, body, query, validationResult } from 'express-validator';
+import { param, body, query } from 'express-validator';
 import sanctionsService from '../services/sanctions.service';
 import { createScopedLogger } from '../utils/logger';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const logger = createScopedLogger('controller:sanctions');
 
@@ -12,11 +13,6 @@ const getAuthenticatedUserId = (req: Request): number | null => {
 
 class SanctionsController {
   getAll = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const status = (req.query.status as string) || 'active';
       const userId = req.query.userId ? Number(req.query.userId) : undefined;
@@ -41,11 +37,6 @@ class SanctionsController {
   };
 
   resolve = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const borrowingId = Number(req.params.id);
       const resolvedByUserId = getAuthenticatedUserId(req);
@@ -63,11 +54,6 @@ class SanctionsController {
   };
 
   waive = async (req: Request, res: Response): Promise<void> => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-      return;
-    }
     try {
       const borrowingId = Number(req.params.id);
       const resolvedByUserId = getAuthenticatedUserId(req);
@@ -91,14 +77,17 @@ export const sanctionsValidators = {
     query('userId').optional().isInt({ min: 1 }).toInt(),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    validateRequest
   ],
   resolve: [
     param('id').isInt({ min: 1 }),
     body('notes').optional().trim(),
+    validateRequest
   ],
   waive: [
     param('id').isInt({ min: 1 }),
     body('reason').trim().notEmpty().withMessage('Alasan pembebasan sanksi wajib diisi'),
+    validateRequest
   ],
 };
 

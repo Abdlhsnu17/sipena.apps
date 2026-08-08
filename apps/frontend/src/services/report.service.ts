@@ -19,6 +19,32 @@ export interface DashboardStats {
   borrowingStatusSummary: StatusSummary[]
   maintenanceStatusSummary: StatusSummary[]
   dueNotifications: DueNotification[]
+  operational: DashboardOperationalStats
+}
+
+/**
+ * Statistik kartu dashboard yang dihitung di database.
+ *
+ * Sebelumnya nilai-nilai ini dihitung di browser setelah menarik lima endpoint
+ * pada `limit: 1000`. Cakupan datanya sudah disesuaikan dengan hak akses aktor
+ * oleh backend, jadi tidak perlu difilter ulang di sisi klien.
+ */
+export interface DashboardOperationalStats {
+  totalMedicalAssets: number
+  totalNonMedicalAssets: number
+  nonMedicalRoomCount: number
+  medicalRoomCount: number
+  totalRoomCount: number
+  medicalDetailsCount: number
+  nonMedicalDetailsCount: number
+  maintenanceDue: number
+  completedMaintenance: number
+  activeBorrowings: number
+  returnedBorrowings: number
+  pendingBorrowings: number
+  overdueBorrowings: number
+  totalUsageLogs: number
+  usedAssetCount: number
 }
 
 export interface StatusSummary {

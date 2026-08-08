@@ -4,6 +4,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
+import { resolveActorScope } from '../utils/actor-scope';
 import { createScopedLogger } from '../utils/logger';
 import { hasAnyRole } from '../utils/role';
 import { getReportUploadsDir } from '../utils/storage-paths';
@@ -23,6 +24,7 @@ interface ReportFilters {
   userId?: string;
   actorUserId?: number | string | null;
   actorRole?: string | null;
+  actorWorkUnit?: string | null;
 }
 
 interface StatsRow extends RowDataPacket {
@@ -37,6 +39,16 @@ interface StatsRow extends RowDataPacket {
   overdue: number;
   active_sanctions: number;
   scheduled: number;
+  room_count: number;
+  detail_count: number;
+  due_count: number;
+  completed_count: number;
+  active_count: number;
+  returned_count: number;
+  pending_count: number;
+  overdue_count: number;
+  total_usage: number;
+  used_asset_count: number;
 }
 
 interface DashboardStats {
@@ -58,6 +70,36 @@ interface DashboardStats {
   borrowingStatusSummary: Array<{ status: string; total: number }>;
   maintenanceStatusSummary: Array<{ status: string; total: number }>;
   dueNotifications: DueNotification[];
+  operational: DashboardOperationalStats;
+}
+
+/**
+ * Ringkasan operasional untuk kartu dashboard.
+ *
+ * Sebelumnya angka-angka ini dihitung di browser dengan menarik 5 endpoint
+ * sekaligus pada `limit: 1000`, sehingga pagination dan index database tidak
+ * terpakai dan dashboard melambat seiring bertambahnya data. Perhitungannya
+ * dipindahkan ke SQL agar hanya satu request yang dibutuhkan.
+ */
+interface DashboardOperationalStats {
+  totalMedicalAssets: number;
+  totalNonMedicalAssets: number;
+  /** Jumlah ruangan berbeda yang memakai aset non-medis (aset disposed dikecualikan). */
+  nonMedicalRoomCount: number;
+  /** Jumlah ruangan berbeda yang memakai aset medis (aset disposed dikecualikan). */
+  medicalRoomCount: number;
+  /** Gabungan ruangan medis dan non-medis tanpa duplikat. */
+  totalRoomCount: number;
+  medicalDetailsCount: number;
+  nonMedicalDetailsCount: number;
+  maintenanceDue: number;
+  completedMaintenance: number;
+  activeBorrowings: number;
+  returnedBorrowings: number;
+  pendingBorrowings: number;
+  overdueBorrowings: number;
+  totalUsageLogs: number;
+  usedAssetCount: number;
 }
 
 type DueNotificationType = 'borrowing_overdue' | 'borrowing_due_soon' | 'maintenance_due_soon';
@@ -775,7 +817,154 @@ export class ReportService {
     }
   }
 
-  async getDashboardStats(filters: Pick<ReportFilters, 'actorUserId' | 'actorRole'> = {}): Promise<ApiResponse<DashboardStats>> {
+  /**
+   * Statistik operasional dashboard, dihitung penuh di database.
+   *
+   * Cakupan datanya sengaja mengikuti aturan yang sama dengan daftar masing-masing
+   * modul (lihat resolveActorScope), supaya kartu dashboard tidak pernah
+   * menampilkan angka yang lebih luas daripada data yang boleh dilihat aktor.
+   */
+  private async getDashboardOperationalStats(
+    filters: Pick<ReportFilters, 'actorUserId' | 'actorRole' | 'actorWorkUnit'> = {}
+  ): Promise<DashboardOperationalStats> {
+    // Kunci ruangan mengikuti perhitungan lama di frontend: pakai lokasi bila ada,
+    // jika kosong pakai kode aset, dan sebagai upaya terakhir id aset.
+    const roomKeyExpression = (alias: string) =>
+      `COALESCE(NULLIF(LOWER(TRIM(${alias}.location)), ''), NULLIF(${alias}.asset_code, ''), CONCAT('asset-', ${alias}.id))`;
+
+    // `specifications` disimpan sebagai TEXT, jadi JSON_VALID wajib diperiksa lebih
+    // dulu: JSON_EXTRACT pada teks tidak valid akan menggagalkan seluruh query.
+    const detailCountExpression = (alias: string) =>
+      `CASE
+         WHEN ${alias}.specifications IS NOT NULL
+          AND JSON_VALID(${alias}.specifications)
+          AND JSON_TYPE(JSON_EXTRACT(${alias}.specifications, '$.details')) = 'ARRAY'
+         THEN JSON_LENGTH(JSON_EXTRACT(${alias}.specifications, '$.details'))
+         ELSE 0
+       END`;
+
+    const buildAssetStatsQuery = (table: string) => `
+      SELECT
+        COUNT(*) AS total,
+        COUNT(DISTINCT CASE WHEN COALESCE(a.status, '') <> 'disposed' THEN ${roomKeyExpression('a')} END) AS room_count,
+        COALESCE(SUM(${detailCountExpression('a')}), 0) AS detail_count
+      FROM ${table} a
+    `;
+
+    const borrowingScope = resolveActorScope({ ...filters, fullAccessRoles: ['admin', 'leader'] });
+    const maintenanceScope = resolveActorScope({
+      ...filters,
+      fullAccessRoles: ['admin', 'leader', 'teknisi'],
+    });
+
+    let borrowingCondition = '';
+    const borrowingParams: Array<number | string> = [];
+    if (borrowingScope.mode === 'work_unit') {
+      borrowingCondition = ' AND LOWER(TRIM(borrower_work_unit)) = ?';
+      borrowingParams.push(borrowingScope.workUnit as string);
+    } else if (borrowingScope.mode === 'own_records') {
+      borrowingCondition = ' AND user_id = ?';
+      borrowingParams.push(borrowingScope.actorUserId as number);
+    }
+
+    let maintenanceCondition = '';
+    const maintenanceParams: Array<number | string> = [];
+    if (maintenanceScope.mode === 'work_unit') {
+      maintenanceCondition =
+        ' AND created_by IN (SELECT id FROM users WHERE LOWER(TRIM(work_unit)) = ?)';
+      maintenanceParams.push(maintenanceScope.workUnit as string);
+    } else if (maintenanceScope.mode === 'own_records') {
+      maintenanceCondition = ' AND (created_by = ? OR completed_by = ?)';
+      maintenanceParams.push(
+        maintenanceScope.actorUserId as number,
+        maintenanceScope.actorUserId as number
+      );
+    }
+
+    const [
+      [medicalRow],
+      [nonMedicalRow],
+      [roomRow],
+      [maintenanceRow],
+      [borrowingRow],
+      [usageRow],
+    ] = await Promise.all([
+      pool.query<StatsRow[]>(buildAssetStatsQuery('medical_assets')).then(([rows]) => rows),
+      pool.query<StatsRow[]>(buildAssetStatsQuery('non_medical_assets')).then(([rows]) => rows),
+      // Ruangan gabungan dihitung sebagai union agar ruangan yang memuat aset medis
+      // dan non-medis sekaligus tidak dihitung dua kali.
+      pool
+        .query<StatsRow[]>(
+          `SELECT COUNT(*) AS total FROM (
+             SELECT ${roomKeyExpression('a')} AS room_key FROM medical_assets a WHERE COALESCE(a.status, '') <> 'disposed'
+             UNION
+             SELECT ${roomKeyExpression('a')} AS room_key FROM non_medical_assets a WHERE COALESCE(a.status, '') <> 'disposed'
+           ) rooms`
+        )
+        .then(([rows]) => rows),
+      pool
+        .query<StatsRow[]>(
+          `SELECT
+             SUM(CASE WHEN status IN ('requested', 'scheduled', 'completed') THEN 1 ELSE 0 END) AS due_count,
+             SUM(CASE WHEN status = 'validated' THEN 1 ELSE 0 END) AS completed_count
+           FROM maintenance_records
+           WHERE deleted_at IS NULL${maintenanceCondition}`,
+          maintenanceParams
+        )
+        .then(([rows]) => rows),
+      pool
+        .query<StatsRow[]>(
+          `SELECT
+             SUM(CASE WHEN status IN ('approved', 'borrowed', 'overdue') THEN 1 ELSE 0 END) AS active_count,
+             SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned_count,
+             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+             SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) AS overdue_count
+           FROM borrowing_records
+           WHERE deleted_at IS NULL${borrowingCondition}`,
+          borrowingParams
+        )
+        .then(([rows]) => rows),
+      // usage_count NULL diperlakukan sebagai 0, sama seperti `log.usageCount || 0`.
+      pool
+        .query<StatsRow[]>(
+          `SELECT
+             COALESCE(SUM(COALESCE(l.usage_count, 0)), 0) AS total_usage,
+             COUNT(DISTINCT COALESCE(
+               NULLIF(l.asset_detail_name, ''),
+               NULLIF(ma.name, ''),
+               NULLIF(na.name, ''),
+               CAST(l.asset_id AS CHAR)
+             )) AS used_asset_count
+           FROM asset_usage_logs l
+           LEFT JOIN medical_assets ma ON l.asset_type = 'medical' AND l.asset_id = ma.id
+           LEFT JOIN non_medical_assets na ON l.asset_type = 'non_medical' AND l.asset_id = na.id
+           WHERE l.deleted_at IS NULL`
+        )
+        .then(([rows]) => rows),
+    ]);
+
+    const count = (value: unknown): number => Number(value) || 0;
+
+    return {
+      totalMedicalAssets: count(medicalRow?.total),
+      totalNonMedicalAssets: count(nonMedicalRow?.total),
+      medicalRoomCount: count(medicalRow?.room_count),
+      nonMedicalRoomCount: count(nonMedicalRow?.room_count),
+      totalRoomCount: count(roomRow?.total),
+      medicalDetailsCount: count(medicalRow?.detail_count),
+      nonMedicalDetailsCount: count(nonMedicalRow?.detail_count),
+      maintenanceDue: count(maintenanceRow?.due_count),
+      completedMaintenance: count(maintenanceRow?.completed_count),
+      activeBorrowings: count(borrowingRow?.active_count),
+      returnedBorrowings: count(borrowingRow?.returned_count),
+      pendingBorrowings: count(borrowingRow?.pending_count),
+      overdueBorrowings: count(borrowingRow?.overdue_count),
+      totalUsageLogs: count(usageRow?.total_usage),
+      usedAssetCount: count(usageRow?.used_asset_count),
+    };
+  }
+
+  async getDashboardStats(filters: Pick<ReportFilters, 'actorUserId' | 'actorRole' | 'actorWorkUnit'> = {}): Promise<ApiResponse<DashboardStats>> {
     const hasBorrowingSanctionColumn = await this.hasBorrowingSanctionColumn();
 
     const [assetsStats] = await pool.query<StatsRow[]>(`
@@ -845,7 +1034,10 @@ export class ReportService {
       GROUP BY status
       ORDER BY total DESC
     `);
-    const dueNotifications = await this.getDueNotifications(filters);
+    const [dueNotifications, operational] = await Promise.all([
+      this.getDueNotifications(filters),
+      this.getDashboardOperationalStats(filters),
+    ]);
 
     const assets = assetsStats[0];
     const borrowings = borrowingStats[0];
@@ -874,6 +1066,7 @@ export class ReportService {
         borrowingStatusSummary: borrowingStatusRows.map((row) => ({ status: row.label || 'unknown', total: Number(row.total) || 0 })),
         maintenanceStatusSummary: maintenanceStatusRows.map((row) => ({ status: row.label || 'unknown', total: Number(row.total) || 0 })),
         dueNotifications,
+        operational,
       }
     };
   }

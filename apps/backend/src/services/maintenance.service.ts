@@ -13,8 +13,9 @@ import {
 } from '../models';
 import { formatCostLabel, formatDateTimeForMySQL, generateMaintenanceCode } from '../utils/helpers';
 import { sendPhoneNotification } from '../utils/notification-delivery';
+import { resolveActorScope } from '../utils/actor-scope';
+import { buildKeywordSearchCondition, buildRecordNoIdExpression } from '../utils/keyword-search';
 import { createScopedLogger } from '../utils/logger';
-import { hasAnyRole } from '../utils/role';
 import { AssetService } from './asset.service';
 import * as MaintenanceHistoryService from './maintenance-history.service';
 import notificationService from './notification.service';
@@ -55,6 +56,24 @@ interface MaintenanceAttachmentRow extends RowDataPacket {
 export const normalizeComparableText = (value?: string | null): string => {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 };
+
+/**
+ * Kolom yang ikut dicari oleh kata kunci pada daftar pemeliharaan.
+ *
+ * `AST-xxxxx` disertakan karena tabel menampilkan No ID aset, dan pengguna
+ * terbiasa menyalin nilai itu dari hasil pindai QR.
+ */
+export const MAINTENANCE_SEARCH_COLUMNS = [
+  buildRecordNoIdExpression('JDW', 'm.maintenance_code', 'm.id'),
+  'm.maintenance_code',
+  buildRecordNoIdExpression('AST', "''", 'm.asset_id'),
+  'COALESCE(ma.name, na.name)',
+  'COALESCE(ma.asset_code, na.asset_code)',
+  'm.asset_detail_name',
+  'm.asset_detail_code',
+  'u.name',
+  'u.nip',
+];
 
 export const toLocalIsoDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
@@ -996,17 +1015,83 @@ export class MaintenanceService {
   }
 
   async getAll(filters: MaintenanceFilters): Promise<PaginatedResponse<Maintenance>> {
-    const { page, limit, status, view, assetId, assetType, type, automationSource, actorUserId, actorRole, actorWorkUnit } = filters;
+    const { page, limit, status, view, assetId, assetType, type, automationSource, actorUserId, actorRole, actorWorkUnit, search } = filters;
     const offset = (page - 1) * limit;
-    const scopedActorId = Number(actorUserId);
-    const hasValidActorId = Number.isFinite(scopedActorId) && scopedActorId > 0;
-    const isFullAccess = hasAnyRole(actorRole, ['admin', 'leader', 'teknisi']);
-    const isStaffPj = hasAnyRole(actorRole, ['staff_pj', 'staff pj']);
-    const scopedWorkUnit = normalizeComparableText(actorWorkUnit);
-    const shouldScopeToWorkUnit = isStaffPj && hasValidActorId && Boolean(scopedWorkUnit);
-    const shouldScopeToActor = hasValidActorId && !isFullAccess && !shouldScopeToWorkUnit;
+    const actorScope = resolveActorScope({
+      actorUserId,
+      actorRole,
+      actorWorkUnit,
+      fullAccessRoles: ['admin', 'leader', 'teknisi'],
+    });
+    const shouldScopeToWorkUnit = actorScope.mode === 'work_unit';
+    const shouldScopeToActor = actorScope.mode === 'own_records';
+    const scopedWorkUnit = actorScope.workUnit;
+    const scopedActorId = actorScope.actorUserId;
 
-    let query = `
+    // Query data dan query hitung berbagi FROM serta WHERE yang sama supaya
+    // `total` selalu konsisten dengan baris yang dikembalikan, dan agar kata kunci
+    // dapat mencari kolom hasil JOIN (nama aset, nama pemohon).
+    const fromClause = `
+      FROM maintenance_records m
+      LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
+      LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
+      LEFT JOIN users u ON m.created_by = u.id
+      LEFT JOIN users v ON m.validated_by = v.id
+      LEFT JOIN users t ON m.technician_user_id = t.id
+    `;
+
+    const conditions: string[] = ['m.deleted_at IS NULL'];
+    const params: any[] = [];
+
+    if (status) {
+      conditions.push('m.status = ?');
+      params.push(status);
+    } else if (view) {
+      const statuses = this.listViewStatuses[view];
+      if (statuses?.length) {
+        const placeholders = statuses.map(() => '?').join(', ');
+        conditions.push(`m.status IN (${placeholders})`);
+        params.push(...statuses);
+      }
+    }
+
+    const searchCondition = buildKeywordSearchCondition(search, MAINTENANCE_SEARCH_COLUMNS);
+    if (searchCondition) {
+      conditions.push(searchCondition.sql);
+      params.push(...searchCondition.params);
+    }
+
+    if (assetId) {
+      conditions.push('m.asset_id = ?');
+      params.push(assetId);
+    }
+
+    if (assetType) {
+      conditions.push("COALESCE(m.asset_type, 'medical') = ?");
+      params.push(assetType);
+    }
+
+    if (type) {
+      conditions.push('m.type = ?');
+      params.push(type);
+    }
+
+    if (automationSource === 'usage_threshold') {
+      conditions.push("COALESCE(m.notes, '') LIKE 'AUTO_USAGE_THRESHOLD%'");
+    } else if (automationSource === 'manual') {
+      conditions.push("COALESCE(m.notes, '') NOT LIKE 'AUTO_USAGE_THRESHOLD%'");
+    }
+
+    if (shouldScopeToWorkUnit) {
+      conditions.push('LOWER(TRIM(u.work_unit)) = ?');
+      params.push(scopedWorkUnit);
+    } else if (shouldScopeToActor) {
+      conditions.push('(m.created_by = ? OR m.completed_by = ?)');
+      params.push(scopedActorId, scopedActorId);
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const query = `
       SELECT m.*,
         COALESCE(ma.name, na.name) as asset_name,
         COALESCE(ma.asset_code, na.asset_code) as asset_code,
@@ -1021,73 +1106,15 @@ export class MaintenanceService {
         t.nip as technician_nip,
         t.role as technician_role,
         t.work_unit as technician_work_unit
-      FROM maintenance_records m
-      LEFT JOIN medical_assets ma ON (m.asset_type IS NULL OR m.asset_type = 'medical') AND m.asset_id = ma.id
-      LEFT JOIN non_medical_assets na ON m.asset_type = 'non_medical' AND m.asset_id = na.id
-      LEFT JOIN users u ON m.created_by = u.id
-      LEFT JOIN users v ON m.validated_by = v.id
-      LEFT JOIN users t ON m.technician_user_id = t.id
-      WHERE m.deleted_at IS NULL
+      ${fromClause}
+      ${whereClause}
+      ORDER BY m.created_at DESC
+      LIMIT ? OFFSET ?
     `;
-    let countQuery = 'SELECT COUNT(*) as count FROM maintenance_records WHERE deleted_at IS NULL';
-    const params: any[] = [];
+    const countQuery = `SELECT COUNT(*) as count ${fromClause} ${whereClause}`;
 
-    if (status) {
-      query += ' AND m.status = ?';
-      countQuery += ' AND status = ?';
-      params.push(status);
-    } else if (view) {
-      const statuses = this.listViewStatuses[view];
-      if (statuses?.length) {
-        const placeholders = statuses.map(() => '?').join(', ');
-        query += ` AND m.status IN (${placeholders})`;
-        countQuery += ` AND status IN (${placeholders})`;
-        params.push(...statuses);
-      }
-    }
-
-    if (assetId) {
-      query += ' AND m.asset_id = ?';
-      countQuery += ' AND asset_id = ?';
-      params.push(assetId);
-    }
-
-    if (assetType) {
-      query += " AND COALESCE(m.asset_type, 'medical') = ?";
-      countQuery += " AND COALESCE(asset_type, 'medical') = ?";
-      params.push(assetType);
-    }
-
-    if (type) {
-      query += ' AND m.type = ?';
-      countQuery += ' AND type = ?';
-      params.push(type);
-    }
-
-    if (automationSource === 'usage_threshold') {
-      query += " AND COALESCE(m.notes, '') LIKE 'AUTO_USAGE_THRESHOLD%'";
-      countQuery += " AND COALESCE(notes, '') LIKE 'AUTO_USAGE_THRESHOLD%'";
-    } else if (automationSource === 'manual') {
-      query += " AND COALESCE(m.notes, '') NOT LIKE 'AUTO_USAGE_THRESHOLD%'";
-      countQuery += " AND COALESCE(notes, '') NOT LIKE 'AUTO_USAGE_THRESHOLD%'";
-    }
-
-    if (shouldScopeToWorkUnit) {
-      query += ' AND LOWER(TRIM(u.work_unit)) = ?';
-      countQuery += ' AND created_by IN (SELECT id FROM users WHERE LOWER(TRIM(work_unit)) = ?)';
-      params.push(scopedWorkUnit);
-    } else if (shouldScopeToActor) {
-      query += ' AND (m.created_by = ? OR m.completed_by = ?)';
-      countQuery += ' AND (created_by = ? OR completed_by = ?)';
-      params.push(scopedActorId, scopedActorId);
-    }
-
-    const countParams = [...params];
-    query += ' ORDER BY m.created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
-
-    const [dataRows] = await pool.query<MaintenanceRow[]>(query, params);
-    const [countRows] = await pool.query<CountRow[]>(countQuery, countParams);
+    const [dataRows] = await pool.query<MaintenanceRow[]>(query, [...params, limit, offset]);
+    const [countRows] = await pool.query<CountRow[]>(countQuery, params);
 
     const total = countRows[0].count;
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, param } from 'express-validator';
 import dssController from '../controllers/dss.controller';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.post(
     body('pairwiseMatrix.*').optional().isArray(),
     body('pairwiseMatrix.*.*').optional().isFloat({ gt: 0 }),
     body('saveHistory').optional().isBoolean().toBoolean(),
+    validateRequest
   ],
   dssController.getRanking
 );
@@ -27,11 +29,12 @@ router.put(
     body('weights').isObject(),
     body('weights.*').isFloat({ min: 0 }),
     body('assetType').optional().isIn(['all', 'medical', 'non_medical']),
+    validateRequest
   ],
   dssController.saveWeightPreference
 );
 
 router.get('/history', dssController.getRankingHistory);
-router.delete('/history/:id', [param('id').isInt({ min: 1 }).toInt()], dssController.deleteRankingHistory);
+router.delete('/history/:id', [param('id').isInt({ min: 1 }).toInt(), validateRequest], dssController.deleteRankingHistory);
 
 export default router;

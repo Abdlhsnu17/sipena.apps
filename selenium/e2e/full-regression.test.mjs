@@ -83,12 +83,14 @@ function extractRows(response) {
 
 async function api(method, endpoint, token, body) {
   return driver.executeAsyncScript(
-    function request(methodArg, endpointArg, tokenArg, bodyArg, done) {
+    // Dieksekusi di dalam browser, jadi variabel scope Node tidak tersedia:
+    // `testClientIp` harus dikirim sebagai argumen.
+    function request(methodArg, endpointArg, tokenArg, bodyArg, clientIpArg, done) {
       const headers = {};
       if (bodyArg !== null) headers["Content-Type"] = "application/json";
       if (tokenArg) headers.Authorization = `Bearer ${tokenArg}`;
-      headers["X-Forwarded-For"] = testClientIp;
-      headers["X-Real-IP"] = testClientIp;
+      headers["X-Forwarded-For"] = clientIpArg;
+      headers["X-Real-IP"] = clientIpArg;
 
       fetch(endpointArg, {
         method: methodArg,
@@ -111,6 +113,7 @@ async function api(method, endpoint, token, body) {
     `/api${endpoint}`,
     token || null,
     body ?? null,
+    testClientIp,
   );
 }
 

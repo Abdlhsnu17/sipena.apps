@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import deletionRequestService from '../services/deletion-request.service';
 import { createScopedLogger } from '../utils/logger';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const logger = createScopedLogger('controller:deletion_request');
 
@@ -13,12 +14,6 @@ const getActorUserId = (req: Request): number | null => {
 class DeletionRequestController {
   getAll = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-        return;
-      }
-
       const result = await deletionRequestService.getAll({
         status: req.query.status as string | undefined,
         targetType: req.query.targetType as string | undefined,
@@ -34,12 +29,6 @@ class DeletionRequestController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       if (!actorId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -62,12 +51,6 @@ class DeletionRequestController {
 
   approve = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       if (!actorId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -87,12 +70,6 @@ class DeletionRequestController {
 
   reject = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validasi gagal', errors: errors.array() });
-        return;
-      }
-
       const actorId = getActorUserId(req);
       if (!actorId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -117,16 +94,19 @@ export const deletionRequestValidators = {
     query('targetType').optional().isIn(['user', 'borrowing', 'return', 'maintenance']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    validateRequest
   ],
   create: [
     body('targetType').isIn(['user', 'borrowing', 'return', 'maintenance']),
     body('targetId').isInt({ min: 1 }).toInt(),
     body('targetLabel').optional().trim(),
     body('reason').trim().notEmpty().withMessage('Alasan penghapusan wajib diisi'),
+    validateRequest
   ],
   review: [
     param('id').isInt({ min: 1 }),
     body('reviewNotes').optional().trim(),
+    validateRequest
   ],
 };
 

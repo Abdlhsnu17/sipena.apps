@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import borrowingController from '../controllers/borrowing.controller';
 import { authMiddleware, requireRole } from '../middlewares/auth.middleware';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 
@@ -37,11 +38,15 @@ router.get(
   '/',
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
-    query('limit').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 1000 }).toInt(),
     query('status').optional().isIn(BORROWING_STATUSES),
     query('userId').optional().isInt({ min: 1 }).toInt(),
     query('assetId').optional().isInt({ min: 1 }).toInt(),
-    query('assetType').optional().isIn(['medical', 'non_medical'])
+    query('assetType').optional().isIn(['medical', 'non_medical']),
+    query('search').optional().trim().isLength({ max: 200 }),
+    query('lockedOnly').optional().isIn(['true', 'false']),
+    query('source').optional().isIn(['medis', 'non_medis']),
+    validateRequest
   ],
   borrowingController.getAll
 );
@@ -50,12 +55,16 @@ router.get(
   '/owner-candidates',
   [
     query('search').optional().trim().isLength({ max: 100 }),
-    query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
+    validateRequest
   ],
   borrowingController.getOwnerCandidates
 );
 
-router.get('/:id', [param('id').isInt({ min: 1 })], borrowingController.getById);
+// Harus berada di atas '/:id' agar 'locks' tidak dianggap sebagai id.
+router.get('/locks', borrowingController.getInventoryLocks);
+
+router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], borrowingController.getById);
 
 router.post(
   '/',
@@ -81,7 +90,8 @@ router.post(
     body('loanDurationValue').optional().isInt({ min: 1 }).toInt(),
     body('loanDurationUnit').optional().isIn(BORROWING_DURATION_UNITS),
     body('quantity').optional().isInt({ min: 1 }).toInt(),
-    body('notes').optional().trim()
+    body('notes').optional().trim(),
+    validateRequest
   ],
   borrowingController.create
 );
@@ -108,7 +118,8 @@ router.patch(
     body('quantity').optional().isInt({ min: 1 }).toInt(),
     body('notes').optional().trim(),
     body('returnCondition').optional().trim(),
-    body('returnNotes').optional().trim()
+    body('returnNotes').optional().trim(),
+    validateRequest
   ],
   borrowingController.update
 );
@@ -117,7 +128,7 @@ router.patch(
   '/:id/approve',
   authMiddleware,
   requireRole(BORROWING_APPROVAL_ROLES),
-  [param('id').isInt({ min: 1 })],
+  [param('id').isInt({ min: 1 }), validateRequest],
   borrowingController.approve
 );
 
@@ -127,7 +138,8 @@ router.patch(
   requireRole(BORROWING_APPROVAL_ROLES),
   [
     param('id').isInt({ min: 1 }),
-    body('reason').trim().notEmpty()
+    body('reason').trim().notEmpty(),
+    validateRequest
   ],
   borrowingController.reject
 );
@@ -138,7 +150,8 @@ router.patch(
   requireRole(BORROWING_ACCESS_ROLES),
   [
     param('id').isInt({ min: 1 }),
-    body('condition').trim().notEmpty()
+    body('condition').trim().notEmpty(),
+    validateRequest
   ],
   borrowingController.return
 );
@@ -147,7 +160,7 @@ router.patch(
   '/:id/validate-return',
   authMiddleware,
   requireRole(BORROWING_APPROVAL_ROLES),
-  [param('id').isInt({ min: 1 })],
+  [param('id').isInt({ min: 1 }), validateRequest],
   borrowingController.validateReturn
 );
 
@@ -157,7 +170,8 @@ router.patch(
   [
     param('id').isInt({ min: 1 }),
     body('newDueDate').isISO8601().withMessage('Tanggal jatuh tempo baru harus format ISO 8601'),
-    body('extensionNotes').optional().trim()
+    body('extensionNotes').optional().trim(),
+    validateRequest
   ],
   borrowingController.extend
 );
@@ -165,10 +179,10 @@ router.patch(
 router.get(
   '/user/:userId/blocking',
   authMiddleware,
-  [param('userId').isInt({ min: 1 })],
+  [param('userId').isInt({ min: 1 }), validateRequest],
   borrowingController.getBlockingBorrowings
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 })], requireRole(['admin']), borrowingController.delete);
+router.delete('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), borrowingController.delete);
 
 export default router;

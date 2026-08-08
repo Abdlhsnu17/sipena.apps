@@ -141,4 +141,14 @@ export interface BorrowingFilters {
   actorUserId?: number | string | null;
   actorRole?: string | null;
   actorWorkUnit?: string | null;
+  /** Kata kunci bebas; dicocokkan ke kode, nama aset, peminjam, tujuan, dan catatan. */
+  search?: string;
+  /**
+   * Hanya peminjaman yang masih "mengunci" inventaris, yaitu status aktif atau
+   * status `returned` yang pengembaliannya belum divalidasi. Ini menggantikan
+   * penyaringan isBorrowingLockRecord yang sebelumnya dilakukan di browser.
+   */
+  lockedOnly?: boolean;
+  /** Asal aset: 'medis' atau 'non_medis', mengikuti deriveAssetSource di frontend. */
+  source?: 'medis' | 'non_medis';
 }

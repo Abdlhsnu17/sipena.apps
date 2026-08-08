@@ -6,6 +6,8 @@ import authController from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { createScopedLogger } from '../utils/logger';
 import { getProfileUploadsDir } from '../utils/storage-paths';
+import { buildStoredFileName } from '../utils/upload-filename';
+import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
 const logger = createScopedLogger('routes:auth');
@@ -23,19 +25,9 @@ const NIP_REGEX = /^[A-Za-z0-9.\-/\s]{3,30}$/;
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const PASSWORD_POLICY_MESSAGE = 'Password minimal 8 karakter dan harus mengandung huruf besar, huruf kecil, dan angka';
 
-const sanitizeFileName = (filename: string): string => {
-  const parsed = path.parse(path.basename(filename));
-  const baseName = parsed.name.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  const extension = parsed.ext.toLowerCase().replace(/[^a-z0-9.]/g, '');
-  return `${baseName || 'file'}${extension}`;
-};
-
 const profileStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, profileUploadDir),
-  filename: (_req, file, cb) => {
-    const safeName = sanitizeFileName(file.originalname);
-    cb(null, `${Date.now()}-${safeName}`);
-  }
+  filename: (_req, file, cb) => cb(null, buildStoredFileName(file.originalname, 'profile'))
 });
 
 const profileUpload = multer({
@@ -55,7 +47,8 @@ router.post(
   '/login',
   [
     body('nip').trim().notEmpty().withMessage('Username atau email wajib diisi'),
-    body('password').notEmpty().withMessage('Password wajib diisi')
+    body('password').notEmpty().withMessage('Password wajib diisi'),
+    validateRequest
   ],
   authController.login
 );
@@ -73,14 +66,15 @@ router.post(
         throw new Error('Password confirmation does not match');
       }
       return true;
-    })
+    }),
+    validateRequest
   ],
   authController.register
 );
 
 router.post(
   '/reset-password/verify',
-  [body('nip').trim().notEmpty()],
+  [body('nip').trim().notEmpty(), validateRequest],
   authController.verifyResetNip
 );
 
@@ -95,7 +89,8 @@ router.post(
         throw new Error('Password confirmation does not match');
       }
       return true;
-    })
+    }),
+    validateRequest
   ],
   authController.resetPassword
 );
@@ -127,7 +122,8 @@ router.patch(
     body('workUnit').optional({ checkFalsy: true }).trim().isLength({ max: 255 }),
     body('subWorkUnit').optional({ checkFalsy: true }).trim().isLength({ max: 255 }),
     body('homeAddress').optional({ checkFalsy: true }).trim().isLength({ max: 500 }),
-    body('phoneNumber').optional({ checkFalsy: true }).trim().isLength({ min: 10, max: 25 })
+    body('phoneNumber').optional({ checkFalsy: true }).trim().isLength({ min: 10, max: 25 }),
+    validateRequest
   ],
   authController.updateProfile
 );

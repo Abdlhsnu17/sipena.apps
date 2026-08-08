@@ -94,7 +94,8 @@ export class ReportController {
     try {
       const result = await this.reportService.getDashboardStats({
         actorUserId: getActorUserId(req),
-        actorRole: req.user?.role
+        actorRole: req.user?.role,
+        actorWorkUnit: req.user?.workUnit
       });
       res.json(result);
     } catch (error) {

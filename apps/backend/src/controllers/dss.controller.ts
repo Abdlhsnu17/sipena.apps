@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validationResult } from 'express-validator';
 import dssService from '../services/dss.service';
 import { createScopedLogger } from '../utils/logger';
 
@@ -13,12 +12,6 @@ const getActorUserId = (req: Request): number | null => {
 export class DssController {
   getRanking = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
-
       const assetType = req.body?.assetType || 'all';
       const result = await dssService.rankAssets({
         weights: req.body?.weights,
@@ -70,11 +63,6 @@ export class DssController {
 
   saveWeightPreference = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
       const userId = getActorUserId(req);
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -106,11 +94,6 @@ export class DssController {
 
   deleteRankingHistory = async (req: Request, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
-        return;
-      }
       const userId = getActorUserId(req);
       if (!userId) {
         res.status(401).json({ success: false, message: 'Unauthorized' });
