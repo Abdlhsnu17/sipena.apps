@@ -138,7 +138,6 @@ class RequestBuilder {
       const originalJson = (res as any).json.bind(res);
       const originalSend = (res as any).send.bind(res);
       const originalEnd = res.end.bind(res);
-      let sentBodyResponse = false;
       let bodySnapshot: { statusCode: number; text: string; headers: Headers } | null = null;
       let settled = false;
 
@@ -186,7 +185,6 @@ class RequestBuilder {
       }) as typeof res.write;
 
       (res as any).json = ((body: unknown) => {
-        sentBodyResponse = true;
         if (!bodySnapshot) {
           const text = JSON.stringify(body ?? null);
           bodySnapshot = {
@@ -204,7 +202,6 @@ class RequestBuilder {
       });
 
       (res as any).send = ((body?: unknown) => {
-        sentBodyResponse = true;
         if (!bodySnapshot) {
           const text = Buffer.isBuffer(body)
             ? body.toString('utf8')

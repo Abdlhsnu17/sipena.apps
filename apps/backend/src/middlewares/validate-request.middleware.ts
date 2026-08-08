@@ -23,8 +23,6 @@ export const validateRequest = (req: Request, res: Response, next: NextFunction)
 
   if (process.env.DEBUG_ROUTE_TESTS === 'true') {
     const errorCount = errors.isEmpty() ? 0 : errors.array().length;
-    // Debug-only trace for in-memory route tests.
-    // eslint-disable-next-line no-console
     console.log('[validateRequest]', req.method, req.originalUrl, 'errors=', errorCount);
   }
 
@@ -50,7 +48,6 @@ export const validateRequest = (req: Request, res: Response, next: NextFunction)
       errors: safeValidationErrors,
     });
     if (process.env.DEBUG_ROUTE_TESTS === 'true') {
-      // eslint-disable-next-line no-console
       console.log('[validateRequest] response sent');
     }
     return;

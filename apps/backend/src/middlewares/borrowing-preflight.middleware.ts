@@ -25,13 +25,7 @@ const isReturnRole = (role: string | null | undefined): boolean => {
 };
 
 const lockResponse = (res: Response): void => {
-  const locked = res as Response & {
-    status: (code: number) => Response;
-    json: (body?: unknown) => Response;
-    send: (body?: unknown) => Response;
-    end: (chunk?: unknown) => Response;
-    writeHead: (...args: unknown[]) => Response;
-  };
+  const locked = res as unknown as Record<string, unknown>;
 
   locked.status = () => res;
   locked.json = () => res;
