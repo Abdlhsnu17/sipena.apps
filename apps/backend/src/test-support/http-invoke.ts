@@ -139,6 +139,39 @@ class RequestBuilder {
       const originalSend = (res as any).send.bind(res);
       const originalEnd = res.end.bind(res);
       let sentBodyResponse = false;
+      let bodySnapshot: { statusCode: number; text: string; headers: Headers } | null = null;
+      let settled = false;
+
+      const finalizeNow = (snapshot?: { statusCode: number; text: string; headers: Headers }) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+
+        const forcedStatusCode = (req as any).__forcedStatusCode as number | undefined;
+        const forcedHeaders = (req as any).__forcedHeaders as Headers | undefined;
+        const forcedBodyText = (req as any).__forcedBodyText as string | undefined;
+        const headers = forcedHeaders ?? snapshot?.headers ?? normalizeHeaders(res.getHeaders());
+        const text = forcedBodyText ?? snapshot?.text ?? Buffer.concat(responseChunks).toString('utf8');
+        let body: unknown = text;
+
+        if ((headers['content-type'] || '').includes('application/json')) {
+          try {
+            body = text ? JSON.parse(text) : null;
+          } catch {
+            body = text;
+          }
+        }
+
+        resolve({
+          status: forcedStatusCode ?? (res as any).__forcedStatusCode ?? snapshot?.statusCode ?? res.statusCode,
+          statusCode: forcedStatusCode ?? (res as any).__forcedStatusCode ?? snapshot?.statusCode ?? res.statusCode,
+          headers,
+          header: headers,
+          body,
+          text,
+        });
+      };
 
       res.write = ((chunk: unknown, encoding?: BufferEncoding | ((error?: Error | null) => void), cb?: (error?: Error | null) => void) => {
         if (typeof encoding === 'function') {
@@ -154,12 +187,30 @@ class RequestBuilder {
 
       (res as any).json = ((body: unknown) => {
         sentBodyResponse = true;
-        return originalJson(body as never);
+        const result = originalJson(body as never);
+        if (!bodySnapshot) {
+          bodySnapshot = {
+            statusCode: res.statusCode,
+            text: Buffer.concat(responseChunks).toString('utf8'),
+            headers: normalizeHeaders(res.getHeaders()),
+          };
+        }
+        finalizeNow(bodySnapshot);
+        return result;
       });
 
       (res as any).send = ((body?: unknown) => {
         sentBodyResponse = true;
-        return originalSend(body as never);
+        const result = originalSend(body as never);
+        if (!bodySnapshot) {
+          bodySnapshot = {
+            statusCode: res.statusCode,
+            text: Buffer.concat(responseChunks).toString('utf8'),
+            headers: normalizeHeaders(res.getHeaders()),
+          };
+        }
+        finalizeNow(bodySnapshot);
+        return result;
       });
 
       res.end = ((chunk?: unknown, encoding?: BufferEncoding | (() => void), cb?: () => void) => {
@@ -177,32 +228,11 @@ class RequestBuilder {
         return result;
       }) as typeof res.end;
 
-      let settled = false;
       const finalize = () => {
         if (settled) {
           return;
         }
-        settled = true;
-        const headers = normalizeHeaders(res.getHeaders());
-        const text = Buffer.concat(responseChunks).toString('utf8');
-        let body: unknown = text;
-
-        if ((headers['content-type'] || '').includes('application/json')) {
-          try {
-            body = text ? JSON.parse(text) : null;
-          } catch {
-            body = text;
-          }
-        }
-
-        resolve({
-          status: res.statusCode,
-          statusCode: res.statusCode,
-          headers,
-          header: headers,
-          body,
-          text,
-        });
+        finalizeNow(bodySnapshot);
         socket.end();
         socket.destroy();
       };

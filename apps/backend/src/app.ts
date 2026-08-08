@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
 import { infrastructureStatus } from './config/infrastructure-status';
 import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middleware';
+import { borrowingPreflightMiddleware } from './middlewares/borrowing-preflight.middleware';
 import { errorHandler } from './middlewares/error-handler.middleware';
 import { requestContextMiddleware } from './middlewares/request-context.middleware';
 import { createScopedLogger } from './utils/logger';
@@ -176,25 +177,8 @@ export const createApp = (): express.Application => {
     app.use('/api', generalLimiter);
   }
 
-  // Body parsing middleware
-  if (process.env.DEBUG_ROUTE_TESTS === 'true') {
-    app.use((req, _res, next) => {
-      // Debug-only trace for in-memory request flow.
-      // eslint-disable-next-line no-console
-      console.log('[app:before-json]', req.method, req.originalUrl);
-      next();
-    });
-  }
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-  if (process.env.DEBUG_ROUTE_TESTS === 'true') {
-    app.use((req, _res, next) => {
-      // Debug-only trace after body parsing.
-      // eslint-disable-next-line no-console
-      console.log('[app:after-json]', req.method, req.originalUrl, 'bodyKeys=', Object.keys(req.body || {}).join(','));
-      next();
-    });
-  }
 
   // Only profile photos remain directly reachable; report files must go through protected routes.
   // Profile photos are public assets loaded via <img>, so they must not be blocked by Helmet's
@@ -254,6 +238,10 @@ export const createApp = (): express.Application => {
   // Must be registered before the /api/notifications router so it is not
   // intercepted by the header-based authMiddleware.
   app.get('/api/notifications/stream', sseTicketMiddleware, notificationController.stream);
+
+  // Borrowing preflight keeps validation/role checks deterministic even when
+  // route-level middleware order changes during refactors.
+  app.use('/api/borrowing', authMiddleware, borrowingPreflightMiddleware);
 
   // API Routes
   for (const mount of API_MOUNTS) {

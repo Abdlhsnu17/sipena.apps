@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import borrowingController from '../controllers/borrowing.controller';
-import { authMiddleware, requireRole } from '../middlewares/auth.middleware';
+import { requireRole } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validate-request.middleware';
 
 const router = Router();
@@ -18,7 +18,7 @@ const validateDateRange = (value: any, { req }: any) => {
     // Jika dueDate tidak diberikan, itu OK (akan default ke borrowDate + default duration)
     return true;
   }
-  
+
   const borrowDate = req.body.borrowDate;
   if (!borrowDate) {
     throw new Error('borrowDate harus diberikan sebelum dueDate');
@@ -68,7 +68,6 @@ router.get('/:id', [param('id').isInt({ min: 1 }), validateRequest], borrowingCo
 
 router.post(
   '/',
-  authMiddleware,
   [
     body('assetId').exists({ checkFalsy: true }).isInt({ min: 1 }),
     body('assetType').optional().isIn(['medical', 'non_medical']),
@@ -77,7 +76,7 @@ router.post(
     body('assetDetailCode').optional().trim(),
     body('borrowDate').exists({ checkFalsy: true }).isISO8601().withMessage('Tanggal pinjam harus format ISO 8601'),
     body('dueDate').optional().isISO8601().custom(validateDateRange),
-    body('purpose').exists({ checkFalsy: true }).trim().notEmpty().withMessage('Keperluan peminjaman wajib diisi'),
+    body('purpose').trim().notEmpty().withMessage('Keperluan peminjaman wajib diisi'),
     body('borrowerPosition').optional().trim(),
     body('borrowerWorkUnit').optional().trim(),
     body('ownerUserId').optional().isInt({ min: 1 }).toInt(),
@@ -98,8 +97,8 @@ router.post(
 
 router.patch(
   '/:id',
-  requireRole(['admin', 'leader']),
   [
+    requireRole(['admin', 'leader']),
     param('id').isInt({ min: 1 }),
     body('borrowDate').optional().isISO8601(),
     body('dueDate').optional().isISO8601().custom(validateDateRange),
@@ -126,17 +125,18 @@ router.patch(
 
 router.patch(
   '/:id/approve',
-  authMiddleware,
-  requireRole(BORROWING_APPROVAL_ROLES),
-  [param('id').isInt({ min: 1 }), validateRequest],
+  [
+    requireRole(BORROWING_APPROVAL_ROLES),
+    param('id').isInt({ min: 1 }),
+    validateRequest
+  ],
   borrowingController.approve
 );
 
 router.patch(
   '/:id/reject',
-  authMiddleware,
-  requireRole(BORROWING_APPROVAL_ROLES),
   [
+    requireRole(BORROWING_APPROVAL_ROLES),
     param('id').isInt({ min: 1 }),
     body('reason').trim().notEmpty(),
     validateRequest
@@ -146,9 +146,8 @@ router.patch(
 
 router.patch(
   '/:id/return',
-  authMiddleware,
-  requireRole(BORROWING_ACCESS_ROLES),
   [
+    requireRole(BORROWING_ACCESS_ROLES),
     param('id').isInt({ min: 1 }),
     body('condition').trim().notEmpty(),
     validateRequest
@@ -158,15 +157,16 @@ router.patch(
 
 router.patch(
   '/:id/validate-return',
-  authMiddleware,
-  requireRole(BORROWING_APPROVAL_ROLES),
-  [param('id').isInt({ min: 1 }), validateRequest],
+  [
+    requireRole(BORROWING_APPROVAL_ROLES),
+    param('id').isInt({ min: 1 }),
+    validateRequest
+  ],
   borrowingController.validateReturn
 );
 
 router.patch(
   '/:id/extend',
-  authMiddleware,
   [
     param('id').isInt({ min: 1 }),
     body('newDueDate').isISO8601().withMessage('Tanggal jatuh tempo baru harus format ISO 8601'),
@@ -178,11 +178,19 @@ router.patch(
 
 router.get(
   '/user/:userId/blocking',
-  authMiddleware,
   [param('userId').isInt({ min: 1 }), validateRequest],
   borrowingController.getBlockingBorrowings
 );
 
-router.delete('/:id', [param('id').isInt({ min: 1 }), validateRequest], requireRole(['admin']), borrowingController.delete);
+router.delete(
+  '/:id',
+  [
+    requireRole(['admin']),
+    param('id').isInt({ min: 1 }),
+    body('deleteReason').trim().notEmpty().withMessage('Alasan penghapusan wajib diisi'),
+    validateRequest
+  ],
+  borrowingController.delete
+);
 
 export default router;

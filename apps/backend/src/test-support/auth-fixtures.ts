@@ -67,7 +67,7 @@ export const signTokenFor = (
       ...overrides,
     },
     TEST_JWT_SECRET,
-    { expiresIn: '1h' },
+    overrides.exp !== undefined ? {} : { expiresIn: '1h' },
   );
 
 export const bearer = (token: string): string => `Bearer ${token}`;

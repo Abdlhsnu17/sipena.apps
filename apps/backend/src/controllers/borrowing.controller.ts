@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AssetType } from '../models';
 import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user-activity.service';
+import { hasAnyRole } from '../utils/role';
 import { createScopedLogger } from '../utils/logger';
 
 const logger = createScopedLogger('controller:borrowing');
@@ -21,6 +22,17 @@ const normalizeAssetType = (value: unknown): AssetType | undefined => {
   }
 
   return undefined;
+};
+
+const ISO_8601_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+
+const isIso8601DateTime = (value: unknown): value is string => {
+  return typeof value === 'string' && ISO_8601_DATETIME.test(value) && !Number.isNaN(new Date(value).getTime());
+};
+
+const isPositiveInteger = (value: unknown): boolean => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0;
 };
 
 export class BorrowingController {
@@ -143,6 +155,47 @@ export class BorrowingController {
 
       // payload may come from frontend using either `purpose` or older `room` field
       const payload: any = { ...req.body, userId };
+      if (!isPositiveInteger(payload.assetId)) {
+        res.status(400).json({ success: false, message: 'Valid asset ID is required' });
+        return;
+      }
+      if (!payload.purpose || String(payload.purpose).trim().length === 0) {
+        res.status(400).json({ success: false, message: 'Keperluan peminjaman wajib diisi' });
+        return;
+      }
+      if (!isIso8601DateTime(payload.borrowDate)) {
+        res.status(400).json({ success: false, message: 'Tanggal pinjam harus format ISO 8601' });
+        return;
+      }
+      if (payload.dueDate) {
+        if (!isIso8601DateTime(payload.dueDate)) {
+          res.status(400).json({ success: false, message: 'Valid due date is required' });
+          return;
+        }
+
+        const borrowDateTime = new Date(payload.borrowDate).getTime();
+        const dueDateTime = new Date(payload.dueDate).getTime();
+        if (dueDateTime < borrowDateTime) {
+          res.status(400).json({
+            success: false,
+            message: 'Tanggal kembali harus lebih besar atau sama dengan tanggal pinjam'
+          });
+          return;
+        }
+      }
+      if (payload.quantity !== undefined && !isPositiveInteger(payload.quantity)) {
+        res.status(400).json({ success: false, message: 'Quantity must be a positive integer' });
+        return;
+      }
+      if (payload.purposeType && !['inside_hospital', 'outside_hospital'].includes(String(payload.purposeType))) {
+        res.status(400).json({ success: false, message: 'Invalid purpose type' });
+        return;
+      }
+      if (payload.loanDurationUnit && !['day', 'month', 'year'].includes(String(payload.loanDurationUnit))) {
+        res.status(400).json({ success: false, message: 'Invalid loan duration unit' });
+        return;
+      }
+
       if (!payload.purpose && payload.room) {
         // historical property name used on UI; map it
         payload.purpose = payload.room;
@@ -203,6 +256,11 @@ export class BorrowingController {
    */
   update = async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!hasAnyRole(req.user?.role, ['admin', 'leader'])) {
+        res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        return;
+      }
+
       const { id } = req.params;
       const {
         borrowDate,
@@ -302,13 +360,10 @@ export class BorrowingController {
         return;
       }
 
-      // SECURITY FIX: Hanya admin/leader yang boleh approve borrowing request
-      const actorRole = req.user?.role;
-      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
-      if (!isAdmin) {
+      if (!hasAnyRole(req.user?.role, ['admin', 'leader', 'staff_pj', 'staff pj'])) {
         res.status(403).json({
           success: false,
-          message: 'Hanya admin atau leader yang dapat menyetujui peminjaman'
+          message: 'Insufficient permissions'
         });
         return;
       }
@@ -373,13 +428,18 @@ export class BorrowingController {
         return;
       }
 
-      // SECURITY FIX: Hanya admin/leader yang boleh reject borrowing request
-      const actorRole = req.user?.role;
-      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
-      if (!isAdmin) {
+      if (!hasAnyRole(req.user?.role, ['admin', 'leader', 'staff_pj', 'staff pj'])) {
         res.status(403).json({
           success: false,
-          message: 'Hanya admin atau leader yang dapat menolak peminjaman'
+          message: 'Insufficient permissions'
+        });
+        return;
+      }
+
+      if (!reason || String(reason).trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Alasan penolakan wajib diisi'
         });
         return;
       }
@@ -443,6 +503,14 @@ export class BorrowingController {
         if (!Number.isNaN(parsedId)) {
           returnedBy = parsedId;
         }
+      }
+
+      if (!condition || String(condition).trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Condition is required'
+        });
+        return;
       }
 
       const result = await this.borrowingService.return(id, {
@@ -513,13 +581,10 @@ export class BorrowingController {
         return;
       }
 
-      // SECURITY FIX: Hanya admin/leader yang boleh validate return
-      const actorRole = req.user?.role;
-      const isAdmin = actorRole && (actorRole.toLowerCase() === 'admin' || actorRole.toLowerCase() === 'leader');
-      if (!isAdmin) {
+      if (!hasAnyRole(req.user?.role, ['admin', 'leader', 'staff_pj', 'staff pj'])) {
         res.status(403).json({
           success: false,
-          message: 'Hanya admin atau leader yang dapat memvalidasi pengembalian alat'
+          message: 'Insufficient permissions'
         });
         return;
       }
@@ -568,6 +633,11 @@ export class BorrowingController {
    */
   delete = async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!hasAnyRole(req.user?.role, ['admin'])) {
+        res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        return;
+      }
+
       const { id } = req.params;
       const beforeDelete = await this.borrowingService.getById(id);
       const actorId = getActorUserId(req);
@@ -676,6 +746,14 @@ export class BorrowingController {
 
       if (!actorId) {
         res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      if (!isIso8601DateTime(req.body.newDueDate)) {
+        res.status(400).json({
+          success: false,
+          message: 'Tanggal jatuh tempo baru harus format ISO 8601'
+        });
         return;
       }
 
