@@ -45,3 +45,5 @@ Service MySQL pada `docker/compose.yml` memasang `seeds/schema.sql` ke `/docker-
 Host backend dalam container adalah `mysql:3306`, sedangkan backend yang berjalan langsung di host menggunakan port MySQL yang dipublikasikan oleh override development.
 
 Pada image produksi (`docker/backend.Dockerfile`), `migrations/` disalin ke `/database/migrations` agar tetap terbaca oleh migration runner.
+
+#

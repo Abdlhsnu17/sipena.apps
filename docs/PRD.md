@@ -12,7 +12,7 @@
 
 ## 1. Tujuan Dokumen
 
-Dokumen ini menjelaskan kebutuhan produk yang tercermin pada implementasi SIPENA saat ini. Karena aplikasi telah dibangun, dokumen ini berfungsi sebagai baseline _as-built_: menjelaskan kemampuan yang tersedia, pengguna yang dilayani, aturan bisnis utama, batas sistem, dan kriteria penerimaan tingkat produk.
+Dokumen ini menjelaskan kebutuhan produk yang tercermin pada implementasi SIPENA saat ini. Karena aplikasi telah dibangun, dokumen ini berfungsi sebagai baseline _as-built_: menjelaskan kemampuan yang tersedia, pengguna yang dilayani, aturan bisnis utama, batas sistem, dan kriteria penerimaan tingkat produk yang dihasilkan.
 
 Jika terdapat perbedaan antara dokumen ini dan perilaku aplikasi, kode serta skema database yang sedang berjalan menjadi sumber kebenaran sampai perbedaan tersebut ditinjau dan PRD diperbarui.
 
