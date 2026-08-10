@@ -21,7 +21,7 @@ export const connectRedis = async (): Promise<boolean> => {
   } catch (error) {
     logger.warn('Redis connection failed', { error });
     if ((process.env.NODE_ENV || 'development') !== 'production') {
-      logger.info('Continuing without Redis - some features may be limited');
+      logger.debug('Continuing without Redis - some features may be limited');
     }
     // Don't throw error - allow app to continue without Redis
     return false;

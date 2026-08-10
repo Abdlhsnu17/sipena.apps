@@ -9,7 +9,6 @@ import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middlewa
 import { borrowingPreflightMiddleware } from './middlewares/borrowing-preflight.middleware';
 import { errorHandler } from './middlewares/error-handler.middleware';
 import { requestContextMiddleware } from './middlewares/request-context.middleware';
-import { createScopedLogger } from './utils/logger';
 import { getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
 import { getServerTimeSnapshot } from './utils/time';
 
@@ -19,8 +18,6 @@ import docsRoutes from './routes/docs.routes';
 // Import notification controller for the standalone SSE stream route mounted
 // outside the header-authenticated notification router.
 import notificationController from './controllers/notification.controller';
-
-const logger = createScopedLogger('app');
 
 const resolveTrustProxy = (value: string | undefined): boolean | number => {
   if (!value) {
@@ -228,9 +225,6 @@ export const createApp = (): express.Application => {
   // Set ALLOW_DSS_DEBUG=true in your local env to enable this route.
   if (!isProduction && process.env.ALLOW_DSS_DEBUG === 'true') {
     app.use('/api/dss-debug', dssRoutes);
-    logger.warn('⚠️ DSS debug routes mounted at /api/dss-debug (dev only)');
-  } else if (!isProduction && process.env.ALLOW_DSS_DEBUG !== 'true') {
-    logger.info('ℹ️ DSS debug routes not mounted (set ALLOW_DSS_DEBUG=true to enable)');
   }
 
   // EventSource cannot set Authorization headers, so this route consumes a

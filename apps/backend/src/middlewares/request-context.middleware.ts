@@ -22,7 +22,7 @@ export const requestContextMiddleware = (req: Request, res: Response, next: Next
   res.on('finish', () => {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
     const actorId = req.user?.id ? String(req.user.id) : '-';
-    logger.info('Request completed', {
+    logger.debug('Request completed', {
       requestId: req.requestId,
       method: req.method,
       path: req.originalUrl,

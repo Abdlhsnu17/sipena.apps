@@ -1,4 +1,6 @@
+import fs from 'fs';
 import { Server } from 'http';
+import path from 'path';
 import { createApp } from './app';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { applyDevelopmentEnvDefaults, loadEnvironment } from './config/env';
@@ -34,6 +36,96 @@ import {
 loadEnvironment();
 applyDevelopmentEnvDefaults();
 const logger = createScopedLogger('server');
+const bootstrapStartedAt = Date.now();
+const DEVELOPMENT_JWT_SECRET = 'sipena-local-dev-jwt-secret-change-in-production';
+
+const readPackageVersion = (): string => {
+  const candidates = [
+    path.resolve(__dirname, '../../../package.json'),
+    path.resolve(process.cwd(), 'package.json'),
+  ];
+
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+
+    try {
+      const rawPackageJson = fs.readFileSync(candidate, 'utf8');
+      const packageJson = JSON.parse(rawPackageJson) as { version?: string };
+      if (packageJson.version) {
+        return packageJson.version;
+      }
+    } catch {
+      // Fall back to the default version below.
+    }
+  }
+
+  return process.env.npm_package_version || '2.5.0';
+};
+
+const formatLocationLabel = (value: string): string => {
+  const normalized = value.trim();
+  return normalized || '-';
+};
+
+const getStartupSummary = (port: number) => {
+  const dbHost = formatLocationLabel(process.env.DB_HOST || 'localhost');
+  const dbPort = process.env.DB_PORT || '3306';
+  const dbName = formatLocationLabel(process.env.DB_NAME || 'sipena_db_local');
+  const dbUser = formatLocationLabel(process.env.DB_USER || 'root');
+  const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+  const isUsingDevelopmentJwtSecret = (process.env.JWT_SECRET || '') === DEVELOPMENT_JWT_SECRET;
+  const hasEmailConfiguration = Boolean(
+    process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim()
+  );
+  const isDssDebugEnabled = !isProduction && process.env.ALLOW_DSS_DEBUG === 'true';
+
+  return {
+    version: readPackageVersion(),
+    environment: process.env.NODE_ENV || 'development',
+    serverUrl: `http://localhost:${port}`,
+    healthUrl: `http://localhost:${port}/health`,
+    databaseLabel: `${dbUser}@${dbHost}:${dbPort}/${dbName}`,
+    jwtLabel: isUsingDevelopmentJwtSecret ? 'Menggunakan JWT secret development default' : '',
+    emailLabel: hasEmailConfiguration ? 'dikonfigurasi' : 'tidak dikonfigurasi',
+    uploadsLabel: 'siap',
+    uploadsRootLabel: path.basename(process.env.UPLOADS_ROOT?.trim() || 'uploads') || 'uploads',
+    dssDebugLabel: isDssDebugEnabled ? 'on' : 'off',
+    redisLabel: infrastructureStatus.redis === 'up'
+      ? 'connected successfully'
+      : infrastructureStatus.redis === 'optional-down'
+        ? 'tidak dikonfigurasi'
+        : 'tidak tersedia',
+    redisAvailable: infrastructureStatus.redis === 'up',
+  };
+};
+
+const printStartupBanner = (port: number): void => {
+  const summary = getStartupSummary(port);
+  const divider = '──────────────────────────────────────────────';
+  const pad = (label: string, value: string): string => `${label.padEnd(10)}${value}`;
+  const lines = [
+    `◆  SIPENA API v${summary.version}  ·  ${summary.environment}`,
+    divider,
+    `🖥️  ${pad('server', summary.serverUrl)}`,
+    `🗄️  ${pad('database', summary.databaseLabel)}`,
+    summary.jwtLabel ? `🔐  ${pad('jwt', summary.jwtLabel)}` : null,
+    `✉️  ${pad('email', summary.emailLabel)}`,
+    `🩺  ${pad('health', summary.healthUrl)}`,
+    `📦  ${pad('uploads', `${summary.uploadsLabel} (${summary.uploadsRootLabel})`)}`,
+    `🧪  ${pad('dss debug', summary.dssDebugLabel)}`,
+  ];
+
+  if (summary.redisAvailable) {
+    lines.push(`⚡  ${pad('redis', summary.redisLabel)}`);
+  } else {
+    lines.push(`⚪  ${pad('redis', summary.redisLabel)}`);
+  }
+
+  lines.push('');
+  lines.push(`siap dalam ${Date.now() - bootstrapStartedAt} ms  ·  tekan Ctrl+C untuk berhenti`);
+
+  console.log(lines.filter(Boolean).join('\n'));
+};
 
 // Validate required environment variables
 const validateEnvironment = () => {
@@ -125,7 +217,10 @@ const startMaintenanceReminderScheduler = () => {
   const run = async () => {
     try {
       const result = await maintenanceService.dispatchDueReminders();
-      logger.info('Maintenance reminder scheduler completed', { sent: result.data?.sent ?? 0 });
+      const sent = result.data?.sent ?? 0;
+      if (sent > 0) {
+        logger.info('Maintenance reminder scheduler completed', { sent });
+      }
     } catch (error) {
       logger.error('Maintenance reminder scheduler failed', { error });
     }
@@ -135,8 +230,9 @@ const startMaintenanceReminderScheduler = () => {
   maintenanceReminderTimer.unref();
 };
 
-const startHttpServer = (startPort: number, maxAttempts = 10) => {
+const startHttpServer = (startPort: number, maxAttempts = 10): Promise<number> => new Promise((resolve, reject) => {
   let attempt = 0;
+  let resolved = false;
 
   const tryListen = (port: number) => {
     attempt += 1;
@@ -144,12 +240,10 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
 
     server.on('listening', () => {
       activeHttpServer = server;
-      logger.info('🚀 Backend is LIVE - Server started', {
-        port,
-        environment: process.env.NODE_ENV || 'development',
-        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-        apiUrl: `http://localhost:${port}`,
-      });
+      if (!resolved) {
+        resolved = true;
+        resolve(port);
+      }
       startMaintenanceReminderScheduler();
     });
 
@@ -164,20 +258,22 @@ const startHttpServer = (startPort: number, maxAttempts = 10) => {
           setTimeout(() => tryListen(nextPort), 200);
           return;
         }
-        logger.error('All port attempts failed. Please free the port or set PORT to another value.');
+        const error = new Error('All port attempts failed. Please free the port or set PORT to another value.');
+        reject(error);
         process.exit(1);
       }
 
       // For other errors, rethrow to surface the problem
       logger.error('HTTP server error', { error: err });
+      if (!resolved) {
+        reject(err);
+      }
       process.exit(1);
     });
   };
 
   tryListen(Number(startPort));
-};
-
-startHttpServer(Number(PORT));
+});
 
 // Initialize database connections in the background.
 const initializeInfrastructure = async (): Promise<void> => {
@@ -185,7 +281,6 @@ const initializeInfrastructure = async (): Promise<void> => {
     try {
       await connectDatabase();
       infrastructureStatus.database = 'up';
-      logger.info('✅ Database connected successfully');
 
       await withSchemaLock(async () => {
         await ensureCoreSchemaInitialized();
@@ -213,17 +308,14 @@ const initializeInfrastructure = async (): Promise<void> => {
       const redisConnected = await connectRedis();
       if (redisConnected) {
         infrastructureStatus.redis = 'up';
-        logger.info('✅ Redis connected successfully');
       } else {
         if (isProduction) {
           infrastructureStatus.redis = 'down';
           throw new Error('Redis wajib aktif di production');
         }
         infrastructureStatus.redis = 'optional-down';
-        logger.warn('⚠️ Redis not available - continuing without Redis');
       }
 
-      logger.info('✅ Startup initialization complete');
       return;
     } catch (error) {
       logger.error('Startup initialization attempt failed', {
@@ -250,7 +342,16 @@ const initializeInfrastructure = async (): Promise<void> => {
   }
 };
 
-void initializeInfrastructure();
+const httpServerReady = startHttpServer(Number(PORT));
+const infrastructureReady = initializeInfrastructure();
+
+void Promise.all([httpServerReady, infrastructureReady])
+  .then(([port]) => {
+    printStartupBanner(port);
+  })
+  .catch((error) => {
+    logger.error('Startup banner could not be printed', { error });
+  });
 
 let shutdownStarted = false;
 const shutdown = async (signal: NodeJS.Signals): Promise<void> => {

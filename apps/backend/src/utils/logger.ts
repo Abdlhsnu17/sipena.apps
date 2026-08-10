@@ -4,13 +4,13 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 const isTest = nodeEnv === 'test';
 
-const developmentFormat = format.printf(({ level, message, timestamp, service, ...metadata }) => {
+const developmentFormat = format.printf(({ message, ...metadata }) => {
   const metadataText = Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : '';
-  return `[${timestamp}] [${service}] ${level}: ${message}${metadataText}`;
+  return `${message}${metadataText}`;
 });
 
 export const logger = createLogger({
-  level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
+  level: process.env.LOG_LEVEL || 'info',
   silent: process.env.LOG_SILENT === 'true' || (isTest && process.env.LOG_TEST_OUTPUT !== 'true'),
   defaultMeta: {
     service: 'sipena-backend',
