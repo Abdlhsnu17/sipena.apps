@@ -4,10 +4,10 @@
 | --- | --- |
 | Produk | SIPENA — Sistem Inventaris, Peminjaman, dan Pemeliharaan Sarana |
 | Jenis dokumen | As-built PRD |
-| Versi dokumen | 1.1 |
+| Versi dokumen | 1.2 |
 | Versi aplikasi | 2.5.0 |
 | Status | Baseline implementasi aktif |
-| Terakhir diperbarui | 15 Juli 2026 |
+| Terakhir diperbarui | 12 Agustus 2026 |
 | Sumber kebenaran teknis | Implementasi di `apps/frontend`, `apps/backend`, dan `database/` |
 
 ## 1. Tujuan Dokumen
@@ -220,6 +220,7 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | DSS-02 | Sistem menerima bobot dan matriks penilaian sebagai masukan pemeringkatan. | Implemented |
 | DSS-03 | Sistem menampilkan hasil peringkat sebagai bahan pendukung keputusan, bukan keputusan otomatis final. | Implemented |
 | DSS-04 | Hasil peringkat menyertakan frekuensi penggunaan dan kategori integrasi `normal`, `warning`, atau `mandatory_check` dengan ambang yang sama seperti modul Penggunaan. | Implemented |
+| DSS-05 | Pengguna dapat menyimpan skenario bobot, membandingkan dua skenario riwayat, serta mengekspor riwayat yang dicentang ke PDF/Excel dengan 10 ranking teratas per skenario. | Implemented |
 
 ### 6.8 Penghapusan aset
 
@@ -252,7 +253,7 @@ Pengajuan -> Pending -> Disetujui -> Dipinjam -> Dicatat kembali -> Divalidasi k
 | ID | Requirement | Status |
 | --- | --- | --- |
 | RPT-01 | Sistem menyediakan dashboard dan laporan aset, pengguna, peminjaman, penggunaan, dan pemeliharaan. | Implemented |
-| RPT-02 | Laporan dapat difilter dan diekspor ke format yang didukung, termasuk PDF/Excel pada layar terkait. | Implemented |
+| RPT-02 | Laporan dapat difilter dan diekspor ke format yang didukung, termasuk PDF/Excel pada layar terkait, serta ekspor ranking/riwayat SPK pada halaman prioritas aset. | Implemented |
 | RPT-03 | Pengguna berizin dapat mengunggah, melihat, mengunduh, dan mempratinjau dokumen. | Implemented |
 | RPT-04 | Admin dapat menghapus dokumen unggahan. | Implemented |
 | RPT-05 | Sistem mencatat dan menampilkan riwayat aktivitas; cakupan melihat aktivitas orang lain bergantung pada role. | Implemented |
@@ -449,6 +450,8 @@ Baseline rilis dinyatakan memenuhi PRD bila:
 
 - `README.md` — ringkasan produk dan struktur monorepo.
 - `apps/frontend/src/app` — halaman dan alur UI.
+- `apps/frontend/src/app/dss/page.tsx` — halaman SPK prioritas aset, riwayat skenario, perbandingan, dan ekspor hasil terpilih.
+- `apps/frontend/src/utils/export-table.ts` — utilitas ekspor PDF/Excel/print untuk tabel dan laporan.
 - `apps/frontend/src/utils/role.ts` — fallback akses route dan helper role.
 - `apps/backend/src/routes` — kontrak endpoint dan batas role tindakan.
 - `apps/backend/src/services/access-control.service.ts` — menu dan matriks akses default.
@@ -456,7 +459,7 @@ Baseline rilis dinyatakan memenuhi PRD bila:
 - `database/` — skema, seed, dan migrasi database.
 - `docker` — konfigurasi runtime container.
 
-Migrasi penting untuk baseline 1.1:
+Migrasi penting untuk baseline 1.2:
 
 - `database/migrations/20260621_add_borrowing_sanction_resolution_columns.sql` — audit penyelesaian dan pembebasan sanksi.
 - `database/migrations/20260622_add_asset_usage_audit_columns.sql` — arsip lunak serta sumber manual/sinkron peminjaman pada Penggunaan.

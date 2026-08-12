@@ -7,8 +7,8 @@ Dokumen kebutuhan produk dan baseline perilaku aplikasi tersedia di [`docs/PRD.m
 | Metadata | Nilai |
 | --- | --- |
 | Versi aplikasi | 2.5.0 |
-| Baseline dokumentasi | Implementasi aktif per 19 Juli 2026 |
-| PRD | Versi 1.1 (as-built) |
+| Baseline dokumentasi | Implementasi aktif per 12 Agustus 2026 |
+| PRD | Versi 1.2 (as-built) |
 
 ## Ringkasan Kegunaan
 
@@ -22,6 +22,7 @@ Secara praktis, SIPENA digunakan untuk:
 - Memantau frekuensi penggunaan per detail inventaris, memberi peringatan setelah lebih dari 10 kali penggunaan, dan membuat tiket cek rutin otomatis saat mencapai 25 kali penggunaan.
 - Menjadwalkan dan memantau pemeliharaan aset, termasuk penautan Teknisi/PJ ke akun aktif dan pemisahan tiket manual dari tiket otomatis.
 - Membantu penentuan prioritas aset melalui modul SPK Prioritas Aset dengan bobot manual atau AHP dan pemeringkatan TOPSIS.
+- Menyimpan, membandingkan, dan mengekspor riwayat skenario SPK prioritas aset yang dipilih.
 - Mencatat riwayat pemeliharaan dan aktivitas pengguna sebagai bahan evaluasi dan kontrol.
 - Mengelola laporan operasional, dokumen pendukung, dan dokumentasi sistem agar lebih mudah ditinjau kembali.
 - Memindai QR/barcode melalui kamera atau gambar untuk mencari aset dan membuka inventaris yang sesuai.
@@ -100,6 +101,7 @@ Isi folder database:
 - Jadwal pemeliharaan terpisah yang tersinkron ke record pemeliharaan.
 - SPK Prioritas Aset dengan delapan kriteria, bobot manual atau matriks perbandingan berpasangan AHP, pemeriksaan rasio konsistensi, pemeringkatan TOPSIS, preferensi bobot per pengguna, dan riwayat hasil yang dapat dipulihkan atau dihapus.
 - Skenario pembobotan dapat diberi nama dan diarsipkan lewat tombol "Simpan Skenario"; dua skenario pada Riwayat Perhitungan dapat dibandingkan langsung (pergeseran peringkat per aset, alternatif yang masuk/keluar sepuluh besar, serta korelasi Spearman/Kendall).
+- Riwayat perhitungan SPK dapat dicentang lalu diekspor ke PDF/Excel; isi ekspor mengikuti skenario yang dipilih dan membawa 10 ranking teratas per skenario.
 - Validasi model SPK berupa uji sensitivitas bobot (pergeseran ±10% dan ±20% per kriteria, diukur dengan korelasi peringkat Spearman/Kendall dan irisan top-10) serta pembandingan hasil TOPSIS dengan metode SAW dan WP pada matriks keputusan dan bobot yang sama.
 - Penghapusan aset (disposal) dengan pengajuan, persetujuan/penolakan, serta sinkronisasi otomatis status aset atau detail aset yang dihapuskan.
 - Permintaan arsip data (deletion request) untuk user, peminjaman/pengembalian, dan pemeliharaan, lengkap dengan alur review sebelum data benar-benar diarsipkan.
@@ -114,7 +116,7 @@ Isi folder database:
 
 ## Pembaruan Implementasi Terbaru
 
-Baseline 19 Juli 2026 mencakup pembaruan berikut:
+Baseline 12 Agustus 2026 mencakup pembaruan berikut:
 
 - Struktur proyek telah dipisahkan menjadi workspace `apps/frontend`, `apps/backend`, dan artefak database di `database/`; konfigurasi Docker, script runtime, dan Selenium berada di folder khusus masing-masing.
 - Pemeliharaan kini mencatat estimasi, waktu aktual, vendor/garansi, diagnosis dan tindakan, checklist/suku cadang, bukti foto atau lampiran, hasil verifikasi, kondisi akhir, dan tanggal pemeliharaan berikutnya.
@@ -298,6 +300,11 @@ Endpoint utama yang aktif mencakup:
 - `/api/borrowing` untuk peminjaman, approval, reject, return, validasi return, dan data Pemilik/PJ tertaut.
 - `/api/borrowing/owner-candidates` untuk pencarian akun aktif calon Pemilik/PJ.
 - `/api/dss` untuk SPK Prioritas Aset dan pemeringkatan aset.
+- `/api/dss/history` untuk riwayat perhitungan SPK.
+- `/api/dss/scenario-comparison` untuk perbandingan dua skenario riwayat atau bobot aktif.
+- `/api/dss/sensitivity` untuk uji sensitivitas bobot.
+- `/api/dss/method-comparison` untuk pembandingan TOPSIS dengan SAW dan WP.
+- `/api/dss/weights` untuk preferensi bobot per pengguna.
 - `/api/maintenance` untuk pemeliharaan aset, termasuk filter sumber manual atau `usage_threshold`.
 - `/api/maintenance/technician-candidates` untuk pencarian akun aktif calon Teknisi/PJ.
 - `/api/maintenance-history` untuk riwayat pemeliharaan.
