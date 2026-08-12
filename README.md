@@ -99,6 +99,8 @@ Isi folder database:
 - Workflow pemeliharaan lanjutan: estimasi durasi/biaya, persetujuan pekerjaan kritis atau bernilai minimal Rp5.000.000, vendor dan garansi, diagnosis, tindakan, checklist, suku cadang, bukti foto/lampiran, verifikasi hasil, pengingat H-7/H-3/H-1, serta jadwal berulang bulanan, triwulanan, atau tahunan.
 - Jadwal pemeliharaan terpisah yang tersinkron ke record pemeliharaan.
 - SPK Prioritas Aset dengan delapan kriteria, bobot manual atau matriks perbandingan berpasangan AHP, pemeriksaan rasio konsistensi, pemeringkatan TOPSIS, preferensi bobot per pengguna, dan riwayat hasil yang dapat dipulihkan atau dihapus.
+- Skenario pembobotan dapat diberi nama dan diarsipkan lewat tombol "Simpan Skenario"; dua skenario pada Riwayat Perhitungan dapat dibandingkan langsung (pergeseran peringkat per aset, alternatif yang masuk/keluar sepuluh besar, serta korelasi Spearman/Kendall).
+- Validasi model SPK berupa uji sensitivitas bobot (pergeseran ±10% dan ±20% per kriteria, diukur dengan korelasi peringkat Spearman/Kendall dan irisan top-10) serta pembandingan hasil TOPSIS dengan metode SAW dan WP pada matriks keputusan dan bobot yang sama.
 - Penghapusan aset (disposal) dengan pengajuan, persetujuan/penolakan, serta sinkronisasi otomatis status aset atau detail aset yang dihapuskan.
 - Permintaan arsip data (deletion request) untuk user, peminjaman/pengembalian, dan pemeliharaan, lengkap dengan alur review sebelum data benar-benar diarsipkan.
 - Manajemen sanksi atas keterlambatan pengembalian aset: daftar sanksi aktif/selesai, penyelesaian sanksi, pembebasan sanksi dengan catatan, dan statistik ringkas.
@@ -119,6 +121,9 @@ Baseline 19 Juli 2026 mencakup pembaruan berikut:
 - Pemeliharaan prioritas kritis atau berestimasi minimal Rp5.000.000 masuk ke alur persetujuan. Admin/leader juga dapat membuat notifikasi pengingat H-7, H-3, dan H-1 serta mengaktifkan pekerjaan berulang.
 - SPK Prioritas Aset mendukung bobot manual dan AHP. Matriks AHP yang tidak konsisten (`CR > 0,1`) menggunakan bobot manual/default sebagai fallback; hasil akhir tetap dihitung dengan TOPSIS.
 - Preferensi bobot, ringkasan hasil, dan matriks perbandingan disimpan pada riwayat SPK per pengguna untuk kebutuhan audit dan pemakaian ulang.
+- Riwayat SPK kini hanya terisi saat pengguna menekan "Simpan Skenario" (bukan setiap kali ranking dihitung ulang), sehingga riwayat berisi keputusan, bukan draf. Halaman ranking menandai apakah konfigurasi yang tampil sudah tersimpan atau belum. Pembandingan dua skenario memakai `POST /api/dss/scenario-comparison` dan selalu menghitung ulang penuh dari bobot tersimpan, bukan membandingkan ringkasan top-10.
+- Perhitungan MCDM dipisahkan ke util murni (`apps/backend/src/utils/mcdm.ts`) dan akses datanya ke `apps/backend/src/repositories/dss.repository.ts`. Dataset SPK di-cache singkat per jenis aset (`DSS_DATASET_CACHE_TTL_MS`, default 60 detik), endpoint `POST /api/dss/ranking` menerima `offset` untuk paginasi, serta tersedia `POST /api/dss/sensitivity` dan `POST /api/dss/method-comparison` untuk validasi model.
+- Frekuensi pemakaian pada SPK memakai `SUM(usage_count)` dan mengabaikan data yang diarsipkan lunak, agar konsisten dengan ambang 10/25 pada modul Penggunaan Aset.
 
 - Pemilik/PJ pada peminjaman dipilih dari akun aktif melalui pencarian nama, NIP, atau unit kerja. Sistem menyimpan `owner_user_id` beserta snapshot nama, NIP, jabatan, dan unit kerja agar dokumen transaksi tetap dapat ditelusuri.
 - Teknisi/PJ pada pemeliharaan menggunakan pola penautan akun yang sama dan menampilkan nama serta NIP pada ringkasan maupun detail.
@@ -139,6 +144,8 @@ Perubahan skema yang menjadi bagian dari baseline ini antara lain:
 - `20260717_expand_maintenance_workflow_details.sql` menambahkan estimasi, bukti foto, diagnosis, tindakan, checklist, suku cadang, hasil verifikasi, kondisi akhir, dan tanggal berikutnya.
 - `20260718_add_dss_weight_and_history.sql` menambahkan preferensi bobot dan riwayat pemeringkatan SPK.
 - `20260719_add_dss_history_pairwise_matrix.sql` menyimpan matriks AHP pada riwayat SPK.
+- `20260812_add_dss_aggregate_indexes.sql` menambahkan index komposit untuk agregasi frekuensi pemakaian dan pemeliharaan yang dipakai SPK.
+- `20260812_add_dss_history_label.sql` menambahkan kolom label skenario pada riwayat perhitungan SPK.
 
 ## Arsitektur
 

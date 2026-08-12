@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildLoginRedirectUrl, getCurrentUser } from "@/services/auth-utils";
-import dssService, { type DssAssetRanking, type DssAssetType, type DssRankingHistoryEntry, type DssRankingResult } from "@/services/dss.service";
+import dssService, { type DssAssetRanking, type DssAssetType, type DssMethodComparisonResult, type DssRankingHistoryEntry, type DssRankingResult, type DssScenarioComparisonResult, type DssSensitivityResult, type DssStabilityLabel } from "@/services/dss.service";
 import { cn } from "@/utils";
 import {
     buildDefaultPairwiseValues,
@@ -53,6 +53,7 @@ import {
     SlidersHorizontal,
     Stethoscope,
     Trash2,
+    X,
     Wrench,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -98,6 +99,41 @@ const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 const formatScore = (value: number) => value.toFixed(4)
 
 const RANKINGS_PER_PAGE = 10
+
+const formatCorrelation = (value: number) => value.toFixed(3)
+
+// Ringkasan satu set bobot: apakah semua kriteria bernilai sama (baseline tanpa
+// prioritas) atau ada kriteria yang mendominasi. Dipakai agar entri riwayat bisa
+// dibaca tanpa harus membuka tabel bobotnya.
+const summarizeWeights = (criteria: DssRankingHistoryEntry["criteria"]) => {
+  const weights = criteria.map((criterion) => Number(criterion.weight) || 0)
+  if (weights.length === 0) return null
+  const max = Math.max(...weights)
+  const min = Math.min(...weights)
+  // Toleransi 0,5 poin persen: pembulatan slider bisa menyisakan selisih kecil
+  // yang secara praktis tetap berarti "rata".
+  if (max - min < 0.005) return { uniform: true, label: `Bobot merata ${formatPercent(max)}` }
+  const dominant = criteria.reduce((best, criterion) => (criterion.weight > best.weight ? criterion : best))
+  return { uniform: false, label: `${dominant.name} ${formatPercent(dominant.weight)}` }
+}
+
+const weightMethodLabel = (entry: DssRankingHistoryEntry) =>
+  entry.pairwiseMatrix && entry.pairwiseMatrix.length > 0 ? "AHP" : "Manual"
+
+// Identitas satu skenario: jenis aset + bobot yang benar-benar dipakai backend.
+// Dibulatkan agar selisih pembulatan float tidak bikin skenario yang sama
+// terbaca sebagai skenario berbeda.
+const buildRankingSignature = (assetType: DssAssetType, criteria: DssRankingResult["criteria"]) =>
+  JSON.stringify({
+    assetType,
+    weights: criteria.map((criterion) => [criterion.id, criterion.weight.toFixed(6)]),
+  })
+
+const stabilityBadgeClass = (stability: DssStabilityLabel) => {
+  if (stability === "stabil") return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+  if (stability === "cukup stabil") return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
+  return "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
+}
 
 const rankingBadgeClass = "min-h-6 max-w-full gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium shadow-xs [&>svg]:size-3 [&>svg]:shrink-0"
 
@@ -185,7 +221,36 @@ export default function DssPage() {
   const [historyDetailEntry, setHistoryDetailEntry] = useState<DssRankingHistoryEntry | null>(null)
   const [deletingHistoryId, setDeletingHistoryId] = useState<number | null>(null)
   const [historyActionMessage, setHistoryActionMessage] = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<"weights" | "ranking" | "history">("weights")
+  const [activeSection, setActiveSection] = useState<"weights" | "ranking" | "history" | "validation">("weights")
+  const [sensitivityResult, setSensitivityResult] = useState<DssSensitivityResult | null>(null)
+  const [comparisonResult, setComparisonResult] = useState<DssMethodComparisonResult | null>(null)
+  const [isValidationLoading, setIsValidationLoading] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationStamp, setValidationStamp] = useState<string | null>(null)
+  // Tanda tangan konfigurasi (bobot + jenis aset) dari ranking yang tampil dan
+  // dari ranking yang terakhir disimpan; selisihnya dipakai untuk memberi tahu
+  // pengguna bahwa skenario di layar belum masuk riwayat.
+  const [currentSignature, setCurrentSignature] = useState<string | null>(null)
+  const [savedSignature, setSavedSignature] = useState<string | null>(null)
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [scenarioLabel, setScenarioLabel] = useState("")
+  const [isSavingScenario, setIsSavingScenario] = useState(false)
+  const [saveScenarioError, setSaveScenarioError] = useState<string | null>(null)
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState<number[]>([])
+  const [scenarioComparison, setScenarioComparison] = useState<DssScenarioComparisonResult | null>(null)
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false)
+  const [comparisonError, setComparisonError] = useState<string | null>(null)
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false)
+  // Skenario riwayat yang sedang dipulihkan. Selama ini aktif, ranking dihitung
+  // memakai bobot persis dari riwayat — bukan hasil pembulatan slider — sehingga
+  // hasilnya benar-benar sama dengan snapshot yang tersimpan. Begitu pengguna
+  // menyentuh bobot, mode, atau jenis aset, tautan ini dilepas.
+  const [activeScenario, setActiveScenario] = useState<{
+    id: number
+    label: string
+    weights: Record<string, number>
+    pairwiseMatrix: number[][] | null
+  } | null>(null)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -248,7 +313,7 @@ export default function DssPage() {
         : normalizedWeights
       const response = await dssService.saveWeightPreference(effectiveWeights, assetType)
       if (response.success) {
-        setWeightsSavedMessage("Bobot tersimpan sebagai default Anda.")
+        setWeightsSavedMessage("Bobot ini akan terpasang otomatis saat Anda membuka SPK. Tidak masuk Riwayat Perhitungan.")
       }
     } catch {
       setWeightsSavedMessage("Gagal menyimpan bobot. Coba lagi.")
@@ -258,14 +323,34 @@ export default function DssPage() {
   }, [rankingResult, normalizedWeights, assetType])
 
   const applyHistoryEntry = useCallback((entry: DssRankingHistoryEntry) => {
-    if (entry.pairwiseMatrix && entry.pairwiseMatrix.length === CRITERIA_IDS.length) {
-      setPairwiseValues(buildPairwiseValuesFromMatrix(entry.pairwiseMatrix, CRITERIA_IDS))
+    // Jenis aset ikut dipulihkan: bobot yang sama pada dataset berbeda
+    // menghasilkan ranking berbeda, jadi memuat bobot saja tidak cukup untuk
+    // mereproduksi skenario.
+    setAssetType((entry.assetType as DssAssetType) || "all")
+
+    const usesAhp = Boolean(entry.pairwiseMatrix && entry.pairwiseMatrix.length === CRITERIA_IDS.length)
+    if (usesAhp) {
+      setPairwiseValues(buildPairwiseValuesFromMatrix(entry.pairwiseMatrix!, CRITERIA_IDS))
       setWeightMode("ahp")
-      return
+    } else {
+      // Slider hanya menerima bilangan bulat 1-40, jadi tampilannya berupa
+      // pendekatan. Nilai eksaknya disimpan di activeScenario dan itulah yang
+      // dikirim ke backend.
+      setWeights((current) => rescaleWeightsToSliderRange(entry.weights, current))
+      setWeightMode("manual")
     }
-    setWeights((current) => rescaleWeightsToSliderRange(entry.weights, current))
-    setWeightMode("manual")
+
+    setActiveScenario({
+      id: entry.id,
+      label: entry.label || `Riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")}`,
+      weights: entry.weights,
+      pairwiseMatrix: usesAhp ? entry.pairwiseMatrix! : null,
+    })
+    setActiveSection("ranking")
   }, [])
+
+  /** Melepas tautan ke skenario riwayat begitu konfigurasinya diubah manual. */
+  const detachActiveScenario = useCallback(() => setActiveScenario(null), [])
 
   const deleteHistoryEntry = useCallback(async (entry: DssRankingHistoryEntry) => {
     const confirmed = await confirm({
@@ -284,6 +369,7 @@ export default function DssPage() {
       if (response.success) {
         setHistoryEntries((current) => current.filter((item) => item.id !== entry.id))
         setHistoryDetailEntry((current) => current?.id === entry.id ? null : current)
+        setSelectedHistoryIds((current) => current.filter((id) => id !== entry.id))
         setHistoryActionMessage("Riwayat perhitungan berhasil dihapus.")
       }
     } catch {
@@ -294,8 +380,9 @@ export default function DssPage() {
   }, [confirm])
 
   const setPairwiseValue = useCallback((rowId: string, colId: string, value: number) => {
+    detachActiveScenario()
     setPairwiseValues((current) => ({ ...current, [buildPairwiseKey(rowId, colId)]: value }))
-  }, [])
+  }, [detachActiveScenario])
 
   // Live per-pair inconsistency hint, recomputed as the user edits — doesn't wait
   // for "Hitung Ulang" or the backend's CR check, so contradictory judgments can
@@ -318,30 +405,55 @@ export default function DssPage() {
     router.push(`/maintenance?${params.toString()}`)
   }, [router])
 
-  const loadRanking = useCallback(async (options: { persistHistory?: boolean } = {}) => {
+  const loadRanking = useCallback(async (options: { persistHistory?: boolean; label?: string } = {}) => {
     setIsLoading(true)
     setErrorMessage(null)
     try {
+      // Saat skenario riwayat sedang dipulihkan, yang dikirim adalah bobot
+      // eksak dari riwayat, bukan hasil pembulatan slider — supaya rankingnya
+      // identik dengan snapshot yang tersimpan.
+      const effectiveWeights = activeScenario?.weights ?? normalizedWeights
+      const effectivePairwiseMatrix = activeScenario
+        ? activeScenario.pairwiseMatrix ?? undefined
+        : weightMode === "ahp"
+          ? buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS)
+          : undefined
+
       const response = await dssService.getRanking(
-        weightMode === "ahp"
+        effectivePairwiseMatrix
           // Manual weights ride along as the fallback the backend uses when
           // the pairwise matrix turns out inconsistent (CR > 0.1), so that
           // fallback actually matches what the UI tells the user happens.
-          ? { assetType, limit: 250, pairwiseMatrix: buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS), weights: normalizedWeights, saveHistory: options.persistHistory }
-          : { assetType, limit: 250, weights: normalizedWeights, saveHistory: options.persistHistory }
+          ? { assetType, limit: 250, pairwiseMatrix: effectivePairwiseMatrix, weights: effectiveWeights, saveHistory: options.persistHistory, label: options.label }
+          : { assetType, limit: 250, weights: effectiveWeights, saveHistory: options.persistHistory, label: options.label }
       )
       if (response.success) {
         setRankingResult(response.data)
+        const signature = buildRankingSignature(assetType, response.data.criteria)
+        setCurrentSignature(signature)
+        if (options.persistHistory) {
+          // Backend melaporkan hasil simpan sebenarnya; kalau gagal, jangan
+          // tandai tersimpan supaya badge tidak menjanjikan riwayat yang kosong.
+          if (response.data.historySaved === false) {
+            setErrorMessage("Skenario gagal disimpan ke Riwayat Perhitungan. Pastikan migrasi database terbaru sudah dijalankan (npm run migrate --workspace=inventory-backend).")
+            void loadHistory()
+            return false
+          }
+          setSavedSignature(signature)
+        }
         void loadHistory()
+        return true
       }
+      return false
     } catch (error) {
       console.error("Error loading DSS ranking:", error)
       setRankingResult(null)
       setErrorMessage(error instanceof Error ? error.message : "Endpoint SPK tidak dapat dihubungi. Periksa layanan backend lalu muat ulang.")
+      return false
     } finally {
       setIsLoading(false)
     }
-  }, [assetType, normalizedWeights, weightMode, pairwiseValues, loadHistory])
+  }, [assetType, normalizedWeights, weightMode, pairwiseValues, activeScenario, loadHistory])
 
   // Gated on weightsLoaded so we don't fetch twice on mount (once with
   // defaults, once with the restored saved preference).
@@ -349,6 +461,99 @@ export default function DssPage() {
     if (!weightsLoaded) return
     void loadRanking()
   }, [weightsLoaded, loadRanking])
+
+  // Tersimpan bila konfigurasi ini baru saja disimpan di sesi ini, atau memang
+  // sedang memulihkan skenario dari riwayat.
+  const isRankingSaved = Boolean(activeScenario) || Boolean(currentSignature && currentSignature === savedSignature)
+
+  const saveScenario = useCallback(async () => {
+    setIsSavingScenario(true)
+    setSaveScenarioError(null)
+    try {
+      const saved = await loadRanking({ persistHistory: true, label: scenarioLabel.trim() || undefined })
+      // Dialog hanya ditutup saat penyimpanan benar-benar berhasil, supaya
+      // kegagalan tidak terlihat seperti keberhasilan.
+      if (saved) {
+        setIsSaveDialogOpen(false)
+        setScenarioLabel("")
+      } else {
+        setSaveScenarioError("Skenario gagal disimpan ke Riwayat Perhitungan. Jalankan migrasi database terbaru lalu coba lagi.")
+      }
+    } finally {
+      setIsSavingScenario(false)
+    }
+  }, [loadRanking, scenarioLabel])
+
+  const toggleHistorySelection = useCallback((historyId: number) => {
+    setSelectedHistoryIds((current) => {
+      if (current.includes(historyId)) return current.filter((id) => id !== historyId)
+      // Perbandingan hanya menerima dua skenario; pilihan terlama digeser keluar
+      // agar pengguna tidak perlu membatalkan centang lebih dulu.
+      return [...current, historyId].slice(-2)
+    })
+  }, [])
+
+  const compareSelectedScenarios = useCallback(async () => {
+    if (selectedHistoryIds.length !== 2) return
+    setIsComparisonOpen(true)
+    setIsComparisonLoading(true)
+    setComparisonError(null)
+    setScenarioComparison(null)
+    try {
+      const response = await dssService.getScenarioComparison({
+        assetType,
+        topK: 10,
+        scenarios: selectedHistoryIds.map((historyId) => ({ historyId })),
+      })
+      if (response.success) setScenarioComparison(response.data)
+    } catch (error) {
+      console.error("Error comparing DSS scenarios:", error)
+      setComparisonError(error instanceof Error ? error.message : "Perbandingan skenario gagal dimuat.")
+    } finally {
+      setIsComparisonLoading(false)
+    }
+  }, [assetType, selectedHistoryIds])
+
+  // Uji sensitivitas dan pembandingan metode memakai bobot yang sama persis
+  // dengan ranking yang sedang ditampilkan, sehingga hasilnya benar-benar
+  // memvalidasi konfigurasi yang dipakai — bukan konfigurasi default.
+  const loadValidation = useCallback(async () => {
+    setIsValidationLoading(true)
+    setValidationError(null)
+    // Sama seperti ranking: kalau skenario riwayat sedang dipulihkan, yang diuji
+    // adalah bobot eksaknya, bukan pendekatan slider.
+    const validationWeights = activeScenario?.weights ?? normalizedWeights
+    const validationPairwise = activeScenario
+      ? activeScenario.pairwiseMatrix ?? undefined
+      : weightMode === "ahp"
+        ? buildPairwiseMatrixFromValues(pairwiseValues, CRITERIA_IDS)
+        : undefined
+    const payload = validationPairwise
+      ? { assetType, weights: validationWeights, pairwiseMatrix: validationPairwise, topK: 10 }
+      : { assetType, weights: validationWeights, topK: 10 }
+    try {
+      const [sensitivity, comparison] = await Promise.all([
+        dssService.getSensitivityAnalysis(payload),
+        dssService.getMethodComparison(payload),
+      ])
+      if (sensitivity.success) setSensitivityResult(sensitivity.data)
+      if (comparison.success) setComparisonResult(comparison.data)
+      setValidationStamp(new Date().toISOString())
+    } catch (error) {
+      console.error("Error loading DSS validation:", error)
+      setValidationError(error instanceof Error ? error.message : "Analisis validasi gagal dimuat.")
+    } finally {
+      setIsValidationLoading(false)
+    }
+  }, [assetType, normalizedWeights, weightMode, pairwiseValues, activeScenario])
+
+  // Analisis ini jauh lebih berat daripada satu kali ranking (8 kriteria x 4
+  // skenario + 3 metode), jadi hanya dijalankan saat tabnya dibuka.
+  useEffect(() => {
+    if (activeSection !== "validation") return
+    if (sensitivityResult || comparisonResult || isValidationLoading) return
+    void loadValidation()
+  }, [activeSection, sensitivityResult, comparisonResult, isValidationLoading, loadValidation])
 
   const filteredRankings = useMemo(() => {
     const rankings = rankingResult?.rankings || []
@@ -386,6 +591,51 @@ export default function DssPage() {
       filePrefix: `spk-ranking-prioritas-${assetType}`,
     })
   }, [filteredRankings, assetType])
+
+  const exportHistory = useCallback(async (format: "excel" | "pdf") => {
+    const selectedEntries = selectedHistoryIds.length > 0
+      ? selectedHistoryIds
+          .map((historyId) => historyEntries.find((entry) => entry.id === historyId))
+          .filter((entry): entry is DssRankingHistoryEntry => Boolean(entry))
+      : historyEntries
+
+    const columns = [
+      "Skenario",
+      "Waktu",
+      "Jenis Aset",
+      "Alternatif",
+      "Metode",
+      "Ringkasan Bobot",
+      "Rank",
+      "Nama Aset Detail",
+      "Kode",
+      "Skor",
+      "Rekomendasi",
+    ]
+
+    const rows = selectedEntries.flatMap((entry) =>
+      entry.topRankings.slice(0, 10).map((ranking) => ({
+        Skenario: entry.label || "Tanpa nama",
+        Waktu: new Date(entry.createdAt).toLocaleString("id-ID"),
+        "Jenis Aset": assetTypeLabel(entry.assetType as DssAssetType),
+        Alternatif: String(entry.totalAlternatives),
+        Metode: weightMethodLabel(entry),
+        "Ringkasan Bobot": summarizeWeights(entry.criteria)?.label || "-",
+        Rank: String(ranking.rank),
+        "Nama Aset Detail": ranking.detailName,
+        Kode: ranking.detailCode,
+        Skor: formatScore(ranking.preferenceScore),
+        Rekomendasi: ranking.recommendation,
+      }))
+    )
+
+    await exportTableData(format, {
+      title: "Riwayat Perhitungan SPK",
+      columns,
+      rows,
+      filePrefix: "spk-riwayat-perhitungan",
+    })
+  }, [historyEntries, selectedHistoryIds])
 
   useEffect(() => {
     setRankingPage(1)
@@ -442,7 +692,7 @@ export default function DssPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full lg:w-auto">
-                  <Select value={assetType} onValueChange={(value) => setAssetType(value as DssAssetType)}>
+                  <Select value={assetType} onValueChange={(value) => { detachActiveScenario(); setAssetType(value as DssAssetType) }}>
                     <SelectTrigger className="w-full sm:w-45">
                       <SelectValue placeholder="Jenis aset" />
                     </SelectTrigger>
@@ -452,7 +702,32 @@ export default function DssPage() {
                       <SelectItem value="non_medical" className="focus:bg-teal-600 focus:text-white focus:[&_svg]:text-white">Non-Medis</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={() => void loadRanking({ persistHistory: true })} disabled={isLoading} className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
+                  {rankingResult && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "h-9 shrink-0 rounded-2xl px-3",
+                        isRankingSaved
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                          : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
+                      )}
+                    >
+                      {activeScenario
+                        ? `Skenario tersimpan · ${activeScenario.label}`
+                        : isRankingSaved
+                          ? "Skenario tersimpan"
+                          : "Skenario belum disimpan"}
+                    </Badge>
+                  )}
+                  <Button
+                    onClick={() => { setSaveScenarioError(null); setIsSaveDialogOpen(true) }}
+                    disabled={isLoading || !rankingResult}
+                    className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-600 dark:text-white dark:hover:bg-teal-700"
+                  >
+                    <Save className="h-4 w-4" />
+                    Simpan Skenario
+                  </Button>
+                  <Button onClick={() => void loadRanking()} disabled={isLoading} className="gap-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700">
                     <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                     Hitung Ulang
                   </Button>
@@ -548,7 +823,7 @@ export default function DssPage() {
 
         <Tabs
           value={activeSection}
-          onValueChange={(value) => setActiveSection(value as "weights" | "ranking" | "history")}
+          onValueChange={(value) => setActiveSection(value as "weights" | "ranking" | "history" | "validation")}
           className="gap-4"
         >
           <div className="overflow-x-auto pb-1">
@@ -569,6 +844,13 @@ export default function DssPage() {
               >
                 <ArrowDownUp className="h-4 w-4" />
                 Ranking Prioritas
+              </TabsTrigger>
+              <TabsTrigger
+                value="validation"
+                className="h-11 rounded-xl px-4 text-sm data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
+              >
+                <Gauge className="h-4 w-4" />
+                Validasi Model
               </TabsTrigger>
               <TabsTrigger
                 value="history"
@@ -595,7 +877,7 @@ export default function DssPage() {
                 <Button
                   type="button"
                   className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
-                  onClick={() => setWeights(DEFAULT_WEIGHTS)}
+                  onClick={() => { detachActiveScenario(); setWeights(DEFAULT_WEIGHTS) }}
                 >
                   Reset Bobot Default
                 </Button>
@@ -604,7 +886,7 @@ export default function DssPage() {
                 <Button
                   type="button"
                   className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
-                  onClick={() => setPairwiseValues(buildDefaultPairwiseValues(CRITERIA_IDS))}
+                  onClick={() => { detachActiveScenario(); setPairwiseValues(buildDefaultPairwiseValues(CRITERIA_IDS)) }}
                 >
                   Reset Matriks AHP
                 </Button>
@@ -615,13 +897,13 @@ export default function DssPage() {
                 disabled={isSavingWeights}
                 onClick={() => void saveWeightsAsDefault()}
               >
-                <Save className={cn("h-4 w-4", isSavingWeights && "animate-pulse")} />
-                Simpan sebagai Default Saya
+                <SlidersHorizontal className={cn("h-4 w-4", isSavingWeights && "animate-pulse")} />
+                Jadikan Bobot Awal Saya
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-0">
-            <Tabs value={weightMode} onValueChange={(value) => setWeightMode(value as "manual" | "ahp")}>
+            <Tabs value={weightMode} onValueChange={(value) => { detachActiveScenario(); setWeightMode(value as "manual" | "ahp") }}>
               <TabsList>
                 <TabsTrigger
                   value="manual"
@@ -662,10 +944,13 @@ export default function DssPage() {
                           min="1"
                           max="40"
                           value={rawValue}
-                          onChange={(event) => setWeights((current) => ({
-                            ...current,
-                            [criterion.id]: Number(event.target.value),
-                          }))}
+                          onChange={(event) => {
+                            detachActiveScenario()
+                            setWeights((current) => ({
+                              ...current,
+                              [criterion.id]: Number(event.target.value),
+                            }))
+                          }}
                           className="h-2 w-full accent-teal-700"
                         />
                         <div className="rounded-md border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-slate-900/60 px-2 py-1.5 text-right text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -863,7 +1148,7 @@ export default function DssPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-245 text-left text-xs">
-                  <thead className="border-y border-slate-200 bg-slate-50/90 text-[11px] uppercase tracking-wide text-slate-600 dark:border-slate-800/35 dark:bg-slate-800/60 dark:text-slate-300">
+                  <thead className="border-y border-teal-700/20 bg-teal-600 text-[11px] uppercase tracking-wide text-white shadow-sm dark:border-teal-400/20 dark:bg-teal-700 dark:text-white">
                     <tr>
                       <th className="w-14 px-2.5 py-2">Rank</th>
                       <th className="px-2.5 py-2">Aset Detail</th>
@@ -1017,13 +1302,227 @@ export default function DssPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="validation" className="mt-0">
+            <div className="space-y-4">
+              <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
+                <CardHeader className="flex flex-col gap-3 border-b border-slate-100 bg-linear-to-r from-white via-white to-teal-50/70 pb-4 dark:border-slate-800/35 dark:from-slate-950 dark:via-slate-950 dark:to-teal-950/30 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Gauge className="h-4 w-4 text-teal-700" />
+                    Uji Sensitivitas Bobot
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {validationStamp && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Diperbarui {new Date(validationStamp).toLocaleTimeString("id-ID")}
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={isValidationLoading}
+                      onClick={() => void loadValidation()}
+                    >
+                      <RefreshCw className={cn("h-3.5 w-3.5", isValidationLoading && "animate-spin")} />
+                      {isValidationLoading ? "Menghitung..." : "Perbarui Analisis"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Setiap bobot kriteria digeser -20%, -10%, +10%, dan +20% (bobot lain dinormalkan ulang), lalu ranking dihitung ulang
+                    dan dibandingkan dengan ranking dasar memakai korelasi peringkat Spearman serta irisan top-10. Nilai mendekati 1
+                    berarti peringkat tidak berubah meski bobot digeser.
+                  </p>
+
+                  {validationError && (
+                    <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300" role="alert">
+                      {validationError}
+                    </div>
+                  )}
+
+                  {isValidationLoading && !sensitivityResult ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="h-12 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800/60" />
+                      ))}
+                    </div>
+                  ) : sensitivityResult && sensitivityResult.criteria.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={stabilityBadgeClass(sensitivityResult.overallStability)}>
+                          Kestabilan: {sensitivityResult.overallStability}
+                        </Badge>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Spearman terendah {formatCorrelation(sensitivityResult.overallMinSpearman)} · {sensitivityResult.totalAlternatives} alternatif
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-175 text-left text-[13px]">
+                          <thead className="border-y border-slate-200 bg-slate-100 text-xs uppercase text-slate-600 dark:border-slate-800/35 dark:bg-slate-800/60 dark:text-slate-300">
+                            <tr>
+                              <th className="px-3 py-2">Kriteria</th>
+                              <th className="px-3 py-2 text-right">Bobot</th>
+                              <th className="px-3 py-2 text-right">Spearman min</th>
+                              <th className="px-3 py-2 text-right">Spearman rata-rata</th>
+                              <th className="px-3 py-2 text-right">Irisan Top-10 min</th>
+                              <th className="px-3 py-2 text-right">Rank 1 berubah</th>
+                              <th className="px-3 py-2">Kestabilan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
+                            {sensitivityResult.criteria.map((criterion) => (
+                              <tr
+                                key={criterion.id}
+                                className={cn(criterion.id === sensitivityResult.mostSensitiveCriterionId && "bg-amber-50/60 dark:bg-amber-400/5")}
+                              >
+                                <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{criterion.name}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatPercent(criterion.baseWeight)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-100">{formatCorrelation(criterion.minSpearman)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatCorrelation(criterion.meanSpearman)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatPercent(criterion.minTopKOverlap)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                                  {criterion.rankOneChanges}/{criterion.scenarios.length}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <Badge variant="outline" className={cn(rankingBadgeClass, stabilityBadgeClass(criterion.stability))}>
+                                    {criterion.stability}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{sensitivityResult.interpretation}</p>
+                    </>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-400">
+                      Belum ada data alternatif untuk diuji.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Scale className="h-4 w-4 text-teal-700" />
+                    Perbandingan Metode (TOPSIS vs SAW vs WP)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Matriks keputusan dan bobot yang sama dihitung ulang dengan SAW dan WP sebagai pembanding. Kesepakatan yang tinggi
+                    menunjukkan prioritas yang dihasilkan bukan artefak dari satu metode saja.
+                  </p>
+
+                  {isValidationLoading && !comparisonResult ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="h-12 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800/60" />
+                      ))}
+                    </div>
+                  ) : comparisonResult && comparisonResult.methods.length > 0 ? (
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-150 text-left text-[13px]">
+                          <thead className="border-y border-slate-200 bg-slate-100 text-xs uppercase text-slate-600 dark:border-slate-800/35 dark:bg-slate-800/60 dark:text-slate-300">
+                            <tr>
+                              <th className="px-3 py-2">Pasangan Metode</th>
+                              <th className="px-3 py-2 text-right">Spearman</th>
+                              <th className="px-3 py-2 text-right">Kendall tau-b</th>
+                              <th className="px-3 py-2 text-right">Irisan Top-{comparisonResult.topK}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
+                            {comparisonResult.agreements.map((agreement) => (
+                              <tr key={`${agreement.methodA}-${agreement.methodB}`}>
+                                <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{agreement.methodA} ↔ {agreement.methodB}</td>
+                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-100">{formatCorrelation(agreement.spearman)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatCorrelation(agreement.kendall)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatPercent(agreement.topKOverlap)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {comparisonResult.methods.map((method) => (
+                          <div key={method.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800/35">
+                            <div className="mb-2 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">{method.name}</div>
+                            <ol className="space-y-1.5">
+                              {method.top.map((entry) => (
+                                <li key={`${method.id}-${entry.rank}-${entry.detailCode}`} className="flex items-start justify-between gap-2 text-[13px]">
+                                  <span className="min-w-0 text-slate-700 dark:text-slate-300">
+                                    <span className="mr-1 text-slate-400">#{entry.rank}</span>
+                                    <span className="wrap-break-word">{entry.detailName}</span>
+                                  </span>
+                                  <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{formatScore(entry.score)}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{comparisonResult.interpretation}</p>
+                    </>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-400">
+                      Belum ada data alternatif untuk dibandingkan.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="history" className="mt-0">
             <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
-          <CardHeader className="pb-3">
+          <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4 text-teal-700" />
               Riwayat Perhitungan
             </CardTitle>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full gap-2 rounded-xl bg-white shadow-xs hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-950 dark:hover:bg-teal-400/10 dark:hover:text-teal-300 sm:w-auto">
+                    <Download className="size-4 shrink-0" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportHistory("excel")}>
+                    Export ke Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportHistory("pdf")}>
+                    Export ke PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {selectedHistoryIds.length}/2 skenario dipilih
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  disabled={selectedHistoryIds.length !== 2}
+                  onClick={() => void compareSelectedScenarios()}
+                >
+                  <ArrowDownUp className="h-3.5 w-3.5" />
+                  Bandingkan
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
             {historyActionMessage && (
@@ -1040,8 +1539,12 @@ export default function DssPage() {
             ) : historyEntries.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-175 text-left text-[13px]">
-                  <thead className="border-y border-slate-200 dark:border-slate-800/35 bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">
+                  <thead className="border-y border-teal-700/20 bg-teal-600 text-xs uppercase text-white shadow-sm dark:border-teal-400/20 dark:bg-teal-700 dark:text-white">
                     <tr>
+                      <th className="w-10 px-3 py-2">
+                        <span className="sr-only">Pilih untuk dibandingkan</span>
+                      </th>
+                      <th className="px-3 py-2">Skenario</th>
                       <th className="px-3 py-2">Waktu</th>
                       <th className="px-3 py-2">Jenis Aset</th>
                       <th className="px-3 py-2">Alternatif</th>
@@ -1052,13 +1555,43 @@ export default function DssPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
                     {historyEntries.map((entry) => (
-                      <tr key={entry.id}>
+                      <tr key={entry.id} className={cn(selectedHistoryIds.includes(entry.id) && "bg-teal-50/60 dark:bg-teal-400/5")}>
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-4 w-4 accent-teal-600"
+                            checked={selectedHistoryIds.includes(entry.id)}
+                            onChange={() => toggleHistorySelection(entry.id)}
+                            aria-label={`Pilih skenario ${entry.label || new Date(entry.createdAt).toLocaleString("id-ID")} untuk dibandingkan`}
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-top text-slate-800 dark:text-slate-200">
+                          <div>{entry.label || <span className="text-slate-400 dark:text-slate-500">Tanpa nama</span>}</div>
+                          {/* Metode + kriteria dominan: identitas skenario yang membedakannya
+                              dari baris lain, tanpa perlu membuka Detail. */}
+                          <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {weightMethodLabel(entry)}
+                            {summarizeWeights(entry.criteria) && ` · ${summarizeWeights(entry.criteria)!.label}`}
+                          </div>
+                        </td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">
                           {new Date(entry.createdAt).toLocaleString("id-ID")}
                         </td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">{assetTypeLabel(entry.assetType as DssAssetType)}</td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">{entry.totalAlternatives}</td>
-                        <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">{entry.topRankings[0]?.detailName ?? "-"}</td>
+                        <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">
+                          {entry.topRankings[0]?.detailName ?? "-"}
+                          {/* Baris tabel hanya memuat peringkat teratas; sisanya dibuka lewat Detail. */}
+                          {entry.topRankings.length > 1 && (
+                            <button
+                              type="button"
+                              className="ml-1 text-xs text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+                              onClick={() => setHistoryDetailEntry(entry)}
+                            >
+                              +{entry.topRankings.length - 1} lainnya
+                            </button>
+                          )}
+                        </td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">
                           {entry.topRankings[0] ? formatScore(entry.topRankings[0].preferenceScore) : "-"}
                         </td>
@@ -1105,7 +1638,7 @@ export default function DssPage() {
               </div>
             ) : (
               <div className="rounded-md border border-dashed border-slate-200 dark:border-slate-800/35 bg-slate-50 dark:bg-slate-900/40 p-3 text-sm text-slate-500 dark:text-slate-400">
-                Belum ada riwayat perhitungan. Riwayat tercatat otomatis setiap kali ranking dihitung ulang.
+                Belum ada riwayat perhitungan. Tekan &quot;Simpan Skenario&quot; pada halaman ranking untuk mengarsipkan konfigurasi bobot yang ingin dibandingkan.
               </div>
             )}
           </CardContent>
@@ -1118,6 +1651,159 @@ export default function DssPage() {
           Hasil dihitung dari kondisi, usia, jadwal maintenance, pemakaian, riwayat maintenance, urgensi fungsi, risiko status, dan akumulasi biaya maintenance aset.
         </div>
       </div>
+
+      <Dialog open={isSaveDialogOpen} onOpenChange={(open) => { if (!open) setIsSaveDialogOpen(false) }}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl leading-tight">
+              <Save className="h-4 w-4 text-teal-700" />
+              Simpan Skenario Bobot
+            </DialogTitle>
+            <DialogDescription>
+              Konfigurasi bobot yang sedang tampil akan diarsipkan ke Riwayat Perhitungan dan dapat dibandingkan dengan skenario lain.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="scenario-label">Nama skenario (opsional)</Label>
+            <Input
+              id="scenario-label"
+              value={scenarioLabel}
+              maxLength={120}
+              placeholder="Contoh: Bobot kondisi dominan 30%"
+              onChange={(event) => setScenarioLabel(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !isSavingScenario) void saveScenario()
+              }}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Tanpa nama pun tetap tersimpan, tapi memberi nama membuat riwayat jauh lebih mudah dibaca saat dibandingkan.
+            </p>
+            {saveScenarioError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300" role="alert">
+                {saveScenarioError}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2 border-teal-200 bg-white text-teal-700 shadow-xs hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 dark:border-teal-400/30 dark:bg-slate-950 dark:text-teal-300 dark:hover:bg-teal-400/10 dark:hover:text-teal-200"
+              onClick={() => setIsSaveDialogOpen(false)}
+              disabled={isSavingScenario}
+            >
+              <X className="h-4 w-4" />
+              Batal
+            </Button>
+            <Button
+              type="button"
+              className="gap-2 bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-600 dark:text-white dark:hover:bg-teal-700"
+              onClick={() => void saveScenario()}
+              disabled={isSavingScenario}
+            >
+              <Save className="h-4 w-4" />
+              {isSavingScenario ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isComparisonOpen} onOpenChange={(open) => { if (!open) setIsComparisonOpen(false) }}>
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 px-6 pb-0 pt-6">
+            <DialogTitle className="flex items-center gap-2 text-xl leading-tight">
+              <ArrowDownUp className="h-4 w-4 text-teal-700" />
+              Perbandingan Skenario Bobot
+            </DialogTitle>
+            <DialogDescription>
+              {scenarioComparison
+                ? `${scenarioComparison.scenarios[0].label} vs ${scenarioComparison.scenarios[1].label} · ${scenarioComparison.totalAlternatives} alternatif dihitung ulang penuh`
+                : "Kedua skenario dihitung ulang penuh dari bobot tersimpan."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-4">
+            {comparisonError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300" role="alert">
+                {comparisonError}
+              </div>
+            )}
+
+            {isComparisonLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="h-10 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800/60" />
+                ))}
+              </div>
+            ) : scenarioComparison && scenarioComparison.movements.length > 0 ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800/35">
+                    <div className="text-xs uppercase text-slate-500 dark:text-slate-400">Spearman</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{formatCorrelation(scenarioComparison.spearman)}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800/35">
+                    <div className="text-xs uppercase text-slate-500 dark:text-slate-400">Irisan Top-{scenarioComparison.topK}</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{formatPercent(scenarioComparison.topKOverlap)}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800/35">
+                    <div className="text-xs uppercase text-slate-500 dark:text-slate-400">Masuk / Keluar</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                      {scenarioComparison.summary.enteredTopK} / {scenarioComparison.summary.leftTopK}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800/35">
+                    <div className="text-xs uppercase text-slate-500 dark:text-slate-400">Pergeseran terbesar</div>
+                    <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{scenarioComparison.summary.biggestMove} posisi</div>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800/35">
+                  <table className="w-full text-left text-[13px]">
+                    <thead className="bg-teal-600 text-xs uppercase text-white shadow-sm dark:bg-teal-700 dark:text-white">
+                      <tr>
+                        <th className="px-3 py-2">Aset</th>
+                        <th className="px-3 py-2 text-right">{scenarioComparison.scenarios[0].label}</th>
+                        <th className="px-3 py-2 text-right">{scenarioComparison.scenarios[1].label}</th>
+                        <th className="px-3 py-2 text-right">Perubahan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
+                      {scenarioComparison.movements.map((movement) => (
+                        <tr key={`${movement.detailCode}-${movement.rankA}-${movement.rankB}`}>
+                          <td className="px-3 py-2 text-slate-800 dark:text-slate-200">
+                            {movement.detailName}
+                            <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">({movement.detailCode})</span>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                            #{movement.rankA}{!movement.inTopKA && <span className="ml-1 text-xs text-slate-400">di luar top-{scenarioComparison.topK}</span>}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                            #{movement.rankB}{!movement.inTopKB && <span className="ml-1 text-xs text-slate-400">di luar top-{scenarioComparison.topK}</span>}
+                          </td>
+                          <td className={cn(
+                            "px-3 py-2 text-right tabular-nums font-semibold",
+                            movement.delta > 0 && "text-emerald-700 dark:text-emerald-300",
+                            movement.delta < 0 && "text-red-700 dark:text-red-300",
+                            movement.delta === 0 && "text-slate-500 dark:text-slate-400"
+                          )}>
+                            {movement.delta > 0 ? `naik ${movement.delta}` : movement.delta < 0 ? `turun ${Math.abs(movement.delta)}` : "tetap"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{scenarioComparison.interpretation}</p>
+              </>
+            ) : !comparisonError && (
+              <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-400">
+                Tidak ada alternatif yang bisa dibandingkan.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(auditItem)} onOpenChange={(open) => { if (!open) setAuditItem(null) }}>
         <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
@@ -1224,13 +1910,34 @@ export default function DssPage() {
               )}
             </DialogTitle>
             <DialogDescription>
-              {historyDetailEntry ? `${new Date(historyDetailEntry.createdAt).toLocaleString("id-ID")} · ${assetTypeLabel(historyDetailEntry.assetType as DssAssetType)} · ${historyDetailEntry.totalAlternatives} alternatif` : ""}
+              {historyDetailEntry ? [
+                historyDetailEntry.label,
+                new Date(historyDetailEntry.createdAt).toLocaleString("id-ID"),
+                assetTypeLabel(historyDetailEntry.assetType as DssAssetType),
+                `${historyDetailEntry.totalAlternatives} alternatif`,
+              ].filter(Boolean).join(" · ") : ""}
             </DialogDescription>
           </DialogHeader>
           {historyDetailEntry && (
             <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-4">
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Bobot Kriteria</div>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Bobot Kriteria</span>
+                  <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    Metode: {weightMethodLabel(historyDetailEntry)}
+                  </Badge>
+                  {summarizeWeights(historyDetailEntry.criteria)?.uniform && (
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+                      Bobot merata
+                    </Badge>
+                  )}
+                </div>
+                {summarizeWeights(historyDetailEntry.criteria)?.uniform && (
+                  <p className="mb-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Seluruh kriteria berbobot sama, sehingga pembobotan tidak memengaruhi urutan — prioritas
+                    sepenuhnya ditentukan nilai kriteria tiap aset. Cocok sebagai baseline pembanding.
+                  </p>
+                )}
                 <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800/35">
                   <table className="w-full text-left text-[13px]">
                     <thead className="bg-slate-100 dark:bg-slate-800/60 text-xs uppercase text-slate-600 dark:text-slate-300">

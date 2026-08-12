@@ -52,6 +52,14 @@ export interface DssRankingResult {
   };
   generatedAt: string;
   totalAlternatives: number;
+  pagination?: {
+    limit: number;
+    offset: number;
+    returned: number;
+    total: number;
+  };
+  /** Hanya ada pada permintaan dengan saveHistory; false berarti simpan riwayat gagal. */
+  historySaved?: boolean;
   rankings: DssAssetRanking[];
 }
 
@@ -64,6 +72,8 @@ export interface DssRankingRequest {
   // "Riwayat Perhitungan" — background/auto loads (mount, filter defaults)
   // omit this so the history isn't flooded with non-actions.
   saveHistory?: boolean;
+  /** Nama skenario yang tampil di Riwayat Perhitungan; hanya dipakai saat saveHistory true. */
+  label?: string;
 }
 
 export interface DssRankingResponse {
@@ -89,6 +99,7 @@ export interface DssRankingHistoryEntry {
   id: number;
   userId: number | null;
   assetType: string;
+  label: string | null;
   weights: Record<string, number>;
   criteria: DssCriterion[];
   totalAlternatives: number;
@@ -109,9 +120,144 @@ export interface DssDeleteRankingHistoryResponse {
   message: string;
 }
 
+export type DssStabilityLabel = 'stabil' | 'cukup stabil' | 'sensitif';
+
+export interface DssSensitivityScenario {
+  delta: number;
+  adjustedWeight: number;
+  spearman: number;
+  kendall: number;
+  topKOverlap: number;
+  rankOneChanged: boolean;
+}
+
+export interface DssSensitivityCriterionReport {
+  id: string;
+  name: string;
+  baseWeight: number;
+  scenarios: DssSensitivityScenario[];
+  meanSpearman: number;
+  minSpearman: number;
+  minTopKOverlap: number;
+  rankOneChanges: number;
+  stability: DssStabilityLabel;
+}
+
+export interface DssSensitivityResult {
+  assetType: string;
+  generatedAt: string;
+  totalAlternatives: number;
+  topK: number;
+  deltas: number[];
+  criteria: DssSensitivityCriterionReport[];
+  baselineTop: Array<{ rank: number; detailName: string; detailCode: string; preferenceScore: number }>;
+  mostSensitiveCriterionId: string | null;
+  overallMinSpearman: number;
+  overallStability: DssStabilityLabel;
+  interpretation: string;
+}
+
+export interface DssMethodComparisonResult {
+  assetType: string;
+  generatedAt: string;
+  totalAlternatives: number;
+  topK: number;
+  criteria: DssCriterion[];
+  methods: Array<{
+    id: 'topsis' | 'saw' | 'wp';
+    name: string;
+    top: Array<{ rank: number; detailName: string; detailCode: string; score: number }>;
+  }>;
+  agreements: Array<{
+    methodA: string;
+    methodB: string;
+    spearman: number;
+    kendall: number;
+    topKOverlap: number;
+  }>;
+  interpretation: string;
+}
+
+export interface DssScenarioComparisonResult {
+  assetType: string;
+  generatedAt: string;
+  totalAlternatives: number;
+  topK: number;
+  scenarios: Array<{ label: string; criteria: DssCriterion[] }>;
+  spearman: number;
+  kendall: number;
+  topKOverlap: number;
+  summary: {
+    enteredTopK: number;
+    leftTopK: number;
+    unchanged: number;
+    biggestMove: number;
+  };
+  movements: Array<{
+    detailName: string;
+    detailCode: string;
+    rankA: number;
+    rankB: number;
+    delta: number;
+    scoreA: number;
+    scoreB: number;
+    inTopKA: boolean;
+    inTopKB: boolean;
+  }>;
+  interpretation: string;
+}
+
+export interface DssScenarioComparisonRequest {
+  assetType?: DssAssetType;
+  topK?: number;
+  /** Tepat dua skenario; tiap skenario memakai historyId atau weights. */
+  scenarios: Array<{ historyId?: number; label?: string; weights?: Record<string, number> }>;
+}
+
+export interface DssScenarioComparisonResponse {
+  success: boolean;
+  message: string;
+  data: DssScenarioComparisonResult;
+}
+
+export interface DssAnalysisRequest {
+  assetType?: DssAssetType;
+  weights?: Record<string, number>;
+  pairwiseMatrix?: number[][];
+  topK?: number;
+  deltas?: number[];
+}
+
+export interface DssSensitivityResponse {
+  success: boolean;
+  message: string;
+  data: DssSensitivityResult;
+}
+
+export interface DssMethodComparisonResponse {
+  success: boolean;
+  message: string;
+  data: DssMethodComparisonResult;
+}
+
 class DssService {
   async getRanking(data: DssRankingRequest = {}): Promise<DssRankingResponse> {
     return apiService.post<DssRankingResponse>('/dss/ranking', data);
+  }
+
+  /** Bandingkan dua skenario pembobotan; keduanya dihitung ulang penuh di backend. */
+  async getScenarioComparison(data: DssScenarioComparisonRequest): Promise<DssScenarioComparisonResponse> {
+    return apiService.post<DssScenarioComparisonResponse>('/dss/scenario-comparison', data);
+  }
+
+  /** Uji sensitivitas bobot: seberapa stabil peringkat saat bobot digeser. */
+  async getSensitivityAnalysis(data: DssAnalysisRequest = {}): Promise<DssSensitivityResponse> {
+    return apiService.post<DssSensitivityResponse>('/dss/sensitivity', data);
+  }
+
+  /** Pembandingan TOPSIS dengan SAW dan WP pada data serta bobot yang sama. */
+  async getMethodComparison(data: DssAnalysisRequest = {}): Promise<DssMethodComparisonResponse> {
+    return apiService.post<DssMethodComparisonResponse>('/dss/method-comparison', data);
   }
 
   async getWeightPreference(): Promise<DssWeightPreferenceResponse> {

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import dssAnalysisService from '../services/dss-analysis.service';
 import dssService from '../services/dss.service';
 import { createScopedLogger } from '../utils/logger';
 
@@ -18,31 +19,144 @@ export class DssController {
         pairwiseMatrix: req.body?.pairwiseMatrix,
         assetType,
         limit: req.body?.limit,
+        offset: req.body?.offset,
       });
+
+      // Penyimpanan riwayat ditunggu sebelum membalas, bukan fire-and-forget:
+      // UI menandai "Skenario tersimpan" dari hasil ini, jadi kegagalan simpan
+      // harus terlihat oleh pengguna, bukan hanya masuk log server.
+      const userId = getActorUserId(req);
+      let historySaved: boolean | undefined;
+      if (req.body?.saveHistory === true) {
+        if (result.totalAlternatives === 0) {
+          historySaved = false;
+        } else {
+          // Only persist the pairwise matrix when it's actually what produced these
+          // weights (CR passed) — if AHP was inconsistent and the service fell back
+          // to manual/default weights, storing the failed matrix would misrepresent
+          // this snapshot as AHP-derived when "Gunakan Bobot" restores it later.
+          const appliedPairwiseMatrix = result.consistency?.isConsistent ? (req.body?.pairwiseMatrix ?? null) : null;
+          try {
+            await dssService.saveRankingHistory(userId, assetType, result, appliedPairwiseMatrix, req.body?.label);
+            historySaved = true;
+          } catch (error) {
+            logger.warn('Failed to persist DSS ranking history', { error });
+            historySaved = false;
+          }
+        }
+      }
 
       res.json({
         success: true,
         message: 'DSS ranking generated successfully',
-        data: result,
+        data: historySaved === undefined ? result : { ...result, historySaved },
       });
-
-      const userId = getActorUserId(req);
-      if (result.totalAlternatives > 0 && req.body?.saveHistory === true) {
-        // Only persist the pairwise matrix when it's actually what produced these
-        // weights (CR passed) — if AHP was inconsistent and the service fell back
-        // to manual/default weights, storing the failed matrix would misrepresent
-        // this snapshot as AHP-derived when "Gunakan Bobot" restores it later.
-        const appliedPairwiseMatrix = result.consistency?.isConsistent ? (req.body?.pairwiseMatrix ?? null) : null;
-        dssService.saveRankingHistory(userId, assetType, result, appliedPairwiseMatrix).catch((error) => {
-          logger.warn('Failed to persist DSS ranking history', { error });
-        });
-      }
     } catch (error) {
       logger.error('DSS ranking error', { error });
       res.status(500).json({
         success: false,
         message: 'Internal server error',
       });
+    }
+  };
+
+  /** Uji sensitivitas bobot terhadap kestabilan peringkat. */
+  getSensitivityAnalysis = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await dssAnalysisService.analyzeWeightSensitivity({
+        assetType: req.body?.assetType || 'all',
+        weights: req.body?.weights,
+        pairwiseMatrix: req.body?.pairwiseMatrix,
+        deltas: req.body?.deltas,
+        topK: req.body?.topK,
+      });
+
+      res.json({
+        success: true,
+        message: 'DSS sensitivity analysis generated successfully',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('DSS sensitivity analysis error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  /** Pembandingan hasil TOPSIS dengan SAW dan WP pada data dan bobot yang sama. */
+  getMethodComparison = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await dssAnalysisService.compareMethods({
+        assetType: req.body?.assetType || 'all',
+        weights: req.body?.weights,
+        pairwiseMatrix: req.body?.pairwiseMatrix,
+        topK: req.body?.topK,
+      });
+
+      res.json({
+        success: true,
+        message: 'DSS method comparison generated successfully',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('DSS method comparison error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  /**
+   * Membandingkan dua skenario pembobotan. Skenario boleh berupa entri riwayat
+   * (`historyId`) atau bobot yang sedang aktif di layar (`weights`).
+   */
+  getScenarioComparison = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = getActorUserId(req);
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Unauthorized' });
+        return;
+      }
+
+      const rawScenarios = Array.isArray(req.body?.scenarios) ? req.body.scenarios : [];
+      if (rawScenarios.length !== 2) {
+        res.status(400).json({ success: false, message: 'Pembandingan membutuhkan tepat dua skenario' });
+        return;
+      }
+
+      const resolved = [];
+      for (const [index, scenario] of rawScenarios.entries()) {
+        const fallbackLabel = `Skenario ${index + 1}`;
+        if (scenario?.historyId != null) {
+          const stored = await dssService.getHistoryScenario(userId, Number(scenario.historyId));
+          if (!stored) {
+            res.status(404).json({ success: false, message: 'Riwayat perhitungan tidak ditemukan' });
+            return;
+          }
+          resolved.push({
+            label: String(scenario.label || stored.label || `Riwayat ${new Date(stored.createdAt).toLocaleString('id-ID')}`),
+            weights: stored.weights,
+          });
+          continue;
+        }
+
+        if (!scenario?.weights || typeof scenario.weights !== 'object') {
+          res.status(400).json({ success: false, message: 'Setiap skenario harus memuat historyId atau weights' });
+          return;
+        }
+        resolved.push({ label: String(scenario.label || fallbackLabel), weights: scenario.weights });
+      }
+
+      const result = await dssAnalysisService.compareScenarios(resolved[0], resolved[1], {
+        assetType: req.body?.assetType || 'all',
+        topK: req.body?.topK,
+      });
+
+      res.json({
+        success: true,
+        message: 'DSS scenario comparison generated successfully',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('DSS scenario comparison error', { error });
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
   };
 

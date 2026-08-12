@@ -114,6 +114,7 @@ CREATE TABLE `dss_ranking_history` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
   `asset_type` varchar(20) NOT NULL DEFAULT 'all',
+  `label` varchar(120) DEFAULT NULL,
   `weights_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`weights_json`)),
   `pairwise_matrix_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (`pairwise_matrix_json` IS NULL OR json_valid(`pairwise_matrix_json`)),
   `criteria_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`criteria_json`)),
@@ -641,7 +642,8 @@ ALTER TABLE `asset_usage_logs`
   ADD KEY `idx_asset_usage_room_started` (`room_name`,`started_at`),
   ADD KEY `idx_asset_usage_operator` (`operator_user_id`),
   ADD KEY `idx_asset_usage_created_by` (`created_by`),
-  ADD KEY `idx_asset_usage_deleted_at` (`deleted_at`);
+  ADD KEY `idx_asset_usage_deleted_at` (`deleted_at`),
+  ADD KEY `idx_asset_usage_dss_group` (`deleted_at`,`asset_type`,`asset_id`,`asset_detail_id`,`asset_detail_code`);
 
 --
 -- Indeks untuk tabel `maintenance_history`
@@ -664,7 +666,8 @@ ALTER TABLE `maintenance_records`
   ADD KEY `idx_maintenance_technician` (`technician_user_id`),
   ADD KEY `idx_maintenance_created_by` (`created_by`),
   ADD KEY `idx_maintenance_completed_by` (`completed_by`),
-  ADD KEY `idx_maintenance_validated_by` (`validated_by`);
+  ADD KEY `idx_maintenance_validated_by` (`validated_by`),
+  ADD KEY `idx_maintenance_dss_group` (`deleted_at`,`status`,`asset_type`,`asset_id`,`asset_detail_id`,`asset_detail_code`);
 
 --
 -- Indeks untuk tabel `maintenance_status_logs`

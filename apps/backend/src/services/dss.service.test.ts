@@ -281,6 +281,60 @@ describe('DssService.rankAssets (end-to-end pipeline)', () => {
   });
 });
 
+describe('DssService.rankAssets (pagination)', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    dssService.invalidateDatasetCache();
+  });
+
+  const buildAssets = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      id: index + 1,
+      asset_code: `MED-${String(index + 1).padStart(3, '0')}`,
+      name: `Ventilator ${index + 1}`,
+      category: 'medis',
+      status: 'Tersedia',
+      condition: index % 2 === 0 ? 'Rusak Berat' : 'Baik',
+      location: 'ICU',
+      purchase_date: `${2012 + index}-01-01`,
+    }));
+
+  it('reports pagination metadata alongside the returned page', async () => {
+    buildMockDb({ medicalAssets: buildAssets(12) });
+
+    const result = await dssService.rankAssets({ assetType: 'medical', limit: 5 });
+
+    expect(result.rankings).toHaveLength(5);
+    expect(result.pagination).toEqual({ limit: 5, offset: 0, returned: 5, total: 12 });
+  });
+
+  it('keeps global rank numbering when an offset is applied', async () => {
+    buildMockDb({ medicalAssets: buildAssets(12) });
+
+    const firstPage = await dssService.rankAssets({ assetType: 'medical', limit: 5 });
+    dssService.invalidateDatasetCache();
+    const secondPage = await dssService.rankAssets({ assetType: 'medical', limit: 5, offset: 5 });
+
+    expect(secondPage.rankings[0].rank).toBe(6);
+    expect(secondPage.pagination.offset).toBe(5);
+    // Halaman kedua tidak boleh memuat ulang alternatif dari halaman pertama.
+    const firstPageCodes = new Set(firstPage.rankings.map((ranking) => ranking.detailCode));
+    secondPage.rankings.forEach((ranking) => {
+      expect(firstPageCodes.has(ranking.detailCode)).toBe(false);
+    });
+  });
+
+  it('returns an empty page when the offset is past the end of the ranking', async () => {
+    buildMockDb({ medicalAssets: buildAssets(3) });
+
+    const result = await dssService.rankAssets({ assetType: 'medical', offset: 100 });
+
+    expect(result.rankings).toEqual([]);
+    expect(result.pagination.returned).toBe(0);
+    expect(result.pagination.total).toBe(3);
+  });
+});
+
 describe('DssService.saveRankingHistory (deduplication)', () => {
   beforeEach(() => {
     mockQuery.mockReset();
@@ -301,7 +355,7 @@ describe('DssService.saveRankingHistory (deduplication)', () => {
   it('skips inserting when the last snapshot for the user has identical weights and asset type', async () => {
     const lastWeightsJson = JSON.stringify({ condition: 0.5, age: 0.5 });
     mockQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('SELECT asset_type, weights_json')) {
+      if (sql.includes('SELECT asset_type, label, weights_json')) {
         return [[{ asset_type: 'all', weights_json: lastWeightsJson }]];
       }
       return [{}];
@@ -313,10 +367,54 @@ describe('DssService.saveRankingHistory (deduplication)', () => {
     expect(insertCalls).toHaveLength(0);
   });
 
+  it('inserts a new row when only the scenario label differs', async () => {
+    const lastWeightsJson = JSON.stringify({ condition: 0.5, age: 0.5 });
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT asset_type, label, weights_json')) {
+        return [[{ asset_type: 'all', label: 'Baseline', weights_json: lastWeightsJson }]];
+      }
+      return [{}];
+    });
+
+    await dssService.saveRankingHistory(7, 'all', buildResult(0.5), null, 'Revisi bobot');
+
+    const insertCalls = mockQuery.mock.calls.filter(([sql]: [string]) => sql.includes('INSERT INTO dss_ranking_history'));
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0][1]).toContain('Revisi bobot');
+  });
+
+  it('still skips when weights, asset type, and label are all unchanged', async () => {
+    const lastWeightsJson = JSON.stringify({ condition: 0.5, age: 0.5 });
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT asset_type, label, weights_json')) {
+        return [[{ asset_type: 'all', label: 'Baseline', weights_json: lastWeightsJson }]];
+      }
+      return [{}];
+    });
+
+    await dssService.saveRankingHistory(7, 'all', buildResult(0.5), null, 'Baseline');
+
+    const insertCalls = mockQuery.mock.calls.filter(([sql]: [string]) => sql.includes('INSERT INTO dss_ranking_history'));
+    expect(insertCalls).toHaveLength(0);
+  });
+
+  it('stores a blank label as null rather than an empty string', async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT asset_type, label, weights_json')) return [[]];
+      return [{}];
+    });
+
+    await dssService.saveRankingHistory(7, 'all', buildResult(0.5), null, '   ');
+
+    const insertCalls = mockQuery.mock.calls.filter(([sql]: [string]) => sql.includes('INSERT INTO dss_ranking_history'));
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0][1][2]).toBeNull();
+  });
+
   it('inserts a new row when weights differ from the last snapshot', async () => {
     const lastWeightsJson = JSON.stringify({ condition: 0.5, age: 0.5 });
     mockQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('SELECT asset_type, weights_json')) {
+      if (sql.includes('SELECT asset_type, label, weights_json')) {
         return [[{ asset_type: 'all', weights_json: lastWeightsJson }]];
       }
       return [{}];
@@ -330,7 +428,7 @@ describe('DssService.saveRankingHistory (deduplication)', () => {
 
   it('inserts when there is no previous history for the user', async () => {
     mockQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes('SELECT asset_type, weights_json')) return [[]];
+      if (sql.includes('SELECT asset_type, label, weights_json')) return [[]];
       return [{}];
     });
 

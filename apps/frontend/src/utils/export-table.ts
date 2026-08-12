@@ -323,6 +323,190 @@ const getPdfPageMargins = (html: string): [number, number, number, number] => {
 const getPdfPageFormat = (paperSize: ExportPaperSize): 'a4' | [number, number] =>
   paperSize === 'f4' ? [595.28, 935.43] : 'a4'
 
+const getPdfTableOrientation = (columns: string[]) => (columns.length > 6 ? 'landscape' : 'portrait')
+
+const normalizePdfTableCell = (value: unknown) => sanitizeValue(value).replace(/\s+/g, ' ').trim()
+
+const estimatePdfTableColumnWidth = (label: string, values: string[]) => {
+  const longestValueLength = Math.max(
+    label.length,
+    ...values.map((value) => Math.max(...value.split('\n').map((line) => line.length), 0))
+  )
+  return Math.max(42, Math.min(150, longestValueLength * 4.6 + 18))
+}
+
+const scalePdfTableColumnWidths = (widths: number[], availableWidth: number) => {
+  const total = widths.reduce((sum, width) => sum + width, 0)
+  if (total <= 0) return widths.map(() => availableWidth / Math.max(1, widths.length))
+
+  const scaled = widths.map((width) => (width / total) * availableWidth)
+  const rounded = scaled.map((width) => Math.floor(width))
+  let remaining = Math.round(availableWidth - rounded.reduce((sum, width) => sum + width, 0))
+
+  for (let index = 0; index < rounded.length && remaining > 0; index += 1, remaining -= 1) {
+    rounded[index] += 1
+  }
+
+  return rounded
+}
+
+const renderTablePdf = async (
+  title: string,
+  columns: string[],
+  rows: Record<string, unknown>[],
+  paperSize: ExportPaperSize = 'a4'
+) => {
+  const { jsPDF } = await import('jspdf')
+  const orientation = getPdfTableOrientation(columns)
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'pt',
+    format: getPdfPageFormat(paperSize),
+    compress: true,
+  })
+
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const margins = {
+    top: 42,
+    right: 24,
+    bottom: 34,
+    left: 24,
+  }
+  const availableWidth = pageWidth - margins.left - margins.right
+  const headerGap = 18
+  const rowPaddingY = 5
+  const rowPaddingX = 6
+  const lineHeight = 11
+  const headerFontSize = 8.5
+  const cellFontSize = 8
+  const titleFontSize = 16
+  const brandFontSize = 9
+  const footerFontSize = 8
+
+  const normalizedRows = rows.map((row) =>
+    Object.fromEntries(columns.map((column) => [column, normalizePdfTableCell(row[column])]))
+  )
+  const columnWidths = scalePdfTableColumnWidths(
+    columns.map((column) => estimatePdfTableColumnWidth(column, normalizedRows.map((row) => String(row[column] ?? '')))),
+    availableWidth
+  )
+
+  const renderPageHeader = () => {
+    pdf.setDrawColor(148, 163, 184)
+    pdf.setLineWidth(0.6)
+    pdf.line(margins.left, 18, pageWidth - margins.right, 18)
+
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(brandFontSize)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(EXPORT_BRAND_NAME, margins.left, 31)
+
+    pdf.setFontSize(titleFontSize)
+    pdf.setTextColor(15, 23, 42)
+    pdf.text(normalizeCapsText(title), margins.left, 58)
+  }
+
+  const renderTableHeader = (startY: number) => {
+    let x = margins.left
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(headerFontSize)
+    pdf.setTextColor(15, 23, 42)
+    pdf.setFillColor(243, 244, 246)
+    pdf.setDrawColor(203, 213, 225)
+
+    columns.forEach((column, index) => {
+      const width = columnWidths[index]
+      const headerLines = pdf.splitTextToSize(normalizeCapsText(column), width - rowPaddingX * 2) as string[]
+      const headerHeight = Math.max(18, headerLines.length * lineHeight + rowPaddingY * 2)
+      pdf.rect(x, startY, width, headerHeight, 'FD')
+      pdf.text(headerLines, x + rowPaddingX, startY + rowPaddingY + 7)
+      x += width
+    })
+
+    return Math.max(18, ...columns.map((column, index) => {
+      const width = columnWidths[index]
+      const headerLines = pdf.splitTextToSize(normalizeCapsText(column), width - rowPaddingX * 2) as string[]
+      return headerLines.length * lineHeight + rowPaddingY * 2
+    }))
+  }
+
+  const renderRow = (values: string[], startY: number) => {
+    const cellLines = values.map((value, index) =>
+      pdf.splitTextToSize(value || '-', columnWidths[index] - rowPaddingX * 2) as string[]
+    )
+    const rowHeight = Math.max(18, ...cellLines.map((lines) => lines.length * lineHeight + rowPaddingY * 2))
+
+    let x = margins.left
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(cellFontSize)
+    pdf.setTextColor(15, 23, 42)
+    pdf.setDrawColor(203, 213, 225)
+
+    columns.forEach((_, index) => {
+      const width = columnWidths[index]
+      const lines = cellLines[index]
+      pdf.rect(x, startY, width, rowHeight)
+      pdf.text(lines, x + rowPaddingX, startY + rowPaddingY + 6)
+      x += width
+    })
+
+    return rowHeight
+  }
+
+  const addNewPage = () => {
+    pdf.addPage()
+    renderPageHeader()
+  }
+
+  renderPageHeader()
+  let y = 78
+
+  if (columns.length === 0) {
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(11)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text('Tidak ada data untuk diekspor.', margins.left, y)
+  } else {
+    y += headerGap
+    y += renderTableHeader(y)
+
+    rows.forEach((row, rowIndex) => {
+      const rowValues = columns.map((column) => normalizePdfTableCell(row[column]))
+      const estimatedHeight = Math.max(
+        18,
+        ...rowValues.map((value, index) =>
+          (pdf.splitTextToSize(value || '-', columnWidths[index] - rowPaddingX * 2) as string[]).length * lineHeight + rowPaddingY * 2
+        )
+      )
+      if (y + estimatedHeight > pageHeight - margins.bottom) {
+        addNewPage()
+        y = 78 + headerGap
+        y += renderTableHeader(y)
+      }
+
+      y += renderRow(rowValues, y)
+      if (rowIndex < rows.length - 1) {
+        y += 0
+      }
+    })
+  }
+
+  const pageCount = pdf.getNumberOfPages()
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    pdf.setPage(pageNumber)
+    pdf.setDrawColor(219, 228, 240)
+    pdf.line(margins.left, pageHeight - 26, pageWidth - margins.right, pageHeight - 26)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(footerFontSize)
+    pdf.setTextColor(100, 116, 139)
+    pdf.text(EXPORT_SYSTEM_NAME, pageWidth / 2, pageHeight - 14, { align: 'center' })
+    pdf.text(`Halaman ${pageNumber} / ${pageCount}`, pageWidth - margins.right, pageHeight - 14, { align: 'right' })
+  }
+
+  return pdf
+}
+
 const renderHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') => {
   const margins = getPdfPageMargins(html)
   const a4WidthPoints = 595.28
@@ -355,11 +539,9 @@ const renderHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') 
     const { jsPDF } = await import('jspdf')
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: getPdfPageFormat(paperSize), compress: true })
     const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-    const availableHeightPixels = (pageHeight - margins[0] - margins[2]) * (96 / 72)
-    const renderedHeight = iframeDocument.documentElement.scrollHeight
-    const fitScale = renderedHeight > availableHeightPixels ? availableHeightPixels / renderedHeight : 1
-    iframeDocument.body.style.zoom = String(fitScale)
+    // Jangan mengecilkan seluruh dokumen agar "muat" dalam satu halaman.
+    // Untuk ranking dengan banyak baris, itu membuat isi PDF terlihat kosong
+    // karena teks menjadi terlalu kecil. Biarkan jsPDF menangani pagination.
     await pdf.html(iframeDocument.body, {
       margin: margins,
       autoPaging: 'slice',
@@ -382,6 +564,11 @@ const downloadHtmlAsPdf = async (html: string, fileName: string, paperSize: Expo
   pdf.save(fileName)
 }
 
+const downloadTableAsPdf = async (title: string, columns: string[], rows: Record<string, unknown>[], fileName: string, paperSize: ExportPaperSize = 'a4') => {
+  const pdf = await renderTablePdf(title, columns, rows, paperSize)
+  pdf.save(fileName)
+}
+
 const printHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') => {
   const printWindow = window.open('', '_blank', 'width=900,height=700')
   if (!printWindow) return
@@ -400,23 +587,40 @@ const printHtmlAsPdf = async (html: string, paperSize: ExportPaperSize = 'a4') =
   }
 }
 
+const printTableAsPdf = async (title: string, columns: string[], rows: Record<string, unknown>[], paperSize: ExportPaperSize = 'a4') => {
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  if (!printWindow) return
+  printWindow.document.write('<!doctype html><title>Menyiapkan cetak...</title><p style="font-family:Arial,sans-serif;padding:24px">Menyiapkan dokumen cetak...</p>')
+  printWindow.document.close()
+
+  try {
+    const pdf = await renderTablePdf(title, columns, rows, paperSize)
+    pdf.autoPrint()
+    const pdfUrl = URL.createObjectURL(pdf.output('blob'))
+    printWindow.location.href = pdfUrl
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000)
+  } catch (error) {
+    printWindow.close()
+    throw error
+  }
+}
+
 export async function exportTableData(format: ExportFormat, options: ExportTableOptions) {
   const { title, columns, rows, filePrefix } = options
   const slug = filePrefix || title.toLowerCase().replace(/\s+/g, '-')
   const colorMode = pickExportColorMode()
   const paperSize: ExportPaperSize = format.endsWith('-f4') ? 'f4' : 'a4'
   if (format === 'pdf' || format === 'pdf-f4') {
-    const html = buildHtml(title, columns, rows, colorMode)
-    await downloadHtmlAsPdf(html, `${slug}.pdf`, paperSize)
+    await downloadTableAsPdf(title, columns, rows, `${slug}.pdf`, paperSize)
+    return
+  }
+
+  if (format === 'print' || format === 'print-f4') {
+    await printTableAsPdf(title, columns, rows, paperSize)
     return
   }
 
   const html = buildHtml(title, columns, rows, colorMode)
-
-  if (format === 'print' || format === 'print-f4') {
-    await printHtmlAsPdf(html, paperSize)
-    return
-  }
 
   if (format === 'word') {
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' })

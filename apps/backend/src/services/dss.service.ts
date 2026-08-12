@@ -1,9 +1,23 @@
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
-import pool from '../config/database';
 import { DssRankingHistoryEntry, DssWeightPreference } from '../models/dss.model';
+import dssRepository, { DssAssetRow } from '../repositories/dss.repository';
 import { createScopedLogger } from '../utils/logger';
+import { McdmCriterion, runTopsis } from '../utils/mcdm';
+import { TtlCache } from '../utils/ttl-cache';
 
 const logger = createScopedLogger('service:dss');
+
+/**
+ * Dataset SPK (aset + agregat pemakaian + agregat pemeliharaan) berubah jauh
+ * lebih jarang daripada frekuensi pengguna menggeser bobot. Bagian mahalnya
+ * adalah query + penyusunan alternatif; perhitungan TOPSIS-nya sendiri murah.
+ * Karena itu dataset di-cache singkat per jenis aset, sedangkan perhitungan
+ * tetap dijalankan ulang setiap permintaan.
+ */
+const DATASET_CACHE_TTL_MS = (() => {
+  const raw = Number(process.env.DSS_DATASET_CACHE_TTL_MS);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return process.env.NODE_ENV === 'test' ? 0 : 60_000;
+})();
 
 type AssetType = 'medical' | 'non_medical';
 type CriterionType = 'benefit' | 'cost';
@@ -60,60 +74,24 @@ export interface DssRankingResult {
   };
   generatedAt: string;
   totalAlternatives: number;
+  pagination: {
+    limit: number;
+    offset: number;
+    returned: number;
+    total: number;
+  };
   rankings: DssAssetRanking[];
 }
 
-type RankingOptions = {
+export type RankingOptions = {
   pairwiseMatrix?: number[][];
   weights?: Record<string, number>;
   assetType?: AssetType | 'all';
   limit?: number;
+  offset?: number;
 };
 
-interface AssetRow extends RowDataPacket {
-  id: number;
-  asset_code: string;
-  name: string;
-  category: string;
-  type?: string | null;
-  status?: string | null;
-  condition?: string | null;
-  location?: string | null;
-  purchase_date?: string | Date | null;
-  specifications?: string | Record<string, any> | null;
-}
-
-interface CountRow extends RowDataPacket {
-  asset_id: number;
-  asset_type?: string | null;
-  asset_detail_id?: string | null;
-  asset_detail_code?: string | null;
-  count: number;
-}
-
-interface MaintenanceCountRow extends CountRow {
-  total_cost?: number | null;
-}
-
-interface WeightPreferenceRow extends RowDataPacket {
-  user_id: number;
-  weights_json: string;
-  asset_type: string;
-  updated_at: Date;
-}
-
-interface RankingHistoryRow extends RowDataPacket {
-  id: number;
-  user_id: number | null;
-  asset_type: string;
-  weights_json: string;
-  pairwise_matrix_json: string | null;
-  criteria_json: string;
-  total_alternatives: number;
-  top_rankings_json: string | null;
-  generated_at: Date;
-  created_at: Date;
-}
+type AssetRow = DssAssetRow;
 
 const parseJsonObject = (raw: string | null): Record<string, number> => {
   if (!raw) return {};
@@ -135,7 +113,7 @@ const parseJsonArray = <T>(raw: string | null): T[] => {
   }
 };
 
-const DEFAULT_CRITERIA: Array<Omit<DssCriterion, 'weight'>> = [
+export const DEFAULT_CRITERIA: Array<Omit<DssCriterion, 'weight'>> = [
   { id: 'condition', name: 'Kondisi Aset', type: 'benefit' },
   { id: 'age', name: 'Usia Aset', type: 'benefit' },
   { id: 'maintenanceDue', name: 'Kedekatan Jadwal Maintenance', type: 'benefit' },
@@ -146,7 +124,7 @@ const DEFAULT_CRITERIA: Array<Omit<DssCriterion, 'weight'>> = [
   { id: 'maintenanceCost', name: 'Akumulasi Biaya Maintenance', type: 'cost' },
 ];
 
-const DEFAULT_WEIGHTS: Record<string, number> = {
+export const DEFAULT_WEIGHTS: Record<string, number> = {
   condition: 0.19,
   age: 0.12,
   maintenanceDue: 0.15,
@@ -377,32 +355,41 @@ export const calculateAhpWeights = (matrix: number[][]): { weights: Record<strin
   };
 };
 
+/**
+ * Menyusun matriks keputusan siap hitung dari daftar alternatif.
+ *
+ * Kriteria tak berbatas (tahun, jumlah, rupiah) dipetakan ke bucket kuintil 1-5
+ * agar skalanya sebanding dengan kriteria lain. Fungsi ini mengembalikan objek
+ * baru dan tidak memutasi alternatif aslinya, sehingga dataset yang di-cache
+ * tetap bersih dan bisa dipakai ulang untuk analisis sensitivitas.
+ */
+export const buildDecisionRows = (
+  alternatives: DetailAlternative[],
+  criteria: Array<{ id: string }>
+): Record<string, number>[] => {
+  const rows = alternatives.map((alternative) => ({ ...alternative.criteriaScores }));
+
+  UNBOUNDED_CRITERIA_IDS.forEach((criterionId) => {
+    if (!criteria.some((criterion) => criterion.id === criterionId)) return;
+    const rawValues = rows.map((row) => Number(row[criterionId]) || 0);
+    const bucketed = scaleToQuintileBuckets(rawValues);
+    rows.forEach((row, index) => {
+      row[criterionId] = bucketed[index];
+    });
+  });
+
+  return rows;
+};
+
 export class DssService {
-  private async getAssets(assetType: RankingOptions['assetType']): Promise<AssetRow[]> {
-    const medicalQuery = `SELECT *, 'medical' as type FROM medical_assets`;
-    const nonMedicalQuery = `SELECT *, 'non_medical' as type FROM non_medical_assets`;
+  private readonly datasetCache = new TtlCache<DetailAlternative[]>(DATASET_CACHE_TTL_MS);
 
-    if (assetType === 'medical') {
-      const [rows] = await pool.query<AssetRow[]>(medicalQuery);
-      return rows;
-    }
-    if (assetType === 'non_medical') {
-      const [rows] = await pool.query<AssetRow[]>(nonMedicalQuery);
-      return rows;
-    }
-
-    const [medicalRows] = await pool.query<AssetRow[]>(medicalQuery);
-    const [nonMedicalRows] = await pool.query<AssetRow[]>(nonMedicalQuery);
-    return [...medicalRows, ...nonMedicalRows];
+  /** Membuang cache dataset (dipakai setelah data aset/pemakaian berubah, dan di test). */
+  invalidateDatasetCache(): void {
+    this.datasetCache.clear();
   }
 
-  private async getUsageCounts(): Promise<Map<string, number>> {
-    const [rows] = await pool.query<CountRow[]>(
-      `SELECT asset_id, COALESCE(asset_type, 'medical') as asset_type, asset_detail_id, asset_detail_code, COUNT(*) as count
-       FROM asset_usage_logs
-       GROUP BY asset_id, COALESCE(asset_type, 'medical'), asset_detail_id, asset_detail_code`
-    );
-
+  private buildUsageCountMap(rows: Awaited<ReturnType<typeof dssRepository.aggregateUsageCounts>>): Map<string, number> {
     const counts = new Map<string, number>();
     rows.forEach((row) => {
       const assetType = row.asset_type === 'non_medical' ? 'non_medical' : 'medical';
@@ -411,23 +398,52 @@ export class DssService {
     return counts;
   }
 
-  private async getMaintenanceCounts(): Promise<{ counts: Map<string, number>; costs: Map<string, number> }> {
-    const [rows] = await pool.query<MaintenanceCountRow[]>(
-      `SELECT asset_id, COALESCE(asset_type, 'medical') as asset_type, asset_detail_id, asset_detail_code, COUNT(*) as count, COALESCE(SUM(cost), 0) as total_cost
-       FROM maintenance_records
-       WHERE status <> 'cancelled'
-       GROUP BY asset_id, COALESCE(asset_type, 'medical'), asset_detail_id, asset_detail_code`
-    );
+  /**
+   * Memuat alternatif (detail inventaris + skor kriteria mentah) untuk satu
+   * jenis aset, memanfaatkan cache TTL agar permintaan beruntun — ranking,
+   * analisis sensitivitas, dan pembandingan metode — tidak mengulang query.
+   */
+  async loadAlternatives(assetType: AssetType | 'all' = 'all'): Promise<DetailAlternative[]> {
+    const cacheKey = `alternatives:${assetType}`;
+    const cached = this.datasetCache.get(cacheKey);
+    if (cached) return cached;
 
-    const counts = new Map<string, number>();
-    const costs = new Map<string, number>();
-    rows.forEach((row) => {
-      const assetType = row.asset_type === 'non_medical' ? 'non_medical' : 'medical';
-      const key = buildDetailKey(assetType, row.asset_id, row.asset_detail_id, row.asset_detail_code);
-      counts.set(key, Number(row.count) || 0);
-      costs.set(key, Number(row.total_cost) || 0);
+    const [assets, usageRows, maintenanceRows] = await Promise.all([
+      dssRepository.findAssets(assetType),
+      dssRepository.aggregateUsageCounts(),
+      dssRepository.aggregateMaintenanceCounts(),
+    ]);
+
+    const usageCounts = this.buildUsageCountMap(usageRows);
+    const maintenanceCounts = new Map<string, number>();
+    const maintenanceCosts = new Map<string, number>();
+    maintenanceRows.forEach((row) => {
+      const rowAssetType = row.asset_type === 'non_medical' ? 'non_medical' : 'medical';
+      const key = buildDetailKey(rowAssetType, row.asset_id, row.asset_detail_id, row.asset_detail_code);
+      maintenanceCounts.set(key, Number(row.count) || 0);
+      maintenanceCosts.set(key, Number(row.total_cost) || 0);
     });
-    return { counts, costs };
+
+    const alternatives = this.buildAlternatives(assets, usageCounts, maintenanceCounts, maintenanceCosts);
+    this.datasetCache.set(cacheKey, alternatives);
+    return alternatives;
+  }
+
+  /** Bobot final beserta kriteria dan hasil uji konsistensi AHP (bila ada). */
+  resolveCriteria(options: Pick<RankingOptions, 'weights' | 'pairwiseMatrix'>): {
+    criteria: DssCriterion[];
+    consistency: DssRankingResult['consistency'];
+  } {
+    const ahpComputed = options.pairwiseMatrix ? calculateAhpWeights(options.pairwiseMatrix) : null;
+    const useAhp = Boolean(ahpComputed && ahpComputed.consistency && ahpComputed.consistency.isConsistent);
+    if (ahpComputed && !useAhp) {
+      logger.warn('Provided AHP pairwise matrix is inconsistent (CR > 0.1); falling back to provided/default weights');
+    }
+    const weights = normalizeWeights(useAhp ? ahpComputed!.weights : (options.weights || DEFAULT_WEIGHTS));
+    return {
+      criteria: DEFAULT_CRITERIA.map((criterion) => ({ ...criterion, weight: weights[criterion.id] || 0 })),
+      consistency: ahpComputed?.consistency || null,
+    };
   }
 
   private buildAlternatives(
@@ -509,119 +525,68 @@ export class DssService {
 
   async rankAssets(options: RankingOptions = {}): Promise<DssRankingResult> {
     try {
-      const ahpComputed = options.pairwiseMatrix ? calculateAhpWeights(options.pairwiseMatrix) : null;
-      const useAhp = ahpComputed && ahpComputed.consistency && ahpComputed.consistency.isConsistent;
-      if (ahpComputed && !useAhp) {
-        logger.warn('Provided AHP pairwise matrix is inconsistent (CR > 0.1); falling back to provided/default weights');
-      }
-      const weights = normalizeWeights(useAhp ? ahpComputed!.weights : (options.weights || DEFAULT_WEIGHTS));
-      const criteria = DEFAULT_CRITERIA.map((criterion) => ({ ...criterion, weight: weights[criterion.id] || 0 }));
-      const [assets, usageCounts, maintenance] = await Promise.all([
-        this.getAssets(options.assetType || 'all'),
-        this.getUsageCounts(),
-        this.getMaintenanceCounts(),
-      ]);
-      const alternatives = this.buildAlternatives(assets, usageCounts, maintenance.counts, maintenance.costs);
+      const { criteria, consistency } = this.resolveCriteria(options);
+      const limit = Math.max(1, Math.min(Number(options.limit) || 100, 1000));
+      const offset = Math.max(0, Number(options.offset) || 0);
+      const alternatives = await this.loadAlternatives(options.assetType || 'all');
 
       if (!Array.isArray(alternatives) || alternatives.length === 0) {
         logger.warn('No alternatives found for ranking (empty dataset)');
         return {
           criteria,
-          consistency: ahpComputed?.consistency || null,
+          consistency,
           idealSolutions: { positive: {}, negative: {} },
           generatedAt: new Date().toISOString(),
           totalAlternatives: 0,
+          pagination: { limit, offset, returned: 0, total: 0 },
           rankings: [],
         };
       }
 
-      // Unbounded raw criteria (years, counts, rupiah) get rescaled onto the
-      // same 1-5 range as the other criteria before normalization, so their
-      // arbitrary scale doesn't distort the weighted TOPSIS distance.
-      UNBOUNDED_CRITERIA_IDS.forEach((criterionId) => {
-        if (!criteria.some((criterion) => criterion.id === criterionId)) return;
-        const rawValues = alternatives.map((alternative) => Number(alternative.criteriaScores[criterionId]) || 0);
-        const bucketed = scaleToQuintileBuckets(rawValues);
-        alternatives.forEach((alternative, index) => {
-          alternative.criteriaScores[criterionId] = bucketed[index];
-        });
-      });
+      const decisionRows = buildDecisionRows(alternatives, criteria);
+      const topsis = runTopsis(decisionRows, criteria as McdmCriterion[]);
 
-      const denominators = Object.fromEntries(criteria.map((criterion) => {
-        const sumSquares = alternatives.reduce((sum, alternative) => {
-          const value = Number(alternative.criteriaScores[criterion.id]) || 0;
-          return sum + value * value;
-        }, 0);
-        const denom = Math.sqrt(sumSquares);
-        return [criterion.id, denom > 0 ? denom : 1];
-      }));
-
-      const positiveIdeal: Record<string, number> = {};
-      const negativeIdeal: Record<string, number> = {};
-      const scored = alternatives.map((alternative) => {
-        const normalizedScores: Record<string, number> = {};
-        const weightedScores: Record<string, number> = {};
-        criteria.forEach((criterion) => {
-          const raw = Number(alternative.criteriaScores[criterion.id]) || 0;
-          const normalized = Number.isFinite(raw) ? raw / denominators[criterion.id] : 0;
-          const weighted = Number.isFinite(normalized) && Number.isFinite(criterion.weight) ? normalized * criterion.weight : 0;
-          normalizedScores[criterion.id] = Number.isFinite(normalized) ? normalized : 0;
-          weightedScores[criterion.id] = Number.isFinite(weighted) ? weighted : 0;
-        });
-        return { ...alternative, normalizedScores, weightedScores };
-      });
-
-      criteria.forEach((criterion) => {
-        const values = scored.map((alternative) => alternative.weightedScores[criterion.id] || 0);
-        positiveIdeal[criterion.id] = values.length > 0 ? (criterion.type === 'benefit' ? Math.max(...values) : Math.min(...values)) : 0;
-        negativeIdeal[criterion.id] = values.length > 0 ? (criterion.type === 'benefit' ? Math.min(...values) : Math.max(...values)) : 0;
-      });
-
-      const distanced = scored
-        .map((alternative) => {
-          const positiveDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
-            const diff = (alternative.weightedScores[criterion.id] || 0) - (positiveIdeal[criterion.id] || 0);
-            return sum + diff * diff;
-          }, 0));
-          const negativeDistance = Math.sqrt(criteria.reduce((sum, criterion) => {
-            const diff = (alternative.weightedScores[criterion.id] || 0) - (negativeIdeal[criterion.id] || 0);
-            return sum + diff * diff;
-          }, 0));
-          const denom = positiveDistance + negativeDistance;
-          const preferenceScore = denom === 0 ? 0 : (negativeDistance / denom);
-          return { ...alternative, positiveDistance, negativeDistance, preferenceScore };
-        })
+      const scored = alternatives
+        .map((alternative, index) => ({
+          ...alternative,
+          criteriaScores: decisionRows[index],
+          normalizedScores: topsis.normalized[index],
+          weightedScores: topsis.weighted[index],
+          positiveDistance: topsis.positiveDistances[index],
+          negativeDistance: topsis.negativeDistances[index],
+          preferenceScore: topsis.scores[index],
+        }))
         .sort((left, right) => right.preferenceScore - left.preferenceScore);
 
       // Recommendation bands are relative to this dataset's own ranking
       // (top ~20% / next ~30% / rest) rather than fixed absolute score
       // cutoffs, which in practice were rarely reached by real data.
-      const totalDistanced = distanced.length;
-      const withRecommendation = distanced.map((alternative, index) => {
-        const percentile = (index + 1) / totalDistanced;
-        const recommendation = percentile <= 0.2
-          ? 'Prioritas tinggi'
-          : percentile <= 0.5
-            ? 'Prioritas sedang'
-            : 'Prioritas rendah';
-        return { ...alternative, recommendation };
-      });
-
-      const rankings = withRecommendation
-        .slice(0, Math.max(1, Math.min(Number(options.limit) || 100, 1000)))
-        .map((alternative, index) => ({
-          ...alternative,
-          rank: index + 1,
-          usageWarningThreshold: USAGE_WARNING_THRESHOLD,
-          usageMandatoryCheckThreshold: USAGE_MANDATORY_CHECK_THRESHOLD,
-        }));
+      const total = scored.length;
+      const rankings = scored
+        .map((alternative, index) => {
+          const percentile = (index + 1) / total;
+          const recommendation = percentile <= 0.2
+            ? 'Prioritas tinggi'
+            : percentile <= 0.5
+              ? 'Prioritas sedang'
+              : 'Prioritas rendah';
+          return {
+            ...alternative,
+            recommendation,
+            rank: index + 1,
+            usageWarningThreshold: USAGE_WARNING_THRESHOLD,
+            usageMandatoryCheckThreshold: USAGE_MANDATORY_CHECK_THRESHOLD,
+          };
+        })
+        .slice(offset, offset + limit);
 
       return {
         criteria,
-        consistency: ahpComputed?.consistency || null,
-        idealSolutions: { positive: positiveIdeal, negative: negativeIdeal },
+        consistency,
+        idealSolutions: { positive: topsis.positiveIdeal, negative: topsis.negativeIdeal },
         generatedAt: new Date().toISOString(),
-        totalAlternatives: alternatives.length,
+        totalAlternatives: total,
+        pagination: { limit, offset, returned: rankings.length, total },
         rankings,
       };
     } catch (err) {
@@ -631,11 +596,7 @@ export class DssService {
   }
 
   async getWeightPreference(userId: number): Promise<DssWeightPreference | null> {
-    const [rows] = await pool.query<WeightPreferenceRow[]>(
-      `SELECT user_id, weights_json, asset_type, updated_at FROM dss_weight_preferences WHERE user_id = ? LIMIT 1`,
-      [userId]
-    );
-    const row = rows[0];
+    const row = await dssRepository.findWeightPreference(userId);
     if (!row) return null;
     return {
       userId: row.user_id,
@@ -646,29 +607,31 @@ export class DssService {
   }
 
   async saveWeightPreference(userId: number, weights: Record<string, number>, assetType: string): Promise<DssWeightPreference> {
-    await pool.query(
-      `INSERT INTO dss_weight_preferences (user_id, weights_json, asset_type)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE weights_json = VALUES(weights_json), asset_type = VALUES(asset_type)`,
-      [userId, JSON.stringify(weights), assetType]
-    );
+    await dssRepository.upsertWeightPreference(userId, JSON.stringify(weights), assetType);
     return { userId, weights, assetType, updatedAt: new Date().toISOString() };
   }
 
-  async saveRankingHistory(userId: number | null, assetType: string, result: DssRankingResult, pairwiseMatrix?: number[][] | null): Promise<void> {
+  async saveRankingHistory(
+    userId: number | null,
+    assetType: string,
+    result: DssRankingResult,
+    pairwiseMatrix?: number[][] | null,
+    label?: string | null
+  ): Promise<void> {
     const weightsJson = JSON.stringify(Object.fromEntries(result.criteria.map((criterion) => [criterion.id, criterion.weight])));
+    const normalizedLabel = String(label || '').trim().slice(0, 120) || null;
 
     // Skip persisting when the last saved snapshot for this user used the exact same
-    // weights and asset type — avoids piling up identical rows on plain page reloads
-    // (loadRanking runs on every mount, not just when the user actually changes weights).
-    const [lastRows] = await pool.query<(RowDataPacket & { asset_type: string; weights_json: string })[]>(
-      `SELECT asset_type, weights_json FROM dss_ranking_history
-       WHERE user_id ${userId === null ? 'IS NULL' : '= ?'}
-       ORDER BY created_at DESC LIMIT 1`,
-      userId === null ? [] : [userId]
-    );
-    const last = lastRows[0];
-    if (last && last.asset_type === assetType && last.weights_json === weightsJson) {
+    // weights, asset type, and label — avoids piling up identical rows. Label yang
+    // berbeda tetap disimpan, karena pengguna sengaja mengarsipkan skenario itu
+    // dengan nama lain (mis. sebelum/sesudah revisi bobot).
+    const last = await dssRepository.findLastHistorySnapshot(userId);
+    if (
+      last
+      && last.asset_type === assetType
+      && last.weights_json === weightsJson
+      && (last.label ?? null) === normalizedLabel
+    ) {
       return;
     }
 
@@ -679,35 +642,26 @@ export class DssService {
       preferenceScore: ranking.preferenceScore,
       recommendation: ranking.recommendation,
     }));
-    await pool.query(
-      `INSERT INTO dss_ranking_history (user_id, asset_type, weights_json, pairwise_matrix_json, criteria_json, total_alternatives, top_rankings_json, generated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        assetType,
-        weightsJson,
-        pairwiseMatrix ? JSON.stringify(pairwiseMatrix) : null,
-        JSON.stringify(result.criteria),
-        result.totalAlternatives,
-        JSON.stringify(topRankings),
-        new Date(result.generatedAt),
-      ]
-    );
+    await dssRepository.insertRankingHistory({
+      userId,
+      assetType,
+      label: normalizedLabel,
+      weightsJson,
+      pairwiseMatrixJson: pairwiseMatrix ? JSON.stringify(pairwiseMatrix) : null,
+      criteriaJson: JSON.stringify(result.criteria),
+      totalAlternatives: result.totalAlternatives,
+      topRankingsJson: JSON.stringify(topRankings),
+      generatedAt: new Date(result.generatedAt),
+    });
   }
 
   async listRankingHistory(userId: number, limit = 20): Promise<DssRankingHistoryEntry[]> {
-    const [rows] = await pool.query<RankingHistoryRow[]>(
-      `SELECT id, user_id, asset_type, weights_json, pairwise_matrix_json, criteria_json, total_alternatives, top_rankings_json, generated_at, created_at
-       FROM dss_ranking_history
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT ?`,
-      [userId, Math.max(1, Math.min(limit, 100))]
-    );
+    const rows = await dssRepository.findRankingHistory(userId, Math.max(1, Math.min(limit, 100)));
     return rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
       assetType: row.asset_type,
+      label: row.label ?? null,
       weights: parseJsonObject(row.weights_json),
       criteria: parseJsonArray(row.criteria_json),
       totalAlternatives: row.total_alternatives,
@@ -718,12 +672,27 @@ export class DssService {
     }));
   }
 
+  /** Konfigurasi bobot satu entri riwayat, untuk dihitung ulang saat dibandingkan. */
+  async getHistoryScenario(userId: number, historyId: number): Promise<{
+    id: number;
+    label: string | null;
+    assetType: string;
+    weights: Record<string, number>;
+    createdAt: Date | string;
+  } | null> {
+    const row = await dssRepository.findRankingHistoryById(userId, historyId);
+    if (!row) return null;
+    return {
+      id: row.id,
+      label: row.label ?? null,
+      assetType: row.asset_type,
+      weights: parseJsonObject(row.weights_json),
+      createdAt: row.created_at,
+    };
+  }
+
   async deleteRankingHistory(userId: number, historyId: number): Promise<boolean> {
-    const [result] = await pool.query<ResultSetHeader>(
-      `DELETE FROM dss_ranking_history WHERE id = ? AND user_id = ?`,
-      [historyId, userId]
-    );
-    return result.affectedRows > 0;
+    return dssRepository.deleteRankingHistory(userId, historyId);
   }
 }
 

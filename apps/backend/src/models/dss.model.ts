@@ -9,6 +9,7 @@ export interface DssRankingHistoryEntry {
   id: number;
   userId: number | null;
   assetType: string;
+  label: string | null;
   weights: Record<string, number>;
   criteria: Array<{ id: string; name: string; type: string; weight: number }>;
   totalAlternatives: number;
