@@ -674,6 +674,13 @@ export default function DssPage() {
     setRankingPage(Math.min(totalRankingPages, Math.max(1, page)))
   }
 
+  const sensitivityCriteria = sensitivityResult?.criteria ?? []
+  const dominantCriterionId = sensitivityCriteria.reduce<string | null>((currentDominantId, criterion) => {
+    if (!currentDominantId) return criterion.id
+    const currentDominant = sensitivityCriteria.find((item) => item.id === currentDominantId)
+    return !currentDominant || criterion.baseWeight > currentDominant.baseWeight ? criterion.id : currentDominantId
+  }, null)
+
   const topRankings = rankingResult?.rankings.slice(0, 3) || []
 
   return (
@@ -1358,6 +1365,9 @@ export default function DssPage() {
                           Spearman terendah {formatCorrelation(sensitivityResult.overallMinSpearman)} · {sensitivityResult.totalAlternatives} alternatif
                         </span>
                       </div>
+                      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-400">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Catatan:</span> badge amber menandai kriteria paling sensitif, sedangkan badge teal menandai bobot dominan pada konfigurasi saat ini.
+                      </div>
 
                       <div className="overflow-x-auto">
                         <table className="w-full min-w-175 text-left text-[13px]">
@@ -1374,11 +1384,22 @@ export default function DssPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200 dark:divide-slate-800/35">
                             {sensitivityResult.criteria.map((criterion) => (
-                              <tr
-                                key={criterion.id}
-                                className={cn(criterion.id === sensitivityResult.mostSensitiveCriterionId && "bg-amber-50/60 dark:bg-amber-400/5")}
-                              >
-                                <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{criterion.name}</td>
+                              <tr key={criterion.id}>
+                                <td className="px-3 py-2 text-slate-800 dark:text-slate-200">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span>{criterion.name}</span>
+                                    {criterion.id === dominantCriterionId && (
+                                      <Badge variant="outline" className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
+                                        Bobot dominan
+                                      </Badge>
+                                    )}
+                                    {criterion.id === sensitivityResult.mostSensitiveCriterionId && (
+                                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+                                        Paling sensitif
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatPercent(criterion.baseWeight)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-100">{formatCorrelation(criterion.minSpearman)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{formatCorrelation(criterion.meanSpearman)}</td>
