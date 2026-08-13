@@ -682,6 +682,7 @@ export default function DssPage() {
   }, null)
 
   const topRankings = rankingResult?.rankings.slice(0, 3) || []
+  const topScoreGap = topRankings.length > 1 ? Math.max(0, topRankings[0].preferenceScore - topRankings[1].preferenceScore) : null
 
   return (
     <div>
@@ -791,6 +792,37 @@ export default function DssPage() {
                   <div className="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">Ranking aset detail</div>
                   <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Ranking aset dihitung berdasarkan bobot kriteria dan nilai alternatif.</div>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800/35">
+                {rankingResult?.consistency && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full px-3 py-1 text-[11px]",
+                      rankingResult.consistency.isConsistent
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                        : "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
+                    )}
+                  >
+                    Konsistensi AHP: {rankingResult.consistency.isConsistent ? "konsisten" : "tidak konsisten"}
+                  </Badge>
+                )}
+                {topRankings[0] && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 dark:border-slate-700/40 dark:bg-slate-800/40 dark:text-slate-300">
+                    Skor TOPSIS tertinggi: {formatScore(topRankings[0].preferenceScore)}
+                  </Badge>
+                )}
+                {topScoreGap != null && (
+                  <Badge variant="outline" className="rounded-full border-teal-200 bg-teal-50 px-3 py-1 text-[11px] text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
+                    Gap rank 1-2: {formatScore(topScoreGap)}
+                  </Badge>
+                )}
+                {sensitivityResult && (
+                  <Badge variant="outline" className={cn("rounded-full px-3 py-1 text-[11px]", stabilityBadgeClass(sensitivityResult.overallStability))}>
+                    Stabilitas ranking: {sensitivityResult.overallStability}
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
