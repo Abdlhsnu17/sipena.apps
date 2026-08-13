@@ -794,42 +794,47 @@ export default function DssPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800/35">
-                {rankingResult?.consistency && (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "rounded-full px-3 py-1 text-[11px]",
-                      rankingResult.consistency.isConsistent
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
-                        : "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
-                    )}
-                  >
-                    Konsistensi model: {rankingResult.consistency.isConsistent ? "konsisten" : "tidak konsisten"}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800/35 dark:bg-slate-900/40">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 dark:border-slate-700/40 dark:bg-slate-900/60 dark:text-slate-300">
+                    Ringkasan presentasi
                   </Badge>
-                )}
-                {topRankings[0] && (
-                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 dark:border-slate-700/40 dark:bg-slate-800/40 dark:text-slate-300">
-                    Nilai preferensi puncak: {formatScore(topRankings[0].preferenceScore)}
-                  </Badge>
-                )}
-                {topScoreGap != null && (
-                  <Badge variant="outline" className="rounded-full border-teal-200 bg-teal-50 px-3 py-1 text-[11px] text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
-                    Selisih peringkat teratas: {formatScore(topScoreGap)}
-                  </Badge>
-                )}
-                {sensitivityResult && (
-                  <Badge variant="outline" className={cn("rounded-full px-3 py-1 text-[11px]", stabilityBadgeClass(sensitivityResult.overallStability))}>
-                    Stabilitas sensitivitas: {sensitivityResult.overallStability}
-                  </Badge>
-                )}
+                  {rankingResult?.consistency && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "rounded-full px-3 py-1 text-[11px]",
+                        rankingResult.consistency.isConsistent
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                          : "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
+                      )}
+                    >
+                      Konsistensi model: {rankingResult.consistency.isConsistent ? "konsisten" : "tidak konsisten"}
+                    </Badge>
+                  )}
+                  {topRankings[0] && (
+                    <Badge variant="outline" className="rounded-full border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 dark:border-slate-700/40 dark:bg-slate-900/60 dark:text-slate-300">
+                      Nilai preferensi puncak: {formatScore(topRankings[0].preferenceScore)}
+                    </Badge>
+                  )}
+                  {topScoreGap != null && (
+                    <Badge variant="outline" className="rounded-full border-teal-200 bg-teal-50 px-3 py-1 text-[11px] text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
+                      Selisih peringkat teratas: {formatScore(topScoreGap)}
+                    </Badge>
+                  )}
+                  {sensitivityResult && (
+                    <Badge variant="outline" className={cn("rounded-full px-3 py-1 text-[11px]", stabilityBadgeClass(sensitivityResult.overallStability))}>
+                      Stabilitas sensitivitas: {sensitivityResult.overallStability}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 dark:border-slate-800/35 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Top Ranking</CardTitle>
+              <CardTitle className="text-base">Peringkat Teratas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
               {topRankings.length > 0 ? (
@@ -1370,9 +1375,9 @@ export default function DssPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
                   <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    Setiap bobot kriteria digeser -20%, -10%, +10%, dan +20% (bobot lain dinormalkan ulang), lalu ranking dihitung ulang
-                    dan dibandingkan dengan ranking dasar memakai korelasi peringkat Spearman serta irisan top-10. Nilai mendekati 1
-                    berarti peringkat tidak berubah meski bobot digeser.
+                    Setiap bobot kriteria diuji dengan perubahan -20%, -10%, +10%, dan +20% (bobot lain dinormalisasi ulang),
+                    lalu hasilnya dibandingkan dengan ranking dasar menggunakan korelasi peringkat Spearman dan irisan top-10.
+                    Nilai yang mendekati 1 menunjukkan peringkat tetap stabil meskipun bobot digeser.
                   </p>
 
                   {validationError && (
@@ -1398,7 +1403,7 @@ export default function DssPage() {
                         </span>
                       </div>
                       <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800/35 dark:bg-slate-900/40 dark:text-slate-400">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">Catatan:</span> badge amber menandai kriteria paling sensitif, sedangkan badge teal menandai bobot dominan pada konfigurasi saat ini.
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Interpretasi warna:</span> badge amber menandai kriteria paling sensitif, sedangkan badge teal menandai bobot dominan pada konfigurasi saat ini.
                       </div>
 
                       <div className="overflow-x-auto">
