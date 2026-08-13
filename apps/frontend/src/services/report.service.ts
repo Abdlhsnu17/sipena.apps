@@ -1,3 +1,4 @@
+import { toIsoDateTimeString } from "../utils/date-input"
 import apiService from "./api.service"
 
 export interface DashboardStats {
@@ -128,7 +129,15 @@ class ReportService {
     const formData = new FormData()
     formData.append("file", file)
     for (const [key, value] of Object.entries(metadata)) {
-      if (value) formData.append(key, value)
+      if (!value) continue
+      if (key === "retentionUntil") {
+        const normalizedRetentionUntil = toIsoDateTimeString(value)
+        if (normalizedRetentionUntil) {
+          formData.append(key, normalizedRetentionUntil)
+        }
+        continue
+      }
+      formData.append(key, value)
     }
     return apiService.post<ReportResponse<ReportUpload>>("/reports/uploads", formData as FormData)
   }

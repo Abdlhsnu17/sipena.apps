@@ -26,6 +26,7 @@ import {
 import { locationBadgeClass } from "@/utils/api-mappers";
 import { buildTableExportRows, exportTableData, type TableExportColumn } from "@/utils/export-table";
 import { canCreateMaintenanceRole } from "@/utils/role";
+import { formatDayTimeLabel } from "@/utils/format";
 import {
     Activity,
     AlertTriangle,
@@ -342,7 +343,7 @@ export default function DssPage() {
 
     setActiveScenario({
       id: entry.id,
-      label: entry.label || `Riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")}`,
+      label: entry.label || `Riwayat ${formatDayTimeLabel(entry.createdAt, { showWeekday: false })}`,
       weights: entry.weights,
       pairwiseMatrix: usesAhp ? entry.pairwiseMatrix! : null,
     })
@@ -355,7 +356,7 @@ export default function DssPage() {
   const deleteHistoryEntry = useCallback(async (entry: DssRankingHistoryEntry) => {
     const confirmed = await confirm({
       title: "Hapus riwayat perhitungan?",
-      description: `Riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")} akan dihapus permanen.`,
+      description: `Riwayat ${formatDayTimeLabel(entry.createdAt, { showWeekday: false })} akan dihapus permanen.`,
       confirmText: "Ya, hapus",
       cancelText: "Batal",
       destructive: true,
@@ -616,7 +617,7 @@ export default function DssPage() {
     const rows = selectedEntries.flatMap((entry) =>
       entry.topRankings.slice(0, 10).map((ranking) => ({
         Skenario: entry.label || "Tanpa nama",
-        Waktu: new Date(entry.createdAt).toLocaleString("id-ID"),
+        Waktu: formatDayTimeLabel(entry.createdAt, { showWeekday: false }),
         "Jenis Aset": assetTypeLabel(entry.assetType as DssAssetType),
         Alternatif: String(entry.totalAlternatives),
         Metode: weightMethodLabel(entry),
@@ -1620,7 +1621,7 @@ export default function DssPage() {
                             className="mt-1 h-4 w-4 accent-teal-600"
                             checked={selectedHistoryIds.includes(entry.id)}
                             onChange={() => toggleHistorySelection(entry.id)}
-                            aria-label={`Pilih skenario ${entry.label || new Date(entry.createdAt).toLocaleString("id-ID")} untuk dibandingkan`}
+                            aria-label={`Pilih skenario ${entry.label || formatDayTimeLabel(entry.createdAt, { showWeekday: false })} untuk dibandingkan`}
                           />
                         </td>
                         <td className="px-3 py-2 align-top text-slate-800 dark:text-slate-200">
@@ -1633,7 +1634,7 @@ export default function DssPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">
-                          {new Date(entry.createdAt).toLocaleString("id-ID")}
+                          {formatDayTimeLabel(entry.createdAt, { showWeekday: false })}
                         </td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">{assetTypeLabel(entry.assetType as DssAssetType)}</td>
                         <td className="px-3 py-2 align-top text-slate-700 dark:text-slate-300">{entry.totalAlternatives}</td>
@@ -1682,7 +1683,7 @@ export default function DssPage() {
                               className="gap-1 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-400/30 dark:text-red-300 dark:hover:bg-red-400/10"
                               disabled={deletingHistoryId === entry.id}
                               onClick={() => void deleteHistoryEntry(entry)}
-                              aria-label={`Hapus riwayat ${new Date(entry.createdAt).toLocaleString("id-ID")}`}
+                              aria-label={`Hapus riwayat ${formatDayTimeLabel(entry.createdAt, { showWeekday: false })}`}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                               {deletingHistoryId === entry.id ? "Menghapus..." : "Hapus"}
@@ -1970,7 +1971,7 @@ export default function DssPage() {
             <DialogDescription>
               {historyDetailEntry ? [
                 historyDetailEntry.label,
-                new Date(historyDetailEntry.createdAt).toLocaleString("id-ID"),
+                formatDayTimeLabel(historyDetailEntry.createdAt, { showWeekday: false }),
                 assetTypeLabel(historyDetailEntry.assetType as DssAssetType),
                 `${historyDetailEntry.totalAlternatives} alternatif`,
               ].filter(Boolean).join(" · ") : ""}

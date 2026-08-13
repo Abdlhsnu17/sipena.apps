@@ -1,3 +1,4 @@
+import { toIsoDateTimeString } from '../utils/date-input';
 import apiService from './api.service';
 
 export interface Asset {
@@ -81,6 +82,14 @@ const normalizeAsset = (asset: any): Asset => ({
 });
 
 class AssetService {
+  private normalizeWritePayload(data: Partial<Asset>) {
+    return {
+      ...data,
+      purchaseDate: data.purchaseDate ? toIsoDateTimeString(data.purchaseDate) : undefined,
+      warrantyExpiry: data.warrantyExpiry ? toIsoDateTimeString(data.warrantyExpiry) : undefined,
+    };
+  }
+
   async getAll(filters: AssetFilters = {}): Promise<AssetResponse> {
     const params = new URLSearchParams();
     
@@ -106,12 +115,12 @@ class AssetService {
   }
 
   async create(data: Partial<Asset>): Promise<SingleAssetResponse> {
-    const response = await apiService.post<SingleAssetResponse>('/assets', data);
+    const response = await apiService.post<SingleAssetResponse>('/assets', this.normalizeWritePayload(data));
     return { ...response, data: normalizeAsset(response.data) };
   }
 
   async update(id: number | string, data: Partial<Asset>): Promise<SingleAssetResponse> {
-    const response = await apiService.put<SingleAssetResponse>(`/assets/${id}`, data);
+    const response = await apiService.put<SingleAssetResponse>(`/assets/${id}`, this.normalizeWritePayload(data));
     return { ...response, data: normalizeAsset(response.data) };
   }
 

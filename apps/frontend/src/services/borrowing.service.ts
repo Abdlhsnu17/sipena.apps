@@ -1,3 +1,4 @@
+import { toIsoDateTimeString } from "../utils/date-input";
 import apiService from './api.service';
 
 export interface Borrowing {
@@ -224,6 +225,14 @@ export interface UpdateBorrowingData {
 }
 
 class BorrowingService {
+  private normalizeWritePayload(data: CreateBorrowingData | UpdateBorrowingData) {
+    return {
+      ...data,
+      borrowDate: data.borrowDate ? toIsoDateTimeString(data.borrowDate) : undefined,
+      dueDate: data.dueDate ? toIsoDateTimeString(data.dueDate) : undefined,
+    };
+  }
+
   async getOwnerCandidates(search = '', limit = 20): Promise<BorrowingOwnerCandidatesResponse> {
     const params = new URLSearchParams({ limit: String(limit) });
     if (search.trim()) params.set('search', search.trim());
@@ -255,14 +264,14 @@ class BorrowingService {
   }
 
   async create(data: CreateBorrowingData): Promise<SingleBorrowingResponse> {
-    const response = await apiService.post<SingleBorrowingResponse>('/borrowing', data);
+    const response = await apiService.post<SingleBorrowingResponse>('/borrowing', this.normalizeWritePayload(data));
     const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
   }
 
   async update(id: number | string, data: UpdateBorrowingData): Promise<SingleBorrowingResponse> {
-    const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}`, data);
+    const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}`, this.normalizeWritePayload(data));
     const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
@@ -298,7 +307,7 @@ class BorrowingService {
 
   async extend(id: number | string, newDueDate: string, extensionNotes?: string): Promise<SingleBorrowingResponse> {
     const response = await apiService.patch<SingleBorrowingResponse>(`/borrowing/${id}/extend`, { 
-      newDueDate, 
+      newDueDate: toIsoDateTimeString(newDueDate),
       extensionNotes 
     });
     const normalized = response.data ? { ...response, data: normalizeBorrowing(response.data) } : response;

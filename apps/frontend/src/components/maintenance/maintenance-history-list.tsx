@@ -24,6 +24,7 @@ import { cn } from "@/utils";
 import { assetSourceBadgeClass, assetSourceLabel, deriveAssetSource, locationBadgeClass, maintenanceStatusLabel, maintenanceTypeBadgeClass, maintenanceTypeLabel, type AssetSourceKey } from "@/utils/api-mappers";
 import { ExportFormat, exportMaintenanceHistory, type MaintenanceHistoryExportEntry } from "@/utils/export-table";
 import { formatCostLabel, formatDayTimeLabel } from "@/utils/format";
+import { toIsoDateTimeString } from "@/utils/date-input";
 import { formatNoId } from "@/utils/record-id";
 import { canManageMaintenanceStatusRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
@@ -308,7 +309,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       } else {
         await apiService.patch(`/maintenance-history/${id}/complete`, {
           ...completeForm,
-          completedDate: completeForm.completedDate ? new Date(completeForm.completedDate).toISOString() : undefined,
+          completedDate: completeForm.completedDate ? toIsoDateTimeString(completeForm.completedDate) : undefined,
           cost: completeForm.cost ? Number(completeForm.cost) : undefined,
         });
       }
@@ -381,7 +382,7 @@ const MaintenanceHistoryList: React.FC<Props> = ({ user, assets, maintenance, on
       } else {
         await apiService.patch(`/maintenance-history/${id}/validate`, {
           validatedBy: Number(safeUser.id),
-          validatedAt: new Date().toISOString(),
+          validatedAt: toIsoDateTimeString(new Date()),
         });
       }
       window.dispatchEvent(new Event('inventory-refresh'))

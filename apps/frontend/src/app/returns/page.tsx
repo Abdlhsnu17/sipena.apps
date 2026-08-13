@@ -19,7 +19,7 @@ import {
     locationBadgeClass,
     type AssetSourceKey,
 } from "@/utils/api-mappers";
-import { formatDayTimeLabel } from "@/utils/format";
+import { formatDayTimeLabel, formatLongDateLabel } from "@/utils/format";
 import { isAdminOrLeaderRole, isAdminRole, isStaffPjRole, isTechnicianRole } from "@/utils/role";
 
 import {
@@ -1736,7 +1736,7 @@ export default function ReturnsPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tanggal Pinjam:</span>
                       <span className="font-medium">
-                        {new Date(selectedBorrowing.borrowDate).toLocaleDateString("id-ID")}
+                        {formatLongDateLabel(selectedBorrowing.borrowDate) || "-"}
                       </span>
                     </div>
                     <div className="flex justify-between gap-4">

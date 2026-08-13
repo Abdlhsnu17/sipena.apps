@@ -17,6 +17,7 @@ import { formatNoId, rebaseRoomScopedDetailCode } from "@/utils/record-id";
 import { canManageInventoryRole, isAdminOrLeaderRole, isAdminRole } from "@/utils/role";
 import { matchesSearchKeyword } from "@/utils/search-keyword";
 import { parseScanTargetFromSearchParams } from "@/utils/asset-scan-target";
+import { formatLongDateLabel } from "@/utils/format";
 import { buildOrderedUsagePurposeList, normalizeUsagePurpose } from "@/utils/usage-purpose";
 
 
@@ -780,26 +781,10 @@ export default function MedicalAssetsPage() {
                         <div className="grid gap-3 md:grid-cols-2 auto-rows-fr">
                           {assetsToDisplay.map((asset) => {
                             const noId = getAssetNoId(room.id, asset.id)
-                            const purchaseDateText = asset.purchaseDate
-                              ? new Date(asset.purchaseDate).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })
-                              : "-"
-                            const maintenanceDateText = asset.lastMaintenance
-                              ? new Date(asset.lastMaintenance).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })
-                              : asset.lastRepair
-                                ? new Date(asset.lastRepair).toLocaleDateString("id-ID", {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })
-                                : "-"
+                            const purchaseDateText = formatLongDateLabel(asset.purchaseDate) || "-"
+                            const maintenanceDateText = formatLongDateLabel(asset.lastMaintenance)
+                              || formatLongDateLabel(asset.lastRepair)
+                              || "-"
                             const maintenanceLabelText = asset.lastMaintenance
                               ? "Pemeliharaan Terakhir"
                               : asset.lastRepair

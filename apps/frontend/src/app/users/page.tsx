@@ -14,6 +14,7 @@ import type { User as ApiUser } from "@/services/user.service";
 import { userService } from "@/services/user.service";
 import type { AccountStatus, User as AuthUser, StaffAccessType } from "@/types/auth-types";
 import { isAdminRole, normalizeUserRole } from "@/utils/role";
+import { formatLongDateLabel } from "@/utils/format";
 import { isStrongPassword } from "@/utils/validation";
 
 import { AlertCircle, CalendarCheck2, Check, Edit, Eye, KeyRound, Mail, MapPin, Phone, Plus, Save, Shield, Smartphone, Trash2, Users } from "lucide-react";
@@ -1073,9 +1074,7 @@ export default function UsersPage() {
                               <div className="flex items-start gap-2">
                                 <CalendarCheck2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
                                 <p className="min-w-0">Terdaftar: <span className="font-medium text-blue-800 dark:text-blue-300">
-                                  {user.createdAt
-                                    ? new Date(user.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-                                    : "-"}
+                                  {formatLongDateLabel(user.createdAt) || "-"}
                                 </span></p>
                               </div>
                               <div className="flex items-start gap-2">

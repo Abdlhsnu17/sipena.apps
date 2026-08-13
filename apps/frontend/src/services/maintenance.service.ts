@@ -1,4 +1,5 @@
-import { toLocalDateTimeString } from '@/utils/format';
+import { toLocalDateTimeString } from '../utils/format';
+import { toIsoDateTimeString } from '../utils/date-input';
 import apiService from './api.service';
 
 export interface Maintenance {
@@ -296,6 +297,20 @@ const emitNotificationsRefresh = () => {
 };
 
 class MaintenanceService {
+  private normalizeWritePayload(data: CreateMaintenanceData | UpdateMaintenanceData) {
+    return {
+      ...data,
+      scheduledDate: data.scheduledDate ? toIsoDateTimeString(data.scheduledDate) : undefined,
+      dueAt: data.dueAt ? toIsoDateTimeString(data.dueAt) : undefined,
+      startedAt: data.startedAt ? toIsoDateTimeString(data.startedAt) : undefined,
+      completedDate: data.completedDate ? toIsoDateTimeString(data.completedDate) : undefined,
+      actualStartAt: data.actualStartAt ? toIsoDateTimeString(data.actualStartAt) : undefined,
+      actualEndAt: data.actualEndAt ? toIsoDateTimeString(data.actualEndAt) : undefined,
+      warrantyUntil: data.warrantyUntil ? toIsoDateTimeString(data.warrantyUntil) : undefined,
+      nextMaintenanceDate: data.nextMaintenanceDate ? toIsoDateTimeString(data.nextMaintenanceDate) : undefined,
+    };
+  }
+
   async getTechnicianCandidates(search = '', limit = 20): Promise<MaintenanceTechnicianCandidatesResponse> {
     const params = new URLSearchParams({ search, limit: String(limit) });
     return apiService.get<MaintenanceTechnicianCandidatesResponse>(`/maintenance/technician-candidates?${params.toString()}`);
@@ -326,14 +341,14 @@ class MaintenanceService {
   }
 
   async create(data: CreateMaintenanceData): Promise<SingleMaintenanceResponse> {
-    const response = await apiService.post<SingleMaintenanceResponse>('/maintenance', data);
+    const response = await apiService.post<SingleMaintenanceResponse>('/maintenance', this.normalizeWritePayload(data));
     const normalized = mapSingleMaintenance(response);
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
   }
 
   async update(id: number | string, data: UpdateMaintenanceData): Promise<SingleMaintenanceResponse> {
-    const response = await apiService.put<SingleMaintenanceResponse>(`/maintenance/${id}`, data);
+    const response = await apiService.put<SingleMaintenanceResponse>(`/maintenance/${id}`, this.normalizeWritePayload(data));
     const normalized = mapSingleMaintenance(response);
     if (normalized.success) emitNotificationsRefresh();
     return normalized;

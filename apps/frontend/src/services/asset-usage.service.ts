@@ -1,4 +1,5 @@
-import { toLocalDateTimeString } from "@/utils/format";
+import { toLocalDateTimeString } from "../utils/format";
+import { toIsoDateTimeString } from "../utils/date-input";
 import apiService from "./api.service";
 
 export type AssetUsageContext = "own_room" | "same_unit_cross_room" | "cross_room" | "emergency" | "procedure" | "rounding" | "other";
@@ -172,6 +173,14 @@ const emitNotificationsRefresh = () => {
 };
 
 class AssetUsageService {
+  private normalizeWritePayload(data: CreateAssetUsageData | UpdateAssetUsageData) {
+    return {
+      ...data,
+      startedAt: data.startedAt ? toIsoDateTimeString(data.startedAt) : undefined,
+      endedAt: data.endedAt ? toIsoDateTimeString(data.endedAt) : undefined,
+    };
+  }
+
   async getAll(filters: AssetUsageFilters = {}): Promise<AssetUsageResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -239,14 +248,14 @@ class AssetUsageService {
   }
 
   async create(data: CreateAssetUsageData): Promise<SingleAssetUsageResponse> {
-    const response = await apiService.post<SingleAssetUsageResponse>("/asset-usage", data);
+    const response = await apiService.post<SingleAssetUsageResponse>("/asset-usage", this.normalizeWritePayload(data));
     const normalized = response.data ? { ...response, data: normalizeUsage(response.data) } : response;
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
   }
 
   async update(id: number | string, data: UpdateAssetUsageData): Promise<SingleAssetUsageResponse> {
-    const response = await apiService.patch<SingleAssetUsageResponse>(`/asset-usage/${id}`, data);
+    const response = await apiService.patch<SingleAssetUsageResponse>(`/asset-usage/${id}`, this.normalizeWritePayload(data));
     const normalized = response.data ? { ...response, data: normalizeUsage(response.data) } : response;
     if (normalized.success) emitNotificationsRefresh();
     return normalized;
