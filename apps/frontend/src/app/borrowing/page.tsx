@@ -74,7 +74,7 @@ import { getDefaultFormData, resolveDefaultDestinationRoom } from "./_lib/form";
 import {
   parseLocalDateTimeInput,
   toDateTimeLocalInputValue,
-  toLocalInputValue,
+  toIsoDateTimeString,
 } from "@/utils/date-input";
 import {
   formatBorrowingDuration,
@@ -709,8 +709,8 @@ export default function BorrowingPage() {
             assetDetailId: selectedAsset.detailId,
             assetDetailName: selectedAsset.detailName,
             assetDetailCode: selectedAsset.detailCode,
-            borrowDate: toLocalInputValue(formData.borrowDate),
-            dueDate: toLocalInputValue(formData.dueDate),
+            borrowDate: toIsoDateTimeString(formData.borrowDate),
+            dueDate: toIsoDateTimeString(formData.dueDate),
             borrowerPosition: formData.borrowerPosition.trim(),
             borrowerWorkUnit: formData.borrowerWorkUnit.trim(),
             ownerUserId: Number(formData.ownerUserId),
@@ -1065,8 +1065,8 @@ export default function BorrowingPage() {
     setEditSubmitting(true)
     try {
       const payload = {
-        borrowDate: editForm.borrowDate ? toLocalInputValue(editForm.borrowDate) : undefined,
-        dueDate: editForm.dueDate ? toLocalInputValue(editForm.dueDate) : undefined,
+        borrowDate: editForm.borrowDate ? toIsoDateTimeString(editForm.borrowDate) : undefined,
+        dueDate: editForm.dueDate ? toIsoDateTimeString(editForm.dueDate) : undefined,
         purpose: editForm.purpose.trim(),
         borrowerPosition: editForm.borrowerPosition.trim(),
         borrowerWorkUnit: editForm.borrowerWorkUnit.trim(),
@@ -1158,7 +1158,7 @@ export default function BorrowingPage() {
     try {
       const result = await borrowingService.extend(
         extendingBorrowing.id,
-        toLocalInputValue(extensionForm.newDueDate),
+        toIsoDateTimeString(extensionForm.newDueDate),
         extensionForm.extensionNotes.trim() || undefined
       )
 

@@ -44,6 +44,22 @@ export const toLocalInputValue = (value?: string | Date | null): string => {
 }
 
 /**
+ * Mengubah isian `datetime-local` menjadi string ISO UTC untuk payload API.
+ *
+ * Backend peminjaman memvalidasi `borrowDate`/`dueDate` sebagai ISO 8601
+ * lengkap dengan zona waktu, jadi nilai lokal dari form harus dinormalisasi
+ * sebelum dikirim.
+ */
+export const toIsoDateTimeString = (value?: string | Date | null): string => {
+  if (!value) return ""
+
+  const parsed = value instanceof Date ? value : parseLocalDateTimeInput(value)
+  if (!parsed || Number.isNaN(parsed.getTime())) return ""
+
+  return parsed.toISOString()
+}
+
+/**
  * Mem-parsing isian `datetime-local` sebagai waktu lokal.
  *
  * `new Date("2026-01-02T03:04")` dapat ditafsirkan berbeda antar-runtime,

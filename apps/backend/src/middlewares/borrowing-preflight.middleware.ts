@@ -24,6 +24,10 @@ const isReturnRole = (role: string | null | undefined): boolean => {
   return hasAnyRole(role, ['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user']);
 };
 
+const INVALID_BORROW_DATE_MESSAGE = 'Tanggal pinjam harus berupa tanggal dan waktu yang valid.';
+const INVALID_DUE_DATE_MESSAGE = 'Tanggal kembali harus berupa tanggal dan waktu yang valid.';
+const INVALID_NEW_DUE_DATE_MESSAGE = 'Tanggal jatuh tempo baru harus berupa tanggal dan waktu yang valid.';
+
 const lockResponse = (res: Response): void => {
   const locked = res as unknown as Record<string, unknown>;
 
@@ -88,13 +92,13 @@ export const borrowingPreflightMiddleware = (req: Request, res: Response, next: 
     }
 
     if (!isIso8601DateTime(body.borrowDate)) {
-      sendValidationError(res, 'Tanggal pinjam harus format ISO 8601');
+      sendValidationError(res, INVALID_BORROW_DATE_MESSAGE);
       return;
     }
 
     if (body.dueDate) {
       if (!isIso8601DateTime(body.dueDate)) {
-        sendValidationError(res, 'Valid due date is required');
+        sendValidationError(res, INVALID_DUE_DATE_MESSAGE);
         return;
       }
 
@@ -170,7 +174,7 @@ export const borrowingPreflightMiddleware = (req: Request, res: Response, next: 
   if (req.method === 'PATCH' && /^\/\d+\/extend$/.test(path)) {
     const newDueDate = req.body?.newDueDate;
     if (!isIso8601DateTime(newDueDate)) {
-      sendValidationError(res, 'Tanggal jatuh tempo baru harus format ISO 8601');
+      sendValidationError(res, INVALID_NEW_DUE_DATE_MESSAGE);
       return;
     }
   }

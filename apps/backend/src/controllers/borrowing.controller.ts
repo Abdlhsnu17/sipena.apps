@@ -25,6 +25,9 @@ const normalizeAssetType = (value: unknown): AssetType | undefined => {
 };
 
 const ISO_8601_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const INVALID_BORROW_DATE_MESSAGE = 'Tanggal pinjam harus berupa tanggal dan waktu yang valid.';
+const INVALID_DUE_DATE_MESSAGE = 'Tanggal kembali harus berupa tanggal dan waktu yang valid.';
+const INVALID_NEW_DUE_DATE_MESSAGE = 'Tanggal jatuh tempo baru harus berupa tanggal dan waktu yang valid.';
 
 const isIso8601DateTime = (value: unknown): value is string => {
   return typeof value === 'string' && ISO_8601_DATETIME.test(value) && !Number.isNaN(new Date(value).getTime());
@@ -164,12 +167,12 @@ export class BorrowingController {
         return;
       }
       if (!isIso8601DateTime(payload.borrowDate)) {
-        res.status(400).json({ success: false, message: 'Tanggal pinjam harus format ISO 8601' });
+        res.status(400).json({ success: false, message: INVALID_BORROW_DATE_MESSAGE });
         return;
       }
       if (payload.dueDate) {
         if (!isIso8601DateTime(payload.dueDate)) {
-          res.status(400).json({ success: false, message: 'Valid due date is required' });
+          res.status(400).json({ success: false, message: INVALID_DUE_DATE_MESSAGE });
           return;
         }
 
@@ -752,7 +755,7 @@ export class BorrowingController {
       if (!isIso8601DateTime(req.body.newDueDate)) {
         res.status(400).json({
           success: false,
-          message: 'Tanggal jatuh tempo baru harus format ISO 8601'
+          message: INVALID_NEW_DUE_DATE_MESSAGE
         });
         return;
       }

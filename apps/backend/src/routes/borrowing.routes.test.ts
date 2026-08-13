@@ -221,7 +221,7 @@ describe('POST /api/borrowing', () => {
       .send({ ...validPayload, borrowDate: '01-08-2026' });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe('Tanggal pinjam harus format ISO 8601');
+    expect(response.body.message).toBe('Tanggal pinjam harus berupa tanggal dan waktu yang valid.');
   });
 
   it('menolak dueDate yang lebih awal dari borrowDate', async () => {
@@ -410,7 +410,7 @@ describe('validasi aksi peminjaman', () => {
       .send({ newDueDate: 'besok' });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe('Tanggal jatuh tempo baru harus format ISO 8601');
+    expect(response.body.message).toBe('Tanggal jatuh tempo baru harus berupa tanggal dan waktu yang valid.');
   });
 
   it('menolak userId yang bukan bilangan bulat pada peminjaman pemblokir', async () => {

@@ -45,8 +45,8 @@ export const updateAssetValidation = [
  */
 export const createBorrowingValidation = [
   body('assetId').isNumeric().withMessage('Valid asset ID is required'),
-  body('borrowDate').isISO8601().withMessage('Valid borrow date is required'),
-  body('dueDate').optional().isISO8601().withMessage('Valid due date is required'),
+  body('borrowDate').isISO8601().withMessage('Tanggal pinjam harus berupa tanggal dan waktu yang valid.'),
+  body('dueDate').optional().isISO8601().withMessage('Tanggal kembali harus berupa tanggal dan waktu yang valid.'),
   // field is called "purpose" in API but represents the room/tujuan peminjaman
   body('purpose').notEmpty().withMessage('Ruangan peminjaman wajib diisi')
 ];
