@@ -3,6 +3,7 @@ import { body, param } from 'express-validator';
 import * as MaintenanceHistoryController from '../controllers/maintenance-history.controller';
 import { authMiddleware, requireRole } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validate-request.middleware';
+import { isoDateTimeMessage } from '../utils/date-validation';
 
 const router = Router();
 
@@ -21,8 +22,8 @@ router.post(
     body('maintenanceId').optional().isInt({ min: 1 }).toInt(),
     body('assetId').optional().isInt({ min: 1 }).toInt(),
     body('assetType').optional().isIn(['medical', 'non_medical']),
-    body('maintenanceDate').optional().isISO8601(),
-    body('completedAt').optional().isISO8601(),
+    body('maintenanceDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal maintenance')),
+    body('completedAt').optional().isISO8601().withMessage(isoDateTimeMessage('Waktu selesai')),
     body('cost').optional().isFloat({ min: 0 }).toFloat(),
     body('notes').optional().trim(),
     validateRequest,
@@ -37,7 +38,7 @@ router.patch(
   [
     param('id').isInt({ min: 1 }).toInt(),
     body('validatedBy').optional().isInt({ min: 1 }).toInt(),
-    body('validatedAt').optional().isISO8601(),
+    body('validatedAt').optional().isISO8601().withMessage(isoDateTimeMessage('Waktu validasi')),
     validateRequest,
   ],
   MaintenanceHistoryController.validateMaintenanceHistory
@@ -49,7 +50,7 @@ router.patch(
   requireRole(['admin']),
   [
     param('id').isInt({ min: 1 }).toInt(),
-    body('completedAt').optional().isISO8601(),
+    body('completedAt').optional().isISO8601().withMessage(isoDateTimeMessage('Waktu selesai')),
     body('cost').optional().isFloat({ min: 0 }).toFloat(),
     body('notes').optional().trim(),
     validateRequest,

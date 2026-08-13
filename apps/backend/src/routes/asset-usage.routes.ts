@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator';
 import assetUsageController from '../controllers/asset-usage.controller';
 import { requireRole } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validate-request.middleware';
+import { isoDateTimeMessage } from '../utils/date-validation';
 
 const router = Router();
 
@@ -19,8 +20,8 @@ router.get(
     query('assetType').optional().isIn(ASSET_TYPES),
     query('roomName').optional().trim(),
     query('usageContext').optional().isIn(USAGE_CONTEXTS),
-    query('dateFrom').optional().isISO8601(),
-    query('dateTo').optional().isISO8601(),
+    query('dateFrom').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal awal filter')),
+    query('dateTo').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     validateRequest
   ],
   assetUsageController.getAll
@@ -54,8 +55,8 @@ router.post(
     body('roomName').trim().notEmpty().withMessage('Ruangan penggunaan wajib diisi'),
     body('operatorUserId').optional().isInt({ min: 1 }).toInt(),
     body('usageContext').optional().isIn(USAGE_CONTEXTS),
-    body('startedAt').isISO8601().withMessage('Waktu mulai harus format ISO 8601'),
-    body('endedAt').optional({ nullable: true }).isISO8601(),
+    body('startedAt').isISO8601().withMessage(isoDateTimeMessage('Waktu mulai')),
+    body('endedAt').optional({ nullable: true }).isISO8601().withMessage(isoDateTimeMessage('Waktu selesai')),
     body('usageCount').optional().isInt({ min: 1 }).toInt(),
     body('conditionBefore').optional().trim(),
     body('conditionAfter').optional().trim(),
@@ -73,8 +74,8 @@ router.patch(
     body('roomName').optional().trim(),
     body('operatorUserId').optional({ nullable: true }).isInt({ min: 1 }).toInt(),
     body('usageContext').optional().isIn(USAGE_CONTEXTS),
-    body('startedAt').optional().isISO8601(),
-    body('endedAt').optional({ nullable: true }).isISO8601(),
+    body('startedAt').optional().isISO8601().withMessage(isoDateTimeMessage('Waktu mulai')),
+    body('endedAt').optional({ nullable: true }).isISO8601().withMessage(isoDateTimeMessage('Waktu selesai')),
     body('usageCount').optional().isInt({ min: 1 }).toInt(),
     body('conditionBefore').optional().trim(),
     body('conditionAfter').optional().trim(),

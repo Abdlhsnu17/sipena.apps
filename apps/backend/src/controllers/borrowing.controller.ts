@@ -4,6 +4,7 @@ import { BorrowingService } from '../services/borrowing.service';
 import { recordUserActivity } from '../services/user-activity.service';
 import { hasAnyRole } from '../utils/role';
 import { createScopedLogger } from '../utils/logger';
+import { isIso8601DateTime, isoDateTimeMessage } from '../utils/date-validation';
 
 const logger = createScopedLogger('controller:borrowing');
 
@@ -22,15 +23,6 @@ const normalizeAssetType = (value: unknown): AssetType | undefined => {
   }
 
   return undefined;
-};
-
-const ISO_8601_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
-const INVALID_BORROW_DATE_MESSAGE = 'Tanggal pinjam harus berupa tanggal dan waktu yang valid.';
-const INVALID_DUE_DATE_MESSAGE = 'Tanggal kembali harus berupa tanggal dan waktu yang valid.';
-const INVALID_NEW_DUE_DATE_MESSAGE = 'Tanggal jatuh tempo baru harus berupa tanggal dan waktu yang valid.';
-
-const isIso8601DateTime = (value: unknown): value is string => {
-  return typeof value === 'string' && ISO_8601_DATETIME.test(value) && !Number.isNaN(new Date(value).getTime());
 };
 
 const isPositiveInteger = (value: unknown): boolean => {
@@ -167,12 +159,12 @@ export class BorrowingController {
         return;
       }
       if (!isIso8601DateTime(payload.borrowDate)) {
-        res.status(400).json({ success: false, message: INVALID_BORROW_DATE_MESSAGE });
+        res.status(400).json({ success: false, message: isoDateTimeMessage('Tanggal pinjam') });
         return;
       }
       if (payload.dueDate) {
         if (!isIso8601DateTime(payload.dueDate)) {
-          res.status(400).json({ success: false, message: INVALID_DUE_DATE_MESSAGE });
+          res.status(400).json({ success: false, message: isoDateTimeMessage('Tanggal kembali') });
           return;
         }
 
@@ -755,7 +747,7 @@ export class BorrowingController {
       if (!isIso8601DateTime(req.body.newDueDate)) {
         res.status(400).json({
           success: false,
-          message: INVALID_NEW_DUE_DATE_MESSAGE
+          message: isoDateTimeMessage('Tanggal jatuh tempo baru')
         });
         return;
       }

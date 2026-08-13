@@ -1,11 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { hasAnyRole } from '../utils/role';
-
-const ISO_8601_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
-
-const isIso8601DateTime = (value: unknown): value is string => {
-  return typeof value === 'string' && ISO_8601_DATETIME.test(value) && !Number.isNaN(new Date(value).getTime());
-};
+import { isIso8601DateTime, isoDateTimeMessage } from '../utils/date-validation';
 
 const isPositiveInteger = (value: unknown): boolean => {
   const parsed = Number(value);
@@ -23,10 +18,6 @@ const isUpdateRole = (role: string | null | undefined): boolean => {
 const isReturnRole = (role: string | null | undefined): boolean => {
   return hasAnyRole(role, ['admin', 'leader', 'staff', 'staff_pj', 'staff pj', 'user']);
 };
-
-const INVALID_BORROW_DATE_MESSAGE = 'Tanggal pinjam harus berupa tanggal dan waktu yang valid.';
-const INVALID_DUE_DATE_MESSAGE = 'Tanggal kembali harus berupa tanggal dan waktu yang valid.';
-const INVALID_NEW_DUE_DATE_MESSAGE = 'Tanggal jatuh tempo baru harus berupa tanggal dan waktu yang valid.';
 
 const lockResponse = (res: Response): void => {
   const locked = res as unknown as Record<string, unknown>;
@@ -92,13 +83,13 @@ export const borrowingPreflightMiddleware = (req: Request, res: Response, next: 
     }
 
     if (!isIso8601DateTime(body.borrowDate)) {
-      sendValidationError(res, INVALID_BORROW_DATE_MESSAGE);
+      sendValidationError(res, isoDateTimeMessage('Tanggal pinjam'));
       return;
     }
 
     if (body.dueDate) {
       if (!isIso8601DateTime(body.dueDate)) {
-        sendValidationError(res, INVALID_DUE_DATE_MESSAGE);
+        sendValidationError(res, isoDateTimeMessage('Tanggal kembali'));
         return;
       }
 
@@ -174,7 +165,7 @@ export const borrowingPreflightMiddleware = (req: Request, res: Response, next: 
   if (req.method === 'PATCH' && /^\/\d+\/extend$/.test(path)) {
     const newDueDate = req.body?.newDueDate;
     if (!isIso8601DateTime(newDueDate)) {
-      sendValidationError(res, INVALID_NEW_DUE_DATE_MESSAGE);
+      sendValidationError(res, isoDateTimeMessage('Tanggal jatuh tempo baru'));
       return;
     }
   }

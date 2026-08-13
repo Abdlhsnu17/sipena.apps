@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query } from 'express-validator';
 import userActivityController from '../controllers/user-activity.controller';
 import { validateRequest } from '../middlewares/validate-request.middleware';
+import { isoDateTimeMessage } from '../utils/date-validation';
 
 const router = Router();
 
@@ -11,8 +12,8 @@ router.get(
     query('userId').optional().isInt({ min: 1 }).toInt(),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     validateRequest,
   ],
   userActivityController.getActivities

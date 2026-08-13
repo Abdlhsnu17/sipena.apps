@@ -7,6 +7,7 @@ import { requireRole } from '../middlewares/auth.middleware';
 import { getReportUploadsDir } from '../utils/storage-paths';
 import { buildStoredFileName } from '../utils/upload-filename';
 import { validateRequest } from '../middlewares/validate-request.middleware';
+import { isoDateTimeMessage } from '../utils/date-validation';
 
 const router = Router();
 const uploadDir = getReportUploadsDir();
@@ -67,8 +68,8 @@ router.get('/notifications', reportController.getNotifications);
 router.get(
   '/assets',
   [
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('category').optional().trim(),
     query('type').optional().trim(),
     validateRequest
@@ -79,8 +80,8 @@ router.get(
 router.get(
   '/borrowing',
   [
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('status').optional().trim(),
     validateRequest
   ],
@@ -90,8 +91,8 @@ router.get(
 router.get(
   '/maintenance',
   [
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('type').optional().trim(),
     validateRequest
   ],
@@ -101,8 +102,8 @@ router.get(
 router.get(
   '/usage',
   [
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('type').optional().trim(),
     query('status').optional().trim(),
     validateRequest
@@ -120,8 +121,8 @@ router.get(
   '/export/pdf',
   [
     query('reportType').optional().trim(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),
@@ -135,8 +136,8 @@ router.get(
   '/export/excel',
   [
     query('reportType').optional().trim(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),
@@ -150,8 +151,8 @@ router.get(
   '/export/csv',
   [
     query('reportType').optional().trim(),
-    query('startDate').optional().isISO8601(),
-    query('endDate').optional().isISO8601(),
+    query('startDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal mulai filter')),
+    query('endDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal akhir filter')),
     query('category').optional().trim(),
     query('type').optional().trim(),
     query('status').optional().trim(),

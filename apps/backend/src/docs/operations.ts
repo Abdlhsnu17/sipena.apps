@@ -337,11 +337,11 @@ const operationsByKey: Record<string, OperationMeta> = {
         assetDetailId: { type: 'string' },
         assetDetailName: { type: 'string' },
         assetDetailCode: { type: 'string' },
-        borrowDate: { type: 'string', format: 'date-time', description: 'Wajib format ISO 8601.' },
+        borrowDate: { type: 'string', format: 'date-time', description: 'Wajib tanggal dan waktu yang valid.' },
         dueDate: {
           type: 'string',
           format: 'date-time',
-          description: 'ISO 8601 dan tidak boleh lebih awal dari `borrowDate`.',
+          description: 'Tanggal dan waktu yang valid dan tidak boleh lebih awal dari `borrowDate`.',
         },
         purpose: { type: 'string', description: 'Keperluan peminjaman, wajib diisi.' },
         borrowerPosition: { type: 'string' },
@@ -456,7 +456,7 @@ const operationsByKey: Record<string, OperationMeta> = {
     requestBody: jsonBody({
       type: 'object',
       properties: {
-        newDueDate: { type: 'string', format: 'date-time', description: 'Wajib format ISO 8601.' },
+        newDueDate: { type: 'string', format: 'date-time', description: 'Wajib tanggal dan waktu yang valid.' },
         extensionNotes: { type: 'string' },
       },
       required: ['newDueDate'],

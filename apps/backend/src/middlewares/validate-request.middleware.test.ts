@@ -74,7 +74,7 @@ describe('validateRequest', () => {
     expect(result.payload.message).toBe('Validation failed');
   });
 
-  it('menolak tanggal yang bukan ISO 8601 (kasus laporan yang dulu lolos)', async () => {
+  it('menolak tanggal yang tidak valid pada query laporan', async () => {
     const result = await run([query('startDate').optional().isISO8601()], {
       query: { startDate: 'bukan-tanggal' } as any,
     });

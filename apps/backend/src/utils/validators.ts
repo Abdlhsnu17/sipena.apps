@@ -1,4 +1,5 @@
 import { body, param, query } from 'express-validator';
+import { isoDateTimeMessage } from './date-validation';
 
 /**
  * Validation rules for authentication
@@ -45,8 +46,8 @@ export const updateAssetValidation = [
  */
 export const createBorrowingValidation = [
   body('assetId').isNumeric().withMessage('Valid asset ID is required'),
-  body('borrowDate').isISO8601().withMessage('Tanggal pinjam harus berupa tanggal dan waktu yang valid.'),
-  body('dueDate').optional().isISO8601().withMessage('Tanggal kembali harus berupa tanggal dan waktu yang valid.'),
+  body('borrowDate').isISO8601().withMessage(isoDateTimeMessage('Tanggal pinjam')),
+  body('dueDate').optional().isISO8601().withMessage(isoDateTimeMessage('Tanggal kembali')),
   // field is called "purpose" in API but represents the room/tujuan peminjaman
   body('purpose').notEmpty().withMessage('Ruangan peminjaman wajib diisi')
 ];
@@ -57,7 +58,7 @@ export const createBorrowingValidation = [
 export const createMaintenanceValidation = [
   body('assetId').isNumeric().withMessage('Valid asset ID is required'),
   body('type').isIn(['preventive', 'corrective', 'calibration', 'inspection']).withMessage('Invalid maintenance type'),
-  body('scheduledDate').isISO8601().withMessage('Valid scheduled date is required'),
+  body('scheduledDate').isISO8601().withMessage(isoDateTimeMessage('Tanggal terjadwal')),
   body('description').notEmpty().withMessage('Description is required')
 ];
 

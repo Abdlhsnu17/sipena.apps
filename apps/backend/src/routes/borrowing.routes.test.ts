@@ -212,7 +212,7 @@ describe('POST /api/borrowing', () => {
     expect(response.body.message).toBe('Keperluan peminjaman wajib diisi');
   });
 
-  it('menolak borrowDate yang bukan ISO 8601', async () => {
+  it('menolak borrowDate yang tidak valid', async () => {
     const { token } = authAs('user');
 
     const response = await requestApp(app)
@@ -401,7 +401,7 @@ describe('validasi aksi peminjaman', () => {
     expect(response.status).toBe(400);
   });
 
-  it('mewajibkan newDueDate berformat ISO 8601 saat perpanjangan', async () => {
+  it('mewajibkan newDueDate yang valid saat perpanjangan', async () => {
     const { token } = authAs('admin');
 
     const response = await requestApp(app)
