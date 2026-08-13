@@ -805,22 +805,22 @@ export default function DssPage() {
                         : "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
                     )}
                   >
-                    Konsistensi AHP: {rankingResult.consistency.isConsistent ? "konsisten" : "tidak konsisten"}
+                    Konsistensi model: {rankingResult.consistency.isConsistent ? "konsisten" : "tidak konsisten"}
                   </Badge>
                 )}
                 {topRankings[0] && (
                   <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 dark:border-slate-700/40 dark:bg-slate-800/40 dark:text-slate-300">
-                    Skor TOPSIS tertinggi: {formatScore(topRankings[0].preferenceScore)}
+                    Nilai preferensi puncak: {formatScore(topRankings[0].preferenceScore)}
                   </Badge>
                 )}
                 {topScoreGap != null && (
                   <Badge variant="outline" className="rounded-full border-teal-200 bg-teal-50 px-3 py-1 text-[11px] text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
-                    Gap rank 1-2: {formatScore(topScoreGap)}
+                    Selisih peringkat teratas: {formatScore(topScoreGap)}
                   </Badge>
                 )}
                 {sensitivityResult && (
                   <Badge variant="outline" className={cn("rounded-full px-3 py-1 text-[11px]", stabilityBadgeClass(sensitivityResult.overallStability))}>
-                    Stabilitas ranking: {sensitivityResult.overallStability}
+                    Stabilitas sensitivitas: {sensitivityResult.overallStability}
                   </Badge>
                 )}
               </div>
