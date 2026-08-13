@@ -162,11 +162,17 @@ export class UserService {
     if (!existing.success) return existing;
 
     if (data.phoneNumber !== undefined) {
-      if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {
+      // Nomor adalah satu-satunya kanal OTP reset password, jadi tidak boleh
+      // dikosongkan lewat pembaruan data pengguna.
+      if (!data.phoneNumber) {
+        return { success: false, message: 'Nomor WhatsApp/SMS wajib diisi dan tidak boleh dikosongkan' };
+      }
+
+      if (!isValidPhoneNumber(data.phoneNumber)) {
         return { success: false, message: 'Nomor WhatsApp/SMS tidak valid' };
       }
 
-      const normalizedPhoneNumber = data.phoneNumber ? normalizePhoneNumberForStorage(data.phoneNumber) : null;
+      const normalizedPhoneNumber = normalizePhoneNumberForStorage(data.phoneNumber);
       const [duplicateRows] = await pool.query<UserRow[]>(
         'SELECT id FROM users WHERE phone_number = ? AND id <> ? AND deleted_at IS NULL LIMIT 1',
         [normalizedPhoneNumber, id],

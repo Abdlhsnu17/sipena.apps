@@ -23,6 +23,8 @@ export interface User {
   lastLogin?: string
   accountStatus?: AccountStatus
   mustChangePassword?: boolean
+  /** True bila akun belum punya nomor telepon valid untuk menerima OTP. */
+  mustCompletePhoneNumber?: boolean
 }
 
 

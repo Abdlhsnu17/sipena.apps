@@ -12,13 +12,23 @@ import { isStrongPassword } from "@/utils/validation";
 import { AlertCircle, CheckCircle2, Eye, EyeOff, IdCard, Lock, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+type ResetStep = "request" | "otp" | "password"
+type DeliveryMethod = "whatsapp" | "sms" | "email" | "local_preview" | ""
+
+const formatCountdown = (totalSeconds: number): string => {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+}
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const [step, setStep] = useState<"request" | "confirm">("request")
+  const [step, setStep] = useState<ResetStep>("request")
   const [nip, setNip] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
+  const [resetToken, setResetToken] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -28,31 +38,90 @@ export default function ResetPasswordPage() {
   const [messageType, setMessageType] = useState<"success" | "error">("success")
   const [deliveryTarget, setDeliveryTarget] = useState("")
   const [previewVerificationCode, setPreviewVerificationCode] = useState("")
-  const [deliveryMethod, setDeliveryMethod] = useState<"whatsapp" | "sms" | "email" | "local_preview" | "">("")
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("")
   const [expiresInMinutes, setExpiresInMinutes] = useState<number | null>(null)
+  const [resendCountdown, setResendCountdown] = useState(0)
   const { handleFocusCapture } = useMobileFocusScroll()
 
+  useEffect(() => {
+    if (resendCountdown <= 0) {
+      return
+    }
+
+    const timerId = window.setTimeout(() => setResendCountdown((current) => current - 1), 1000)
+    return () => window.clearTimeout(timerId)
+  }, [resendCountdown])
+
+  const resetFlow = useCallback(() => {
+    setStep("request")
+    setVerificationCode("")
+    setResetToken("")
+    setPreviewVerificationCode("")
+    setDeliveryMethod("")
+    setDeliveryTarget("")
+    setExpiresInMinutes(null)
+    setResendCountdown(0)
+    setNewPassword("")
+    setConfirmPassword("")
+    setMessage("")
+  }, [])
+
+  const requestCode = useCallback(
+    async (mode: "initial" | "resend") => {
+      setMessage("")
+      setIsLoading(true)
+
+      try {
+        const result =
+          mode === "resend"
+            ? await authService.resendPasswordResetCode(nip)
+            : await authService.requestPasswordResetCode(nip)
+
+        setMessageType(result.success ? "success" : "error")
+        setMessage(result.message)
+
+        if (result.success) {
+          setDeliveryTarget(result.data?.deliveryTarget || "")
+          setPreviewVerificationCode(result.data?.previewCode || "")
+          setDeliveryMethod(result.data?.deliveryMethod || "")
+          setExpiresInMinutes(result.data?.expiresInMinutes ?? null)
+          setResendCountdown(result.data?.resendAvailableInSeconds ?? 60)
+          setVerificationCode("")
+          setStep("otp")
+        }
+      } catch (error: any) {
+        setMessageType("error")
+        setMessage(error.message || "Gagal mengirim kode verifikasi.")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [nip],
+  )
+
   const handleRequestCode = async (event: React.FormEvent) => {
+    event.preventDefault()
+    await requestCode("initial")
+  }
+
+  const handleVerifyOtp = async (event: React.FormEvent) => {
     event.preventDefault()
     setMessage("")
     setIsLoading(true)
 
     try {
-      const result = await authService.requestPasswordResetCode(nip)
+      const result = await authService.verifyPasswordResetOtp(nip, verificationCode)
+
       setMessageType(result.success ? "success" : "error")
       setMessage(result.message)
 
-      if (result.success) {
-        setDeliveryTarget(result.data?.deliveryTarget || "")
-        setPreviewVerificationCode(result.data?.previewCode || "")
-        setDeliveryMethod(result.data?.deliveryMethod || "")
-        setExpiresInMinutes(result.data?.expiresInMinutes ?? null)
-        setVerificationCode("")
-        setStep("confirm")
+      if (result.success && result.data?.resetToken) {
+        setResetToken(result.data.resetToken)
+        setStep("password")
       }
     } catch (error: any) {
       setMessageType("error")
-      setMessage(error.message || "Gagal mengirim kode verifikasi.")
+      setMessage(error.message || "Kode verifikasi tidak valid.")
     } finally {
       setIsLoading(false)
     }
@@ -77,9 +146,8 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
 
     try {
-      const result = await authService.resetPasswordWithCode({
-        nip,
-        verificationCode,
+      const result = await authService.resetPasswordWithToken({
+        resetToken,
         newPassword,
         confirmPassword,
       })
@@ -99,6 +167,13 @@ export default function ResetPasswordPage() {
       setIsLoading(false)
     }
   }
+
+  const headerDescription =
+    step === "request"
+      ? "Masukkan NIP untuk menerima kode verifikasi reset password."
+      : step === "otp"
+        ? "Masukkan kode verifikasi yang dikirim ke nomor terdaftar."
+        : "Buat password baru untuk akun Anda."
 
   return (
     <div
@@ -123,11 +198,12 @@ export default function ResetPasswordPage() {
         <CardContent className="space-y-4 pt-5 sm:pt-6">
           <AuthHeader
             title="Lupa Password"
-            description="Masukkan NIP untuk menerima kode verifikasi reset password."
+            description={headerDescription}
             showRecoveryIcon
             variant="inline"
           />
-          {step === "request" ? (
+
+          {step === "request" && (
             <form onSubmit={handleRequestCode} className="space-y-3">
               <div>
                 <label htmlFor="nip" className="block text-sm font-medium text-foreground mb-2">
@@ -160,15 +236,17 @@ export default function ResetPasswordPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Spinner className="text-white" />
-                    Membuat kode...
+                    Mengirim kode...
                   </span>
                 ) : (
-                  "Buat Kode Verifikasi"
+                  "Kirim Kode Verifikasi"
                 )}
               </Button>
             </form>
-          ) : (
-            <form onSubmit={handleResetPassword} className="space-y-3">
+          )}
+
+          {step === "otp" && (
+            <form onSubmit={handleVerifyOtp} className="space-y-3">
               <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300">
                 {deliveryMethod === "local_preview" && deliveryTarget ? (
                   <>
@@ -177,7 +255,8 @@ export default function ResetPasswordPage() {
                   </>
                 ) : (
                   <>
-                    Jika data terdaftar, kode verifikasi sudah dikirim ke kanal yang tersedia.
+                    Jika NIP terdaftar, kode verifikasi dikirim ke{" "}
+                    <span className="font-medium">{deliveryTarget || "kanal terdaftar"}</span>.
                     {expiresInMinutes ? ` Kode berlaku selama ${expiresInMinutes} menit.` : ""}
                   </>
                 )}
@@ -210,6 +289,51 @@ export default function ResetPasswordPage() {
                     <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || verificationCode.length !== 6}
+                className="w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:transform-none"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner className="text-white" />
+                    Memverifikasi...
+                  </span>
+                ) : (
+                  "Verifikasi Kode"
+                )}
+              </Button>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resetFlow}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Ganti NIP
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => requestCode("resend")}
+                  disabled={isLoading || resendCountdown > 0}
+                  className="w-full"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {resendCountdown > 0 ? `Kirim ulang ${formatCountdown(resendCountdown)}` : "Kirim Ulang Kode"}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {step === "password" && (
+            <form onSubmit={handleResetPassword} className="space-y-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-400">
+                Kode verifikasi berhasil diverifikasi. Silakan buat password baru.
               </div>
 
               <div>
@@ -270,25 +394,16 @@ export default function ResetPasswordPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setStep("request")
-                    setVerificationCode("")
-                    setPreviewVerificationCode("")
-                    setDeliveryMethod("")
-                    setExpiresInMinutes(null)
-                    setNewPassword("")
-                    setConfirmPassword("")
-                    setMessage("")
-                  }}
+                  onClick={resetFlow}
                   disabled={isLoading}
                   className="w-full"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Minta Kode Baru
+                  Ulangi dari Awal
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading || verificationCode.length !== 6}
+                  disabled={isLoading}
                   className="w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:transform-none"
                 >
                   {isLoading ? (

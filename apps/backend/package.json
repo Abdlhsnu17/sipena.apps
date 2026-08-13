@@ -17,6 +17,8 @@
     "build": "tsc",
     "migrate": "tsx src/scripts/run-migrations.ts",
     "migrate:user-security-columns": "tsx scripts/migrate-user-security-columns.ts",
+    "report:users-without-phone": "tsx scripts/report-users-without-phone.ts",
+    "check:twilio": "tsx scripts/check-twilio-verify.ts",
     "bootstrap:test-admin": "node scripts/bootstrap-test-admin.mjs",
     "bootstrap:test-admin:docker": "node ../../scripts/bootstrap-test-admin.mjs",
     "migrate:prod": "node dist/scripts/run-migrations.js",
@@ -43,6 +45,7 @@
     "redis": "^4.6.11",
     "sequelize-typescript": "^2.1.6",
     "swagger-ui-express": "^5.0.1",
+    "twilio": "^6.1.0",
     "winston": "^3.11.0"
   },
   "devDependencies": {

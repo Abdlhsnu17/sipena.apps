@@ -72,6 +72,7 @@ export interface User {
   lastLogin?: string;
   accountStatus?: "active" | "inactive" | "suspended";
   mustChangePassword?: boolean;
+  mustCompletePhoneNumber?: boolean;
 }
 
 export interface AuthResponse {
@@ -87,16 +88,33 @@ export interface PasswordResetRequestResponse {
   success: boolean;
   message: string;
   data?: {
-    deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: "whatsapp" | "sms" | "email" | "local_preview";
+    resendAvailableInSeconds?: number;
+    // Backend hanya membuka detail kanal pada preview pengembangan.
+    deliveryTarget?: string;
+    deliveryMethod?: "whatsapp" | "sms" | "email" | "local_preview";
     previewCode?: string;
+  };
+}
+
+export interface PasswordResetOtpVerifyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    resetToken: string;
+    expiresInMinutes: number;
   };
 }
 
 export interface PasswordResetPayload {
   nip: string;
   verificationCode: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface PasswordResetTokenPayload {
+  resetToken: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -156,6 +174,13 @@ function normalizeRegisterError(error: any): string {
 }
 
 function normalizePasswordResetRequestError(error: any): string {
+  // Batas kirim ulang juga memakai status 429; pesannya lebih berguna
+  // daripada pesan rate limit generik.
+  const { status, serverMessage } = extractApiErrorDetails(error);
+  if (status === 429 && typeof serverMessage === "string" && serverMessage.startsWith("Batas permintaan kode verifikasi tercapai")) {
+    return serverMessage;
+  }
+
   return normalizeCommonAuthError(error, PASSWORD_RESET_REQUEST_SERVER_ISSUE_MESSAGE);
 }
 
@@ -378,7 +403,34 @@ class AuthService {
     }
   }
 
+  async resendPasswordResetCode(nip: string): Promise<PasswordResetRequestResponse> {
+    try {
+      return await apiService.post<PasswordResetRequestResponse>('/auth/reset-password/resend', { nip });
+    } catch (error: any) {
+      throw createNormalizedAuthError(normalizePasswordResetRequestError(error), error);
+    }
+  }
+
+  async verifyPasswordResetOtp(nip: string, verificationCode: string): Promise<PasswordResetOtpVerifyResponse> {
+    try {
+      return await apiService.post<PasswordResetOtpVerifyResponse>('/auth/reset-password/verify-otp', {
+        nip,
+        verificationCode,
+      });
+    } catch (error: any) {
+      throw createNormalizedAuthError(normalizePasswordResetConfirmError(error), error);
+    }
+  }
+
   async resetPasswordWithCode(payload: PasswordResetPayload): Promise<AuthResponse> {
+    try {
+      return await apiService.post<AuthResponse>('/auth/reset-password', payload);
+    } catch (error: any) {
+      throw createNormalizedAuthError(normalizePasswordResetConfirmError(error), error);
+    }
+  }
+
+  async resetPasswordWithToken(payload: PasswordResetTokenPayload): Promise<AuthResponse> {
     try {
       return await apiService.post<AuthResponse>('/auth/reset-password', payload);
     } catch (error: any) {

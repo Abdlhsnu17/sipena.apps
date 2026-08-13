@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 let hasLoadedEnv = false;
+let loadedEnvPath: string | null = null;
 const DB_PASSWORD_PLACEHOLDERS = new Set([
   'your_secure_password_here',
   'changeme',
@@ -42,12 +43,20 @@ export const loadEnvironment = (): void => {
 
   if (envPath) {
     dotenv.config({ path: envPath, override: true });
+    loadedEnvPath = envPath;
   } else {
     dotenv.config();
   }
 
   hasLoadedEnv = true;
 };
+
+/**
+ * File env yang benar-benar dipakai proses ini, atau `null` bila tidak ada
+ * satu pun kandidat ditemukan. Hanya satu file yang dimuat, jadi nilai ini
+ * memperjelas ketika konfigurasi tak sengaja ditulis di file yang terabaikan.
+ */
+export const getLoadedEnvPath = (): string | null => loadedEnvPath;
 
 export const applyDevelopmentEnvDefaults = (): void => {
   const nodeEnv = process.env.NODE_ENV || 'development';

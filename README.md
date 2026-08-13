@@ -108,7 +108,7 @@ Isi folder database:
 - Manajemen sanksi atas keterlambatan pengembalian aset: daftar sanksi aktif/selesai, penyelesaian sanksi, pembebasan sanksi dengan catatan, dan statistik ringkas.
 - Kontrol akses berbasis menu (access control) untuk mengatur menu apa saja yang dapat diakses tiap role, termasuk matriks role-menu yang dapat diubah admin.
 - Autentikasi lengkap: login, register, reset password, profil, dan unggah foto profil.
-- Reset password multikanal dengan prioritas WhatsApp, fallback SMS, lalu email bila kanal telepon gagal; preview kode hanya tersedia pada mode pengembangan.
+- Reset password tiga langkah (minta kode → verifikasi OTP → password baru) dengan Twilio Verify sebagai kanal utama bila dikonfigurasi dan webhook WhatsApp/SMS sebagai cadangan. OTP hanya dikirim ke nomor terdaftar, sehingga nomor telepon menjadi data wajib bagi setiap akun; preview kode hanya tersedia pada mode pengembangan.
 - Scanner QR/barcode responsif melalui kamera atau unggah gambar, dengan hasil diarahkan ke pencarian inventaris medis/non-medis.
 - Dashboard dan laporan aset, peminjaman, pemeliharaan, export PDF/Excel, serta unggah dokumen pendukung.
 - Dashboard ambang penggunaan dan kategori frekuensi yang juga tersedia pada hasil SPK Prioritas Aset.
@@ -318,6 +318,74 @@ Endpoint utama yang aktif mencakup:
 - `/api/uml` untuk akses dokumentasi sistem.
 
 ## Konfigurasi Kanal Reset Password
+
+Alur reset password memakai tiga endpoint berurutan, ditambah endpoint kirim ulang:
+
+```text
+POST /api/auth/reset-password/verify      → kirim OTP ke nomor terdaftar
+POST /api/auth/reset-password/resend      → kirim ulang OTP (cooldown 60 detik)
+POST /api/auth/reset-password/verify-otp  → tukar OTP dengan resetToken sekali pakai
+POST /api/auth/reset-password             → ubah password memakai resetToken
+```
+
+Status "sudah terverifikasi" tidak pernah dipercaya dari frontend: `verify-otp` membalas `resetToken` acak yang disimpan server sebagai hash, berlaku 10 menit, dan hangus setelah satu kali pakai. Endpoint `POST /api/auth/reset-password` masih menerima payload lama (`nip` + `verificationCode` + password baru) agar klien versi sebelumnya tetap berfungsi.
+
+### Aturan yang berlaku
+
+| Aturan | Nilai | Catatan |
+| --- | --- | --- |
+| Masa berlaku OTP | 10 menit | Pada jalur Twilio, masa berlaku dipegang Twilio Verify |
+| Maksimal percobaan kode | 5 per sesi | Habis percobaan berarti sesi dihapus, wajib minta kode baru |
+| Cooldown kirim ulang | 60 detik | Permintaan di dalam cooldown dibalas 200 tanpa mengirim kode baru |
+| Maksimal kirim ulang | 3 per sesi | Setelahnya 429 sampai sesi kedaluwarsa (10 menit) |
+| Rate limit per IP | `PASSWORD_RESET_RATE_LIMIT_MAX` | Default 20 per 15 menit di produksi |
+| Masa berlaku reset token | 10 menit, sekali pakai | Disimpan sebagai hash SHA-256, dikonsumsi sebelum password diubah |
+| Kebijakan password baru | Min. 8 karakter, huruf besar + kecil + angka | Tidak boleh sama dengan password lama |
+| Akun nonaktif/ditangguhkan | Tidak bisa reset | Balasannya disamakan dengan NIP tidak dikenal |
+| Kanal OTP | Hanya nomor telepon terdaftar | Email sudah dicabut sebagai kanal OTP |
+| Akun tanpa nomor valid | Tidak bisa reset sendiri | Dipandu melengkapi nomor saat login; jalur daruratnya reset oleh admin |
+
+Anti-enumerasi: balasan `verify` dan `resend` seragam untuk NIP terdaftar, NIP asing, maupun akun nonaktif — pesan, status, dan bentuk `data` sama persis. Nomor tujuan ditampilkan dalam bentuk tersamar (`+628*******890`); NIP yang tidak berhak menerima kode mendapat **tujuan umpan** berbentuk sama, diturunkan secara deterministik dari NIP lewat HMAC sehingga permintaan berulang selalu menampilkan nilai yang sama. NIP asing juga tetap membuat sesi umpan supaya selisih waktu cooldown tidak membocorkan akun mana yang ada. Nama kanal (`sms`/`email`) tidak pernah dikirim ke klien di luar preview pengembangan, karena itu sendiri menyingkap apakah sebuah akun punya nomor terdaftar.
+
+### Nomor telepon wajib
+
+OTP kini hanya dikirim ke nomor terdaftar. Email dicabut sebagai kanal OTP karena bentuk tujuannya menyingkap akun mana yang tidak punya nomor, dan karena kotak surat yang ikut jebol membuat OTP tidak lagi menjadi faktor terpisah dari password.
+
+Konsekuensinya, nomor telepon menjadi data wajib: tidak bisa dikosongkan lewat pembaruan profil maupun pembaruan data pengguna oleh admin. Akun lama yang belum mengisinya ditandai `mustCompletePhoneNumber` dan diarahkan ke halaman Pengaturan sebelum boleh memakai modul lain — pola yang sama dengan `mustChangePassword`.
+
+Untuk mendata akun yang terdampak sebelum aturan ini terasa oleh pengguna:
+
+```bash
+npm run report:users-without-phone --workspace apps/backend
+```
+
+Jalur darurat bagi akun yang terlanjur lupa password **dan** belum punya nomor: admin atau leader mereset lewat `PATCH /api/users/:id/password/reset`.
+
+Setelah reset berhasil: `session_version` dinaikkan (semua JWT lama gugur), penghitung gagal login dan status terkunci dibersihkan sehingga akun yang sempat terkunci langsung bisa dipakai, dan pemilik akun diberi notifikasi WhatsApp/SMS bahwa passwordnya berubah. OTP tidak pernah ditulis ke log pada mode produksi.
+
+### Twilio Verify
+
+Bila `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, dan `TWILIO_VERIFY_SERVICE_SID` terisi dan akun memiliki nomor telepon valid, OTP dikirim lewat Twilio Verify. Twilio yang membuat, mengirim, dan memvalidasi kodenya, sehingga tidak ada OTP plaintext yang disimpan aplikasi — Redis hanya menyimpan metadata sesi (provider, nomor tujuan, sisa percobaan) dan hash reset token. Nomor telepon disimpan dalam format E.164 (`+62…`) sesuai syarat Twilio. `TWILIO_VERIFY_CHANNEL` dapat diisi `sms` (default) atau `whatsapp`.
+
+Kredensial Twilio hanya boleh berada di backend. Jangan pernah memakai prefix `NEXT_PUBLIC_` untuk nilai-nilai tersebut. Bila Twilio tidak dikonfigurasi atau pengirimannya gagal, sistem kembali memakai webhook WhatsApp/SMS.
+
+Setiap environment membaca kredensial dari satu tempat yang berbeda, dan tidak bisa dicampur:
+
+| Cara menjalankan | Sumber kredensial |
+| --- | --- |
+| `npm run dev` di host | `apps/backend/.env` |
+| Docker Compose | `docker/.env` (diinterpolasi ke `docker/compose.yml`) |
+| Railway/produksi | Variabel environment di dashboard, tanpa file |
+
+`loadEnvironment()` hanya memuat **satu** file — kandidat pertama yang ditemukan, dengan `apps/backend/.env` lebih diprioritaskan daripada `.env` di root. Jadi konfigurasi tidak boleh dipecah ke dua file.
+
+Untuk memastikan kredensial valid dan terbaca backend tanpa mengirim SMS:
+
+```bash
+npm run check:twilio --workspace apps/backend
+```
+
+Perintah itu mencetak file env mana yang benar-benar dipakai, lalu memanggil Verify Service dan membedakan sebab kegagalan: 401 berarti SID/token salah, 404 berarti Verify Service SID tidak ada di akun tersebut. Nilai rahasianya tidak pernah dicetak.
 
 Template variabel tersedia di `.env.example` dan `apps/backend/.env.example`. Untuk konfigurasi Docker secara interaktif, jalankan:
 

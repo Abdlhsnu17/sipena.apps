@@ -311,6 +311,13 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {currentUser?.mustCompletePhoneNumber && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+            Akun Anda belum memiliki nomor WhatsApp/SMS. Lengkapi nomor tersebut untuk dapat menggunakan modul lain,
+            karena kode verifikasi lupa password hanya dikirim ke nomor terdaftar.
+          </div>
+        )}
+
         <div className="space-y-5">
           <Card className="gap-4 py-5">
             <CardHeader className="gap-1.5">

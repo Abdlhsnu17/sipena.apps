@@ -87,10 +87,34 @@ router.post(
 );
 
 router.post(
-  '/reset-password',
+  '/reset-password/resend',
+  [body('nip').exists({ checkFalsy: true }).trim().notEmpty(), validateRequest],
+  authController.resendResetOtp
+);
+
+router.post(
+  '/reset-password/verify-otp',
   [
     body('nip').exists({ checkFalsy: true }).trim().notEmpty(),
     body('verificationCode').exists({ checkFalsy: true }).trim().isLength({ min: 6, max: 6 }).isNumeric(),
+    validateRequest
+  ],
+  authController.verifyResetOtp
+);
+
+// Menerima dua bentuk payload: `resetToken` (hasil verify-otp) atau kombinasi
+// lama `nip` + `verificationCode` dalam satu request.
+router.post(
+  '/reset-password',
+  [
+    body('resetToken').optional().isString().trim().isLength({ min: 32, max: 128 }),
+    body('nip').if(body('resetToken').not().exists({ checkFalsy: true })).exists({ checkFalsy: true }).trim().notEmpty(),
+    body('verificationCode')
+      .if(body('resetToken').not().exists({ checkFalsy: true }))
+      .exists({ checkFalsy: true })
+      .trim()
+      .isLength({ min: 6, max: 6 })
+      .isNumeric(),
     body('newPassword').exists({ checkFalsy: true }).matches(STRONG_PASSWORD_REGEX).withMessage(PASSWORD_POLICY_MESSAGE),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.newPassword) {

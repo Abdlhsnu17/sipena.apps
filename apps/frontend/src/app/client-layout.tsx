@@ -100,11 +100,15 @@ export default function ClientLayout({
     }
   }, [isAuthPage, user?.id, user?.role])
 
+  // Nomor telepon adalah satu-satunya kanal OTP reset password, jadi akun lama
+  // yang belum mengisinya diarahkan melengkapi profil lebih dulu.
+  const mustCompleteProfile = Boolean(user?.mustChangePassword || user?.mustCompletePhoneNumber)
+
   useEffect(() => {
-    if (!loading && showLayout && user?.mustChangePassword && pathname !== "/settings") {
+    if (!loading && showLayout && mustCompleteProfile && pathname !== "/settings") {
       router.replace("/settings")
     }
-  }, [loading, pathname, router, showLayout, user])
+  }, [loading, mustCompleteProfile, pathname, router, showLayout])
 
   useLayoutEffect(() => {
     if (!showLayout) return
@@ -175,7 +179,7 @@ export default function ClientLayout({
 
   const shouldBlockProtectedPage =
     showLayout &&
-    (!user || (user && !isAllowedByDatabase) || (user?.mustChangePassword && pathname !== "/settings"))
+    (!user || (user && !isAllowedByDatabase) || (mustCompleteProfile && pathname !== "/settings"))
 
   if (loading) {
     return (

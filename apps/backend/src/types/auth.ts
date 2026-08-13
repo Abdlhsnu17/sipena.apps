@@ -21,6 +21,8 @@ export interface User {
   sessionVersion?: number
   accountStatus?: AccountStatus
   mustChangePassword?: boolean
+  /** True bila akun belum punya nomor telepon valid untuk menerima OTP. */
+  mustCompletePhoneNumber?: boolean
   umlAccess?: boolean | {
     isApproved: boolean
     approvedBy?: string
@@ -53,9 +55,21 @@ export interface PasswordResetRequestPayload {
   nip: string
 }
 
+export interface PasswordResetOtpVerifyPayload {
+  nip: string
+  verificationCode: string
+}
+
 export interface PasswordResetConfirmPayload {
   nip: string
   verificationCode: string
+  newPassword: string
+  confirmPassword: string
+}
+
+/** Jalur reset token: OTP sudah divalidasi lebih dulu di endpoint verify-otp. */
+export interface PasswordResetTokenPayload {
+  resetToken: string
   newPassword: string
   confirmPassword: string
 }

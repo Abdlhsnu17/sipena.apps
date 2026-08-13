@@ -45,7 +45,7 @@ export const isValidPhoneNumber = (value: string): boolean => {
   return /^\+[1-9]\d{9,15}$/.test(normalized);
 };
 
-const maskPhoneNumber = (value: string): string => {
+export const maskPhoneNumber = (value: string): string => {
   const normalized = normalizePhoneNumber(value);
   if (normalized.length <= 6) {
     return normalized;

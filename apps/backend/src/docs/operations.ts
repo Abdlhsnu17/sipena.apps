@@ -109,8 +109,11 @@ const operationsByKey: Record<string, OperationMeta> = {
   [buildRouteKey('POST', '/api/auth/reset-password/verify')]: {
     summary: 'Minta kode verifikasi reset password',
     description:
-      'Mengirim OTP 6 digit lewat channel WhatsApp/SMS yang dikonfigurasi. ' +
-      'Membalas 503 bila Redis wajib aktif namun tidak tersedia, atau bila seluruh channel OTP gagal.',
+      'Mengirim OTP 6 digit ke nomor terdaftar lewat Twilio Verify bila dikonfigurasi, jika tidak memakai webhook WhatsApp/SMS. ' +
+      'Akun tanpa nomor telepon valid tidak dapat memakai alur ini. ' +
+      'Balasan sengaja seragam untuk NIP terdaftar, NIP asing, maupun akun nonaktif: `deliveryTarget` selalu berupa ' +
+      'nomor tersamar (umpan untuk NIP yang tidak berhak), dan nama kanal tidak dikirim di luar preview pengembangan. ' +
+      'Membalas 503 bila Redis wajib aktif namun tidak tersedia.',
     requestBody: jsonBody({
       type: 'object',
       properties: { nip: { type: 'string' } },
@@ -129,18 +132,82 @@ const operationsByKey: Record<string, OperationMeta> = {
     },
   },
 
-  [buildRouteKey('POST', '/api/auth/reset-password')]: {
-    summary: 'Setel ulang password dengan kode verifikasi',
-    description: 'Berhasil reset akan menaikkan `sessionVersion` sehingga seluruh token lama menjadi tidak valid.',
+  [buildRouteKey('POST', '/api/auth/reset-password/resend')]: {
+    summary: 'Kirim ulang kode verifikasi reset password',
+    description:
+      'Memakai kanal yang sama dengan permintaan pertama. Cooldown 60 detik: permintaan di dalam masa ' +
+      'cooldown tetap dibalas 200 tanpa mengirim kode baru, disertai sisa detiknya. Setelah 3 kali kirim ' +
+      'ulang dalam satu sesi, balasannya 429 sampai sesi kedaluwarsa.',
+    requestBody: jsonBody({
+      type: 'object',
+      properties: { nip: { type: 'string' } },
+      required: ['nip'],
+    }),
+    responses: {
+      200: okResponse('Kode verifikasi dikirim ulang, atau ditahan karena cooldown.', envelope({ type: 'object' })),
+      429: {
+        description: 'Batas kirim ulang per sesi tercapai.',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+      },
+      503: {
+        description: 'Layanan OTP atau Redis belum tersedia.',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+      },
+    },
+  },
+
+  [buildRouteKey('POST', '/api/auth/reset-password/verify-otp')]: {
+    summary: 'Tukar kode verifikasi dengan reset token',
+    description:
+      'Memvalidasi OTP ke provider (Twilio Verify bila aktif) lalu membalas `resetToken` sekali pakai ' +
+      'yang berlaku 10 menit. Kode yang salah mengurangi jatah percobaan sesi.',
     requestBody: jsonBody({
       type: 'object',
       properties: {
         nip: { type: 'string' },
         verificationCode: { type: 'string', minLength: 6, maxLength: 6, pattern: '^[0-9]{6}$' },
+      },
+      required: ['nip', 'verificationCode'],
+    }),
+    responses: {
+      200: okResponse(
+        'Kode verifikasi valid.',
+        envelope({
+          type: 'object',
+          properties: {
+            resetToken: { type: 'string' },
+            expiresInMinutes: { type: 'integer' },
+          },
+        }),
+      ),
+      400: {
+        description: 'Kode verifikasi salah atau sudah kedaluwarsa.',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+      },
+    },
+  },
+
+  [buildRouteKey('POST', '/api/auth/reset-password')]: {
+    summary: 'Setel ulang password dengan reset token atau kode verifikasi',
+    description:
+      'Kirim `resetToken` hasil `/reset-password/verify-otp` (dianjurkan), atau payload lama ' +
+      '`nip` + `verificationCode`. Berhasil reset akan menaikkan `sessionVersion` sehingga seluruh token lama menjadi tidak valid.',
+    requestBody: jsonBody({
+      type: 'object',
+      properties: {
+        resetToken: { type: 'string', description: 'Token sekali pakai dari `/reset-password/verify-otp`.' },
+        nip: { type: 'string', description: 'Wajib bila `resetToken` tidak dikirim.' },
+        verificationCode: {
+          type: 'string',
+          minLength: 6,
+          maxLength: 6,
+          pattern: '^[0-9]{6}$',
+          description: 'Wajib bila `resetToken` tidak dikirim.',
+        },
         newPassword: { type: 'string', format: 'password', description: PASSWORD_POLICY },
         confirmPassword: { type: 'string', format: 'password', description: 'Harus sama persis dengan `newPassword`.' },
       },
-      required: ['nip', 'verificationCode', 'newPassword', 'confirmPassword'],
+      required: ['newPassword', 'confirmPassword'],
     }),
     responses: {
       200: okResponse('Password diperbarui.', envelope({ type: 'object' })),

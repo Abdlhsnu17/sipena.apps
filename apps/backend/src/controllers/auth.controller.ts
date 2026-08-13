@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
-import { AuthService } from '../services/auth.service';
+import { AuthService, PASSWORD_RESET_DELIVERY_FAILED_MESSAGE } from '../services/auth.service';
 import { createScopedLogger } from '../utils/logger';
 import {
     LoginCredentials,
     PasswordResetConfirmPayload,
+    PasswordResetOtpVerifyPayload,
     PasswordResetRequestPayload,
+    PasswordResetTokenPayload,
     RegisterCredentials
 } from '../types/auth';
 
@@ -81,24 +83,48 @@ export class AuthController {
    * POST /api/auth/reset-password/verify
    */
   verifyResetNip = async (req: Request, res: Response): Promise<void> => {
+    await this.handlePasswordResetRequest(req, res, { isResend: false });
+  };
+
+  /**
+   * Resend the password reset OTP, subject to a server-side cooldown
+   * POST /api/auth/reset-password/resend
+   */
+  resendResetOtp = async (req: Request, res: Response): Promise<void> => {
+    await this.handlePasswordResetRequest(req, res, { isResend: true });
+  };
+
+  private handlePasswordResetRequest = async (
+    req: Request,
+    res: Response,
+    options: { isResend: boolean }
+  ): Promise<void> => {
     try {
       const payload: PasswordResetRequestPayload = req.body;
-      const result = await this.authService.requestPasswordResetCode(payload.nip);
+      const result = await this.authService.requestPasswordResetCode(payload.nip, options);
 
       if (!result.success) {
         const serviceUnavailableMessages = [
           'Redis wajib aktif untuk reset password di production',
           'Layanan OTP WhatsApp/SMS belum dikonfigurasi di server.',
           'Pengiriman kode verifikasi gagal di semua channel WhatsApp/SMS. Periksa webhook OTP.',
+          PASSWORD_RESET_DELIVERY_FAILED_MESSAGE,
         ];
-        const statusCode = serviceUnavailableMessages.includes(result.message) ? 503 : 400;
+
+        let statusCode = 400;
+        if (serviceUnavailableMessages.includes(result.message)) {
+          statusCode = 503;
+        } else if (result.message.startsWith('Batas permintaan kode verifikasi tercapai')) {
+          statusCode = 429;
+        }
+
         res.status(statusCode).json(result);
         return;
       }
 
       res.json(result);
     } catch (error) {
-      logger.error('Verify reset NIP error', { error });
+      logger.error('Password reset request error', { error, isResend: options.isResend });
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -107,13 +133,39 @@ export class AuthController {
   };
 
   /**
-   * Reset password after NIP verification
+   * Exchange a valid OTP for a single-use reset token
+   * POST /api/auth/reset-password/verify-otp
+   */
+  verifyResetOtp = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const payload: PasswordResetOtpVerifyPayload = req.body;
+      const result = await this.authService.verifyPasswordResetOtp(payload.nip, payload.verificationCode);
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.json(result);
+    } catch (error) {
+      logger.error('Verify reset OTP error', { error });
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  };
+
+  /**
+   * Reset password using a reset token, or the legacy NIP + OTP payload
    * POST /api/auth/reset-password
    */
   resetPassword = async (req: Request, res: Response): Promise<void> => {
     try {
-      const payload: PasswordResetConfirmPayload = req.body;
-      const result = await this.authService.resetPasswordWithCode(payload);
+      const body = req.body as Partial<PasswordResetTokenPayload & PasswordResetConfirmPayload>;
+      const result = body.resetToken
+        ? await this.authService.resetPasswordWithToken(body.resetToken, body.newPassword as string)
+        : await this.authService.resetPasswordWithCode(body as PasswordResetConfirmPayload);
 
       if (!result.success) {
         res.status(400).json(result);

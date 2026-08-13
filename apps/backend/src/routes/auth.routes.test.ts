@@ -250,6 +250,139 @@ describe('POST /api/auth/reset-password', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('menerima payload reset token tanpa nip dan kode verifikasi', async () => {
+    // Token acak yang tidak tersimpan: validator lolos, lalu service menolaknya
+    // karena sesi resetnya tidak ada.
+    const response = await requestApp(app).post('/api/auth/reset-password').send({
+      resetToken: 'a'.repeat(64),
+      newPassword: PASSWORD,
+      confirmPassword: PASSWORD,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain('Sesi reset password tidak valid');
+  });
+
+  it('menolak reset token yang terlalu pendek', async () => {
+    const response = await requestApp(app).post('/api/auth/reset-password').send({
+      resetToken: 'pendek',
+      newPassword: PASSWORD,
+      confirmPassword: PASSWORD,
+    });
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/reset-password/verify-otp', () => {
+  it('menolak kode verifikasi yang bukan 6 digit', async () => {
+    const response = await requestApp(app).post('/api/auth/reset-password/verify-otp').send({
+      nip: '199203102019031005',
+      verificationCode: '123',
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('menolak kode untuk nip yang tidak dikenal', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, []);
+
+    const response = await requestApp(app).post('/api/auth/reset-password/verify-otp').send({
+      nip: '199203102019031005',
+      verificationCode: '123456',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.data?.resetToken).toBeUndefined();
+  });
+});
+
+describe('POST /api/auth/reset-password/resend', () => {
+  it('menolak permintaan kirim ulang tanpa nip', async () => {
+    const response = await requestApp(app).post('/api/auth/reset-password/resend').send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it('membalas pesan generik untuk nip yang tidak terdaftar', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, []);
+
+    const response = await requestApp(app).post('/api/auth/reset-password/resend').send({
+      nip: '199203102019031005',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    // NIP asing tetap menerima tujuan tersamar berbentuk nomor telepon agar
+    // tidak bisa dibedakan dari akun sungguhan, tanpa membocorkan kanal.
+    expect(response.body.data.deliveryTarget).toMatch(/^\+628\*{7}\d{3}$/);
+    expect(response.body.data.expiresInMinutes).toBe(10);
+    expect(response.body.data.deliveryMethod).toBeUndefined();
+    expect(response.body.data.previewCode).toBeUndefined();
+  });
+
+  it('memakai tujuan umpan yang sama untuk nip yang sama', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, []);
+
+    const first = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031008',
+    });
+    const second = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031008',
+    });
+
+    expect(first.body.data.deliveryTarget).toMatch(/^\+628\*{7}\d{3}$/);
+    expect(second.body.data.deliveryTarget).toBe(first.body.data.deliveryTarget);
+  });
+
+  it('memperlakukan akun ditangguhkan sama seperti nip yang tidak dikenal', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, [
+      createUserRow({ nip: '199203102019031006', account_status: 'suspended' }),
+    ]);
+
+    const response = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031006',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.deliveryTarget).toMatch(/^\+628\*{7}\d{3}$/);
+    expect(response.body.data.expiresInMinutes).toBe(10);
+    expect(response.body.data.resendAvailableInSeconds).toBe(60);
+  });
+
+  it('memperlakukan akun tanpa nomor telepon sama seperti nip yang tidak dikenal', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, [
+      createUserRow({ nip: '199203102019031009', phone_number: null }),
+    ]);
+
+    const response = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031009',
+    });
+
+    expect(response.status).toBe(200);
+    // Tujuan umpan, bukan email: kanal email sudah dicabut dari alur OTP.
+    expect(response.body.data.deliveryTarget).toMatch(/^\+628\*{7}\d{3}$/);
+    expect(response.body.data.previewCode).toBeUndefined();
+  });
+
+  it('menahan permintaan kedua selama cooldown masih berjalan', async () => {
+    onQuery(/FROM users WHERE nip = \?/i, []);
+
+    const first = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031007',
+    });
+    const second = await requestApp(app).post('/api/auth/reset-password/verify').send({
+      nip: '199203102019031007',
+    });
+
+    expect(first.body.data.resendAvailableInSeconds).toBe(60);
+    expect(second.status).toBe(200);
+    expect(second.body.success).toBe(true);
+    expect(second.body.message).toContain('Kode baru dapat diminta dalam');
+    expect(second.body.data.resendAvailableInSeconds).toBeLessThanOrEqual(60);
+  });
 });
 
 describe('GET /api/auth/me', () => {

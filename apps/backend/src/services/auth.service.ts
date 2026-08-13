@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { randomInt } from 'crypto';
+import { createHmac, randomInt } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
@@ -11,17 +11,28 @@ import {
     RegisterCredentials,
     User
 } from '../types/auth';
-import { sendPasswordResetCodeEmail } from '../utils/mailer';
+import { sendPhoneNotification } from '../utils/notification-delivery';
 import {
     isValidPhoneNumber,
+    maskPhoneNumber,
     normalizePhoneNumberForStorage,
     sendPasswordResetOtp,
 } from '../utils/otp-delivery';
 import {
+    consumePasswordResetToken,
     deletePasswordResetSession,
+    generatePasswordResetToken,
     getPasswordResetSession,
-    savePasswordResetSession
+    getPasswordResetToken,
+    savePasswordResetSession,
+    savePasswordResetToken,
+    type PasswordResetSession
 } from '../utils/password-reset-store';
+import {
+    checkVerificationCode,
+    isTwilioVerifyConfigured,
+    sendVerificationCode
+} from './otp/twilio.service';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -63,14 +74,37 @@ interface PasswordResetRequestResponse {
   success: boolean;
   message: string;
   data?: {
-    deliveryTarget: string;
     expiresInMinutes: number;
-    deliveryMethod: 'whatsapp' | 'sms' | 'email' | 'local_preview';
+    resendAvailableInSeconds?: number;
+    /** Hanya diisi pada preview pengembangan. */
+    deliveryTarget?: string;
+    deliveryMethod?: 'whatsapp' | 'sms' | 'email' | 'local_preview';
     previewCode?: string;
   };
 }
 
+interface PasswordResetOtpVerifyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    resetToken: string;
+    expiresInMinutes: number;
+  };
+}
+
+/** Hasil pengecekan OTP sebelum password benar-benar diubah. */
+interface ResetVerificationResult {
+  success: boolean;
+  message: string;
+  userId?: number;
+  nip?: string;
+}
+
 const logger = createScopedLogger('service:auth');
+
+/** Dipakai controller untuk memetakan kegagalan kanal OTP ke status 503. */
+export const PASSWORD_RESET_DELIVERY_FAILED_MESSAGE =
+  'Pengiriman kode verifikasi gagal. Periksa konfigurasi Twilio Verify atau webhook WhatsApp/SMS.';
 
 export class AuthService {
   private static readonly PASSWORD_RESET_EXPIRES_IN_MINUTES = 10;
@@ -79,6 +113,11 @@ export class AuthService {
   private static readonly ACCOUNT_LOCK_DURATION_MINUTES = 15;
   private static readonly PASSWORD_RESET_REQUEST_MESSAGE =
     'Jika data Anda terdaftar, kode verifikasi akan dikirim melalui kanal yang tersedia.';
+  private static readonly PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 60;
+  private static readonly PASSWORD_RESET_MAX_RESENDS = 3;
+  private static readonly PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES = 10;
+  private static readonly PASSWORD_RESET_INVALID_CODE_MESSAGE =
+    'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.';
 
   private mapRowToUser(row: UserRow): User {
     return {
@@ -100,19 +139,11 @@ export class AuthService {
       sessionVersion: Number(row.session_version) || 0,
       accountStatus: row.account_status || 'active',
       mustChangePassword: Boolean(row.must_change_password),
+      // Nomor telepon kini satu-satunya kanal OTP, jadi akun lama yang belum
+      // mengisinya harus dipandu melengkapi sebelum sempat lupa password.
+      mustCompletePhoneNumber: !row.phone_number || !isValidPhoneNumber(row.phone_number),
       umlAccess: row.uml_access
     };
-  }
-
-  private maskEmail(email: string): string {
-    const [localPart, domain = ''] = email.split('@');
-    if (!localPart || !domain) {
-      return 'email terdaftar';
-    }
-
-    const visiblePrefix = localPart.slice(0, Math.min(2, localPart.length));
-    const maskedLocalPart = `${visiblePrefix}${'*'.repeat(Math.max(localPart.length - visiblePrefix.length, 2))}`;
-    return `${maskedLocalPart}@${domain}`;
   }
 
   /**
@@ -238,19 +269,128 @@ export class AuthService {
     };
   }
 
-  async requestPasswordResetCode(nip: string): Promise<PasswordResetRequestResponse> {
+  async requestPasswordResetCode(nip: string, options: { isResend?: boolean } = {}): Promise<PasswordResetRequestResponse> {
     const [rows] = await pool.query<UserRow[]>(
-      'SELECT id, nip, name, email, phone_number FROM users WHERE nip = ?',
+      'SELECT id, nip, name, email, phone_number, account_status FROM users WHERE nip = ?',
       [nip]
     );
 
-    if (rows.length === 0) {
-      return { success: true, message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE };
+    const now = Date.now();
+    const expiresAt = now + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
+    const user = rows.length > 0 ? rows[0] : null;
+    const normalizedPhoneNumber = user?.phone_number ? normalizePhoneNumberForStorage(user.phone_number) : '';
+    const hasUsablePhoneNumber = Boolean(normalizedPhoneNumber) && isValidPhoneNumber(normalizedPhoneNumber);
+    // Akun nonaktif/ditangguhkan tidak boleh memulihkan akses sendiri, dan akun
+    // tanpa nomor terdaftar tidak punya kanal OTP sama sekali. Keduanya ditolak
+    // dengan tampilan yang sama persis dengan NIP yang tidak terdaftar.
+    const isEligible =
+      Boolean(user) && (user!.account_status || 'active') === 'active' && hasUsablePhoneNumber;
+    const sessionKey = user?.nip ?? nip;
+    const previousSession = await getPasswordResetSession(sessionKey).catch(() => null);
+    const cooldownRemaining = this.getResendCooldownRemaining(previousSession, now);
+
+    // Cooldown dan batas kirim ulang dievaluasi sebelum akun diperiksa, dan
+    // jawabannya identik untuk NIP terdaftar maupun tidak, supaya endpoint ini
+    // tidak bisa dipakai menebak NIP mana yang ada di sistem.
+    if (cooldownRemaining > 0) {
+      return {
+        success: true,
+        message: `${AuthService.PASSWORD_RESET_REQUEST_MESSAGE} Kode baru dapat diminta dalam ${cooldownRemaining} detik.`,
+        data: {
+          deliveryTarget: previousSession?.deliveryTarget ?? this.buildDecoyDeliveryTarget(sessionKey),
+          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+          resendAvailableInSeconds: cooldownRemaining
+        }
+      };
     }
 
-    const user = rows[0];
+    if (previousSession && previousSession.resendCount >= AuthService.PASSWORD_RESET_MAX_RESENDS) {
+      return {
+        success: false,
+        message: 'Batas permintaan kode verifikasi tercapai. Silakan coba lagi setelah 10 menit.'
+      };
+    }
+
+    const resendCount = options.isResend && previousSession ? previousSession.resendCount + 1 : 0;
+
+    if (!user || !isEligible) {
+      if (user && !hasUsablePhoneNumber) {
+        logger.warn('[RESET_PASSWORD] Akun tanpa nomor telepon valid tidak dapat menerima OTP', {
+          userId: user.id,
+        });
+      }
+
+      // Sesi umpan: tidak memuat kode apa pun, hanya menyamakan perilaku
+      // cooldown agar selisih waktu balasan tidak membocorkan keberadaan akun.
+      const decoyTarget = this.buildDecoyDeliveryTarget(sessionKey);
+
+      await savePasswordResetSession({
+        userId: 0,
+        nip: sessionKey,
+        email: '',
+        provider: 'local',
+        deliveryTarget: decoyTarget,
+        expiresAt,
+        attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS,
+        lastSentAt: now,
+        resendCount
+      }).catch((error) => logger.error('Save decoy password reset session error', { error }));
+
+      return {
+        success: true,
+        message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE,
+        data: {
+          deliveryTarget: decoyTarget,
+          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+          resendAvailableInSeconds: AuthService.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS
+        }
+      };
+    }
+
+    // Twilio Verify adalah kanal utama bila dikonfigurasi: Twilio yang membuat,
+    // mengirim, dan memvalidasi kodenya sehingga tidak ada OTP yang disimpan
+    // aplikasi. Webhook WhatsApp/SMS di bawah menjadi cadangan.
+    if (isTwilioVerifyConfigured()) {
+      try {
+        const twilioDelivery = await sendVerificationCode(normalizedPhoneNumber);
+        const deliveryTarget = maskPhoneNumber(normalizedPhoneNumber);
+
+        await savePasswordResetSession({
+          userId: user.id,
+          nip: user.nip,
+          email: user.email,
+          phoneNumber: normalizedPhoneNumber,
+          provider: 'twilio',
+          deliveryTarget,
+          expiresAt,
+          attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS,
+          lastSentAt: now,
+          resendCount
+        });
+
+        logger.info('Password reset OTP dikirim via Twilio Verify', {
+          userId: user.id,
+          channel: twilioDelivery.channel,
+          target: deliveryTarget,
+        });
+
+        // Nama kanal tetap tidak dikirim ke klien: `sms` versus `email` sudah
+        // cukup untuk menyimpulkan apakah sebuah NIP punya nomor terdaftar.
+        return {
+          success: true,
+          message: AuthService.PASSWORD_RESET_REQUEST_MESSAGE,
+          data: {
+            deliveryTarget,
+            expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+            resendAvailableInSeconds: AuthService.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS
+          }
+        };
+      } catch (error) {
+        logger.error('Twilio Verify send error, fallback ke kanal lain', { error });
+      }
+    }
+
     const verificationCode = this.generateVerificationCode();
-    const expiresAt = Date.now() + (AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000);
     const codeHash = await bcrypt.hash(verificationCode, 10);
 
     try {
@@ -259,8 +399,11 @@ export class AuthService {
         nip: user.nip,
         email: user.email,
         codeHash,
+        provider: 'local',
         expiresAt,
-        attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS
+        attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS,
+        lastSentAt: now,
+        resendCount
       });
     } catch (error) {
       logger.error('Save password reset session error', { error });
@@ -272,141 +415,276 @@ export class AuthService {
       };
     }
 
-    const deliveries: Array<{
-      method: 'whatsapp' | 'sms' | 'email' | 'local_preview';
-      preview: boolean;
-      target: string;
-    }> = [];
+    // OTP hanya dikirim ke nomor terdaftar. Email sudah tidak dipakai sebagai
+    // kanal OTP: bentuk tujuannya membocorkan akun mana yang tidak punya nomor,
+    // dan kotak surat yang ikut jebol membuat SMS/WhatsApp tidak lagi menjadi
+    // faktor terpisah dari password.
+    let phoneDelivery: Awaited<ReturnType<typeof sendPasswordResetOtp>> | null = null;
 
-    // Kebijakan OTP: utamakan WhatsApp (fallback SMS). Email hanya dipakai
-    // sebagai cadangan bila pengiriman via WhatsApp/SMS tidak berhasil.
-    let phoneDeliverySucceeded = false;
-
-    if (user.phone_number && isValidPhoneNumber(user.phone_number)) {
-      try {
-        const phoneDelivery = await sendPasswordResetOtp({
-          phoneNumber: user.phone_number,
-          userName: user.name,
-          code: verificationCode,
-          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-        });
-        deliveries.push({
-          method: phoneDelivery.channel,
-          preview: phoneDelivery.preview,
-          target: phoneDelivery.deliveryTarget,
-        });
-        phoneDeliverySucceeded = !phoneDelivery.preview;
-      } catch (error) {
-        logger.error('Send password reset OTP error', { error });
-      }
-    } else {
-      logger.warn('[RESET_PASSWORD] User has no valid phone number; falling back to email delivery', { userId: user.id });
+    try {
+      phoneDelivery = await sendPasswordResetOtp({
+        phoneNumber: normalizedPhoneNumber,
+        userName: user.name,
+        code: verificationCode,
+        expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
+      });
+    } catch (error) {
+      logger.error('Send password reset OTP error', { error });
     }
 
-    if (!phoneDeliverySucceeded) {
-      try {
-        const emailDelivery = await sendPasswordResetCodeEmail({
-          to: user.email,
-          name: user.name,
-          code: verificationCode,
-          expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-        });
-        deliveries.push({
-          method: emailDelivery.preview ? 'local_preview' : 'email',
-          preview: emailDelivery.preview,
-          target: this.maskEmail(user.email),
-        });
-      } catch (error) {
-        logger.error('Send password reset email error', { error });
-      }
-    }
-
-    if (deliveries.length === 0) {
+    if (!phoneDelivery) {
       await deletePasswordResetSession(user.nip).catch(() => undefined);
       return {
         success: false,
-        message: 'Pengiriman kode verifikasi gagal di semua kanal. Periksa konfigurasi WhatsApp, SMS, dan email.'
+        message: PASSWORD_RESET_DELIVERY_FAILED_MESSAGE
       };
     }
 
-    const activeDelivery = deliveries.find((delivery) => !delivery.preview);
-    const selectedDelivery = activeDelivery ?? deliveries[0];
-    const previewOnly = !activeDelivery;
+    const selectedDelivery = { target: phoneDelivery.deliveryTarget };
+    const previewOnly = phoneDelivery.preview;
+
+    // Target disimpan agar permintaan berikutnya yang tertahan cooldown tetap
+    // menampilkan tujuan yang sama.
+    await savePasswordResetSession({
+      userId: user.id,
+      nip: user.nip,
+      email: user.email,
+      codeHash,
+      provider: 'local',
+      deliveryTarget: selectedDelivery.target,
+      expiresAt,
+      attemptsLeft: AuthService.PASSWORD_RESET_MAX_ATTEMPTS,
+      lastSentAt: now,
+      resendCount
+    }).catch((error) => logger.error('Update password reset session target error', { error }));
 
     return {
       success: true,
       message: previewOnly
         ? 'Kode verifikasi tersedia di preview lokal pengembangan.'
         : AuthService.PASSWORD_RESET_REQUEST_MESSAGE,
+      // Nama kanal dan kode hanya dibuka pada preview pengembangan.
       data: previewOnly
         ? {
             deliveryTarget: selectedDelivery.target,
             expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
             deliveryMethod: 'local_preview',
             previewCode: verificationCode,
+            resendAvailableInSeconds: AuthService.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS,
           }
         : {
             deliveryTarget: selectedDelivery.target,
             expiresInMinutes: AuthService.PASSWORD_RESET_EXPIRES_IN_MINUTES,
-            deliveryMethod: selectedDelivery.method,
+            resendAvailableInSeconds: AuthService.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS,
           }
     };
   }
 
-  async resetPasswordWithCode(payload: PasswordResetConfirmPayload): Promise<AuthResponse> {
-    const { nip, verificationCode, newPassword } = payload;
+  /**
+   * Tujuan tersamar untuk NIP yang tidak berhak menerima kode. Bentuknya
+   * disamakan dengan hasil `maskPhoneNumber` dan diturunkan secara deterministik
+   * dari NIP, sehingga permintaan berulang selalu menampilkan nilai yang sama
+   * dan tidak bisa dibedakan dari akun sungguhan.
+   */
+  private buildDecoyDeliveryTarget(nip: string): string {
+    const secret = process.env.JWT_SECRET || 'sipena-password-reset-decoy';
+    const digest = createHmac('sha256', secret).update(`reset-target:${nip}`).digest();
+    const lastDigits = String(digest.readUInt16BE(0) % 1000).padStart(3, '0');
+
+    return `+628${'*'.repeat(7)}${lastDigits}`;
+  }
+
+  /** Sisa cooldown kirim ulang OTP dalam detik; 0 bila sudah boleh dikirim. */
+  private getResendCooldownRemaining(session: PasswordResetSession | null, now: number): number {
+    if (!session?.lastSentAt) {
+      return 0;
+    }
+
+    const elapsedSeconds = Math.floor((now - session.lastSentAt) / 1000);
+    const remaining = AuthService.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS - elapsedSeconds;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  /**
+   * Memvalidasi OTP terhadap provider yang dipakai sesi ini. Sesi hanya
+   * dihapus ketika kode benar atau jatah percobaan habis.
+   */
+  private async consumeResetVerification(nip: string, verificationCode: string): Promise<ResetVerificationResult> {
     const [rows] = await pool.query<UserRow[]>(
       'SELECT id FROM users WHERE nip = ?',
       [nip]
     );
 
     if (rows.length === 0) {
-      return {
-        success: false,
-        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
-      };
+      return { success: false, message: AuthService.PASSWORD_RESET_INVALID_CODE_MESSAGE };
     }
 
     const user = rows[0];
     const session = await getPasswordResetSession(nip);
 
     if (!session || session.userId !== user.id) {
-      return {
-        success: false,
-        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
-      };
+      return { success: false, message: AuthService.PASSWORD_RESET_INVALID_CODE_MESSAGE };
     }
 
-    const isValidCode = await bcrypt.compare(verificationCode, session.codeHash);
+    let isValidCode = false;
+
+    if (session.provider === 'twilio' && session.phoneNumber) {
+      try {
+        isValidCode = (await checkVerificationCode(session.phoneNumber, verificationCode)) === 'approved';
+      } catch (error) {
+        logger.error('Twilio Verify check error', { error });
+        return {
+          success: false,
+          message: 'Verifikasi kode gagal diproses. Coba lagi beberapa saat.'
+        };
+      }
+    } else if (session.codeHash) {
+      isValidCode = await bcrypt.compare(verificationCode, session.codeHash);
+    }
+
     if (!isValidCode) {
       const nextAttemptsLeft = session.attemptsLeft - 1;
       if (nextAttemptsLeft <= 0) {
         await deletePasswordResetSession(nip);
-        return {
-          success: false,
-          message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
-        };
+      } else {
+        await savePasswordResetSession({ ...session, attemptsLeft: nextAttemptsLeft });
       }
 
-      await savePasswordResetSession({
-        ...session,
-        attemptsLeft: nextAttemptsLeft
-      });
+      return { success: false, message: AuthService.PASSWORD_RESET_INVALID_CODE_MESSAGE };
+    }
 
+    await deletePasswordResetSession(nip);
+
+    return { success: true, message: 'Kode verifikasi valid.', userId: user.id, nip: session.nip };
+  }
+
+  /**
+   * Menukar OTP yang benar dengan reset token sekali pakai. Frontend tidak
+   * pernah menjadi sumber kebenaran status "terverifikasi".
+   */
+  async verifyPasswordResetOtp(nip: string, verificationCode: string): Promise<PasswordResetOtpVerifyResponse> {
+    const verification = await this.consumeResetVerification(nip, verificationCode);
+
+    if (!verification.success || !verification.userId) {
+      return { success: false, message: verification.message };
+    }
+
+    const resetToken = generatePasswordResetToken();
+
+    try {
+      await savePasswordResetToken(resetToken, {
+        userId: verification.userId,
+        nip: verification.nip ?? nip,
+        expiresAt: Date.now() + (AuthService.PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES * 60 * 1000)
+      });
+    } catch (error) {
+      logger.error('Save password reset token error', { error });
       return {
         success: false,
-        message: 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.'
+        message: error instanceof Error
+          ? error.message
+          : 'Sesi reset password gagal disiapkan. Coba lagi beberapa saat.'
       };
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await pool.query(
-      'UPDATE users SET password = ?, must_change_password = 0, session_version = session_version + 1, updated_at = NOW() WHERE id = ?',
-      [hashedPassword, user.id],
+    return {
+      success: true,
+      message: 'Kode verifikasi berhasil diverifikasi.',
+      data: {
+        resetToken,
+        expiresInMinutes: AuthService.PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES
+      }
+    };
+  }
+
+  private async applyNewPassword(userId: number, newPassword: string): Promise<AuthResponse> {
+    const [rows] = await pool.query<UserRow[]>(
+      'SELECT id, name, password, phone_number FROM users WHERE id = ?',
+      [userId]
     );
-    await deletePasswordResetSession(nip);
+
+    if (rows.length === 0) {
+      return { success: false, message: 'Pengguna tidak ditemukan' };
+    }
+
+    const user = rows[0];
+
+    if (await bcrypt.compare(newPassword, user.password)) {
+      return { success: false, message: 'Password baru tidak boleh sama dengan password lama.' };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    // Reset yang berhasil sekaligus membuka kunci akun: pengguna yang terkunci
+    // karena salah password justru datang lewat jalur ini.
+    await pool.query(
+      `UPDATE users
+       SET password = ?, must_change_password = 0, session_version = session_version + 1,
+           failed_login_attempts = 0, locked_until = NULL, updated_at = NOW()
+       WHERE id = ?`,
+      [hashedPassword, userId],
+    );
+
+    logger.info('Password berhasil direset', { userId });
+    await this.notifyPasswordChanged(user);
 
     return { success: true, message: 'Password berhasil diubah. Silakan login dengan password baru.' };
+  }
+
+  /**
+   * Memberi tahu pemilik akun bahwa passwordnya berubah, supaya reset yang
+   * tidak dia lakukan bisa segera disadari. Kegagalan kirim tidak boleh
+   * membatalkan reset yang sudah tersimpan.
+   */
+  private async notifyPasswordChanged(user: Pick<UserRow, 'id' | 'name' | 'phone_number'>): Promise<void> {
+    if (!user.phone_number || !isValidPhoneNumber(user.phone_number)) {
+      return;
+    }
+
+    try {
+      await sendPhoneNotification({
+        phoneNumber: normalizePhoneNumberForStorage(user.phone_number),
+        userName: user.name,
+        title: 'Password berhasil diubah',
+        message:
+          'Password akun SiPeNa Anda baru saja diubah. Jika bukan Anda yang melakukannya, segera hubungi admin.',
+        referenceType: 'password_reset',
+      });
+    } catch (error) {
+      logger.error('Gagal mengirim notifikasi perubahan password', { userId: user.id, error });
+    }
+  }
+
+  /** Jalur utama: reset token sekali pakai hasil `verifyPasswordResetOtp`. */
+  async resetPasswordWithToken(resetToken: string, newPassword: string): Promise<AuthResponse> {
+    const tokenPayload = await getPasswordResetToken(resetToken);
+
+    if (!tokenPayload) {
+      return {
+        success: false,
+        message: 'Sesi reset password tidak valid atau sudah kedaluwarsa. Silakan ulangi dari awal.'
+      };
+    }
+
+    // Token dikonsumsi lebih dulu supaya satu token tidak bisa dipakai dua kali
+    // walaupun ada dua permintaan yang datang bersamaan.
+    await consumePasswordResetToken(resetToken);
+
+    const result = await this.applyNewPassword(tokenPayload.userId, newPassword);
+    await deletePasswordResetSession(tokenPayload.nip).catch(() => undefined);
+
+    return result;
+  }
+
+  /** Jalur lama: OTP dan password baru dikirim sekaligus dalam satu request. */
+  async resetPasswordWithCode(payload: PasswordResetConfirmPayload): Promise<AuthResponse> {
+    const { nip, verificationCode, newPassword } = payload;
+    const verification = await this.consumeResetVerification(nip, verificationCode);
+
+    if (!verification.success || !verification.userId) {
+      return { success: false, message: verification.message };
+    }
+
+    return this.applyNewPassword(verification.userId, newPassword);
   }
 
   async getProfile(userId: number): Promise<AuthResponse> {
@@ -471,11 +749,17 @@ export class AuthService {
     }
 
     if (payload.phoneNumber !== undefined) {
-      if (payload.phoneNumber && !isValidPhoneNumber(payload.phoneNumber)) {
+      // Nomor tidak boleh dikosongkan: itu satu-satunya kanal pemulihan akun.
+      if (!payload.phoneNumber) {
+        return { success: false, message: 'Nomor WhatsApp/SMS wajib diisi dan tidak boleh dikosongkan' };
+      }
+
+      if (!isValidPhoneNumber(payload.phoneNumber)) {
         return { success: false, message: 'Nomor WhatsApp/SMS tidak valid' };
       }
+
       fields.push('phone_number = ?');
-      values.push(payload.phoneNumber ? normalizePhoneNumberForStorage(payload.phoneNumber) : null);
+      values.push(normalizePhoneNumberForStorage(payload.phoneNumber));
     }
 
     if (photoPath) {
@@ -546,6 +830,7 @@ export class AuthService {
       sessionVersion: Number(user.session_version) || 0,
       accountStatus: user.account_status || 'active',
       mustChangePassword: Boolean(user.must_change_password),
+      mustCompletePhoneNumber: !user.phone_number || !isValidPhoneNumber(user.phone_number),
     };
 
     const secret = process.env.JWT_SECRET;
