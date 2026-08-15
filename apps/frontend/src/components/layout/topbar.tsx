@@ -161,6 +161,7 @@ const SERVER_TYPE_LABELS: Record<string, string> = {
   maintenance_completed: "✅ Layanan Selesai",
   maintenance_validated: "📄 Laporan Tersedia",
   maintenance_cancelled: "❌ Ditolak/Dibatalkan",
+  admin_broadcast: "📢 Pengumuman",
   sanction_applied: "⚠️ Sanksi Keterlambatan",
   sanction_resolved: "✅ Sanksi Selesai",
   sanction_waived: "✅ Sanksi Dibebaskan",

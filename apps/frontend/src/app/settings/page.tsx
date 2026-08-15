@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import appSettingService, {
     ANNOUNCEMENT_UPDATED_EVENT,
@@ -19,18 +20,23 @@ import appSettingService, {
 } from "@/services/app-setting.service";
 import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
-import notificationService, { type NotificationDeliveryStatus } from "@/services/notification.service";
+import notificationService, {
+    BROADCAST_MESSAGE_MAX_LENGTH,
+    BROADCAST_TITLE_MAX_LENGTH,
+    type NotificationDeliveryStatus,
+} from "@/services/notification.service";
 import { userService } from "@/services/user.service";
 import { formatDateId } from "@/utils/format";
 import { toPublicPhotoUrl } from "@/utils/photo-url";
 import { isAdminRole } from "@/utils/role";
 import { isStrongPassword } from "@/utils/validation";
 // ...existing code...
-import { Eye, EyeOff, Megaphone, Monitor, Moon, Save, Settings, Smartphone, Sun } from "lucide-react";
+import { Eye, EyeOff, Megaphone, Monitor, Moon, Save, Send, Settings, Smartphone, Sun } from "lucide-react";
 import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { toast } = useToast()
+  const { confirm } = useConfirm()
   const { theme, resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [profileForm, setProfileForm] = useState({
@@ -82,6 +88,11 @@ export default function SettingsPage() {
   const [announcementMeta, setAnnouncementMeta] = useState<{ updatedByName?: string | null; updatedAt?: string | null }>({})
   const [announcementLoading, setAnnouncementLoading] = useState(true)
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false)
+
+  // Pemberitahuan manual sekali kirim ke seluruh pengguna.
+  const [broadcastTitle, setBroadcastTitle] = useState("")
+  const [broadcastMessage, setBroadcastMessage] = useState("")
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -374,6 +385,57 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSendBroadcast = async () => {
+    const title = broadcastTitle.trim()
+    const message = broadcastMessage.trim()
+    if (!title || !message) {
+      toast({
+        title: "Lengkapi pemberitahuan",
+        description: "Judul dan isi pemberitahuan wajib diisi.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Sekali terkirim, pemberitahuan langsung masuk ke lonceng semua orang dan
+    // tidak bisa ditarik, jadi dikonfirmasi dulu.
+    const isConfirmed = await confirm({
+      title: "Kirim ke seluruh pengguna?",
+      description: `"${title}" akan langsung muncul di lonceng semua pengguna aktif dan tidak dapat ditarik kembali.`,
+      confirmText: "Kirim",
+    })
+    if (!isConfirmed) return
+
+    setIsSendingBroadcast(true)
+    try {
+      const response = await notificationService.broadcast({ title, message })
+      if (!response.success) {
+        toast({ title: "Error", description: response.message, variant: "destructive" })
+        return
+      }
+
+      setBroadcastTitle("")
+      setBroadcastMessage("")
+      // Lonceng pengirim ikut menampilkan pemberitahuannya sendiri tanpa reload.
+      window.dispatchEvent(new Event("notifications-refresh"))
+      toast({
+        title: "Pemberitahuan terkirim",
+        description: response.data?.recipients
+          ? `Diterima ${response.data.recipients} pengguna aktif.`
+          : undefined,
+      })
+    } catch (error) {
+      console.error("Failed to send broadcast:", error)
+      toast({
+        title: "Error",
+        description: "Pemberitahuan gagal dikirim. Coba lagi.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSendingBroadcast(false)
+    }
+  }
+
   const profileImageSrc = localPhotoPreview || remotePhotoUrl
   const currentUser = getCurrentUser()
 
@@ -659,6 +721,75 @@ export default function SettingsPage() {
             </Card>
           )}
 
+          {isAdmin && (
+            <Card className="gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Send className="h-4 w-4 text-teal-600" />
+                  Kirim Pemberitahuan
+                </CardTitle>
+                <CardDescription>
+                  Kirim satu pemberitahuan ke lonceng seluruh pengguna aktif, misalnya jadwal pemeliharaan sistem.
+                  Berbeda dengan teks berjalan, pemberitahuan ini bertanggal dan status bacanya tercatat per pengguna.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3.5">
+                <form
+                  className="space-y-3.5"
+                  autoComplete="off"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleSendBroadcast()
+                  }}
+                >
+                  <div className="space-y-2">
+                  <Label htmlFor="broadcastTitle">Judul</Label>
+                  <Input
+                    id="broadcastTitle"
+                    name="notification-title"
+                    autoComplete="off"
+                    value={broadcastTitle}
+                    onChange={(event) => setBroadcastTitle(event.target.value.slice(0, BROADCAST_TITLE_MAX_LENGTH))}
+                    maxLength={BROADCAST_TITLE_MAX_LENGTH}
+                    placeholder="Contoh: Pemeliharaan sistem terjadwal"
+                  />
+                </div>
+
+                  <div className="space-y-2">
+                  <Label htmlFor="broadcastMessage">Isi Pemberitahuan</Label>
+                  <Textarea
+                    id="broadcastMessage"
+                    name="notification-message"
+                    autoComplete="off"
+                    value={broadcastMessage}
+                    onChange={(event) => setBroadcastMessage(event.target.value.slice(0, BROADCAST_MESSAGE_MAX_LENGTH))}
+                    maxLength={BROADCAST_MESSAGE_MAX_LENGTH}
+                    rows={3}
+                    placeholder="Contoh: Sistem tidak dapat diakses pada Sabtu, 20 Agustus 2026 pukul 20.00-22.00 WIB."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {broadcastMessage.length}/{BROADCAST_MESSAGE_MAX_LENGTH} karakter
+                  </p>
+                </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Pemberitahuan yang sudah terkirim tidak dapat ditarik kembali.
+                  </p>
+                  <Button
+                    type="submit"
+                    disabled={isSendingBroadcast || !broadcastTitle.trim() || !broadcastMessage.trim()}
+                    className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isSendingBroadcast ? "Mengirim..." : "Kirim ke Semua"}
+                  </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid items-stretch gap-5 md:grid-cols-2">
             <Card className="h-full gap-4 py-5">
               <CardHeader className="gap-1.5">
@@ -666,11 +797,20 @@ export default function SettingsPage() {
                 <CardDescription>Ubah password akun Anda untuk keamanan</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3.5">
-                <div className="space-y-2">
+                <form
+                  className="space-y-3.5"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleChangePassword()
+                  }}
+                >
+                  <div className="space-y-2">
                   <Label htmlFor="currentPassword">Password Saat Ini</Label>
                   <div className="relative">
                     <Input
                       id="currentPassword"
+                      name="current-password"
+                      autoComplete="current-password"
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
@@ -688,11 +828,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                  <div className="space-y-2">
                   <Label htmlFor="newPassword">Password Baru</Label>
                   <div className="relative">
                     <Input
                       id="newPassword"
+                      name="new-password"
+                      autoComplete="new-password"
                       type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -710,11 +852,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                  <div className="space-y-2">
                   <Label htmlFor="confirmNewPassword">Konfirmasi Password Baru</Label>
                   <div className="relative">
                     <Input
                       id="confirmNewPassword"
+                      name="confirm-new-password"
+                      autoComplete="new-password"
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
@@ -733,12 +877,13 @@ export default function SettingsPage() {
                 </div>
 
                 <Button
-                  onClick={handleChangePassword}
+                  type="submit"
                   disabled={isChangingPassword}
                   className="w-full bg-teal-600 hover:bg-teal-700 sm:w-auto"
                 >
                   {isChangingPassword ? "Menyimpan..." : "Ubah Password"}
                 </Button>
+                </form>
               </CardContent>
             </Card>
             <Card className="h-full gap-4 py-5">

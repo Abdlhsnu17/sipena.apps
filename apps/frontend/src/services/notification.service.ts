@@ -45,7 +45,20 @@ export interface NotificationDeliveryStatus {
   email: { configured: boolean; mode: 'active' | 'preview' | 'unavailable' };
 }
 
+/** Sinkron dengan batas di `notification.controller.ts`. */
+export const BROADCAST_TITLE_MAX_LENGTH = 150;
+export const BROADCAST_MESSAGE_MAX_LENGTH = 1000;
+
 class NotificationService {
+  /** Khusus admin: mengirim satu pemberitahuan ke seluruh pengguna aktif. */
+  async broadcast(payload: { title: string; message: string }) {
+    return apiService.post<{
+      success: boolean;
+      message: string;
+      data?: { recipients: number };
+    }>('/notifications/broadcast', payload);
+  }
+
   async list(params: {
     unreadOnly?: boolean;
     category?: NotificationCategory;

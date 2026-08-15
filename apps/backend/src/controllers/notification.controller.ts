@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { param, query } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import notificationService from '../services/notification.service';
+import { recordUserActivity } from '../services/user-activity.service';
 import { notificationStreamHub } from '../utils/notification-stream';
 import { createSseTicket } from '../utils/sse-ticket';
 import { validateRequest } from '../middlewares/validate-request.middleware';
@@ -11,6 +12,10 @@ const getActorUserId = (req: Request): number | null => {
 };
 
 const SSE_HEARTBEAT_INTERVAL_MS = 25000;
+
+/** Batas panjang siaran admin; `title` varchar(255), `message` bertipe TEXT. */
+export const BROADCAST_TITLE_MAX_LENGTH = 150;
+export const BROADCAST_MESSAGE_MAX_LENGTH = 1000;
 
 const isValidWebhookUrl = (value: string | undefined): boolean => {
   if (!value?.trim()) return false;
@@ -54,6 +59,33 @@ class NotificationController {
       sms: { configured: hasSms, mode: hasSms ? 'active' : isProduction ? 'unavailable' : 'preview' },
       email: { configured: hasEmail, mode: hasEmail ? 'active' : isProduction ? 'unavailable' : 'preview' },
     }});
+  };
+
+  /** Hanya admin (dijaga `requireRole` di router). */
+  broadcast = async (req: Request, res: Response): Promise<void> => {
+    const actorId = getActorUserId(req);
+    if (!actorId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const result = await notificationService.broadcast({
+      title: String(req.body.title ?? '').trim(),
+      message: String(req.body.message ?? '').trim(),
+      actorId,
+    });
+
+    if (result.success) {
+      await recordUserActivity({
+        userId: actorId,
+        feature: 'pengaturan_sistem',
+        action: 'broadcast',
+        description: `Mengirim pemberitahuan ke seluruh pengguna: ${req.body.title}`,
+        metadata: { recipients: result.data?.recipients },
+      });
+    }
+
+    res.status(result.success ? 201 : 400).json(result);
   };
 
   getMine = async (req: Request, res: Response): Promise<void> => {
@@ -163,6 +195,27 @@ export const notificationValidators = {
     validateRequest
   ],
   id: [param('id').isInt({ min: 1 }), validateRequest],
+  broadcast: [
+    body('title')
+      .isString()
+      .withMessage('Judul harus berupa teks')
+      .bail()
+      .trim()
+      .notEmpty()
+      .withMessage('Judul pemberitahuan wajib diisi')
+      .isLength({ max: BROADCAST_TITLE_MAX_LENGTH })
+      .withMessage(`Judul maksimal ${BROADCAST_TITLE_MAX_LENGTH} karakter`),
+    body('message')
+      .isString()
+      .withMessage('Isi pemberitahuan harus berupa teks')
+      .bail()
+      .trim()
+      .notEmpty()
+      .withMessage('Isi pemberitahuan wajib diisi')
+      .isLength({ max: BROADCAST_MESSAGE_MAX_LENGTH })
+      .withMessage(`Isi pemberitahuan maksimal ${BROADCAST_MESSAGE_MAX_LENGTH} karakter`),
+    validateRequest,
+  ],
 };
 
 export default new NotificationController();

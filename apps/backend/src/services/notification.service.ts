@@ -87,9 +87,15 @@ export class NotificationService {
   /**
    * Persist the same notification for multiple recipients (e.g. all admins).
    */
-  async createForUsers(userIds: number[], dto: Omit<CreateNotificationDTO, 'userId'>): Promise<void> {
+  /**
+   * Mengembalikan `false` bila penyimpanan gagal. Pemanggil di alur bisnis boleh
+   * mengabaikannya (kegagalan notifikasi tidak boleh menggagalkan transaksi),
+   * tetapi aksi yang dipicu admin secara langsung wajib memeriksanya agar tidak
+   * melaporkan "terkirim" untuk sesuatu yang sebenarnya gagal.
+   */
+  async createForUsers(userIds: number[], dto: Omit<CreateNotificationDTO, 'userId'>): Promise<boolean> {
     const uniqueIds = Array.from(new Set(userIds.filter((id) => Number.isFinite(id) && id > 0)));
-    if (uniqueIds.length === 0) return;
+    if (uniqueIds.length === 0) return false;
 
     try {
       const values = uniqueIds.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
@@ -118,8 +124,59 @@ export class NotificationService {
       for (const userId of uniqueIds) {
         notificationStreamHub.notify(userId);
       }
+
+      return true;
     } catch (error) {
       logger.error('Failed to create notifications for users', { error, count: uniqueIds.length, type: dto.type });
+      return false;
+    }
+  }
+
+  /**
+   * Menyiarkan satu pemberitahuan tertulis admin ke seluruh pengguna aktif.
+   *
+   * Penerimanya sengaja tidak menyaring role: pesan seperti jadwal pemeliharaan
+   * berlaku untuk semua orang, termasuk admin pengirimnya sendiri agar isi
+   * lonceng pengirim sama dengan yang dilihat penerima lain.
+   */
+  async broadcast(payload: {
+    title: string;
+    message: string;
+    actorId: number;
+  }): Promise<ApiResponse<{ recipients: number }>> {
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(
+        `SELECT id FROM users
+          WHERE deleted_at IS NULL
+            AND COALESCE(account_status, 'active') = 'active'`
+      );
+
+      const recipientIds = rows.map((row) => Number(row.id));
+      if (recipientIds.length === 0) {
+        return { success: false, message: 'Tidak ada pengguna aktif yang bisa dikirimi pemberitahuan' };
+      }
+
+      const stored = await this.createForUsers(recipientIds, {
+        type: 'admin_broadcast',
+        category: 'system',
+        title: payload.title,
+        message: payload.message,
+      });
+
+      if (!stored) {
+        return { success: false, message: 'Pemberitahuan gagal dikirim' };
+      }
+
+      logger.info('Admin broadcast sent', { actorId: payload.actorId, recipients: recipientIds.length });
+
+      return {
+        success: true,
+        message: `Pemberitahuan terkirim ke ${recipientIds.length} pengguna`,
+        data: { recipients: recipientIds.length },
+      };
+    } catch (error) {
+      logger.error('Failed to broadcast notification', { error, actorId: payload.actorId });
+      return { success: false, message: 'Pemberitahuan gagal dikirim' };
     }
   }
 
