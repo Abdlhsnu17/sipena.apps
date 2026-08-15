@@ -17,6 +17,12 @@ const SSE_HEARTBEAT_INTERVAL_MS = 25000;
 /** Batas panjang siaran admin; `title` varchar(255), `message` bertipe TEXT. */
 export const BROADCAST_TITLE_MAX_LENGTH = 150;
 export const BROADCAST_MESSAGE_MAX_LENGTH = 1000;
+export const BROADCAST_LINK_MAX_LENGTH = 500;
+
+const isValidBroadcastLink = (value: string): boolean => {
+  if (value.startsWith('/') && !value.startsWith('//')) return true;
+  return isValidWebhookUrl(value);
+};
 
 const isValidWebhookUrl = (value: string | undefined): boolean => {
   if (!value?.trim()) return false;
@@ -77,6 +83,7 @@ class NotificationController {
     const result = await notificationService.broadcast({
       title: String(req.body.title ?? '').trim(),
       message: String(req.body.message ?? '').trim(),
+      link: String(req.body.link ?? '').trim() || null,
       imagePath,
       actorId,
     });
@@ -96,6 +103,7 @@ class NotificationController {
           announcementId: result.data?.announcementId,
           recipients: result.data?.recipients,
           withImage: Boolean(imagePath),
+          withLink: Boolean(req.body.link),
         },
       });
     }
@@ -236,6 +244,17 @@ export const notificationValidators = {
       .withMessage('Isi pemberitahuan wajib diisi')
       .isLength({ max: BROADCAST_MESSAGE_MAX_LENGTH })
       .withMessage(`Isi pemberitahuan maksimal ${BROADCAST_MESSAGE_MAX_LENGTH} karakter`),
+    body('link')
+      .optional({ checkFalsy: true })
+      .isString()
+      .withMessage('Tautan harus berupa teks')
+      .bail()
+      .trim()
+      .isLength({ max: BROADCAST_LINK_MAX_LENGTH })
+      .withMessage(`Tautan maksimal ${BROADCAST_LINK_MAX_LENGTH} karakter`)
+      .bail()
+      .custom(isValidBroadcastLink)
+      .withMessage('Tautan harus berupa URL http/https atau path aplikasi seperti /unggahan'),
     // Tanpa `validateRequest` di sini: route siaran menyisipkan pembersih file
     // unggahan lebih dulu sebelum permintaan ditolak.
   ],

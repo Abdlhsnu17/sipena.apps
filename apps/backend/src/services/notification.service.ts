@@ -27,6 +27,7 @@ interface AnnouncementRow extends RowDataPacket {
   id: number;
   title: string;
   message: string;
+  link: string | null;
   image_path: string | null;
   created_by: number | null;
   created_by_name: string | null;
@@ -156,6 +157,7 @@ export class NotificationService {
   async broadcast(payload: {
     title: string;
     message: string;
+    link?: string | null;
     imagePath?: string | null;
     actorId: number;
   }): Promise<ApiResponse<{ announcementId: number; recipients: number }>> {
@@ -174,9 +176,9 @@ export class NotificationService {
       // Isi siaran disimpan sekali di `announcements`; baris notifikasi per
       // penerima hanya menunjuk ke sini lewat reference_type/reference_id.
       const [inserted] = await pool.query<ResultSetHeader>(
-        `INSERT INTO announcements (title, message, image_path, created_by)
-         VALUES (?, ?, ?, ?)`,
-        [payload.title, payload.message, payload.imagePath ?? null, payload.actorId]
+        `INSERT INTO announcements (title, message, link, image_path, created_by)
+         VALUES (?, ?, ?, ?, ?)`,
+        [payload.title, payload.message, payload.link ?? null, payload.imagePath ?? null, payload.actorId]
       );
       const announcementId = inserted.insertId;
 
@@ -185,6 +187,7 @@ export class NotificationService {
         category: 'system',
         title: payload.title,
         message: payload.message,
+        link: payload.link ?? undefined,
         referenceType: 'announcement',
         referenceId: announcementId,
       });
@@ -201,6 +204,7 @@ export class NotificationService {
         announcementId,
         recipients: recipientIds.length,
         withImage: Boolean(payload.imagePath),
+        withLink: Boolean(payload.link),
       });
 
       return {
@@ -218,7 +222,7 @@ export class NotificationService {
   async getBroadcastHistory(limit = 10): Promise<ApiResponse<Announcement[]>> {
     try {
       const [rows] = await pool.query<AnnouncementRow[]>(
-        `SELECT a.id, a.title, a.message, a.image_path, a.created_by, a.created_at,
+        `SELECT a.id, a.title, a.message, a.link, a.image_path, a.created_by, a.created_at,
                 u.name AS created_by_name,
                 COUNT(n.id) AS recipients,
                 COALESCE(SUM(n.is_read), 0) AS read_count
@@ -241,6 +245,7 @@ export class NotificationService {
           id: row.id,
           title: row.title,
           message: row.message,
+          link: row.link,
           imagePath: row.image_path,
           createdBy: row.created_by,
           createdByName: row.created_by_name,

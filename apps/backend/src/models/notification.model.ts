@@ -28,6 +28,7 @@ export interface Announcement {
   id: number;
   title: string;
   message: string;
+  link?: string | null;
   imagePath?: string | null;
   createdBy?: number | null;
   createdByName?: string | null;

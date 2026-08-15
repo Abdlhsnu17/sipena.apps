@@ -29,6 +29,7 @@ export interface BroadcastHistoryItem {
   id: number;
   title: string;
   message: string;
+  link?: string | null;
   imagePath?: string | null;
   createdByName?: string | null;
   createdAt?: string;
@@ -61,17 +62,19 @@ export interface NotificationDeliveryStatus {
 /** Sinkron dengan batas di `notification.controller.ts`. */
 export const BROADCAST_TITLE_MAX_LENGTH = 150;
 export const BROADCAST_MESSAGE_MAX_LENGTH = 1000;
+export const BROADCAST_LINK_MAX_LENGTH = 500;
 /** Sinkron dengan batas multer di `notification.routes.ts`. */
 export const BROADCAST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 class NotificationService {
   /** Khusus admin: mengirim satu pemberitahuan ke seluruh pengguna aktif. */
-  async broadcast(payload: { title: string; message: string; image?: File | null }) {
+  async broadcast(payload: { title: string; message: string; link?: string; image?: File | null }) {
     // Selalu multipart supaya satu endpoint melayani kiriman dengan maupun
     // tanpa gambar.
     const formData = new FormData();
     formData.append('title', payload.title);
     formData.append('message', payload.message);
+    if (payload.link) formData.append('link', payload.link);
     if (payload.image) formData.append('image', payload.image);
 
     return apiService.post<{

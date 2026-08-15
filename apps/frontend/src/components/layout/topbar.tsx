@@ -1188,7 +1188,11 @@ export default function Topbar() {
                     onSelect={(event) => {
                       event.preventDefault()
                       if (notification.href) {
-                        router.push(notification.href)
+                        if (/^https?:\/\//i.test(notification.href)) {
+                          window.open(notification.href, "_blank", "noopener,noreferrer")
+                        } else {
+                          router.push(notification.href)
+                        }
                       }
                     }}
                   >

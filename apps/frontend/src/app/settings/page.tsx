@@ -22,6 +22,7 @@ import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
 import notificationService, {
     BROADCAST_IMAGE_MAX_BYTES,
+    BROADCAST_LINK_MAX_LENGTH,
     BROADCAST_MESSAGE_MAX_LENGTH,
     BROADCAST_TITLE_MAX_LENGTH,
     type BroadcastHistoryItem,
@@ -94,6 +95,7 @@ export default function SettingsPage() {
   // Pemberitahuan manual sekali kirim ke seluruh pengguna.
   const [broadcastTitle, setBroadcastTitle] = useState("")
   const [broadcastMessage, setBroadcastMessage] = useState("")
+  const [broadcastLink, setBroadcastLink] = useState("")
   const [broadcastImage, setBroadcastImage] = useState<File | null>(null)
   const [broadcastImagePreview, setBroadcastImagePreview] = useState<string | null>(null)
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false)
@@ -439,6 +441,7 @@ export default function SettingsPage() {
   const handleSendBroadcast = async () => {
     const title = broadcastTitle.trim()
     const message = broadcastMessage.trim()
+    const link = broadcastLink.trim()
     if (!title || !message) {
       toast({
         title: "Lengkapi pemberitahuan",
@@ -459,7 +462,7 @@ export default function SettingsPage() {
 
     setIsSendingBroadcast(true)
     try {
-      const response = await notificationService.broadcast({ title, message, image: broadcastImage })
+      const response = await notificationService.broadcast({ title, message, link, image: broadcastImage })
       if (!response.success) {
         toast({ title: "Error", description: response.message, variant: "destructive" })
         return
@@ -467,6 +470,7 @@ export default function SettingsPage() {
 
       setBroadcastTitle("")
       setBroadcastMessage("")
+      setBroadcastLink("")
       clearBroadcastImage()
       void loadBroadcastHistory()
       // Lonceng pengirim ikut menampilkan pemberitahuannya sendiri tanpa reload.
@@ -826,6 +830,34 @@ export default function SettingsPage() {
                 </div>
 
                   <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label htmlFor="broadcastLink">Tautan unggahan (opsional)</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setBroadcastLink("/unggahan")}
+                        className="h-7 px-2 text-xs text-teal-700 hover:bg-teal-50 hover:text-teal-800 dark:text-teal-300 dark:hover:bg-teal-400/10"
+                      >
+                        Tautkan halaman Unggahan
+                      </Button>
+                    </div>
+                    <Input
+                      id="broadcastLink"
+                      name="notification-link"
+                      type="url"
+                      autoComplete="off"
+                      value={broadcastLink}
+                      onChange={(event) => setBroadcastLink(event.target.value.slice(0, BROADCAST_LINK_MAX_LENGTH))}
+                      maxLength={BROADCAST_LINK_MAX_LENGTH}
+                      placeholder="/unggahan atau https://contoh.id/dokumen"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Saat pemberitahuan dibuka, penerima akan diarahkan ke tautan ini. Gunakan <span className="font-medium">/unggahan</span> untuk membuka daftar unggahan di aplikasi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="broadcastImage">Gambar (opsional)</Label>
                     <Input
                       id="broadcastImage"
@@ -835,8 +867,7 @@ export default function SettingsPage() {
                       className="cursor-pointer"
                     />
                     <p className="text-xs text-muted-foreground">
-                      PNG, JPG, atau WEBP, maksimal 5 MB. Gambar dapat dibuka siapa pun yang memiliki tautannya, jadi
-                      jangan unggah dokumen yang memuat data pasien atau data pribadi.
+                      PNG, JPG, atau WEBP, maksimal 5 MB. Gambar dapat dibuka siapa pun yang memiliki tautannya.
                     </p>
 
                     {broadcastImagePreview && (
@@ -894,6 +925,7 @@ export default function SettingsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
                           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.message}</p>
+                          {item.link && <p className="mt-1 truncate text-xs font-medium text-teal-700 dark:text-teal-300">Tautan: {item.link}</p>}
                           <p className="mt-1 text-xs text-muted-foreground">
                             {formatDateId(item.createdAt)}
                             {item.createdByName ? ` • ${item.createdByName}` : ""} • dibaca {item.readCount} dari{" "}

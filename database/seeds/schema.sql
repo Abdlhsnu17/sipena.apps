@@ -609,6 +609,7 @@ CREATE TABLE `announcements` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `message` text NOT NULL,
+  `link` varchar(500) DEFAULT NULL,
   `image_path` varchar(500) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
