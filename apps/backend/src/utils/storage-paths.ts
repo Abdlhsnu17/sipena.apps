@@ -32,3 +32,5 @@ export const getProfileUploadsDir = (): string => ensureDirectory(path.join(getU
 export const getReportUploadsDir = (): string => ensureDirectory(path.join(getUploadsRootDir(), 'reports'));
 
 export const getMaintenanceUploadsDir = (): string => ensureDirectory(path.join(getUploadsRootDir(), 'maintenance'));
+
+export const getAnnouncementUploadsDir = (): string => ensureDirectory(path.join(getUploadsRootDir(), 'announcements'));

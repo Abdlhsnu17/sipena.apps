@@ -21,8 +21,10 @@ import appSettingService, {
 import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
 import notificationService, {
+    BROADCAST_IMAGE_MAX_BYTES,
     BROADCAST_MESSAGE_MAX_LENGTH,
     BROADCAST_TITLE_MAX_LENGTH,
+    type BroadcastHistoryItem,
     type NotificationDeliveryStatus,
 } from "@/services/notification.service";
 import { userService } from "@/services/user.service";
@@ -92,7 +94,10 @@ export default function SettingsPage() {
   // Pemberitahuan manual sekali kirim ke seluruh pengguna.
   const [broadcastTitle, setBroadcastTitle] = useState("")
   const [broadcastMessage, setBroadcastMessage] = useState("")
+  const [broadcastImage, setBroadcastImage] = useState<File | null>(null)
+  const [broadcastImagePreview, setBroadcastImagePreview] = useState<string | null>(null)
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false)
+  const [broadcastHistory, setBroadcastHistory] = useState<BroadcastHistoryItem[]>([])
 
   useEffect(() => {
     setMounted(true)
@@ -131,6 +136,17 @@ export default function SettingsPage() {
       isMounted = false
     }
   }, [isAdmin])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    void loadBroadcastHistory()
+  }, [isAdmin])
+
+  useEffect(() => {
+    return () => {
+      if (broadcastImagePreview) URL.revokeObjectURL(broadcastImagePreview)
+    }
+  }, [broadcastImagePreview])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -385,6 +401,41 @@ export default function SettingsPage() {
     }
   }
 
+  const loadBroadcastHistory = async () => {
+    try {
+      const response = await notificationService.getBroadcastHistory(5)
+      if (response.success) setBroadcastHistory(response.data ?? [])
+    } catch (error) {
+      console.error("Failed to load broadcast history:", error)
+    }
+  }
+
+  const clearBroadcastImage = () => {
+    if (broadcastImagePreview) URL.revokeObjectURL(broadcastImagePreview)
+    setBroadcastImage(null)
+    setBroadcastImagePreview(null)
+  }
+
+  const handleBroadcastImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    // Input direset agar memilih file yang sama dua kali tetap memicu onChange.
+    event.target.value = ""
+    if (!file) return
+
+    if (file.size > BROADCAST_IMAGE_MAX_BYTES) {
+      toast({
+        title: "Ukuran gambar terlalu besar",
+        description: "Maksimal 5 MB.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (broadcastImagePreview) URL.revokeObjectURL(broadcastImagePreview)
+    setBroadcastImage(file)
+    setBroadcastImagePreview(URL.createObjectURL(file))
+  }
+
   const handleSendBroadcast = async () => {
     const title = broadcastTitle.trim()
     const message = broadcastMessage.trim()
@@ -408,7 +459,7 @@ export default function SettingsPage() {
 
     setIsSendingBroadcast(true)
     try {
-      const response = await notificationService.broadcast({ title, message })
+      const response = await notificationService.broadcast({ title, message, image: broadcastImage })
       if (!response.success) {
         toast({ title: "Error", description: response.message, variant: "destructive" })
         return
@@ -416,6 +467,8 @@ export default function SettingsPage() {
 
       setBroadcastTitle("")
       setBroadcastMessage("")
+      clearBroadcastImage()
+      void loadBroadcastHistory()
       // Lonceng pengirim ikut menampilkan pemberitahuannya sendiri tanpa reload.
       window.dispatchEvent(new Event("notifications-refresh"))
       toast({
@@ -772,6 +825,40 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcastImage">Gambar (opsional)</Label>
+                    <Input
+                      id="broadcastImage"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleBroadcastImageChange}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, atau WEBP, maksimal 5 MB. Gambar dapat dibuka siapa pun yang memiliki tautannya, jadi
+                      jangan unggah dokumen yang memuat data pasien atau data pribadi.
+                    </p>
+
+                    {broadcastImagePreview && (
+                      <div className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/35 dark:bg-slate-900/40">
+                        <img
+                          src={broadcastImagePreview}
+                          alt="Pratinjau gambar pemberitahuan"
+                          className="h-20 w-20 shrink-0 rounded-lg border border-slate-200 object-cover"
+                        />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="truncate text-sm font-medium text-foreground">{broadcastImage?.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {((broadcastImage?.size ?? 0) / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                          <Button type="button" variant="outline" size="sm" onClick={clearBroadcastImage}>
+                            Hapus gambar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-muted-foreground">
                     Pemberitahuan yang sudah terkirim tidak dapat ditarik kembali.
@@ -786,6 +873,37 @@ export default function SettingsPage() {
                   </Button>
                   </div>
                 </form>
+
+                {broadcastHistory.length > 0 && (
+                  <div className="space-y-2.5 border-t border-border/60 pt-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Terakhir Dikirim
+                    </p>
+                    {broadcastHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/35 dark:bg-slate-900/40"
+                      >
+                        {item.imagePath && (
+                          <img
+                            src={toPublicPhotoUrl(item.imagePath) ?? ""}
+                            alt={`Gambar pemberitahuan: ${item.title}`}
+                            className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 object-cover"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.message}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {formatDateId(item.createdAt)}
+                            {item.createdByName ? ` • ${item.createdByName}` : ""} • dibaca {item.readCount} dari{" "}
+                            {item.recipients}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

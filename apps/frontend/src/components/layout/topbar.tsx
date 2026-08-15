@@ -24,6 +24,7 @@ import {
     maintenanceStatusLabel,
 } from "@/utils/api-mappers";
 import { formatDateId } from "@/utils/format";
+import { toPublicPhotoUrl } from "@/utils/photo-url";
 import { formatNoId } from "@/utils/record-id";
 import { parseScannedBarcode } from "@/utils/scanned-asset";
 
@@ -108,6 +109,8 @@ type NotificationItem = {
   roomLabel?: string
   dismissKey?: string
   serverId?: number
+  /** URL gambar lampiran siaran admin, bila ada. */
+  imageUrl?: string | null
 }
 
 const notificationTypeLabel: Record<NotificationType, string> = {
@@ -210,6 +213,7 @@ const mapServerNotification = (notification: AppNotification): NotificationItem 
   type: notification.type,
   typeLabel: resolveServerTypeLabel(notification.type, notification.category),
   notifStatus: resolveServerNotifStatus(notification.type),
+  imageUrl: toPublicPhotoUrl(notification.imagePath),
 })
 
 const sourceLabelBadgeClass = (sourceLabel: string): string => {
@@ -1280,6 +1284,25 @@ export default function Topbar() {
                             <p className={`${isCompactNotification ? "mt-1 text-[10px]" : "mt-1.5 text-xs"} leading-relaxed text-slate-600`}>{notification.description}</p>
                           ) : null}
                         </div>
+
+                        {/* Gambar dibatasi tingginya karena panel lonceng sempit;
+                            klik membuka berkas aslinya di tab baru. */}
+                        {notification.imageUrl ? (
+                          <a
+                            href={notification.imageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(event) => event.stopPropagation()}
+                            className="mt-2 block overflow-hidden rounded-lg border border-slate-200"
+                          >
+                            <img
+                              src={notification.imageUrl}
+                              alt={`Gambar pemberitahuan: ${notification.title}`}
+                              className={`${isCompactNotification ? "max-h-24" : "max-h-40"} w-full object-cover`}
+                              loading="lazy"
+                            />
+                          </a>
+                        ) : null}
 
                         {!isCompactNotification ? (
                           <div className="mt-2.5 flex items-center justify-end gap-1 text-[11px] font-bold text-blue-600 transition group-hover:text-blue-700">

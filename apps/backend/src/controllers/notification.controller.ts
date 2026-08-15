@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { body, param, query } from 'express-validator';
+import fs from 'fs/promises';
 import notificationService from '../services/notification.service';
 import { recordUserActivity } from '../services/user-activity.service';
 import { notificationStreamHub } from '../utils/notification-stream';
@@ -69,11 +70,21 @@ class NotificationController {
       return;
     }
 
+    // Disimpan relatif terhadap root uploads, mengikuti pola `photo_path`
+    // sehingga frontend bisa memakai helper URL yang sama.
+    const imagePath = req.file ? `announcements/${req.file.filename}` : null;
+
     const result = await notificationService.broadcast({
       title: String(req.body.title ?? '').trim(),
       message: String(req.body.message ?? '').trim(),
+      imagePath,
       actorId,
     });
+
+    if (!result.success && req.file) {
+      // Tanpa ini file yatim menumpuk di disk setiap kali pengiriman gagal.
+      await fs.unlink(req.file.path).catch(() => undefined);
+    }
 
     if (result.success) {
       await recordUserActivity({
@@ -81,11 +92,22 @@ class NotificationController {
         feature: 'pengaturan_sistem',
         action: 'broadcast',
         description: `Mengirim pemberitahuan ke seluruh pengguna: ${req.body.title}`,
-        metadata: { recipients: result.data?.recipients },
+        metadata: {
+          announcementId: result.data?.announcementId,
+          recipients: result.data?.recipients,
+          withImage: Boolean(imagePath),
+        },
       });
     }
 
     res.status(result.success ? 201 : 400).json(result);
+  };
+
+  /** Riwayat siaran untuk admin (hanya admin, dijaga `requireRole` di router). */
+  getBroadcastHistory = async (req: Request, res: Response): Promise<void> => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+    const result = await notificationService.getBroadcastHistory(limit);
+    res.status(result.success ? 200 : 400).json(result);
   };
 
   getMine = async (req: Request, res: Response): Promise<void> => {
@@ -214,7 +236,8 @@ export const notificationValidators = {
       .withMessage('Isi pemberitahuan wajib diisi')
       .isLength({ max: BROADCAST_MESSAGE_MAX_LENGTH })
       .withMessage(`Isi pemberitahuan maksimal ${BROADCAST_MESSAGE_MAX_LENGTH} karakter`),
-    validateRequest,
+    // Tanpa `validateRequest` di sini: route siaran menyisipkan pembersih file
+    // unggahan lebih dulu sebelum permintaan ditolak.
   ],
 };
 

@@ -9,7 +9,7 @@ import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middlewa
 import { borrowingPreflightMiddleware } from './middlewares/borrowing-preflight.middleware';
 import { errorHandler } from './middlewares/error-handler.middleware';
 import { requestContextMiddleware } from './middlewares/request-context.middleware';
-import { getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
+import { getAnnouncementUploadsDir, getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
 import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
@@ -190,6 +190,14 @@ export const createApp = (): express.Application => {
     next();
   });
   app.use('/uploads/maintenance', express.static(getMaintenanceUploadsDir()));
+  // Gambar siaran mengikuti pola foto profil: dimuat lewat <img> sehingga harus
+  // lolos Cross-Origin-Resource-Policy, dan dapat diakses tanpa autentikasi oleh
+  // siapa pun yang mengetahui nama filenya yang teracak.
+  app.use('/uploads/announcements', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  });
+  app.use('/uploads/announcements', express.static(getAnnouncementUploadsDir()));
 
   const healthHandler = (req: express.Request, res: express.Response) => {
     const status = infrastructureStatus.database === 'up' && infrastructureStatus.schema === 'up'

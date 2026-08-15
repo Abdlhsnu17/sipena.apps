@@ -45,8 +45,6 @@ Backend membuat tepat satu admin awal hanya bila seluruh variabel tersebut teris
 
 Migration runner membaca semua file `.sql` di root `database/migrations` (non-recursive) berdasarkan urutan nama dan mencatat hasilnya di tabel `schema_migrations`.
 
-Migrasi historis yang sudah digabung ke baseline schema dipindahkan ke `database/migrations/archive/2026-08-02-baseline/` agar folder migrasi aktif tidak menumpuk.
-
 Baseline `schema.sql` saat ini sudah mencakup perubahan berikut:
 
 - sanksi, perpanjangan peminjaman, dan keamanan user;

@@ -21,6 +21,19 @@ export interface AppNotification {
   isRead: boolean;
   readAt?: string;
   createdAt?: string;
+  /** Relatif terhadap root uploads, mis. `announcements/abc.png`. */
+  imagePath?: string | null;
+}
+
+export interface BroadcastHistoryItem {
+  id: number;
+  title: string;
+  message: string;
+  imagePath?: string | null;
+  createdByName?: string | null;
+  createdAt?: string;
+  recipients: number;
+  readCount: number;
 }
 
 export interface NotificationListResponse {
@@ -48,15 +61,33 @@ export interface NotificationDeliveryStatus {
 /** Sinkron dengan batas di `notification.controller.ts`. */
 export const BROADCAST_TITLE_MAX_LENGTH = 150;
 export const BROADCAST_MESSAGE_MAX_LENGTH = 1000;
+/** Sinkron dengan batas multer di `notification.routes.ts`. */
+export const BROADCAST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 class NotificationService {
   /** Khusus admin: mengirim satu pemberitahuan ke seluruh pengguna aktif. */
-  async broadcast(payload: { title: string; message: string }) {
+  async broadcast(payload: { title: string; message: string; image?: File | null }) {
+    // Selalu multipart supaya satu endpoint melayani kiriman dengan maupun
+    // tanpa gambar.
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    formData.append('message', payload.message);
+    if (payload.image) formData.append('image', payload.image);
+
     return apiService.post<{
       success: boolean;
       message: string;
-      data?: { recipients: number };
-    }>('/notifications/broadcast', payload);
+      data?: { announcementId: number; recipients: number };
+    }>('/notifications/broadcast', formData);
+  }
+
+  /** Khusus admin: riwayat siaran beserta jumlah penerima dan pembacanya. */
+  async getBroadcastHistory(limit = 5) {
+    return apiService.get<{
+      success: boolean;
+      message: string;
+      data?: BroadcastHistoryItem[];
+    }>(`/notifications/broadcasts?limit=${limit}`);
   }
 
   async list(params: {

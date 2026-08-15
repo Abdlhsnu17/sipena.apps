@@ -6,7 +6,6 @@ Folder ini adalah lokasi kanonis artefak skema database SIPENA. Isinya murni SQL
 
 - `seeds/schema.sql`: struktur dasar untuk instalasi database baru; tidak berisi data contoh.
 - `migrations/*.sql`: migrasi aktif (baru) setelah baseline schema terbaru.
-- `migrations/archive/`: arsip migrasi historis yang sudah digabung ke baseline schema.
 - `seeds/README.md`: panduan khusus impor seed melalui MySQL/phpMyAdmin.
 
 ## Inisialisasi Database
@@ -25,7 +24,7 @@ npm run migrate --workspace=inventory-backend
 
 Migration runner mencatat migrasi yang selesai agar tidak diterapkan dua kali. Tetap lakukan backup dan uji restore sebelum migrasi production.
 
-Baseline saat ini sudah mencakup migrasi historis sampai perubahan DSS. Arsip migrasi historis disimpan di `migrations/archive/2026-08-02-baseline/` untuk audit, namun tidak dibaca ulang oleh migration runner.
+Baseline saat ini sudah mencakup migrasi historis sampai perubahan DSS. Migration runner hanya membaca migrasi aktif di root `migrations/`.
 
 ## Workflow Perubahan Skema
 

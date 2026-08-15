@@ -1,7 +1,7 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
-import { CreateNotificationDTO, Notification, NotificationCategory } from '../models/notification.model';
+import { Announcement, CreateNotificationDTO, Notification, NotificationCategory } from '../models/notification.model';
 import { createScopedLogger } from '../utils/logger';
 import { notificationStreamHub } from '../utils/notification-stream';
 
@@ -20,6 +20,19 @@ interface NotificationRow extends RowDataPacket {
   is_read: number;
   read_at: Date | null;
   created_at: Date;
+  announcement_image_path?: string | null;
+}
+
+interface AnnouncementRow extends RowDataPacket {
+  id: number;
+  title: string;
+  message: string;
+  image_path: string | null;
+  created_by: number | null;
+  created_by_name: string | null;
+  created_at: Date;
+  recipients: number;
+  read_count: number;
 }
 
 const mapRow = (row: NotificationRow): Notification => ({
@@ -35,6 +48,7 @@ const mapRow = (row: NotificationRow): Notification => ({
   isRead: Boolean(row.is_read),
   readAt: row.read_at ?? undefined,
   createdAt: row.created_at,
+  imagePath: row.announcement_image_path ?? null,
 });
 
 export class NotificationService {
@@ -142,8 +156,9 @@ export class NotificationService {
   async broadcast(payload: {
     title: string;
     message: string;
+    imagePath?: string | null;
     actorId: number;
-  }): Promise<ApiResponse<{ recipients: number }>> {
+  }): Promise<ApiResponse<{ announcementId: number; recipients: number }>> {
     try {
       const [rows] = await pool.query<RowDataPacket[]>(
         `SELECT id FROM users
@@ -156,27 +171,87 @@ export class NotificationService {
         return { success: false, message: 'Tidak ada pengguna aktif yang bisa dikirimi pemberitahuan' };
       }
 
+      // Isi siaran disimpan sekali di `announcements`; baris notifikasi per
+      // penerima hanya menunjuk ke sini lewat reference_type/reference_id.
+      const [inserted] = await pool.query<ResultSetHeader>(
+        `INSERT INTO announcements (title, message, image_path, created_by)
+         VALUES (?, ?, ?, ?)`,
+        [payload.title, payload.message, payload.imagePath ?? null, payload.actorId]
+      );
+      const announcementId = inserted.insertId;
+
       const stored = await this.createForUsers(recipientIds, {
         type: 'admin_broadcast',
         category: 'system',
         title: payload.title,
         message: payload.message,
+        referenceType: 'announcement',
+        referenceId: announcementId,
       });
 
       if (!stored) {
+        // Siaran tanpa penerima tidak ada gunanya dan hanya akan muncul di
+        // riwayat seolah-olah terkirim, jadi barisnya dibatalkan.
+        await pool.query('DELETE FROM announcements WHERE id = ?', [announcementId]);
         return { success: false, message: 'Pemberitahuan gagal dikirim' };
       }
 
-      logger.info('Admin broadcast sent', { actorId: payload.actorId, recipients: recipientIds.length });
+      logger.info('Admin broadcast sent', {
+        actorId: payload.actorId,
+        announcementId,
+        recipients: recipientIds.length,
+        withImage: Boolean(payload.imagePath),
+      });
 
       return {
         success: true,
         message: `Pemberitahuan terkirim ke ${recipientIds.length} pengguna`,
-        data: { recipients: recipientIds.length },
+        data: { announcementId, recipients: recipientIds.length },
       };
     } catch (error) {
       logger.error('Failed to broadcast notification', { error, actorId: payload.actorId });
       return { success: false, message: 'Pemberitahuan gagal dikirim' };
+    }
+  }
+
+  /** Riwayat siaran beserta berapa penerima yang sudah membacanya. */
+  async getBroadcastHistory(limit = 10): Promise<ApiResponse<Announcement[]>> {
+    try {
+      const [rows] = await pool.query<AnnouncementRow[]>(
+        `SELECT a.id, a.title, a.message, a.image_path, a.created_by, a.created_at,
+                u.name AS created_by_name,
+                COUNT(n.id) AS recipients,
+                COALESCE(SUM(n.is_read), 0) AS read_count
+           FROM announcements a
+           LEFT JOIN users u ON u.id = a.created_by
+           LEFT JOIN notifications n
+             ON n.reference_type = 'announcement' AND n.reference_id = a.id
+          GROUP BY a.id
+          -- id dipakai sebagai pemecah seri: created_at hanya presisi detik,
+          -- sehingga dua siaran berurutan bisa tertukar urutannya tanpa ini.
+          ORDER BY a.created_at DESC, a.id DESC
+          LIMIT ?`,
+        [limit]
+      );
+
+      return {
+        success: true,
+        message: 'Riwayat pemberitahuan berhasil diambil',
+        data: rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          message: row.message,
+          imagePath: row.image_path,
+          createdBy: row.created_by,
+          createdByName: row.created_by_name,
+          createdAt: row.created_at,
+          recipients: Number(row.recipients ?? 0),
+          readCount: Number(row.read_count ?? 0),
+        })),
+      };
+    } catch (error) {
+      logger.error('Failed to fetch broadcast history', { error });
+      return { success: false, message: 'Riwayat pemberitahuan gagal diambil' };
     }
   }
 
@@ -189,29 +264,37 @@ export class NotificationService {
       const limit = filters.limit ?? 20;
       const offset = (page - 1) * limit;
 
-      const conditions: string[] = ['user_id = ?'];
+      const conditions: string[] = ['n.user_id = ?'];
       const params: unknown[] = [userId];
 
       if (filters.unreadOnly) {
-        conditions.push('is_read = 0');
+        conditions.push('n.is_read = 0');
       }
       if (filters.category) {
-        conditions.push('category = ?');
+        conditions.push('n.category = ?');
         params.push(filters.category);
       }
 
       const where = `WHERE ${conditions.join(' AND ')}`;
 
       const [[countRow]] = await pool.query<RowDataPacket[]>(
-        `SELECT COUNT(*) AS total FROM notifications ${where}`,
+        `SELECT COUNT(*) AS total FROM notifications n ${where}`,
         params
       );
       const [[unreadRow]] = await pool.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS unreadCount FROM notifications WHERE user_id = ? AND is_read = 0`,
         [userId]
       );
+      // JOIN ke announcements supaya gambar siaran ikut terbawa tanpa perlu
+      // menduplikasi path-nya di setiap baris notifikasi.
       const [rows] = await pool.query<NotificationRow[]>(
-        `SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        `SELECT n.*, a.image_path AS announcement_image_path
+           FROM notifications n
+           LEFT JOIN announcements a
+             ON n.reference_type = 'announcement' AND n.reference_id = a.id
+          ${where}
+          ORDER BY n.created_at DESC
+          LIMIT ? OFFSET ?`,
         [...params, limit, offset]
       );
 
