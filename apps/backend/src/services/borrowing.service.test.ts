@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const notificationCreate = vi.fn();
 vi.mock('./notification.service', () => ({
@@ -211,6 +211,12 @@ describe('BorrowingService notifikasi sanksi', () => {
 
   beforeEach(() => {
     notificationCreate.mockClear();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-21T09:00:00'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('memberi tahu peminjam beserta jumlah hari keterlambatan', () => {
@@ -221,7 +227,7 @@ describe('BorrowingService notifikasi sanksi', () => {
         borrowing_code: 'PJM-2026-0042',
         asset_detail_name: 'Infusion Pump',
         asset_detail_code: 'MED-011',
-        due_date: new Date(Date.now() - 3 * 86400000),
+        due_date: new Date('2026-07-18T09:00:00'),
       },
     ]);
 
