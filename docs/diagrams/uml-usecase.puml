@@ -14,15 +14,15 @@ actor "Pengguna Publik" as Guest
 actor "Pengguna Terautentikasi" as Authenticated
 actor Admin
 actor Leader
-actor Staff
 actor "Staff PJ" as StaffPJ
+actor "Staff Pelayanan" as Staff
 actor Teknisi
-actor User
+actor Pengguna as User
 
 Authenticated <|-- Admin
 Authenticated <|-- Leader
-Authenticated <|-- Staff
 Authenticated <|-- StaffPJ
+Authenticated <|-- Staff
 Authenticated <|-- Teknisi
 Authenticated <|-- User
 
@@ -31,23 +31,32 @@ rectangle "SIPENA" {
     usecase "Login" as UC_Login
     usecase "Register" as UC_Register
     usecase "Reset Password" as UC_ResetPassword
+    usecase "Verifikasi Kode OTP" as UC_VerifyOtp
     usecase "Logout" as UC_Logout
     usecase "Lihat Profil" as UC_ViewProfile
     usecase "Ubah Profil" as UC_EditProfile
-    usecase "Unggah Foto Profil" as UC_UploadPhoto
-    usecase "Ubah Password" as UC_ChangePassword
+    usecase "Ubah Password Sendiri" as UC_ChangePassword
+  }
+
+  package "Notifikasi" {
+    usecase "Lihat Notifikasi" as UC_ViewNotification
+    usecase "Tandai Notifikasi Dibaca" as UC_ReadNotification
+    usecase "Hapus Notifikasi" as UC_DeleteNotification
   }
 
   package "Inventaris Aset" {
     usecase "Lihat Daftar Aset" as UC_ViewAssets
     usecase "Cari dan Filter Aset" as UC_SearchAssets
     usecase "Lihat Detail Aset" as UC_AssetDetail
+    usecase "Pindai QR Aset" as UC_ScanAsset
     usecase "Tambah Aset" as UC_AddAsset
     usecase "Ubah Aset" as UC_EditAsset
+    usecase "Impor Aset Massal" as UC_ImportAsset
     usecase "Hapus Aset" as UC_DeleteAsset
+    usecase "Reset Inventaris" as UC_ResetInventory
   }
 
-  package "Peminjaman" {
+  package "Peminjaman & Pengembalian" {
     usecase "Ajukan Peminjaman" as UC_CreateBorrowing
     usecase "Lihat Daftar Peminjaman" as UC_ViewBorrowing
     usecase "Lihat Detail Peminjaman" as UC_BorrowingDetail
@@ -56,27 +65,41 @@ rectangle "SIPENA" {
     usecase "Tolak Peminjaman" as UC_RejectBorrowing
     usecase "Catat Pengembalian" as UC_ReturnBorrowing
     usecase "Validasi Pengembalian" as UC_ValidateReturn
+    usecase "Perpanjang Jatuh Tempo" as UC_ExtendBorrowing
     usecase "Hapus Data Peminjaman" as UC_DeleteBorrowing
+  }
+
+  package "Penggunaan Aset" {
+    usecase "Catat Penggunaan Aset" as UC_CreateUsage
+    usecase "Lihat Log Penggunaan" as UC_ViewUsage
+    usecase "Selesaikan Penggunaan" as UC_CompleteUsage
+    usecase "Izin Penggunaan Darurat" as UC_EmergencyUsage
+    usecase "Hapus Log Penggunaan" as UC_DeleteUsage
   }
 
   package "Pemeliharaan" {
     usecase "Buat Pemeliharaan Sarana" as UC_CreateMaintenance
     usecase "Lihat Daftar Pemeliharaan" as UC_ViewMaintenance
     usecase "Lihat Detail Pemeliharaan" as UC_MaintenanceDetail
-    usecase "Ubah Pemeliharaan" as UC_EditMaintenance
-    usecase "Tandai Pengecekan Lanjutan" as UC_CompleteMaintenance
-    usecase "Validasi Akhir Pemeliharaan" as UC_ValidateMaintenance
-    usecase "Batalkan Pemeliharaan" as UC_CancelMaintenance
+    usecase "Ubah Data Pemeliharaan" as UC_EditMaintenance
+    usecase "Selesaikan Pemeliharaan" as UC_CompleteMaintenance
+    usecase "Kelola Lampiran Pemeliharaan" as UC_MaintenanceAttachment
+    usecase "Kirim Pengingat Jadwal" as UC_DispatchReminder
+    usecase "Kelola Riwayat Pemeliharaan" as UC_MaintenanceHistory
     usecase "Hapus Record Pemeliharaan" as UC_DeleteMaintenance
   }
 
-  package "Jadwal Pemeliharaan" {
-    usecase "Buat Jadwal Pemeliharaan" as UC_CreateSchedule
-    usecase "Lihat Jadwal Pemeliharaan" as UC_ViewSchedule
-    usecase "Lihat Detail Jadwal" as UC_ScheduleDetail
-    usecase "Ubah Jadwal Pemeliharaan" as UC_EditSchedule
-    usecase "Ubah Status Jadwal" as UC_UpdateScheduleStatus
-    usecase "Hapus Jadwal Pemeliharaan" as UC_DeleteSchedule
+  package "Sanksi Keterlambatan" {
+    usecase "Lihat Statistik Sanksi" as UC_ViewSanction
+    usecase "Selesaikan Sanksi" as UC_ResolveSanction
+    usecase "Bebaskan Sanksi" as UC_WaiveSanction
+  }
+
+  package "Pemusnahan & Penghapusan" {
+    usecase "Ajukan Pemusnahan Aset" as UC_RequestDisposal
+    usecase "Putuskan Pemusnahan Aset" as UC_DecideDisposal
+    usecase "Ajukan Penghapusan Data" as UC_RequestDeletion
+    usecase "Putuskan Penghapusan Data" as UC_DecideDeletion
   }
 
   package "Laporan & Analitik" {
@@ -84,11 +107,12 @@ rectangle "SIPENA" {
     usecase "Lihat Laporan Aset" as UC_AssetReport
     usecase "Lihat Laporan Peminjaman" as UC_BorrowingReport
     usecase "Lihat Laporan Pemeliharaan" as UC_MaintenanceReport
+    usecase "Hitung SPK Prioritas (AHP)" as UC_Dss
     usecase "Ekspor PDF" as UC_ExportPdf
     usecase "Ekspor Excel" as UC_ExportExcel
   }
 
-  package "Unggah Dokumen" {
+  package "Dokumen Unggahan" {
     usecase "Unggah Dokumen" as UC_UploadReport
     usecase "Lihat Dokumen" as UC_ViewUploads
     usecase "Unduh Dokumen" as UC_DownloadUpload
@@ -96,8 +120,9 @@ rectangle "SIPENA" {
     usecase "Hapus Dokumen" as UC_DeleteUpload
   }
 
-  package "Dokumentasi Sistem" {
-    usecase "Lihat Riwayat Aktivitas" as UC_ViewActivity
+  package "Dokumentasi & Arsip" {
+    usecase "Lihat Aktivitas Sendiri" as UC_ViewOwnActivity
+    usecase "Lihat Seluruh Aktivitas" as UC_ViewAllActivity
     usecase "Akses Dokumentasi Sistem" as UC_ViewUML
   }
 
@@ -107,92 +132,118 @@ rectangle "SIPENA" {
     usecase "Tambah Pengguna" as UC_AddUser
     usecase "Ubah Pengguna" as UC_EditUser
     usecase "Hapus Pengguna" as UC_DeleteUser
-    usecase "Ubah Password Pengguna" as UC_AdminChangePassword
+    usecase "Hapus Pengguna Massal" as UC_BulkDeleteUser
+    usecase "Reset Password Pengguna" as UC_AdminResetPassword
+    usecase "Atur Matriks Hak Akses Menu" as UC_AccessMatrix
   }
 }
 
+' ============ Aktor pra-login ============
 Guest --> UC_Login
 Guest --> UC_Register
 Guest --> UC_ResetPassword
 
+' ============ Hak dasar seluruh role ============
 Authenticated --> UC_Logout
 Authenticated --> UC_ViewProfile
 Authenticated --> UC_EditProfile
-Authenticated --> UC_UploadPhoto
 Authenticated --> UC_ChangePassword
-Authenticated --> UC_ViewActivity
-Authenticated --> UC_ViewUML
+Authenticated --> UC_ViewNotification
+Authenticated --> UC_ReadNotification
+Authenticated --> UC_DeleteNotification
 Authenticated --> UC_UploadReport
 Authenticated --> UC_ViewUploads
 Authenticated --> UC_DownloadUpload
 Authenticated --> UC_PreviewUpload
+Authenticated --> UC_ViewOwnActivity
+Authenticated --> UC_ViewUML
+Authenticated --> UC_ViewDashboard
+Authenticated --> UC_Dss
+Authenticated --> UC_ScanAsset
 
+' ============ Pengguna (self-service) ============
 User --> UC_ViewAssets
-User --> UC_SearchAssets
 User --> UC_AssetDetail
 User --> UC_CreateBorrowing
 User --> UC_ViewBorrowing
 User --> UC_BorrowingDetail
 User --> UC_ReturnBorrowing
-User --> UC_ViewDashboard
-User --> UC_ViewProfile
-User --> UC_EditProfile
+User --> UC_ExtendBorrowing
+User --> UC_CreateUsage
+User --> UC_ViewUsage
+User --> UC_CompleteUsage
 
+' ============ Staff Pelayanan ============
 Staff --> UC_ViewAssets
-Staff --> UC_SearchAssets
 Staff --> UC_AssetDetail
 Staff --> UC_CreateBorrowing
 Staff --> UC_ViewBorrowing
 Staff --> UC_BorrowingDetail
 Staff --> UC_ReturnBorrowing
-Staff --> UC_ViewMaintenance
+Staff --> UC_ExtendBorrowing
+Staff --> UC_CreateUsage
+Staff --> UC_ViewUsage
+Staff --> UC_CompleteUsage
 Staff --> UC_CreateMaintenance
-Staff --> UC_ViewSchedule
-Staff --> UC_CreateSchedule
-Staff --> UC_EditSchedule
-Staff --> UC_ViewDashboard
+Staff --> UC_ViewMaintenance
+Staff --> UC_MaintenanceDetail
+Staff --> UC_EditMaintenance
+Staff --> UC_MaintenanceAttachment
+Staff --> UC_ViewUsers
+Staff --> UC_ViewAllActivity
 Staff --> UC_AssetReport
 Staff --> UC_BorrowingReport
 Staff --> UC_MaintenanceReport
 Staff --> UC_ExportPdf
 Staff --> UC_ExportExcel
 
+' ============ Staff PJ ============
 StaffPJ --> UC_ViewAssets
-StaffPJ --> UC_SearchAssets
 StaffPJ --> UC_AssetDetail
 StaffPJ --> UC_AddAsset
 StaffPJ --> UC_EditAsset
+StaffPJ --> UC_ImportAsset
+StaffPJ --> UC_RequestDisposal
 StaffPJ --> UC_CreateBorrowing
 StaffPJ --> UC_ViewBorrowing
 StaffPJ --> UC_BorrowingDetail
+StaffPJ --> UC_ApproveBorrowing
+StaffPJ --> UC_RejectBorrowing
 StaffPJ --> UC_ReturnBorrowing
+StaffPJ --> UC_ValidateReturn
+StaffPJ --> UC_ExtendBorrowing
+StaffPJ --> UC_CreateUsage
+StaffPJ --> UC_ViewUsage
+StaffPJ --> UC_CompleteUsage
+StaffPJ --> UC_EmergencyUsage
 StaffPJ --> UC_CreateMaintenance
 StaffPJ --> UC_ViewMaintenance
-StaffPJ --> UC_CreateSchedule
-StaffPJ --> UC_ViewSchedule
-StaffPJ --> UC_EditSchedule
-StaffPJ --> UC_ViewDashboard
+StaffPJ --> UC_MaintenanceDetail
+StaffPJ --> UC_EditMaintenance
+StaffPJ --> UC_MaintenanceAttachment
+StaffPJ --> UC_ViewUsers
+StaffPJ --> UC_ViewAllActivity
 StaffPJ --> UC_AssetReport
 StaffPJ --> UC_BorrowingReport
 StaffPJ --> UC_MaintenanceReport
 StaffPJ --> UC_ExportPdf
 StaffPJ --> UC_ExportExcel
 
+' ============ Teknisi ============
 Teknisi --> UC_ViewMaintenance
 Teknisi --> UC_MaintenanceDetail
+Teknisi --> UC_EditMaintenance
 Teknisi --> UC_CompleteMaintenance
-Teknisi --> UC_ValidateMaintenance
-Teknisi --> UC_CancelMaintenance
-Teknisi --> UC_ViewSchedule
-Teknisi --> UC_UpdateScheduleStatus
-Teknisi --> UC_ViewDashboard
+Teknisi --> UC_MaintenanceAttachment
 Teknisi --> UC_MaintenanceReport
 
+' ============ Leader ============
 Leader --> UC_ViewAssets
-Leader --> UC_SearchAssets
 Leader --> UC_AssetDetail
 Leader --> UC_AddAsset
 Leader --> UC_EditAsset
+Leader --> UC_ImportAsset
+Leader --> UC_RequestDisposal
 Leader --> UC_CreateBorrowing
 Leader --> UC_ViewBorrowing
 Leader --> UC_BorrowingDetail
@@ -201,111 +252,151 @@ Leader --> UC_ApproveBorrowing
 Leader --> UC_RejectBorrowing
 Leader --> UC_ReturnBorrowing
 Leader --> UC_ValidateReturn
+Leader --> UC_ExtendBorrowing
+Leader --> UC_CreateUsage
+Leader --> UC_ViewUsage
+Leader --> UC_CompleteUsage
+Leader --> UC_EmergencyUsage
+Leader --> UC_DeleteUsage
+Leader --> UC_CreateMaintenance
 Leader --> UC_ViewMaintenance
 Leader --> UC_MaintenanceDetail
-Leader --> UC_CreateMaintenance
 Leader --> UC_EditMaintenance
 Leader --> UC_CompleteMaintenance
-Leader --> UC_ValidateMaintenance
-Leader --> UC_CancelMaintenance
-Leader --> UC_ViewSchedule
-Leader --> UC_CreateSchedule
-Leader --> UC_EditSchedule
-Leader --> UC_UpdateScheduleStatus
-Leader --> UC_ViewDashboard
+Leader --> UC_MaintenanceAttachment
+Leader --> UC_DispatchReminder
+Leader --> UC_ViewSanction
+Leader --> UC_ResolveSanction
+Leader --> UC_WaiveSanction
+Leader --> UC_RequestDeletion
+Leader --> UC_ViewUsers
+Leader --> UC_AddUser
+Leader --> UC_EditUser
+Leader --> UC_AdminResetPassword
+Leader --> UC_ViewAllActivity
 Leader --> UC_AssetReport
 Leader --> UC_BorrowingReport
 Leader --> UC_MaintenanceReport
 Leader --> UC_ExportPdf
 Leader --> UC_ExportExcel
-Leader --> UC_ViewUsers
-Leader --> UC_AddUser
-Leader --> UC_EditUser
 
+' ============ Administrator ============
 Admin --> UC_ViewAssets
-Admin --> UC_SearchAssets
 Admin --> UC_AssetDetail
 Admin --> UC_AddAsset
 Admin --> UC_EditAsset
+Admin --> UC_ImportAsset
 Admin --> UC_DeleteAsset
+Admin --> UC_ResetInventory
+Admin --> UC_DecideDisposal
+Admin --> UC_CreateBorrowing
 Admin --> UC_ViewBorrowing
 Admin --> UC_BorrowingDetail
-Admin --> UC_CreateBorrowing
+Admin --> UC_EditBorrowing
 Admin --> UC_ApproveBorrowing
 Admin --> UC_RejectBorrowing
 Admin --> UC_ReturnBorrowing
 Admin --> UC_ValidateReturn
-Admin --> UC_EditBorrowing
+Admin --> UC_ExtendBorrowing
 Admin --> UC_DeleteBorrowing
+Admin --> UC_CreateUsage
+Admin --> UC_ViewUsage
+Admin --> UC_CompleteUsage
+Admin --> UC_EmergencyUsage
+Admin --> UC_DeleteUsage
+Admin --> UC_CreateMaintenance
 Admin --> UC_ViewMaintenance
 Admin --> UC_MaintenanceDetail
-Admin --> UC_CreateMaintenance
 Admin --> UC_EditMaintenance
 Admin --> UC_CompleteMaintenance
-Admin --> UC_ValidateMaintenance
-Admin --> UC_CancelMaintenance
+Admin --> UC_MaintenanceAttachment
+Admin --> UC_DispatchReminder
+Admin --> UC_MaintenanceHistory
 Admin --> UC_DeleteMaintenance
-Admin --> UC_ViewSchedule
-Admin --> UC_CreateSchedule
-Admin --> UC_EditSchedule
-Admin --> UC_UpdateScheduleStatus
-Admin --> UC_DeleteSchedule
-Admin --> UC_ViewDashboard
-Admin --> UC_AssetReport
-Admin --> UC_BorrowingReport
-Admin --> UC_MaintenanceReport
-Admin --> UC_DeleteUpload
-Admin --> UC_ExportPdf
-Admin --> UC_ExportExcel
+Admin --> UC_ViewSanction
+Admin --> UC_ResolveSanction
+Admin --> UC_WaiveSanction
+Admin --> UC_DecideDeletion
 Admin --> UC_ViewUsers
 Admin --> UC_UserDetail
 Admin --> UC_AddUser
 Admin --> UC_EditUser
 Admin --> UC_DeleteUser
-Admin --> UC_AdminChangePassword
-Admin --> UC_ViewActivity
+Admin --> UC_BulkDeleteUser
+Admin --> UC_AdminResetPassword
+Admin --> UC_AccessMatrix
+Admin --> UC_ViewAllActivity
+Admin --> UC_AssetReport
+Admin --> UC_BorrowingReport
+Admin --> UC_MaintenanceReport
+Admin --> UC_ExportPdf
+Admin --> UC_ExportExcel
+Admin --> UC_DeleteUpload
 
+' ============ Relasi antar use case ============
+UC_ResetPassword ..> UC_VerifyOtp : <<include>>
 UC_ViewAssets ..> UC_SearchAssets : <<include>>
 UC_ViewAssets ..> UC_AssetDetail : <<include>>
 UC_ViewBorrowing ..> UC_BorrowingDetail : <<include>>
 UC_ViewMaintenance ..> UC_MaintenanceDetail : <<include>>
-UC_ViewSchedule ..> UC_ScheduleDetail : <<include>>
 UC_ViewUploads ..> UC_DownloadUpload : <<include>>
 UC_ViewUploads ..> UC_PreviewUpload : <<include>>
-UC_ViewUploads ..> UC_DeleteUpload : <<include>>
+UC_AssetReport ..> UC_ExportPdf : <<extend>>
+UC_AssetReport ..> UC_ExportExcel : <<extend>>
+UC_BorrowingReport ..> UC_ExportPdf : <<extend>>
+UC_BorrowingReport ..> UC_ExportExcel : <<extend>>
+UC_MaintenanceReport ..> UC_ExportPdf : <<extend>>
+UC_MaintenanceReport ..> UC_ExportExcel : <<extend>>
+UC_CreateUsage ..> UC_EmergencyUsage : <<extend>>
+UC_DeleteAsset ..> UC_DecideDisposal : <<include>>
+UC_DeleteBorrowing ..> UC_DecideDeletion : <<include>>
+UC_RequestDisposal ..> UC_DecideDisposal : <<include>>
+UC_RequestDeletion ..> UC_DecideDeletion : <<include>>
 
 note right of Authenticated
-  Semua aktor terautentikasi dapat
-  mengelola akun sendiri, mengakses
-  dokumentasi sistem,
-  melihat riwayat aktivitas, dan
-  mengelola dokumen sesuai hak akses.
+  Hak dasar yang diwarisi semua role:
+  kelola akun sendiri, notifikasi,
+  dokumen unggahan, pemindai QR,
+  SPK prioritas aset, dashboard laporan,
+  dokumentasi sistem, dan riwayat
+  aktivitas miliknya sendiri.
 end note
 
 note right of StaffPJ
-  Staff dan Staff PJ mengikuti
-  staff_access_type:
-  medis, non-medis, atau all.
+  Staff Pelayanan dan Staff PJ mengikuti
+  staff_access_type: medis, non-medis,
+  atau all. Staff PJ berwenang menyetujui
+  peminjaman dan memvalidasi pengembalian,
+  Staff Pelayanan tidak.
+end note
+
+note bottom of Teknisi
+  Teknisi hanya menyentuh modul
+  pemeliharaan. Tidak mengakses
+  inventaris, peminjaman,
+  penggunaan aset, sanksi,
+  maupun manajemen pengguna.
 end note
 
 note bottom of Leader
-  Leader fokus pada pengawasan
-  operasional, validasi transaksi,
-  dan pembinaan user operasional.
+  Leader mengawasi dan memvalidasi,
+  tetapi tidak memiliki hak hapus.
+  Penghapusan aset dan data transaksi
+  diajukan lewat permintaan yang
+  diputuskan admin.
 end note
 
 note bottom of Admin
-  Admin memiliki akses paling luas
-  pada pengelolaan data dan dokumen.
+  Admin satu-satunya pemegang hak hapus
+  permanen dan pemutus akhir setiap
+  pengajuan, termasuk pengaturan
+  matriks hak akses menu per role.
 end note
 
 note bottom of User
   Pengguna bersifat self-service:
   pinjam, kembalikan, dan catat
   penggunaan miliknya sendiri.
-  Tidak mengakses modul pemeliharaan,
-  manajemen pengguna, sanksi,
-  maupun pemusnahan aset.
 end note
 
 @enduml

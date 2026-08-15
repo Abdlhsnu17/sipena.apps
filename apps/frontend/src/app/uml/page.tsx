@@ -11,12 +11,14 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  Bell,
   Box,
   Boxes,
   CalendarClock,
   ClipboardList,
   Crown,
   Database,
+  FileCheck,
   FileText,
   Globe,
   History,
@@ -597,7 +599,7 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Pra-Login",
     icon: Globe,
     accent: "slate",
-    summary: "Aktor yang belum memiliki sesi aktif. Interaksinya terbatas pada gerbang autentikasi sebelum masuk ke sistem.",
+    summary: "Aktor tanpa sesi aktif. Interaksinya berhenti di gerbang autentikasi sebelum masuk ke sistem.",
     groups: [
       {
         module: "Autentikasi",
@@ -605,12 +607,12 @@ const useCaseActors: UseCaseActor[] = [
         level: "ajukan",
         points: [
           "Login memakai NIP dan password",
-          "Registrasi akun baru dan menunggu aktivasi admin",
-          "Reset password lewat kode verifikasi yang dikirim ke email",
+          "Registrasi akun baru, lalu menunggu aktivasi admin",
+          "Reset password: verifikasi NIP, kirim ulang & masukkan kode OTP, atur password baru",
         ],
       },
     ],
-    note: "Tidak ada akses ke data aset, transaksi, maupun laporan sebelum sesi terbentuk.",
+    note: "Belum memiliki akses ke data aset, transaksi, dokumen, maupun laporan.",
   },
   {
     actor: "Pengguna Terautentikasi",
@@ -618,24 +620,34 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Hak Dasar",
     icon: KeyRound,
     accent: "emerald",
-    summary: "Aktor generalisasi. Seluruh role di bawah ini mewarisi hak akses berikut begitu berhasil login.",
+    summary: "Aktor generalisasi. Enam role di bawah ini mewarisi seluruh hak akses dasar berikut begitu sesi terbentuk.",
     groups: [
       {
         module: "Akun & Profil",
         icon: UserCog,
         level: "kelola",
         points: [
-          "Logout dan mengelola sesi perangkat sendiri",
-          "Ubah biodata, unit kerja, foto profil, dan password",
+          "Lihat profil sendiri, ubah biodata, unit kerja, dan foto",
+          "Ganti password sendiri dengan verifikasi password lama",
+          "Logout dan mengakhiri sesi perangkat",
         ],
       },
       {
-        module: "Dokumen & Arsip",
+        module: "Notifikasi",
+        icon: Bell,
+        level: "kelola",
+        points: [
+          "Terima notifikasi realtime dan pantau jumlah yang belum dibaca",
+          "Tandai satu atau semua notifikasi sebagai dibaca, lalu hapus",
+        ],
+      },
+      {
+        module: "Dokumen Unggahan",
         icon: Upload,
         level: "ajukan",
         points: [
-          "Unggah, pratinjau, unduh, dan lihat dokumen sesuai hak akses",
-          "Telusuri riwayat aktivitas (teknisi & pengguna hanya log miliknya)",
+          "Unggah dokumen pendukung beserta metadatanya",
+          "Lihat, pratinjau, dan unduh dokumen yang tersedia",
         ],
       },
       {
@@ -643,11 +655,13 @@ const useCaseActors: UseCaseActor[] = [
         icon: ScrollText,
         level: "lihat",
         points: [
-          "Akses dokumentasi sistem: Activity Diagram & Use Case Diagram",
+          "Buka dokumentasi sistem: Activity Diagram & Use Case Diagram",
           "Gunakan pemindai QR aset dan SPK Prioritas Aset (AHP)",
+          "Buka dashboard laporan dan telusuri riwayat aktivitas miliknya sendiri",
         ],
       },
     ],
+    note: "Menghapus dokumen unggahan bukan hak dasar — hanya admin yang dapat melakukannya.",
   },
   {
     actor: "Administrator",
@@ -655,7 +669,7 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Kontrol Penuh",
     icon: ShieldCheck,
     accent: "teal",
-    summary: "Pemegang kendali tertinggi atas data master, transaksi, pengguna, sanksi, dan pemusnahan aset.",
+    summary: "Satu-satunya role dengan hak hapus permanen dan pemutus akhir setiap pengajuan di sistem.",
     groups: [
       {
         module: "Inventaris Aset",
@@ -663,7 +677,7 @@ const useCaseActors: UseCaseActor[] = [
         level: "penuh",
         points: [
           "Tambah, ubah, dan hapus aset medis maupun non-medis",
-          "Impor data massal dan perbaiki kode aset yang keliru",
+          "Impor data massal lewat template dan reset seluruh inventaris",
         ],
       },
       {
@@ -671,8 +685,8 @@ const useCaseActors: UseCaseActor[] = [
         icon: ArrowLeftRight,
         level: "penuh",
         points: [
-          "Setujui atau tolak pengajuan peminjaman",
-          "Validasi pengembalian, ubah, hingga hapus data transaksi",
+          "Setujui atau tolak pengajuan, validasi pengembalian, perpanjang jatuh tempo",
+          "Ubah data transaksi dan hapus permanen dengan alasan penghapusan wajib",
         ],
       },
       {
@@ -680,17 +694,17 @@ const useCaseActors: UseCaseActor[] = [
         icon: Activity,
         level: "penuh",
         points: [
-          "Catat dan selesaikan seluruh log penggunaan lintas unit",
-          "Beri izin penggunaan darurat pada alat berstatus overdue",
+          "Catat, ubah, dan selesaikan seluruh log penggunaan lintas unit",
+          "Hapus log penggunaan serta beri izin pemakaian darurat pada alat overdue",
         ],
       },
       {
-        module: "Pemeliharaan & Jadwal",
+        module: "Pemeliharaan",
         icon: Wrench,
         level: "penuh",
         points: [
-          "Buat jadwal, ubah status, validasi akhir, dan hapus record",
-          "Pantau riwayat pemeliharaan seluruh aset",
+          "Buat, ubah, selesaikan, dan hapus record pemeliharaan",
+          "Kirim pengingat jadwal, kelola lampiran, serta kelola riwayat pemeliharaan",
         ],
       },
       {
@@ -698,17 +712,35 @@ const useCaseActors: UseCaseActor[] = [
         icon: ShieldAlert,
         level: "penuh",
         points: [
-          "Kelola sanksi overdue: selesaikan atau bebaskan",
-          "Setujui atau tolak pengajuan pemusnahan (disposal) aset",
+          "Pantau statistik sanksi overdue lalu selesaikan atau bebaskan",
+          "Putuskan persetujuan atau penolakan pengajuan pemusnahan (disposal) aset",
         ],
       },
       {
-        module: "Pengguna & Laporan",
+        module: "Permintaan Penghapusan",
+        icon: FileCheck,
+        level: "penuh",
+        points: [
+          "Tinjau permintaan penghapusan data yang diajukan Leader",
+          "Setujui atau tolak permintaan sebagai keputusan akhir",
+        ],
+      },
+      {
+        module: "Pengguna & Hak Akses",
         icon: Users,
         level: "penuh",
         points: [
-          "CRUD semua akun termasuk reset password pengguna",
-          "Akses laporan penuh, ekspor PDF/Excel, dan hapus dokumen unggahan",
+          "Lihat daftar dan detail pengguna, tambah, ubah, hapus, hingga hapus massal",
+          "Reset password pengguna dan atur matriks hak akses menu per role",
+        ],
+      },
+      {
+        module: "Laporan & Dokumen",
+        icon: BarChart3,
+        level: "penuh",
+        points: [
+          "Akses seluruh laporan aset, peminjaman, dan pemeliharaan beserta ekspor PDF/Excel",
+          "Hapus dokumen unggahan milik siapa pun",
         ],
       },
     ],
@@ -719,15 +751,15 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Pengawasan",
     icon: Crown,
     accent: "violet",
-    summary: "Pengawas operasional yang memvalidasi proses inti serta memutuskan sanksi dan pemusnahan aset.",
+    summary: "Pengawas operasional yang memvalidasi transaksi dan memutus sanksi, namun setiap penghapusan harus lewat persetujuan admin.",
     groups: [
       {
         module: "Inventaris Aset",
         icon: Boxes,
         level: "kelola",
         points: [
-          "Pantau seluruh inventaris medis dan non-medis",
-          "Tambah dan ubah data aset (tanpa hak hapus)",
+          "Pantau, tambah, ubah, dan impor data aset medis maupun non-medis",
+          "Ajukan pemusnahan aset karena tidak memiliki hak hapus langsung",
         ],
       },
       {
@@ -735,8 +767,8 @@ const useCaseActors: UseCaseActor[] = [
         icon: ArrowLeftRight,
         level: "kelola",
         points: [
-          "Setujui atau tolak pengajuan peminjaman",
-          "Validasi pengembalian dan koreksi data transaksi berjalan",
+          "Setujui atau tolak pengajuan peminjaman dan validasi pengembalian",
+          "Ubah data transaksi serta perpanjang jatuh tempo peminjaman",
         ],
       },
       {
@@ -744,26 +776,35 @@ const useCaseActors: UseCaseActor[] = [
         icon: Activity,
         level: "kelola",
         points: [
-          "Catat dan selesaikan log penggunaan seluruh unit",
-          "Beri izin penggunaan darurat pada alat overdue",
+          "Catat, ubah, selesaikan, dan hapus log penggunaan seluruh unit",
+          "Beri izin penggunaan darurat pada alat berstatus overdue",
         ],
       },
       {
-        module: "Pemeliharaan & Jadwal",
+        module: "Pemeliharaan",
         icon: BadgeCheck,
         level: "kelola",
         points: [
-          "Buat dan ubah jadwal pemeliharaan",
+          "Buat dan ubah pemeliharaan, kirim pengingat jadwal ke teknisi",
           "Validasi hasil kerja teknisi lalu tutup record pemeliharaan",
         ],
       },
       {
-        module: "Sanksi & Pemusnahan",
+        module: "Sanksi",
         icon: ShieldAlert,
         level: "kelola",
         points: [
-          "Selesaikan atau bebaskan sanksi keterlambatan",
-          "Putuskan persetujuan pengajuan pemusnahan aset",
+          "Pantau statistik sanksi keterlambatan pengembalian",
+          "Selesaikan atau bebaskan sanksi beserta catatan resolusinya",
+        ],
+      },
+      {
+        module: "Permintaan Penghapusan",
+        icon: FileCheck,
+        level: "ajukan",
+        points: [
+          "Ajukan permintaan penghapusan data peminjaman, pengembalian, dan aset",
+          "Pantau status permintaan sampai diputuskan admin",
         ],
       },
       {
@@ -771,12 +812,12 @@ const useCaseActors: UseCaseActor[] = [
         icon: BarChart3,
         level: "kelola",
         points: [
-          "Tambah dan ubah akun operasional non-admin",
+          "Lihat daftar pengguna, tambah dan ubah akun operasional, reset password",
           "Akses laporan penuh beserta ekspor PDF/Excel",
         ],
       },
     ],
-    note: "Batas akses: tidak menghapus aset, jadwal pemeliharaan, akun admin, maupun dokumen unggahan.",
+    note: "Batas akses: tidak menghapus aset, transaksi, record pemeliharaan, akun pengguna, maupun dokumen unggahan. Detail pengguna dan matriks hak akses menu hanya milik admin.",
   },
   {
     actor: "Staff PJ",
@@ -784,24 +825,27 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Penanggung Jawab Unit",
     icon: ClipboardList,
     accent: "indigo",
-    summary: "Penanggung jawab unit yang memelihara data inventaris dan mengoordinasikan transaksi di wilayah kerjanya.",
+    summary: "Penanggung jawab unit yang memelihara data inventaris sekaligus memegang kewenangan persetujuan transaksi di wilayah kerjanya.",
     groups: [
       {
         module: "Inventaris Aset",
         icon: Boxes,
         level: "kelola",
         points: [
-          "Tambah dan ubah aset sesuai cakupan unit: medis, non-medis, atau keduanya",
+          "Tambah, ubah, dan impor aset sesuai cakupan unit: medis, non-medis, atau keduanya",
           "Rapikan penempatan aset pada ruangan dan sub ruangan",
+          "Ajukan pemusnahan aset untuk diputuskan admin",
         ],
       },
       {
         module: "Peminjaman & Pengembalian",
         icon: ArrowLeftRight,
-        level: "ajukan",
+        level: "kelola",
         points: [
           "Ajukan peminjaman alat untuk kebutuhan unit",
-          "Catat pengembalian beserta kondisi fisik alat",
+          "Setujui atau tolak pengajuan peminjaman",
+          "Catat pengembalian dan validasi pengembalian alat",
+          "Perpanjang jatuh tempo peminjaman di unitnya",
         ],
       },
       {
@@ -815,16 +859,25 @@ const useCaseActors: UseCaseActor[] = [
         ],
       },
       {
-        module: "Pemeliharaan & Laporan",
+        module: "Pemeliharaan",
         icon: Wrench,
         level: "ajukan",
         points: [
-          "Buat permintaan pemeliharaan dan pantau progres tindak lanjut",
+          "Buat permintaan pemeliharaan dan perbarui datanya",
+          "Unggah lampiran bukti serta pantau progres tindak lanjut",
+        ],
+      },
+      {
+        module: "Pengguna & Laporan",
+        icon: BarChart3,
+        level: "lihat",
+        points: [
+          "Rujuk data pengguna saat menetapkan peminjam dan penanggung jawab aset",
           "Pantau laporan operasional unit beserta ekspornya",
         ],
       },
     ],
-    note: "Cakupan inventaris mengikuti staff access type yang ditetapkan admin. Tidak mengakses manajemen pengguna, sanksi, atau pemusnahan.",
+    note: "Cakupan inventaris mengikuti staff access type yang ditetapkan admin. Tidak mengakses sanksi, keputusan pemusnahan, maupun pengelolaan akun.",
   },
   {
     actor: "Staff Pelayanan",
@@ -832,7 +885,7 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Operasional Harian",
     icon: Stethoscope,
     accent: "sky",
-    summary: "Pelaksana harian di ruang layanan yang memakai alat dan mengajukan kebutuhan pemeliharaan.",
+    summary: "Pelaksana harian di ruang layanan yang memakai alat dan mengajukan kebutuhan pemeliharaan tanpa kewenangan persetujuan.",
     groups: [
       {
         module: "Inventaris Aset",
@@ -840,7 +893,7 @@ const useCaseActors: UseCaseActor[] = [
         level: "lihat",
         points: [
           "Lihat, cari, dan filter inventaris sesuai cakupan unit",
-          "Buka detail aset untuk memastikan ketersediaan",
+          "Buka detail aset untuk memastikan ketersediaan sebelum dipakai",
         ],
       },
       {
@@ -848,8 +901,9 @@ const useCaseActors: UseCaseActor[] = [
         icon: ArrowLeftRight,
         level: "ajukan",
         points: [
-          "Ajukan peminjaman alat dan pantau statusnya",
-          "Catat pengembalian alat beserta catatan kondisi",
+          "Ajukan peminjaman alat dan pantau status persetujuannya",
+          "Catat pengembalian alat beserta kondisi fisiknya",
+          "Ajukan perpanjangan jatuh tempo peminjaman miliknya",
         ],
       },
       {
@@ -862,16 +916,25 @@ const useCaseActors: UseCaseActor[] = [
         ],
       },
       {
-        module: "Pemeliharaan & Laporan",
+        module: "Pemeliharaan",
+        icon: Wrench,
+        level: "ajukan",
+        points: [
+          "Buat permintaan pemeliharaan dan perbarui keterangannya",
+          "Unggah lampiran bukti kerusakan lalu pantau jadwal tindak lanjut",
+        ],
+      },
+      {
+        module: "Pengguna & Laporan",
         icon: BarChart3,
         level: "lihat",
         points: [
-          "Buat permintaan pemeliharaan lalu pantau jadwalnya",
-          "Baca laporan operasional sebagai bahan koordinasi",
+          "Rujuk data pengguna saat mengisi formulir peminjaman dan penggunaan",
+          "Baca laporan operasional beserta riwayat aktivitas unit",
         ],
       },
     ],
-    note: "Penggunaan darurat alat overdue hanya berlaku bila role-nya sama dengan peminjam asal.",
+    note: "Tidak mengubah data master aset, tidak menyetujui transaksi, dan penggunaan darurat alat overdue hanya bila role-nya sama dengan peminjam asal.",
   },
   {
     actor: "Teknisi",
@@ -879,38 +942,38 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Eksekusi Teknis",
     icon: Wrench,
     accent: "orange",
-    summary: "Eksekutor lapangan yang mengerjakan perbaikan dan memperbarui status pemeliharaan aset.",
+    summary: "Eksekutor lapangan yang fokus penuh pada pekerjaan pemeliharaan, tanpa sentuhan ke inventaris maupun transaksi peminjaman.",
     groups: [
       {
         module: "Pemeliharaan",
         icon: Wrench,
         level: "kelola",
         points: [
-          "Buka daftar pemeliharaan dan detail pekerjaan yang ditugaskan",
-          "Isi catatan hasil perbaikan serta kondisi akhir alat",
-          "Tandai pengecekan lanjutan atau batalkan pekerjaan",
+          "Buka daftar dan detail pekerjaan pemeliharaan yang ditugaskan",
+          "Perbarui data pengerjaan: status, biaya, catatan, dan kondisi akhir alat",
+          "Tandai pemeliharaan selesai setelah pengecekan lapangan",
         ],
       },
       {
-        module: "Jadwal Kerja",
+        module: "Jadwal & Lampiran",
         icon: CalendarClock,
         level: "kelola",
         points: [
-          "Lihat jadwal pemeliharaan yang menjadi tanggung jawabnya",
-          "Ubah status jadwal: berjalan, selesai, atau dibatalkan",
+          "Pantau jadwal pemeliharaan berulang yang menjadi tanggung jawabnya",
+          "Unggah lampiran bukti perbaikan pada record pemeliharaan",
         ],
       },
       {
-        module: "Bukti & Laporan",
+        module: "Laporan & Arsip",
         icon: BarChart3,
         level: "lihat",
         points: [
-          "Unggah dokumen bukti perbaikan pada modul unggahan",
-          "Baca laporan pemeliharaan dan riwayat aktivitasnya sendiri",
+          "Baca laporan pemeliharaan dan riwayat perbaikan aset",
+          "Telusuri riwayat aktivitas miliknya sendiri",
         ],
       },
     ],
-    note: "Tidak mengakses inventaris, peminjaman, manajemen pengguna, sanksi, maupun pemusnahan.",
+    note: "Tidak mengakses inventaris, peminjaman, penggunaan aset, sanksi, pemusnahan, maupun manajemen pengguna.",
   },
   {
     actor: "Pengguna",
@@ -918,7 +981,7 @@ const useCaseActors: UseCaseActor[] = [
     tier: "Self-Service",
     icon: UserRound,
     accent: "amber",
-    summary: "Role mandiri untuk pinjam pakai alat tanpa kewenangan atas data master maupun keputusan operasional.",
+    summary: "Role mandiri untuk pinjam pakai alat. Semua aktivitasnya berhenti pada data miliknya sendiri.",
     groups: [
       {
         module: "Inventaris Aset",
@@ -934,8 +997,9 @@ const useCaseActors: UseCaseActor[] = [
         icon: ArrowLeftRight,
         level: "ajukan",
         points: [
-          "Ajukan peminjaman dan pantau riwayat pengajuannya sendiri",
-          "Catat pengembalian alat untuk diverifikasi petugas",
+          "Ajukan peminjaman lalu pantau riwayat pengajuannya sendiri",
+          "Catat pengembalian alat untuk divalidasi petugas",
+          "Ajukan perpanjangan jatuh tempo peminjaman miliknya",
         ],
       },
       {
@@ -952,12 +1016,12 @@ const useCaseActors: UseCaseActor[] = [
         icon: Scale,
         level: "lihat",
         points: [
-          "Baca ringkasan laporan dan hasil SPK prioritas aset",
+          "Baca dashboard laporan dan hasil SPK prioritas aset",
           "Telusuri riwayat aktivitas miliknya sendiri",
         ],
       },
     ],
-    note: "Tidak memiliki akses ke modul pemeliharaan, manajemen pengguna, sanksi, maupun pemusnahan aset.",
+    note: "Tidak mengakses modul pemeliharaan, sanksi, pemusnahan, manajemen pengguna, maupun daftar pengguna.",
   },
 ]
 
