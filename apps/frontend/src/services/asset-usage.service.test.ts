@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toIsoDateTimeString } from "../utils/date-input";
-
 const postMock = vi.fn();
 const patchMock = vi.fn();
 
@@ -20,7 +18,7 @@ describe("assetUsageService", () => {
     patchMock.mockResolvedValue({ success: true, message: "ok", data: { id: 1, startedAt: "2026-08-14T09:30:00.000Z" } });
   });
 
-  it("mengubah datetime lokal menjadi ISO UTC saat create", async () => {
+  it("mempertahankan jam lokal yang dipilih saat create", async () => {
     const { assetUsageService } = await import("./asset-usage.service");
 
     await assetUsageService.create({
@@ -33,12 +31,12 @@ describe("assetUsageService", () => {
 
     expect(postMock).toHaveBeenCalledTimes(1);
     expect(postMock.mock.calls[0][1]).toMatchObject({
-      startedAt: toIsoDateTimeString("2026-08-14T09:30"),
-      endedAt: toIsoDateTimeString("2026-08-14T10:15"),
+      startedAt: "2026-08-14T09:30:00",
+      endedAt: "2026-08-14T10:15:00",
     });
   });
 
-  it("mengubah datetime lokal menjadi ISO UTC saat update", async () => {
+  it("mempertahankan jam lokal yang dipilih saat update", async () => {
     const { assetUsageService } = await import("./asset-usage.service");
 
     await assetUsageService.update(1, {
@@ -48,8 +46,8 @@ describe("assetUsageService", () => {
 
     expect(patchMock).toHaveBeenCalledTimes(1);
     expect(patchMock.mock.calls[0][1]).toMatchObject({
-      startedAt: toIsoDateTimeString("2026-08-14T09:30"),
-      endedAt: toIsoDateTimeString("2026-08-14T10:15"),
+      startedAt: "2026-08-14T09:30:00",
+      endedAt: "2026-08-14T10:15:00",
     });
   });
 });

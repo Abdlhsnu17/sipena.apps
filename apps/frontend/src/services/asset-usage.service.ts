@@ -1,5 +1,4 @@
 import { toLocalDateTimeString } from "../utils/format";
-import { toIsoDateTimeString } from "../utils/date-input";
 import apiService from "./api.service";
 
 export type AssetUsageContext = "own_room" | "same_unit_cross_room" | "cross_room" | "emergency" | "procedure" | "rounding" | "other";
@@ -176,8 +175,11 @@ class AssetUsageService {
   private normalizeWritePayload(data: CreateAssetUsageData | UpdateAssetUsageData) {
     return {
       ...data,
-      startedAt: data.startedAt ? toIsoDateTimeString(data.startedAt) : undefined,
-      endedAt: data.endedAt ? toIsoDateTimeString(data.endedAt) : undefined,
+      // Kolom usage memakai MySQL DATETIME (waktu dinding), sehingga nilai dari
+      // <input type="datetime-local"> harus dipertahankan. Mengubahnya menjadi
+      // ISO UTC di sini membuat backend menyimpan jam UTC sebagai jam lokal.
+      startedAt: data.startedAt ? toLocalDateTimeString(data.startedAt) : undefined,
+      endedAt: data.endedAt ? toLocalDateTimeString(data.endedAt) : undefined,
     };
   }
 
