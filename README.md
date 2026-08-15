@@ -406,3 +406,4 @@ Script menyimpan rahasia ke `docker/.env`, memvalidasi URL webhook WhatsApp/SMS,
 - Staff PJ: melihat inventaris serta menambah atau mengubah data inventaris sesuai `staffAccessType`, mengajukan peminjaman, mencatat pengembalian dan penggunaan aset, membuat jadwal pemeliharaan, dan memantau laporan.
 - Teknisi: fokus pada daftar pemeliharaan dan jadwal, mengubah status jadwal, menandai pekerjaan selesai, melakukan validasi akhir teknis, dan membatalkan pemeliharaan bila diperlukan.
 - User: role self-service untuk melihat inventaris, mengajukan peminjaman, mencatat pengembalian dan penggunaan aset, serta mengelola akun sendiri; tidak memiliki akses ke laporan maupun manajemen data master.
+# sipena.space
