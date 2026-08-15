@@ -54,8 +54,8 @@ const state = {
 let driver;
 
 before(async () => {
-  await ensureTestAdmin();
   await waitForApplication();
+  await ensureTestAdmin();
   driver = await createDriver();
 });
 

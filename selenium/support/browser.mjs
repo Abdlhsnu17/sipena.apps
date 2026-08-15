@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -36,9 +37,11 @@ const composeArgs = [
   "docker/compose.yml",
   "-f",
   "docker/compose.override.yml",
-  "--env-file",
-  ".docker.env",
 ];
+
+if (existsSync(path.resolve(repoRoot, ".docker.env"))) {
+  composeArgs.push("--env-file", ".docker.env");
+}
 
 export async function waitForApplication() {
   const probe = async () => {

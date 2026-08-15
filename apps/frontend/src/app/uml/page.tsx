@@ -5,8 +5,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getCurrentUser } from "@/services/auth-utils";
 import { cn } from "@/utils";
 import { normalizeUserRole } from "@/utils/role";
-import { ArrowRight, Box, Database, FileText, Users, Workflow, Zap } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity,
+  ArrowLeftRight,
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Box,
+  Boxes,
+  CalendarClock,
+  ClipboardList,
+  Crown,
+  Database,
+  FileText,
+  Globe,
+  History,
+  KeyRound,
+  LogIn,
+  Scale,
+  ScrollText,
+  ShieldAlert,
+  ShieldCheck,
+  Stethoscope,
+  Upload,
+  UserCog,
+  UserRound,
+  Users,
+  Workflow,
+  Wrench,
+  Zap,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 
 type DiagramSectionId = "activity" | "class" | "erd" | "use-case"
 
@@ -459,112 +488,487 @@ const erdTables = [
   },
 ]
 
+type UseCaseIconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
+
+type UseCaseAccent = "slate" | "emerald" | "teal" | "violet" | "indigo" | "sky" | "orange" | "amber"
+
+type UseCaseLevel = "penuh" | "kelola" | "ajukan" | "lihat"
+
+type UseCaseGroup = {
+  module: string
+  icon: UseCaseIconComponent
+  level: UseCaseLevel
+  points: string[]
+}
+
 type UseCaseActor = {
   actor: string
-  accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange" | "emerald" | "rose"
+  roleKey: string
+  tier: string
+  icon: UseCaseIconComponent
+  accent: UseCaseAccent
   summary: string
-  items: string[]
+  groups: UseCaseGroup[]
   note?: string
+}
+
+const useCaseLevelMeta: Record<UseCaseLevel, { label: string; className: string }> = {
+  penuh: {
+    label: "Akses Penuh",
+    className: "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300",
+  },
+  kelola: {
+    label: "Kelola & Validasi",
+    className: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-300",
+  },
+  ajukan: {
+    label: "Ajukan & Catat",
+    className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300",
+  },
+  lihat: {
+    label: "Lihat Saja",
+    className: "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-300",
+  },
+}
+
+const useCaseAccentMeta: Record<UseCaseAccent, { card: string; icon: string; chip: string; module: string; bullet: string }> = {
+  slate: {
+    card: "border-slate-200 bg-slate-50/80 dark:border-slate-700/60 dark:bg-slate-900/40",
+    icon: "from-slate-500 to-slate-700",
+    chip: "bg-slate-200/80 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200",
+    module: "text-slate-500 dark:text-slate-400",
+    bullet: "bg-slate-400",
+  },
+  emerald: {
+    card: "border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/60 dark:bg-emerald-950/20",
+    icon: "from-emerald-500 to-green-600",
+    chip: "bg-emerald-200/70 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200",
+    module: "text-emerald-600 dark:text-emerald-400",
+    bullet: "bg-emerald-500",
+  },
+  teal: {
+    card: "border-teal-200 bg-teal-50/70 dark:border-teal-800/60 dark:bg-teal-950/20",
+    icon: "from-teal-500 to-cyan-600",
+    chip: "bg-teal-200/70 text-teal-800 dark:bg-teal-400/15 dark:text-teal-200",
+    module: "text-teal-600 dark:text-teal-400",
+    bullet: "bg-teal-500",
+  },
+  violet: {
+    card: "border-violet-200 bg-violet-50/70 dark:border-violet-800/60 dark:bg-violet-950/20",
+    icon: "from-violet-500 to-purple-600",
+    chip: "bg-violet-200/70 text-violet-800 dark:bg-violet-400/15 dark:text-violet-200",
+    module: "text-violet-600 dark:text-violet-400",
+    bullet: "bg-violet-500",
+  },
+  indigo: {
+    card: "border-indigo-200 bg-indigo-50/70 dark:border-indigo-800/60 dark:bg-indigo-950/20",
+    icon: "from-indigo-500 to-blue-600",
+    chip: "bg-indigo-200/70 text-indigo-800 dark:bg-indigo-400/15 dark:text-indigo-200",
+    module: "text-indigo-600 dark:text-indigo-400",
+    bullet: "bg-indigo-500",
+  },
+  sky: {
+    card: "border-sky-200 bg-sky-50/70 dark:border-sky-800/60 dark:bg-sky-950/20",
+    icon: "from-sky-500 to-blue-500",
+    chip: "bg-sky-200/70 text-sky-800 dark:bg-sky-400/15 dark:text-sky-200",
+    module: "text-sky-600 dark:text-sky-400",
+    bullet: "bg-sky-500",
+  },
+  orange: {
+    card: "border-orange-200 bg-orange-50/70 dark:border-orange-800/60 dark:bg-orange-950/20",
+    icon: "from-orange-500 to-amber-600",
+    chip: "bg-orange-200/70 text-orange-800 dark:bg-orange-400/15 dark:text-orange-200",
+    module: "text-orange-600 dark:text-orange-400",
+    bullet: "bg-orange-500",
+  },
+  amber: {
+    card: "border-amber-200 bg-amber-50/70 dark:border-amber-800/60 dark:bg-amber-950/20",
+    icon: "from-amber-500 to-yellow-600",
+    chip: "bg-amber-200/70 text-amber-900 dark:bg-amber-400/15 dark:text-amber-200",
+    module: "text-amber-600 dark:text-amber-400",
+    bullet: "bg-amber-500",
+  },
 }
 
 const useCaseActors: UseCaseActor[] = [
   {
     actor: "Pengguna Publik",
-    accent: "rose",
-    summary: "Aktor yang belum login dan hanya berinteraksi dengan modul autentikasi awal.",
-    items: [
-      "Login ke sistem dengan NIP & password",
-      "Registrasi akun baru (menunggu aktivasi admin)",
-      "Reset password melalui kode verifikasi NIP",
+    roleKey: "guest",
+    tier: "Pra-Login",
+    icon: Globe,
+    accent: "slate",
+    summary: "Aktor yang belum memiliki sesi aktif. Interaksinya terbatas pada gerbang autentikasi sebelum masuk ke sistem.",
+    groups: [
+      {
+        module: "Autentikasi",
+        icon: LogIn,
+        level: "ajukan",
+        points: [
+          "Login memakai NIP dan password",
+          "Registrasi akun baru dan menunggu aktivasi admin",
+          "Reset password lewat kode verifikasi yang dikirim ke email",
+        ],
+      },
     ],
+    note: "Tidak ada akses ke data aset, transaksi, maupun laporan sebelum sesi terbentuk.",
   },
   {
     actor: "Pengguna Terautentikasi",
+    roleKey: "base actor",
+    tier: "Hak Dasar",
+    icon: KeyRound,
     accent: "emerald",
-    summary: "Hak akses dasar yang otomatis dimiliki semua akun aktif setelah berhasil login.",
-    items: [
-      "Logout dan kelola profil: biodata, foto, unit kerja, password",
-      "Akses dokumentasi sistem (Activity & Use Case Diagram)",
-      "Lihat riwayat aktivitas akun sendiri",
-      "Unggah, lihat, unduh, dan pratinjau dokumen sesuai hak akses",
+    summary: "Aktor generalisasi. Seluruh role di bawah ini mewarisi hak akses berikut begitu berhasil login.",
+    groups: [
+      {
+        module: "Akun & Profil",
+        icon: UserCog,
+        level: "kelola",
+        points: [
+          "Logout dan mengelola sesi perangkat sendiri",
+          "Ubah biodata, unit kerja, foto profil, dan password",
+        ],
+      },
+      {
+        module: "Dokumen & Arsip",
+        icon: Upload,
+        level: "ajukan",
+        points: [
+          "Unggah, pratinjau, unduh, dan lihat dokumen sesuai hak akses",
+          "Telusuri riwayat aktivitas (teknisi & pengguna hanya log miliknya)",
+        ],
+      },
+      {
+        module: "Penunjang Sistem",
+        icon: ScrollText,
+        level: "lihat",
+        points: [
+          "Akses dokumentasi sistem: Activity Diagram & Use Case Diagram",
+          "Gunakan pemindai QR aset dan SPK Prioritas Aset (AHP)",
+        ],
+      },
     ],
   },
   {
     actor: "Administrator",
-    accent: "teal" as const,
-    summary: "Role dengan kontrol penuh atas seluruh data master, transaksi, pengguna, sanksi, dan disposal.",
-    items: [
-      "CRUD inventaris medis & non-medis, impor data massal",
-      "Setujui/tolak peminjaman, validasi pengembalian, kelola sanksi overdue",
-      "Catat & selesaikan penggunaan aset (semua log); izin penggunaan darurat pada alat overdue",
-      "Kelola pemeliharaan: jadwal, status, riwayat, dan hapus record",
-      "Setujui atau tolak pengajuan pemusnahan (disposal) aset",
-      "CRUD semua pengguna, akses laporan penuh, dan hapus dokumen",
+    roleKey: "admin",
+    tier: "Kontrol Penuh",
+    icon: ShieldCheck,
+    accent: "teal",
+    summary: "Pemegang kendali tertinggi atas data master, transaksi, pengguna, sanksi, dan pemusnahan aset.",
+    groups: [
+      {
+        module: "Inventaris Aset",
+        icon: Boxes,
+        level: "penuh",
+        points: [
+          "Tambah, ubah, dan hapus aset medis maupun non-medis",
+          "Impor data massal dan perbaiki kode aset yang keliru",
+        ],
+      },
+      {
+        module: "Peminjaman & Pengembalian",
+        icon: ArrowLeftRight,
+        level: "penuh",
+        points: [
+          "Setujui atau tolak pengajuan peminjaman",
+          "Validasi pengembalian, ubah, hingga hapus data transaksi",
+        ],
+      },
+      {
+        module: "Penggunaan Aset",
+        icon: Activity,
+        level: "penuh",
+        points: [
+          "Catat dan selesaikan seluruh log penggunaan lintas unit",
+          "Beri izin penggunaan darurat pada alat berstatus overdue",
+        ],
+      },
+      {
+        module: "Pemeliharaan & Jadwal",
+        icon: Wrench,
+        level: "penuh",
+        points: [
+          "Buat jadwal, ubah status, validasi akhir, dan hapus record",
+          "Pantau riwayat pemeliharaan seluruh aset",
+        ],
+      },
+      {
+        module: "Sanksi & Pemusnahan",
+        icon: ShieldAlert,
+        level: "penuh",
+        points: [
+          "Kelola sanksi overdue: selesaikan atau bebaskan",
+          "Setujui atau tolak pengajuan pemusnahan (disposal) aset",
+        ],
+      },
+      {
+        module: "Pengguna & Laporan",
+        icon: Users,
+        level: "penuh",
+        points: [
+          "CRUD semua akun termasuk reset password pengguna",
+          "Akses laporan penuh, ekspor PDF/Excel, dan hapus dokumen unggahan",
+        ],
+      },
     ],
   },
   {
     actor: "Leader",
-    accent: "violet" as const,
-    summary: "Role pengawas operasional yang memvalidasi proses inti dan mengelola sanksi serta disposal.",
-    items: [
-      "Pantau & validasi inventaris, peminjaman, pengembalian, pemeliharaan",
-      "Setujui/tolak transaksi, selesaikan & bebaskan sanksi overdue",
-      "Catat & selesaikan penggunaan aset; izin penggunaan darurat alat overdue",
-      "Setujui atau tolak pengajuan pemusnahan (disposal) aset",
-      "Tambah & ubah user operasional non-admin, akses laporan penuh",
+    roleKey: "leader",
+    tier: "Pengawasan",
+    icon: Crown,
+    accent: "violet",
+    summary: "Pengawas operasional yang memvalidasi proses inti serta memutuskan sanksi dan pemusnahan aset.",
+    groups: [
+      {
+        module: "Inventaris Aset",
+        icon: Boxes,
+        level: "kelola",
+        points: [
+          "Pantau seluruh inventaris medis dan non-medis",
+          "Tambah dan ubah data aset (tanpa hak hapus)",
+        ],
+      },
+      {
+        module: "Peminjaman & Pengembalian",
+        icon: ArrowLeftRight,
+        level: "kelola",
+        points: [
+          "Setujui atau tolak pengajuan peminjaman",
+          "Validasi pengembalian dan koreksi data transaksi berjalan",
+        ],
+      },
+      {
+        module: "Penggunaan Aset",
+        icon: Activity,
+        level: "kelola",
+        points: [
+          "Catat dan selesaikan log penggunaan seluruh unit",
+          "Beri izin penggunaan darurat pada alat overdue",
+        ],
+      },
+      {
+        module: "Pemeliharaan & Jadwal",
+        icon: BadgeCheck,
+        level: "kelola",
+        points: [
+          "Buat dan ubah jadwal pemeliharaan",
+          "Validasi hasil kerja teknisi lalu tutup record pemeliharaan",
+        ],
+      },
+      {
+        module: "Sanksi & Pemusnahan",
+        icon: ShieldAlert,
+        level: "kelola",
+        points: [
+          "Selesaikan atau bebaskan sanksi keterlambatan",
+          "Putuskan persetujuan pengajuan pemusnahan aset",
+        ],
+      },
+      {
+        module: "Pengguna & Laporan",
+        icon: BarChart3,
+        level: "kelola",
+        points: [
+          "Tambah dan ubah akun operasional non-admin",
+          "Akses laporan penuh beserta ekspor PDF/Excel",
+        ],
+      },
     ],
-    note: "Leader tidak menghapus aset, jadwal pemeliharaan, akun admin, atau dokumen unggahan.",
+    note: "Batas akses: tidak menghapus aset, jadwal pemeliharaan, akun admin, maupun dokumen unggahan.",
   },
   {
     actor: "Staff PJ",
-    accent: "blue" as const,
-    summary: "Penanggung jawab unit yang menangani inventaris, koordinasi transaksi, dan dapat menyelesaikan penggunaan.",
-    items: [
-      "Tambah & ubah inventaris sesuai cakupan unit (medis/non-medis/all)",
-      "Ajukan peminjaman, catat pengembalian, buat permintaan pemeliharaan",
-      "Catat penggunaan aset di sub ruangan; selesaikan log penggunaan (semua log di unitnya)",
-      "Penggunaan darurat alat overdue jika role cocok dengan peminjam asal",
-      "Pantau laporan operasional & progres tindak lanjut unit",
+    roleKey: "staff_pj",
+    tier: "Penanggung Jawab Unit",
+    icon: ClipboardList,
+    accent: "indigo",
+    summary: "Penanggung jawab unit yang memelihara data inventaris dan mengoordinasikan transaksi di wilayah kerjanya.",
+    groups: [
+      {
+        module: "Inventaris Aset",
+        icon: Boxes,
+        level: "kelola",
+        points: [
+          "Tambah dan ubah aset sesuai cakupan unit: medis, non-medis, atau keduanya",
+          "Rapikan penempatan aset pada ruangan dan sub ruangan",
+        ],
+      },
+      {
+        module: "Peminjaman & Pengembalian",
+        icon: ArrowLeftRight,
+        level: "ajukan",
+        points: [
+          "Ajukan peminjaman alat untuk kebutuhan unit",
+          "Catat pengembalian beserta kondisi fisik alat",
+        ],
+      },
+      {
+        module: "Penggunaan Aset",
+        icon: Activity,
+        level: "kelola",
+        points: [
+          "Catat penggunaan aset di sub ruangan unitnya",
+          "Selesaikan seluruh log penggunaan yang ada di unitnya",
+          "Penggunaan darurat alat overdue jika role cocok dengan peminjam asal",
+        ],
+      },
+      {
+        module: "Pemeliharaan & Laporan",
+        icon: Wrench,
+        level: "ajukan",
+        points: [
+          "Buat permintaan pemeliharaan dan pantau progres tindak lanjut",
+          "Pantau laporan operasional unit beserta ekspornya",
+        ],
+      },
     ],
-    note: "Cakupan inventaris mengikuti staff access type yang ditetapkan admin.",
+    note: "Cakupan inventaris mengikuti staff access type yang ditetapkan admin. Tidak mengakses manajemen pengguna, sanksi, atau pemusnahan.",
   },
   {
     actor: "Staff Pelayanan",
-    accent: "sky" as const,
-    summary: "Role operasional harian yang mencatat penggunaan aset dan mengajukan kebutuhan pemeliharaan.",
-    items: [
-      "Lihat inventaris sesuai cakupan unit",
-      "Ajukan peminjaman dan catat pengembalian alat",
-      "Catat penggunaan aset di sub ruangan sendiri",
-      "Selesaikan penggunaan yang dicatatnya sendiri (role operator cocok)",
-      "Buat permintaan pemeliharaan; lihat jadwal & laporan operasional",
+    roleKey: "staff",
+    tier: "Operasional Harian",
+    icon: Stethoscope,
+    accent: "sky",
+    summary: "Pelaksana harian di ruang layanan yang memakai alat dan mengajukan kebutuhan pemeliharaan.",
+    groups: [
+      {
+        module: "Inventaris Aset",
+        icon: Boxes,
+        level: "lihat",
+        points: [
+          "Lihat, cari, dan filter inventaris sesuai cakupan unit",
+          "Buka detail aset untuk memastikan ketersediaan",
+        ],
+      },
+      {
+        module: "Peminjaman & Pengembalian",
+        icon: ArrowLeftRight,
+        level: "ajukan",
+        points: [
+          "Ajukan peminjaman alat dan pantau statusnya",
+          "Catat pengembalian alat beserta catatan kondisi",
+        ],
+      },
+      {
+        module: "Penggunaan Aset",
+        icon: Activity,
+        level: "ajukan",
+        points: [
+          "Catat penggunaan aset di sub ruangan sendiri",
+          "Selesaikan log penggunaan yang dicatatnya sendiri",
+        ],
+      },
+      {
+        module: "Pemeliharaan & Laporan",
+        icon: BarChart3,
+        level: "lihat",
+        points: [
+          "Buat permintaan pemeliharaan lalu pantau jadwalnya",
+          "Baca laporan operasional sebagai bahan koordinasi",
+        ],
+      },
     ],
-    note: "Penggunaan darurat alat overdue hanya jika role-nya sama dengan peminjam asal.",
+    note: "Penggunaan darurat alat overdue hanya berlaku bila role-nya sama dengan peminjam asal.",
   },
   {
     actor: "Teknisi",
-    accent: "orange" as const,
-    summary: "Role eksekutor teknis yang mengerjakan dan memperbarui status pemeliharaan di lapangan.",
-    items: [
-      "Lihat daftar pemeliharaan dan jadwal kerja teknisi",
-      "Ubah status jadwal: in-progress, selesai, atau batalkan",
-      "Isi catatan hasil perbaikan dan kondisi akhir alat",
-      "Validasi penyelesaian pemeliharaan jika diberi wewenang",
+    roleKey: "teknisi",
+    tier: "Eksekusi Teknis",
+    icon: Wrench,
+    accent: "orange",
+    summary: "Eksekutor lapangan yang mengerjakan perbaikan dan memperbarui status pemeliharaan aset.",
+    groups: [
+      {
+        module: "Pemeliharaan",
+        icon: Wrench,
+        level: "kelola",
+        points: [
+          "Buka daftar pemeliharaan dan detail pekerjaan yang ditugaskan",
+          "Isi catatan hasil perbaikan serta kondisi akhir alat",
+          "Tandai pengecekan lanjutan atau batalkan pekerjaan",
+        ],
+      },
+      {
+        module: "Jadwal Kerja",
+        icon: CalendarClock,
+        level: "kelola",
+        points: [
+          "Lihat jadwal pemeliharaan yang menjadi tanggung jawabnya",
+          "Ubah status jadwal: berjalan, selesai, atau dibatalkan",
+        ],
+      },
+      {
+        module: "Bukti & Laporan",
+        icon: BarChart3,
+        level: "lihat",
+        points: [
+          "Unggah dokumen bukti perbaikan pada modul unggahan",
+          "Baca laporan pemeliharaan dan riwayat aktivitasnya sendiri",
+        ],
+      },
     ],
+    note: "Tidak mengakses inventaris, peminjaman, manajemen pengguna, sanksi, maupun pemusnahan.",
   },
   {
     actor: "Pengguna",
-    accent: "amber" as const,
-    summary: "Role self-service untuk pinjam pakai alat tanpa akses manajemen data master atau laporan.",
-    items: [
-      "Lihat inventaris medis dan non-medis",
-      "Ajukan peminjaman dan lihat riwayat peminjaman sendiri",
-      "Catat pengembalian alat; catat penggunaan di sub ruangan sendiri",
-      "Selesaikan penggunaan yang dicatatnya sendiri (role operator cocok)",
+    roleKey: "user",
+    tier: "Self-Service",
+    icon: UserRound,
+    accent: "amber",
+    summary: "Role mandiri untuk pinjam pakai alat tanpa kewenangan atas data master maupun keputusan operasional.",
+    groups: [
+      {
+        module: "Inventaris Aset",
+        icon: Boxes,
+        level: "lihat",
+        points: [
+          "Lihat inventaris medis dan non-medis beserta detailnya",
+          "Cari dan filter alat yang tersedia untuk dipinjam",
+        ],
+      },
+      {
+        module: "Peminjaman & Pengembalian",
+        icon: ArrowLeftRight,
+        level: "ajukan",
+        points: [
+          "Ajukan peminjaman dan pantau riwayat pengajuannya sendiri",
+          "Catat pengembalian alat untuk diverifikasi petugas",
+        ],
+      },
+      {
+        module: "Penggunaan Aset",
+        icon: Activity,
+        level: "ajukan",
+        points: [
+          "Catat penggunaan aset di sub ruangan sendiri",
+          "Selesaikan log penggunaan yang dicatatnya sendiri",
+        ],
+      },
+      {
+        module: "Laporan Ringkas",
+        icon: Scale,
+        level: "lihat",
+        points: [
+          "Baca ringkasan laporan dan hasil SPK prioritas aset",
+          "Telusuri riwayat aktivitas miliknya sendiri",
+        ],
+      },
     ],
-    note: "Tidak dapat mengakses laporan, manajemen pengguna, sanksi, atau disposal.",
+    note: "Tidak memiliki akses ke modul pemeliharaan, manajemen pengguna, sanksi, maupun pemusnahan aset.",
   },
 ]
+
+const useCaseTotals = useCaseActors.reduce(
+  (accumulator, actor) => {
+    accumulator.modules += actor.groups.length
+    accumulator.useCases += actor.groups.reduce((total, group) => total + group.points.length, 0)
+    return accumulator
+  },
+  { modules: 0, useCases: 0 },
+)
 
 export default function UMLPage() {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser())
@@ -693,7 +1097,7 @@ export default function UMLPage() {
               </span>
               <div className="flex-1 space-y-1">
                 <p className="text-base font-bold text-white">Use Case Diagram</p>
-                <p className="text-xs text-white/90">Interaksi aktor dengan modul inti sistem.</p>
+                <p className="text-xs text-white/90">Hak akses tiap role pengguna per modul sistem.</p>
               </div>
             </div>
             <div className="mt-3 flex items-center">
@@ -817,11 +1221,14 @@ export default function UMLPage() {
                 </div>
                 <div>
                   <CardTitle>Use Case Diagram</CardTitle>
-                  <CardDescription>Interaksi aktor dengan modul inti sistem inventaris beserta batas akses setiap role.</CardDescription>
+                  <CardDescription>
+                    {useCaseActors.length} aktor, {useCaseTotals.modules} kelompok modul, dan {useCaseTotals.useCases} use case yang disusun per role pengguna.
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="panel-gutter">
+            <CardContent className="space-y-6 panel-gutter">
+              <UseCaseOverview />
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 {useCaseActors.map((actor) => (
                   <UseCaseActorCard key={actor.actor} {...actor} />
@@ -1016,47 +1423,140 @@ function TableCard({
   )
 }
 
-function UseCaseActorCard({
-  actor,
-  accent,
-  summary,
-  items,
-  note,
-}: {
-  actor: string
-  accent: "teal" | "violet" | "blue" | "amber" | "sky" | "orange" | "emerald" | "rose"
-  summary: string
-  items: string[]
-  note?: string
-}) {
-  const accentClass: Record<typeof accent, string> = {
-    teal: "border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/20",
-    violet: "border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/20",
-    blue: "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20",
-    amber: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20",
-    sky: "border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20",
-    orange: "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20",
-    emerald: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20",
-    rose: "border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/20",
-  }
+function UseCaseOverview() {
+  const inheritedActors = useCaseActors.filter((actor) => actor.roleKey !== "guest" && actor.roleKey !== "base actor")
 
   return (
-    <div className={`rounded-2xl border p-5 ${accentClass[accent]}`}>
-      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{actor}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{summary}</p>
-      <div className="mt-4 space-y-3">
-        {items.map((item) => (
-          <div key={`${actor}-${item}`} className="flex items-start gap-3 rounded-xl bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm dark:bg-slate-900/70 dark:text-slate-200">
-            <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-            <span>{item}</span>
+    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white/70 p-4 dark:border-slate-800/60 dark:bg-slate-900/50">
+      <div>
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Hierarki Aktor</p>
+        <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+          Pengguna Publik masuk lewat autentikasi, lalu menjadi Pengguna Terautentikasi. Enam role di bawah ini adalah spesialisasi
+          yang mewarisi seluruh hak akses dasar tersebut.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {useCaseActors.slice(0, 2).map((actor, index) => (
+          <div key={actor.roleKey} className="flex items-center gap-2">
+            {index > 0 ? <ArrowRight className="h-4 w-4 text-slate-400" aria-hidden="true" /> : null}
+            <span
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+                useCaseAccentMeta[actor.accent].chip,
+              )}
+            >
+              <actor.icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {actor.actor}
+            </span>
+          </div>
+        ))}
+        <ArrowRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+        <div className="flex flex-wrap items-center gap-2">
+          {inheritedActors.map((actor) => (
+            <span
+              key={actor.roleKey}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+                useCaseAccentMeta[actor.accent].chip,
+              )}
+            >
+              <actor.icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {actor.actor}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-slate-200/70 pt-3 dark:border-slate-800/60">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Keterangan Tingkat Akses</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(Object.keys(useCaseLevelMeta) as UseCaseLevel[]).map((level) => (
+            <span
+              key={level}
+              className={cn("rounded-full border px-2.5 py-1 text-[11px] font-semibold", useCaseLevelMeta[level].className)}
+            >
+              {useCaseLevelMeta[level].label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UseCaseActorCard({ actor, roleKey, tier, icon: ActorIcon, accent, summary, groups, note }: UseCaseActor) {
+  const accentMeta = useCaseAccentMeta[accent]
+  const totalUseCases = groups.reduce((total, group) => total + group.points.length, 0)
+
+  return (
+    <article
+      className={cn(
+        "flex h-full flex-col overflow-hidden rounded-2xl border shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        accentMeta.card,
+      )}
+    >
+      <header className="flex items-start gap-3 border-b border-white/60 p-4 dark:border-slate-800/60">
+        <span
+          className={cn(
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-md",
+            accentMeta.icon,
+          )}
+        >
+          <ActorIcon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{actor}</h3>
+            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", accentMeta.chip)}>
+              {tier}
+            </span>
+          </div>
+          <p className="mt-0.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+            {roleKey} · {groups.length} modul · {totalUseCases} use case
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">{summary}</p>
+        </div>
+      </header>
+
+      <div className="flex-1 space-y-3 p-4">
+        {groups.map((group) => (
+          <div
+            key={`${roleKey}-${group.module}`}
+            className="rounded-xl border border-slate-200/70 bg-white/85 p-3 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/60"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <group.icon className={cn("h-4 w-4 shrink-0", accentMeta.module)} aria-hidden="true" />
+                <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">{group.module}</p>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                  useCaseLevelMeta[group.level].className,
+                )}
+              >
+                {useCaseLevelMeta[group.level].label}
+              </span>
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {group.points.map((point) => (
+                <li key={point} className="flex items-start gap-2 text-[12px] leading-5 text-slate-600 dark:text-slate-300">
+                  <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", accentMeta.bullet)} aria-hidden="true" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         ))}
       </div>
+
       {note ? (
-        <div className="mt-4 rounded-xl border border-dashed border-slate-300/80 bg-white/70 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-slate-700/35 dark:bg-slate-900/60 dark:text-slate-300">
-          {note}
-        </div>
+        <footer className="flex items-start gap-2 border-t border-dashed border-slate-300/70 px-4 py-3 text-[11px] leading-5 text-slate-600 dark:border-slate-700/60 dark:text-slate-300">
+          <History className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+          <span>{note}</span>
+        </footer>
       ) : null}
-    </div>
+    </article>
   )
 }

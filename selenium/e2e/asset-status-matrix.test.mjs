@@ -41,9 +41,20 @@ const matrix = createAssetStatusMatrix({
   runId,
 });
 
+// `node:test` dapat menjalankan callback test secara overlap, sedangkan suite
+// ini berbagi satu state browser dan satu set data uji. Semua langkah matriks
+// dikunci ke antrian ini agar urutan eksekusi, log, dan cleanup tetap stabil.
+let matrixStepChain = Promise.resolve();
+
+function runMatrixStep(step) {
+  const next = matrixStepChain.then(step, step);
+  matrixStepChain = next.catch(() => {});
+  return next;
+}
+
 before(async () => {
-  await ensureTestAdmin();
   await waitForApplication();
+  await ensureTestAdmin();
   await warmUpRoutes(warmUpPaths);
   driver = await createDriver();
 });
@@ -57,23 +68,27 @@ after(async () => {
 });
 
 test("Login dengan akun admin", async () => {
-  try {
-    await openPath(driver, "/login");
-    const nipInput = await driver.wait(until.elementLocated(By.id("nip")), timeout);
-    await driver.wait(until.elementIsVisible(nipInput), timeout);
-    await nipInput.sendKeys(adminUsername);
-    await driver.findElement(By.id("password")).sendKeys(adminPassword);
-    await driver.findElement(By.xpath('//button[normalize-space()="Masuk"]')).click();
-    await waitForPath(driver, "/");
-    await saveScreenshot(driver, "matrix-login", "pass");
-  } catch (error) {
-    await saveScreenshot(driver, "matrix-login", "fail");
-    throw error;
-  }
+  return runMatrixStep(async () => {
+    try {
+      await openPath(driver, "/login");
+      const nipInput = await driver.wait(until.elementLocated(By.id("nip")), timeout);
+      await driver.wait(until.elementIsVisible(nipInput), timeout);
+      await nipInput.sendKeys(adminUsername);
+      await driver.findElement(By.id("password")).sendKeys(adminPassword);
+      await driver.findElement(By.xpath('//button[normalize-space()="Masuk"]')).click();
+      await waitForPath(driver, "/");
+      await saveScreenshot(driver, "matrix-login", "pass");
+    } catch (error) {
+      await saveScreenshot(driver, "matrix-login", "fail");
+      throw error;
+    }
+  });
 });
 
 test("Siapkan aset uji pada setiap status", async () => {
-  console.log(await matrix.setup());
+  return runMatrixStep(async () => {
+    console.log(await matrix.setup());
+  });
 });
 
 for (const matrixCase of matrix.cases) {
@@ -81,22 +96,28 @@ for (const matrixCase of matrix.cases) {
   const options = matrixCase.skip ? { skip: matrixCase.skip } : {};
 
   test(name, options, async () => {
-    try {
-      const detail = await matrixCase.run();
-      console.log(`${name}\n${detail}`);
-      await openPath(driver, matrixCase.evidencePath);
-      await saveScreenshot(driver, `matrix-${matrixCase.key}`, "pass");
-    } catch (error) {
-      await saveScreenshot(driver, `matrix-${matrixCase.key}`, "fail");
-      throw error;
-    }
+    return runMatrixStep(async () => {
+      try {
+        const detail = await matrixCase.run();
+        console.log(`${name}\n${detail}`);
+        await openPath(driver, matrixCase.evidencePath);
+        await saveScreenshot(driver, `matrix-${matrixCase.key}`, "pass");
+      } catch (error) {
+        await saveScreenshot(driver, `matrix-${matrixCase.key}`, "fail");
+        throw error;
+      }
+    });
   });
 }
 
 test("Ringkasan matriks status aset", async () => {
-  console.log(`\n${matrix.renderSummary()}\n`);
+  return runMatrixStep(async () => {
+    console.log(`\n${matrix.renderSummary()}\n`);
+  });
 });
 
 test("Bersihkan data uji matriks status aset", async () => {
-  await matrix.cleanup();
+  return runMatrixStep(async () => {
+    await matrix.cleanup();
+  });
 });

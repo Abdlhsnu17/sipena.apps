@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+const defaultAdminUsername = "99999999";
+const defaultAdminPassword = "SeleniumE2E#2026";
+
 function readLocalConfig() {
   const candidates = process.env.SELENIUM_ENV_FILE
     ? [process.env.SELENIUM_ENV_FILE]
@@ -20,14 +23,12 @@ function readLocalConfig() {
 const localConfig = readLocalConfig();
 
 export const adminUsername = String(
-  process.env.SELENIUM_E2E_USERNAME || localConfig.E2E_ADMIN_USERNAME || "",
+  process.env.SELENIUM_E2E_USERNAME ||
+    localConfig.E2E_ADMIN_USERNAME ||
+    defaultAdminUsername,
 );
 export const adminPassword = String(
-  process.env.SELENIUM_E2E_PASSWORD || localConfig.E2E_ADMIN_PASSWORD || "",
+  process.env.SELENIUM_E2E_PASSWORD ||
+    localConfig.E2E_ADMIN_PASSWORD ||
+    defaultAdminPassword,
 );
-
-if (!adminUsername || !adminPassword) {
-  throw new Error(
-    "Isi SELENIUM_E2E_USERNAME/SELENIUM_E2E_PASSWORD atau selenium.env.json sebelum menjalankan regresi Selenium.",
-  );
-}

@@ -131,8 +131,8 @@ const statusScenarios = createAssetStatusScenarios({
 });
 
 before(async () => {
-  await ensureTestAdmin();
   await waitForApplication();
+  await ensureTestAdmin();
   await warmUpRoutes(["/login", ...routes.map((route) => route.pathname)]);
   driver = await createDriver();
 });

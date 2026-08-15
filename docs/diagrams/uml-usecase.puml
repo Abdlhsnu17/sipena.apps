@@ -134,8 +134,7 @@ User --> UC_CreateBorrowing
 User --> UC_ViewBorrowing
 User --> UC_BorrowingDetail
 User --> UC_ReturnBorrowing
-User --> UC_ViewMaintenance
-User --> UC_CreateMaintenance
+User --> UC_ViewDashboard
 User --> UC_ViewProfile
 User --> UC_EditProfile
 
@@ -186,6 +185,8 @@ Teknisi --> UC_ValidateMaintenance
 Teknisi --> UC_CancelMaintenance
 Teknisi --> UC_ViewSchedule
 Teknisi --> UC_UpdateScheduleStatus
+Teknisi --> UC_ViewDashboard
+Teknisi --> UC_MaintenanceReport
 
 Leader --> UC_ViewAssets
 Leader --> UC_SearchAssets
@@ -296,6 +297,15 @@ end note
 note bottom of Admin
   Admin memiliki akses paling luas
   pada pengelolaan data dan dokumen.
+end note
+
+note bottom of User
+  Pengguna bersifat self-service:
+  pinjam, kembalikan, dan catat
+  penggunaan miliknya sendiri.
+  Tidak mengakses modul pemeliharaan,
+  manajemen pengguna, sanksi,
+  maupun pemusnahan aset.
 end note
 
 @enduml

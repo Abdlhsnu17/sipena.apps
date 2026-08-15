@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { By, Key, until } from "selenium-webdriver";
-import { createDriver, openPath, timeout, waitForPath } from "./browser.mjs";
+import { createDriver, navigationTimeout, openPath, timeout, waitForPath } from "./browser.mjs";
 
 /**
  * Matriks aturan status aset terhadap tiga aksi transaksi.
@@ -237,15 +237,22 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
   }
 
   async function readAssetStatus(assetId) {
-    const response = await api("GET", `/assets/${assetId}?type=medical`, state.admin.token);
+    const response = await apiWithRetry("GET", `/assets/${assetId}?type=medical`, state.admin.token);
     assertStatus(response, 200);
     return String(response.body.data.status || "");
   }
 
   // --- Tiga aksi yang diuji -------------------------------------------------
+  //
+  // Ketiganya memakai `apiWithRetry`, bukan `api`, supaya pembatas laju backend
+  // tidak terbaca sebagai pelanggaran aturan status. Sebuah HTTP 429 pada sel
+  // "Ditolak" gagal pada asersi kode status, dan pada sel "Diizinkan" gagal
+  // sebagai "seharusnya diizinkan" — dua-duanya menuduh aturan bisnis yang
+  // sebenarnya benar. Percobaan ulang aman karena 429 berarti permintaannya
+  // tidak pernah diproses, sehingga tidak ada data yang terbuat dua kali.
 
   async function requestBorrowing(assetId, purpose) {
-    return api("POST", "/borrowing", state.borrower.token, {
+    return apiWithRetry("POST", "/borrowing", state.borrower.token, {
       assetId,
       assetType: "medical",
       borrowDate: new Date().toISOString(),
@@ -256,7 +263,7 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
   }
 
   async function requestUsage(assetId, notes, usageContext = "cross_room") {
-    return api("POST", "/asset-usage", state.borrower.token, {
+    return apiWithRetry("POST", "/asset-usage", state.borrower.token, {
       assetId,
       assetType: "medical",
       roomName: usageRoom,
@@ -268,7 +275,7 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
   }
 
   async function requestMaintenance(assetId, description) {
-    return api("POST", "/maintenance", state.admin.token, {
+    return apiWithRetry("POST", "/maintenance", state.admin.token, {
       assetId,
       assetType: "medical",
       type: "corrective",
@@ -344,8 +351,61 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
   }
 
   /**
+   * Satu kali percobaan: buka formulir, buka pemilih, ketik kata kunci, lalu
+   * tunggu aset kontrol muncul. Mengembalikan daftar opsi bila berhasil, atau
+   * `null` bila aset kontrol tidak kunjung muncul.
+   *
+   * Halaman Penggunaan memuat lima endpoint sekaligus (aset medis, non medis,
+   * seluruh log penggunaan, pemeliharaan, dan peminjaman) sebelum daftar
+   * pilihannya terisi, sehingga penantiannya memakai `navigationTimeout` —
+   * batas skala pemuatan halaman — bukan `timeout` yang ditujukan untuk asersi
+   * singkat.
+   */
+  async function tryReadPickerOptions(driver, { pathname, openButtonText, pickerAriaLabel, controlName }) {
+    await openPath(driver, pathname);
+    await driver.wait(until.elementLocated(By.css("body")), timeout);
+    await clickVisibleByXpath(
+      driver,
+      `//button[normalize-space(.)="${openButtonText}"]`,
+      `Tombol "${openButtonText}"`,
+    );
+    await clickVisibleByXpath(
+      driver,
+      `//button[@aria-label="${pickerAriaLabel}"]`,
+      `Pemilih inventaris "${pickerAriaLabel}"`,
+    );
+
+    const searchInput = await driver.wait(async () => {
+      const candidates = await driver.findElements(By.css("[cmdk-input]"));
+      for (const candidate of candidates) {
+        if (await candidate.isDisplayed()) return candidate;
+      }
+      return null;
+    }, timeout, "Kolom pencarian inventaris tidak ditemukan");
+
+    await searchInput.clear();
+    await searchInput.sendKeys(searchKeyword);
+    await pauseStep();
+
+    let lastOptions = [];
+    try {
+      await driver.wait(async () => {
+        lastOptions = await readPickerOptions(driver);
+        return lastOptions.some((option) => option.includes(controlName));
+      }, navigationTimeout);
+      return lastOptions;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Membuka formulir, memfilter pemilih inventaris, lalu memastikan aset
    * kontrol muncul sementara aset yang seharusnya terkunci tidak muncul.
+   *
+   * Percobaan diulang sekali dengan formulir yang dibuka dari awal: klik yang
+   * mendarat saat dialog masih beranimasi kadang tidak membuka popover pemilih,
+   * dan gejalanya identik dengan daftar yang benar-benar kosong.
    */
   async function expectAssetHiddenFromPicker({
     pathname,
@@ -355,50 +415,49 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
     controlName,
   }) {
     const driver = await ensureUiDriver();
+    const attempts = 2;
+    let options = null;
 
     try {
-      await openPath(driver, pathname);
-      await driver.wait(until.elementLocated(By.css("body")), timeout);
-      await clickVisibleByXpath(
-        driver,
-        `//button[normalize-space(.)="${openButtonText}"]`,
-        `Tombol "${openButtonText}"`,
-      );
-      await clickVisibleByXpath(
-        driver,
-        `//button[@aria-label="${pickerAriaLabel}"]`,
-        `Pemilih inventaris "${pickerAriaLabel}"`,
-      );
+      for (let attempt = 1; attempt <= attempts && !options; attempt += 1) {
+        options = await tryReadPickerOptions(driver, {
+          pathname,
+          openButtonText,
+          pickerAriaLabel,
+          controlName,
+        });
+        if (!options && attempt < attempts) await closeForm(driver);
+      }
 
-      const searchInput = await driver.wait(async () => {
-        const candidates = await driver.findElements(By.css("[cmdk-input]"));
-        for (const candidate of candidates) {
-          if (await candidate.isDisplayed()) return candidate;
-        }
-        return null;
-      }, timeout, "Kolom pencarian inventaris tidak ditemukan");
+      // Aset kontrol wajib muncul lebih dulu. Tanpa pemeriksaan ini, daftar yang
+      // kosong karena sebab lain (filter sub ruangan, data belum termuat) akan
+      // terbaca sebagai aturan yang bekerja.
+      if (!options) {
+        const shown = await readPickerOptions(driver);
+        const bodyText = String(await driver.findElement(By.css("body")).getText() || "")
+          .replace(/\s+/g, " ");
+        const emptyNotice = [
+          "Tidak ada alat inventaris yang tersedia",
+          "Sub ruangan akun belum diisi",
+        ].filter((notice) => bodyText.includes(notice));
 
-      await searchInput.clear();
-      await searchInput.sendKeys(searchKeyword);
-      await pauseStep();
+        assert.fail(
+          `Aset kontrol "${controlName}" tidak muncul pada ${pathname}; daftar tidak dapat dipercaya `
+            + `sehingga ketiadaan "${hiddenName}" tidak membuktikan apa pun.\n`
+            + `URL saat gagal: ${await driver.getCurrentUrl()}\n`
+            + `Opsi yang tampil (${shown.length}): ${JSON.stringify(shown.slice(0, 5))}\n`
+            + `Pesan daftar kosong: ${emptyNotice.length ? JSON.stringify(emptyNotice) : "tidak ada"}`,
+        );
+      }
 
-      // Aset kontrol wajib muncul lebih dulu. Tanpa pemeriksaan ini, daftar
-      // yang kosong karena sebab lain (filter sub ruangan, data belum termuat)
-      // akan terbaca sebagai aturan yang bekerja.
-      let lastOptions = [];
-      await driver.wait(async () => {
-        lastOptions = await readPickerOptions(driver);
-        return lastOptions.some((option) => option.includes(controlName));
-      }, timeout, `Aset kontrol "${controlName}" tidak muncul pada ${pathname}; daftar tidak dapat dipercaya`);
-
-      const blocked = lastOptions.filter((option) => option.includes(hiddenName));
+      const blocked = options.filter((option) => option.includes(hiddenName));
       assert.equal(
         blocked.length,
         0,
         `Aset "${hiddenName}" masih dapat dipilih pada ${pathname}: ${JSON.stringify(blocked)}`,
       );
 
-      return `Aset kontrol "${controlName}" muncul, aset "${hiddenName}" tidak dapat dipilih.\n${lastOptions.length} opsi tampil pada ${pathname}.`;
+      return `Aset kontrol "${controlName}" muncul, aset "${hiddenName}" tidak dapat dipilih.\n${options.length} opsi tampil pada ${pathname}.`;
     } finally {
       await closeForm(driver);
     }
@@ -416,6 +475,22 @@ export function createAssetStatusMatrix({ getDriver, runId, pauseStep = noop }) 
     });
     assert.ok(session.token, "Sesi admin tidak ditemukan; matriks ini harus dijalankan setelah login");
     assert.equal(session.user?.role, "admin", "Akun pengujian harus memiliki role admin");
+
+    // Akun yang masih wajib mengganti sandi tidak dapat dipakai untuk menyiapkan
+    // data uji: seluruh endpoint tulis membalas HTTP 403, dan `client-layout.tsx`
+    // memaksa pindah ke `/settings` dari halaman mana pun. Perpindahan itu
+    // terjadi persis saat `executeAsyncScript` menunggu `fetch`, sehingga
+    // callback-nya ikut hilang bersama konteks halaman lama dan kegagalannya
+    // muncul sebagai `script timeout` setelah dua menit — bukan sebagai
+    // penyebab sebenarnya. Diperiksa lebih dulu agar pesannya langsung jelas.
+    assert.ok(
+      !session.user?.mustChangePassword,
+      "Akun admin pengujian masih berstatus wajib ganti sandi, sehingga seluruh endpoint tulis "
+        + "membalas HTTP 403 dan aplikasi memaksa pindah ke /settings. Set "
+        + "INITIAL_ADMIN_MUST_CHANGE_PASSWORD=false pada apps/backend/.env lalu jalankan ulang "
+        + "`npm run bootstrap:test-admin --workspace=inventory-backend`.",
+    );
+
     state.admin = session;
 
     const created = await apiWithRetry("POST", "/users", state.admin.token, {

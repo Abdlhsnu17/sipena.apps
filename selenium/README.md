@@ -17,6 +17,7 @@ Suite ini menguji alur bisnis inti dan memastikan halaman utama SIPENA dapat dib
 3. Jalankan backend dan frontend, atau jalankan stack Docker.
 4. Salin `selenium.env.example.json` menjadi `selenium.env.json` dan isi akun admin khusus pengujian.
 5. Jika database masih kosong, jalankan `npm run bootstrap:test-admin` setelah backend terhubung ke database agar akun admin test tersedia.
+6. Pastikan `INITIAL_ADMIN_MUST_CHANGE_PASSWORD=false` pada `apps/backend/.env`. Bila `true`, `ensureTestAdmin()` menandai ulang akun admin test sebagai wajib ganti sandi **setiap kali suite dijalankan**: seluruh endpoint tulis membalas HTTP 403 dan `client-layout.tsx` memaksa pindah ke `/settings` dari halaman mana pun. Perpindahan itu terjadi saat `executeAsyncScript` sedang menunggu `fetch`, sehingga callback-nya hilang bersama konteks halaman lama dan kegagalannya muncul sebagai `script timeout` setelah dua menit, bukan sebagai penyebab sebenarnya.
 
 `selenium.env.json` dan seluruh screenshot diabaikan Git. Jangan memakai akun atau database produksi.
 

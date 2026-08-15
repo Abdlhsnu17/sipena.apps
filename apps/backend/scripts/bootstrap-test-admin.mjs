@@ -12,6 +12,14 @@ const requiredEnvVars = [
   "INITIAL_ADMIN_PHONE",
 ];
 
+const defaultAdmin = {
+  INITIAL_ADMIN_NIP: "99999999",
+  INITIAL_ADMIN_NAME: "Admin Selenium",
+  INITIAL_ADMIN_EMAIL: "admin.selenium@sipena.test",
+  INITIAL_ADMIN_PASSWORD: "SeleniumE2E#2026",
+  INITIAL_ADMIN_PHONE: "081200000000",
+};
+
 const loadEnvironment = () => {
   // Tetap mengikuti urutan pencarian environment dari aplikasi backend.
   const candidates = [
@@ -31,7 +39,7 @@ const loadEnvironment = () => {
 };
 
 const readRequiredEnv = (name) => {
-  const value = process.env[name]?.trim() || "";
+  const value = (process.env[name] || defaultAdmin[name] || "").trim();
   if (!value) {
     throw new Error(`Environment variable ${name} must be set`);
   }
