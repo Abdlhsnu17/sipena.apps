@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import accessControlRoutes from './access-control.routes';
+import appSettingRoutes from './app-setting.routes';
 import assetDisposalRoutes from './asset-disposal.routes';
 import assetUsageRoutes from './asset-usage.routes';
 import assetRoutes from './asset.routes';
@@ -55,6 +56,7 @@ export const API_MOUNTS: readonly ApiMount[] = [
   { prefix: '/api/sanctions', router: sanctionsRoutes, requiresAuth: true, tag: 'Sanctions' },
   { prefix: '/api/asset-disposal', router: assetDisposalRoutes, requiresAuth: true, tag: 'Asset Disposal' },
   { prefix: '/api/notifications', router: notificationRoutes, requiresAuth: true, tag: 'Notifications' },
+  { prefix: '/api/app-settings', router: appSettingRoutes, requiresAuth: true, tag: 'App Settings' },
 ];
 
 /** Router DSS dipakai ulang oleh alias debug khusus pengembangan di `app.ts`. */

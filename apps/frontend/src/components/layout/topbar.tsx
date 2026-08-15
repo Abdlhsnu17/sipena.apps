@@ -4,6 +4,13 @@ import { ArrowRight, Bell, Building2, Hash, ScanLine, Search, UserRound } from "
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import appSettingService, {
+    ANNOUNCEMENT_UPDATED_EVENT,
+    DEFAULT_TOPBAR_ANNOUNCEMENT,
+    DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE,
+    getAnnouncementStyleClass,
+    type TopbarAnnouncementStyle,
+} from "@/services/app-setting.service";
 import { assetUsageService } from "@/services/asset-usage.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
@@ -165,8 +172,10 @@ const saveDismissedNotificationKeys = (keys: Set<string>) => {
 }
 
 export default function Topbar() {
-  const topbarAnnouncement =
-    "Selamat datang di Sistem Informasi Manajemen Sarana dan Prasarana. Periksa pemberitahuan secara berkala agar informasi penting tidak terlewat. Terima Kasih"
+  // Teks marquee diambil dari pengaturan aplikasi supaya admin bisa mengubahnya
+  // lewat halaman Pengaturan. Default dipakai selama fetch berjalan atau gagal.
+  const [topbarAnnouncement, setTopbarAnnouncement] = useState(DEFAULT_TOPBAR_ANNOUNCEMENT)
+  const [announcementStyle, setAnnouncementStyle] = useState<TopbarAnnouncementStyle>(DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE)
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const serverTimeOffsetMsRef = useRef(0)
@@ -179,10 +188,44 @@ export default function Topbar() {
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [scanChoice, setScanChoice] = useState<ScanChoice | null>(null)
   const isCompactNotification = notificationDensity === "compact"
+  const announcementStyleClass = getAnnouncementStyleClass(announcementStyle)
 
   useEffect(() => {
     setMounted(true)
     dismissedNotificationKeysRef.current = loadDismissedNotificationKeys()
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadAnnouncement = async () => {
+      // Sesi lokal (offline/dev) tidak punya backend untuk dihubungi, jadi cukup
+      // pakai teks default seperti yang dilakukan pemuatan notifikasi.
+      if (!getAuthToken() || isLocalAuthSession()) return
+
+      try {
+        const announcement = await appSettingService.getAnnouncement()
+        if (!isMounted) return
+        setTopbarAnnouncement(announcement.value)
+        setAnnouncementStyle(announcement.style)
+      } catch (error) {
+        console.error("Gagal memuat teks pemberitahuan", error)
+      }
+    }
+
+    void loadAnnouncement()
+
+    const refreshListener = () => {
+      void loadAnnouncement()
+    }
+    window.addEventListener(ANNOUNCEMENT_UPDATED_EVENT, refreshListener)
+    window.addEventListener("auth-user-updated", refreshListener)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener(ANNOUNCEMENT_UPDATED_EVENT, refreshListener)
+      window.removeEventListener("auth-user-updated", refreshListener)
+    }
   }, [])
 
   const dismissNotification = (notification: NotificationItem) => {
@@ -932,9 +975,11 @@ export default function Topbar() {
     <header className="z-30 w-full min-w-0 shrink-0 bg-background/95 shadow-[0_1px_0_rgba(15,23,42,0.05)] backdrop-blur supports-backdrop-filter:bg-background/85">
       <div className="flex h-7 items-center overflow-hidden bg-muted/40 px-3 xl:px-6">
         <div className="overflow-hidden">
-          <div className="animate-topbar-marquee flex w-max items-center text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground will-change-transform">
-            <span className="shrink-0 pr-14">{topbarAnnouncement}</span>
-            <span className="shrink-0 pr-14" aria-hidden="true">{topbarAnnouncement}</span>
+          <div className="animate-topbar-marquee flex w-max items-center text-sm font-semibold uppercase tracking-[0.16em] will-change-transform">
+            {/* Warna dipasang per salinan teks, bukan di pembungkus, agar setiap
+                salinan mendapat gradien penuh saat marquee bergulir. */}
+            <span className={`shrink-0 pr-14 ${announcementStyleClass}`}>{topbarAnnouncement}</span>
+            <span className={`shrink-0 pr-14 ${announcementStyleClass}`} aria-hidden="true">{topbarAnnouncement}</span>
           </div>
         </div>
       </div>

@@ -99,6 +99,7 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Sanctions: 'Sanksi keterlambatan pengembalian.',
   'Asset Disposal': 'Pengajuan penghapusan/pemusnahan aset.',
   Notifications: 'Notifikasi dalam aplikasi dan stream real-time.',
+  'App Settings': 'Pengaturan global aplikasi, seperti teks pemberitahuan berjalan.',
 };
 
 /** Response yang berlaku untuk hampir semua endpoint di bawah /api. */

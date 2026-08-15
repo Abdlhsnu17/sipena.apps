@@ -9,14 +9,24 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import appSettingService, {
+    ANNOUNCEMENT_UPDATED_EVENT,
+    DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE,
+    TOPBAR_ANNOUNCEMENT_MAX_LENGTH,
+    TOPBAR_ANNOUNCEMENT_STYLE_OPTIONS,
+    getAnnouncementStyleClass,
+    type TopbarAnnouncementStyle,
+} from "@/services/app-setting.service";
 import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
 import { authService } from "@/services/auth.service";
 import notificationService, { type NotificationDeliveryStatus } from "@/services/notification.service";
 import { userService } from "@/services/user.service";
+import { formatDateId } from "@/utils/format";
 import { toPublicPhotoUrl } from "@/utils/photo-url";
+import { isAdminRole } from "@/utils/role";
 import { isStrongPassword } from "@/utils/validation";
 // ...existing code...
-import { Eye, EyeOff, Monitor, Moon, Save, Settings, Smartphone, Sun } from "lucide-react";
+import { Eye, EyeOff, Megaphone, Monitor, Moon, Save, Settings, Smartphone, Sun } from "lucide-react";
 import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react";
 
 export default function SettingsPage() {
@@ -65,6 +75,14 @@ export default function SettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [deliveryStatus, setDeliveryStatus] = useState<NotificationDeliveryStatus | null>(null)
 
+  // Pemberitahuan berjalan di topbar: hanya admin yang boleh mengubahnya.
+  const isAdmin = isAdminRole(getCurrentUser()?.role)
+  const [announcement, setAnnouncement] = useState("")
+  const [announcementStyle, setAnnouncementStyle] = useState<TopbarAnnouncementStyle>(DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE)
+  const [announcementMeta, setAnnouncementMeta] = useState<{ updatedByName?: string | null; updatedAt?: string | null }>({})
+  const [announcementLoading, setAnnouncementLoading] = useState(true)
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false)
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -74,6 +92,34 @@ export default function SettingsPage() {
       if (response.success) setDeliveryStatus(response.data)
     }).catch(() => undefined)
   }, [])
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setAnnouncementLoading(false)
+      return
+    }
+
+    let isMounted = true
+    const loadAnnouncement = async () => {
+      setAnnouncementLoading(true)
+      try {
+        const data = await appSettingService.getAnnouncement()
+        if (!isMounted) return
+        setAnnouncement(data.value)
+        setAnnouncementStyle(data.style)
+        setAnnouncementMeta({ updatedByName: data.updatedByName, updatedAt: data.updatedAt })
+      } catch (error) {
+        console.error("Failed to load announcement:", error)
+      } finally {
+        if (isMounted) setAnnouncementLoading(false)
+      }
+    }
+
+    void loadAnnouncement()
+    return () => {
+      isMounted = false
+    }
+  }, [isAdmin])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -288,6 +334,46 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSaveAnnouncement = async () => {
+    const value = announcement.trim()
+    if (!value) {
+      toast({
+        title: "Teks pemberitahuan kosong",
+        description: "Isi teks pemberitahuan terlebih dahulu.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingAnnouncement(true)
+    try {
+      const response = await appSettingService.updateAnnouncement(value, announcementStyle)
+      if (!response.success) {
+        toast({ title: "Error", description: response.message, variant: "destructive" })
+        return
+      }
+
+      setAnnouncement(response.data?.value ?? value)
+      setAnnouncementStyle(response.data?.style ?? announcementStyle)
+      setAnnouncementMeta({
+        updatedByName: response.data?.updatedByName,
+        updatedAt: response.data?.updatedAt,
+      })
+      // Beri tahu topbar agar teks berjalan langsung berubah tanpa reload.
+      window.dispatchEvent(new Event(ANNOUNCEMENT_UPDATED_EVENT))
+      toast({ title: "Pemberitahuan berhasil disimpan" })
+    } catch (error) {
+      console.error("Failed to save announcement:", error)
+      toast({
+        title: "Error",
+        description: "Teks pemberitahuan gagal disimpan. Coba lagi.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingAnnouncement(false)
+    }
+  }
+
   const profileImageSrc = localPhotoPreview || remotePhotoUrl
   const currentUser = getCurrentUser()
 
@@ -482,6 +568,96 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {isAdmin && (
+            <Card className="gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Megaphone className="h-4 w-4 text-teal-600" />
+                  Pemberitahuan Berjalan
+                </CardTitle>
+                <CardDescription>
+                  Teks yang berjalan di bagian atas halaman dan dilihat semua pengguna setelah masuk. Hanya admin yang
+                  dapat mengubahnya.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3.5">
+                {announcementLoading ? (
+                  <p className="text-sm text-muted-foreground">Memuat teks pemberitahuan...</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="topbarAnnouncement">Teks Pemberitahuan</Label>
+                      <Textarea
+                        id="topbarAnnouncement"
+                        value={announcement}
+                        onChange={(event) => setAnnouncement(event.target.value.slice(0, TOPBAR_ANNOUNCEMENT_MAX_LENGTH))}
+                        maxLength={TOPBAR_ANNOUNCEMENT_MAX_LENGTH}
+                        rows={3}
+                        placeholder="Contoh: Pemeliharaan sistem dijadwalkan Sabtu ini pukul 20.00 WIB."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {announcement.length}/{TOPBAR_ANNOUNCEMENT_MAX_LENGTH} karakter
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Warna Teks</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {TOPBAR_ANNOUNCEMENT_STYLE_OPTIONS.map((option) => {
+                          const isSelected = announcementStyle === option.value
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setAnnouncementStyle(option.value)}
+                              aria-pressed={isSelected}
+                              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                                isSelected
+                                  ? "border-teal-600 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300"
+                                  : "border-border text-foreground hover:bg-muted"
+                              }`}
+                            >
+                              <span className={`h-4 w-8 rounded-full ${option.swatch}`} aria-hidden="true" />
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 dark:border-slate-700/35 dark:bg-slate-900/40">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pratinjau</p>
+                      <p
+                        className={`mt-1.5 truncate text-sm font-semibold uppercase tracking-[0.16em] ${getAnnouncementStyleClass(announcementStyle)}`}
+                      >
+                        {announcement.trim() || "Teks pemberitahuan belum diisi"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {announcementMeta.updatedAt
+                          ? `Terakhir diubah ${formatDateId(announcementMeta.updatedAt)}${
+                              announcementMeta.updatedByName ? ` oleh ${announcementMeta.updatedByName}` : ""
+                            }`
+                          : "Masih memakai teks bawaan sistem."}
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={handleSaveAnnouncement}
+                        disabled={isSavingAnnouncement || !announcement.trim()}
+                        className="w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto"
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSavingAnnouncement ? "Menyimpan..." : "Simpan Pemberitahuan"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid items-stretch gap-5 md:grid-cols-2">
             <Card className="h-full gap-4 py-5">

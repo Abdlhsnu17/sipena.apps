@@ -313,6 +313,7 @@ Endpoint utama yang aktif mencakup:
 - `/api/deletion-requests` untuk pengajuan dan review permintaan arsip data (user, peminjaman/pengembalian, pemeliharaan).
 - `/api/sanctions` untuk daftar sanksi, penyelesaian, pembebasan, dan statistik sanksi keterlambatan.
 - `/api/access-control` untuk matriks hak akses menu per role dan menu yang aktif bagi pengguna saat ini.
+- `/api/app-settings/announcement` untuk membaca teks pemberitahuan berjalan di topbar; pembaruannya khusus admin.
 - `/api/reports` untuk dashboard, laporan, unggah dokumen, dan ekspor.
 - `/api/user-activities` untuk riwayat aktivitas pengguna.
 - `/api/uml` untuk akses dokumentasi sistem.

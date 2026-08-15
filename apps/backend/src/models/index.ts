@@ -1,3 +1,4 @@
+export * from './app-setting.model';
 export * from './asset.model';
 export * from './asset-disposal.model';
 export * from './asset-usage.model';

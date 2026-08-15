@@ -15,7 +15,7 @@ CREATE DATABASE IF NOT EXISTS `sipena_db_local` CHARACTER SET utf8mb4 COLLATE ut
 USE `sipena_db_local`;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_attachments`, `maintenance_parts`, `maintenance_status_logs`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `dss_ranking_history`, `dss_weight_preferences`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
+DROP TABLE IF EXISTS `app_settings`, `role_menu_permissions`, `menus`, `roles`, `asset_disposal_requests`, `deletion_requests`, `return_records`, `report_uploads`, `maintenance_attachments`, `maintenance_parts`, `maintenance_status_logs`, `maintenance_history`, `asset_usage_logs`, `maintenance_records`, `borrowing_records`, `non_medical_assets`, `medical_assets`, `dss_ranking_history`, `dss_weight_preferences`, `notifications`, `user_activity_logs`, `activity_logs`, `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 
@@ -585,6 +585,21 @@ CREATE TABLE `users` (
   `delete_reason` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `app_settings`
+--
+
+CREATE TABLE `app_settings` (
+  `setting_key` varchar(80) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`),
+  KEY `idx_app_settings_updated_by` (`updated_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 --
 -- --------------------------------------------------------
@@ -990,6 +1005,12 @@ ALTER TABLE `deletion_requests`
 ALTER TABLE `role_menu_permissions`
   ADD CONSTRAINT `fk_role_menu_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_role_menu_permissions_menu` FOREIGN KEY (`menu_id`) REFERENCES `menus` (`id`) ON DELETE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `app_settings`
+--
+ALTER TABLE `app_settings`
+  ADD CONSTRAINT `fk_app_settings_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
