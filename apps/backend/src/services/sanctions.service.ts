@@ -1,6 +1,7 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import pool from '../config/database';
 import { ApiResponse } from '../models';
+import notificationService from './notification.service';
 
 export interface SanctionRecord {
   id: number;
@@ -50,6 +51,38 @@ interface SanctionRow extends RowDataPacket {
   resolved_by_user_id: number | null;
   resolved_notes: string | null;
 }
+
+/**
+ * Memberi tahu peminjam bahwa sanksinya sudah tidak aktif lagi.
+ *
+ * Dipasangkan dengan notifikasi saat sanksi diberlakukan: tanpa ini peminjam
+ * tahu dirinya kena sanksi tapi tidak pernah tahu kapan blokir perpanjangannya
+ * dicabut.
+ */
+const notifySanctionCleared = (
+  row: SanctionRow | undefined,
+  variant: 'resolved' | 'waived'
+): void => {
+  const ownerId = Number(row?.user_id);
+  if (!row || !Number.isFinite(ownerId) || ownerId <= 0) return;
+
+  const assetLabel = row.asset_name || row.asset_code || 'Aset peminjaman';
+  const code = row.borrowing_code || String(row.id);
+
+  void notificationService.create({
+    userId: ownerId,
+    type: variant === 'waived' ? 'sanction_waived' : 'sanction_resolved',
+    category: 'borrowing',
+    title: variant === 'waived' ? 'Sanksi keterlambatan dibebaskan' : 'Sanksi keterlambatan selesai',
+    message:
+      variant === 'waived'
+        ? `Sanksi untuk ${assetLabel} (${code}) dibebaskan. Perpanjangan peminjaman dapat digunakan kembali.`
+        : `Sanksi untuk ${assetLabel} (${code}) telah diselesaikan. Perpanjangan peminjaman dapat digunakan kembali.`,
+    link: '/borrowing',
+    referenceType: 'borrowing',
+    referenceId: Number(row.id),
+  });
+};
 
 export const mapRow = (row: SanctionRow): SanctionRecord => ({
   id: row.id,
@@ -180,6 +213,8 @@ export class SanctionsService {
       [borrowingId]
     );
 
+    notifySanctionCleared(updated, 'resolved');
+
     return { success: true, message: 'Sanksi berhasil diselesaikan', data: mapRow(updated) };
   }
 
@@ -226,6 +261,8 @@ export class SanctionsService {
        WHERE br.id = ?`,
       [borrowingId]
     );
+
+    notifySanctionCleared(updated, 'waived');
 
     return { success: true, message: 'Sanksi berhasil dibebaskan', data: mapRow(updated) };
   }

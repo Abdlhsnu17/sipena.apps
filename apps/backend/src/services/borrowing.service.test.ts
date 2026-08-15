@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const notificationCreate = vi.fn();
+vi.mock('./notification.service', () => ({
+  default: { create: (...args: unknown[]) => notificationCreate(...args) },
+}));
+
 import {
   BorrowingService,
   getRoleLabel,
@@ -193,5 +199,53 @@ describe('normalizeBorrowingDateFields', () => {
     expect(normalized.due_date).toBeUndefined();
     expect(normalized.note).toBe('catatan bebas');
     expect(normalized.id).toBe(1);
+  });
+});
+
+describe('BorrowingService notifikasi sanksi', () => {
+  type NotifyInternals = {
+    notifyNewSanctions: (rows: Record<string, unknown>[]) => void;
+  };
+
+  const service = new BorrowingService() as unknown as NotifyInternals;
+
+  beforeEach(() => {
+    notificationCreate.mockClear();
+  });
+
+  it('memberi tahu peminjam beserta jumlah hari keterlambatan', () => {
+    service.notifyNewSanctions([
+      {
+        id: 42,
+        user_id: 7,
+        borrowing_code: 'PJM-2026-0042',
+        asset_detail_name: 'Infusion Pump',
+        asset_detail_code: 'MED-011',
+        due_date: new Date(Date.now() - 3 * 86400000),
+      },
+    ]);
+
+    expect(notificationCreate).toHaveBeenCalledTimes(1);
+    const payload = notificationCreate.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      userId: 7,
+      type: 'sanction_applied',
+      category: 'borrowing',
+      referenceId: 42,
+    });
+    expect(payload.message).toContain('Infusion Pump');
+    expect(payload.message).toContain('terlambat 3 hari');
+    // Halaman /sanctions hanya untuk admin dan leader, sedangkan penerima
+    // notifikasi ini peminjamnya sendiri.
+    expect(payload.link).toBe('/borrowing');
+  });
+
+  it('melewati baris tanpa pemilik yang sah', () => {
+    service.notifyNewSanctions([
+      { id: 1, user_id: 0 },
+      { id: 2, user_id: null as unknown as number },
+    ]);
+
+    expect(notificationCreate).not.toHaveBeenCalled();
   });
 });

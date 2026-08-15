@@ -97,6 +97,21 @@ describe('GET /api/borrowing', () => {
     expect(dataQuery?.params).toContain('overdue');
   });
 
+  it('mendata peminjaman yang baru kena sanksi dengan penjaga sekali kirim', async () => {
+    const { token } = authAs('admin');
+    stubBorrowingListQueries([]);
+
+    await requestApp(app).get('/api/borrowing').set('Authorization', bearer(token));
+
+    const lookup = executedQueries().find((entry) => /sanction_applied_at IS NULL/.test(entry.sql));
+
+    // Sinkronisasi status terlambat berjalan di hampir setiap operasi peminjaman,
+    // sehingga tanpa penjaga `sanction_applied_at IS NULL` peminjam akan menerima
+    // notifikasi sanksi berulang kali untuk keterlambatan yang sama.
+    expect(lookup).toBeDefined();
+    expect(lookup?.sql).toMatch(/status IN \('approved', 'borrowed'\)/);
+  });
+
   it('menolak page nol', async () => {
     const { token } = authAs('admin');
 

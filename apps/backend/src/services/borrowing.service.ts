@@ -192,6 +192,16 @@ interface ActiveUsageRow extends RowDataPacket {
   ended_at?: Date | string | null;
 }
 
+/** Peminjaman yang baru melewati jatuh tempo dan belum pernah dikenai sanksi. */
+interface NewSanctionRow extends RowDataPacket {
+  id: number;
+  user_id: number;
+  borrowing_code?: string | null;
+  asset_detail_name?: string | null;
+  asset_detail_code?: string | null;
+  due_date?: Date | string | null;
+}
+
 export class BorrowingService {
   async getOwnerCandidates(search = '', limit = 20): Promise<ApiResponse<Array<{
     id: number;
@@ -647,6 +657,21 @@ export class BorrowingService {
       return;
     }
 
+    // Peminjaman yang baru akan kena sanksi dikumpulkan sebelum UPDATE dijalankan.
+    // Setelah UPDATE, `sanction_applied_at` sudah terisi sehingga transisi barunya
+    // tidak bisa lagi dibedakan dari sanksi lama. Kolom itu pula yang menjaga
+    // notifikasi hanya terkirim sekali, karena `syncOverdueBorrowings` dipanggil
+    // ulang di hampir setiap operasi peminjaman.
+    const [newlySanctioned] = await pool.query<NewSanctionRow[]>(
+      `SELECT id, user_id, borrowing_code, asset_detail_name, asset_detail_code, due_date
+         FROM borrowing_records
+        WHERE status IN ('approved', 'borrowed')
+          AND deleted_at IS NULL
+          AND due_date IS NOT NULL
+          AND NOW() > due_date
+          AND sanction_applied_at IS NULL`
+    );
+
     await pool.query(
       `UPDATE borrowing_records
        SET status = 'overdue',
@@ -666,6 +691,40 @@ export class BorrowingService {
          AND due_date IS NOT NULL
          AND NOW() > due_date`
     );
+
+    this.notifyNewSanctions(newlySanctioned);
+  }
+
+  /**
+   * Memberi tahu peminjam bahwa sanksi keterlambatan mulai berlaku.
+   *
+   * Sengaja tidak `await`: pemberitahuan tidak boleh memperlambat atau
+   * menggagalkan sinkronisasi status yang dipanggil di banyak jalur baca.
+   */
+  private notifyNewSanctions(rows: NewSanctionRow[]): void {
+    for (const row of rows) {
+      const ownerId = Number(row.user_id);
+      if (!Number.isFinite(ownerId) || ownerId <= 0) continue;
+
+      const overdueDays = getOverdueDays(row.due_date);
+      const assetLabel = row.asset_detail_name || row.asset_detail_code || 'Aset peminjaman';
+      const code = row.borrowing_code || String(row.id);
+      const lateLabel = overdueDays > 0 ? ` dan terlambat ${overdueDays} hari` : '';
+
+      void notificationService.create({
+        userId: ownerId,
+        type: 'sanction_applied',
+        category: 'borrowing',
+        title: 'Sanksi keterlambatan diberlakukan',
+        message: `${assetLabel} (${code}) belum dikembalikan${lateLabel}. Perpanjangan peminjaman diblokir sampai sanksi diselesaikan.`,
+        // Diarahkan ke /borrowing, bukan /sanctions: halaman sanksi hanya bisa
+        // diakses admin dan leader, sedangkan penerima notifikasi ini adalah
+        // peminjamnya sendiri.
+        link: '/borrowing',
+        referenceType: 'borrowing',
+        referenceId: Number(row.id),
+      });
+    }
   }
 
   private getOverdueBorrowingInfo(dueDate?: Date | string | null, referenceDate: Date = new Date()): {

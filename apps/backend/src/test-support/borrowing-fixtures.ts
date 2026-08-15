@@ -34,12 +34,15 @@ export const createBorrowingRow = (overrides: Record<string, unknown> = {}) => (
  * yang paling spesifik.
  *
  * Selain query data dan hitung, endpoint ini lebih dulu memeriksa ketersediaan
- * kolom sanksi lewat information_schema dan menyegarkan status terlambat. Kedua
- * query itu memakai pola SQL yang mirip dengan query hitung, jadi urutan
- * pendaftaran di sini penting.
+ * kolom sanksi lewat information_schema, mendata peminjaman yang baru kena
+ * sanksi, lalu menyegarkan status terlambat. Query-query itu memakai pola SQL
+ * yang mirip dengan query hitung, jadi urutan pendaftaran di sini penting.
  */
 export const stubBorrowingListQueries = (rows: unknown[], total = rows.length): void => {
   onQuery(/information_schema\.columns/, [{ count: 4 }]);
+  // Bawaannya kosong: daftar peminjaman tidak memicu notifikasi sanksi baru.
+  // Test yang ingin menguji notifikasi mendaftarkan pencocok sendiri lebih dulu.
+  onQuery(/FROM borrowing_records[\s\S]*sanction_applied_at IS NULL/, []);
   onQuery(/UPDATE borrowing_records[\s\S]*SET status = 'overdue'/, { affectedRows: 0 });
   onQuery(/SELECT COUNT\(\*\) as count[\s\S]*FROM borrowing_records b/, [{ count: total }]);
   onQuery(/FROM borrowing_records b/, rows);

@@ -14,6 +14,7 @@ import appSettingService, {
 import { assetUsageService } from "@/services/asset-usage.service";
 import { borrowingService } from "@/services/borrowing.service";
 import { maintenanceService } from "@/services/maintenance.service";
+import notificationService, { type AppNotification } from "@/services/notification.service";
 import { serverTimeService } from "@/services/server-time.service";
 import {
     assetSourceLabel,
@@ -64,22 +65,49 @@ type NotificationType =
 
 type NotificationStatus = "info" | "success" | "reminder" | "warning" | "urgent"
 
+type NotificationCategoryKey =
+  | "schedule"
+  | "maintenance"
+  | "borrowing"
+  | "returns"
+  | "usage"
+  | "disposal"
+  | "deletion"
+  | "asset"
+  | "system"
+
+/**
+ * Lonceng menampilkan dua jenis pemberitahuan sekaligus:
+ *
+ * - `derived`: ringkasan keadaan yang dihitung di klien dari polling modul
+ *   pemeliharaan/peminjaman/penggunaan. Selalu sinkron dengan data terkini dan
+ *   ditutup lewat `dismissKey` di localStorage.
+ * - `server`: baris tabel `notifications` yang mewakili kejadian pada satu titik
+ *   waktu (mis. peminjaman disetujui). Ditutup dengan menandainya sudah dibaca
+ *   di server lewat `serverId`.
+ *
+ * Field aset bersifat opsional karena hanya pemberitahuan turunan yang selalu
+ * punya konteks aset; kejadian dari server bisa saja tidak terkait aset sama sekali.
+ */
 type NotificationItem = {
   id: string
   title: string
   subtitle: string
   description?: string
   href?: string
-  category: "schedule" | "maintenance" | "borrowing" | "returns" | "usage"
-  type: NotificationType
+  category: NotificationCategoryKey
+  type: NotificationType | string
+  /** Label siap tampil untuk item server; item turunan memakai `notificationTypeLabel`. */
+  typeLabel?: string
   notifStatus: NotificationStatus
-  assetName: string
-  assetCode: string
-  recordNoId: string
-  identity: string
-  sourceLabel: string
-  roomLabel: string
+  assetName?: string
+  assetCode?: string
+  recordNoId?: string
+  identity?: string
+  sourceLabel?: string
+  roomLabel?: string
   dismissKey?: string
+  serverId?: number
 }
 
 const notificationTypeLabel: Record<NotificationType, string> = {
@@ -112,13 +140,76 @@ const NOTIFICATION_TYPES_BY_ROLE: Record<string, NotificationType[]> = {
   user:     ["permintaan_baru", "jadwal_layanan", "status_berubah", "layanan_selesai", "laporan_tersedia", "ditolak_dibatalkan"],
 }
 
-const categoryLabelByKey: Record<NotificationItem["category"], string> = {
+const categoryLabelByKey: Record<NotificationCategoryKey, string> = {
   schedule: "Pemeliharaan Sarana",
   maintenance: "Pemeliharaan Sarana",
   borrowing: "Peminjaman",
   returns: "Pengembalian",
   usage: "Penggunaan Alat",
+  disposal: "Penghapusan Aset",
+  deletion: "Permintaan Arsip",
+  asset: "Inventaris",
+  system: "Sistem",
 }
+
+/** Label header kartu untuk tipe yang datang dari tabel `notifications`. */
+const SERVER_TYPE_LABELS: Record<string, string> = {
+  borrowing_approved: "✅ Peminjaman Disetujui",
+  borrowing_rejected: "❌ Peminjaman Ditolak",
+  maintenance_scheduled: "📅 Jadwal Layanan",
+  maintenance_in_progress: "🔄 Status Berubah",
+  maintenance_completed: "✅ Layanan Selesai",
+  maintenance_validated: "📄 Laporan Tersedia",
+  maintenance_cancelled: "❌ Ditolak/Dibatalkan",
+  sanction_applied: "⚠️ Sanksi Keterlambatan",
+  sanction_resolved: "✅ Sanksi Selesai",
+  sanction_waived: "✅ Sanksi Dibebaskan",
+}
+
+const SERVER_CATEGORY_FALLBACK_LABELS: Record<string, string> = {
+  borrowing: "📦 Peminjaman",
+  maintenance: "🛠️ Pemeliharaan",
+  disposal: "🗑️ Penghapusan Aset",
+  deletion: "🗂️ Permintaan Arsip",
+  asset: "📦 Inventaris",
+  system: "🔔 Pemberitahuan",
+}
+
+const resolveServerTypeLabel = (type: string, category: string): string => {
+  if (SERVER_TYPE_LABELS[type]) return SERVER_TYPE_LABELS[type]
+  // Pengingat memakai tipe bernomor (`maintenance_reminder_h3`), jadi dicocokkan
+  // lewat awalan agar jumlah harinya tidak perlu didaftarkan satu per satu.
+  if (type.startsWith("maintenance_reminder")) return "⏰ Pengingat Pemeliharaan"
+  return SERVER_CATEGORY_FALLBACK_LABELS[category] ?? "🔔 Pemberitahuan"
+}
+
+const resolveServerNotifStatus = (type: string): NotificationStatus => {
+  // Sanksi dicek lebih dulu: `sanction_applied` tidak tertangkap pola mana pun di
+  // bawah, padahal justru kejadian yang paling perlu menonjol.
+  if (type === "sanction_applied") return "warning"
+  if (type.startsWith("sanction_")) return "success"
+  if (/rejected|cancelled|blocked|locked|suspended|gagal/i.test(type)) return "warning"
+  if (/approved|completed|validated|resolved|selesai/i.test(type)) return "success"
+  if (/reminder|overdue|due|terlewat/i.test(type)) return "reminder"
+  return "info"
+}
+
+const isKnownCategoryKey = (value: string): value is NotificationCategoryKey =>
+  Object.prototype.hasOwnProperty.call(categoryLabelByKey, value)
+
+const mapServerNotification = (notification: AppNotification): NotificationItem => ({
+  // Prefiks mencegah bentrok id dengan pemberitahuan turunan yang memakai id teks.
+  id: `server-${notification.id}`,
+  serverId: notification.id,
+  title: notification.title,
+  subtitle: notification.createdAt ? formatDateId(notification.createdAt) : "Baru saja",
+  description: notification.message,
+  href: notification.link,
+  category: isKnownCategoryKey(notification.category) ? notification.category : "system",
+  type: notification.type,
+  typeLabel: resolveServerTypeLabel(notification.type, notification.category),
+  notifStatus: resolveServerNotifStatus(notification.type),
+})
 
 const sourceLabelBadgeClass = (sourceLabel: string): string => {
   if (sourceLabel === "Medis") return "border-blue-200 bg-blue-50 text-blue-700"
@@ -128,6 +219,7 @@ const sourceLabelBadgeClass = (sourceLabel: string): string => {
 
 const DISMISSED_NOTIFICATIONS_STORAGE_KEY = "dismissed-notifications"
 const NOTIFICATION_FETCH_LIMIT = 1000
+const SERVER_NOTIFICATION_LIMIT = 20
 const BORROWING_NOTIFICATION_STATUSES = ["pending", "approved", "rejected", "borrowed", "overdue", "returned"] as const
 const MAINTENANCE_NOTIFICATION_STATUSES = ["requested", "scheduled", "in_progress", "completed", "validated", "cancelled"] as const
 const PRIORITY_KEYWORDS = ["prioritas tinggi", "urgent", "darurat", "cito", "segera"]
@@ -229,6 +321,16 @@ export default function Topbar() {
   }, [])
 
   const dismissNotification = (notification: NotificationItem) => {
+    // Item server ditutup dengan menandainya sudah dibaca supaya keputusan itu
+    // ikut terbawa ke perangkat lain, bukan tersimpan di localStorage.
+    if (notification.serverId) {
+      setNotifications((prev) => prev.filter((item) => item.id !== notification.id))
+      void notificationService.markAsRead(notification.serverId).catch((error) => {
+        console.error("Gagal menandai notifikasi sudah dibaca", error)
+      })
+      return
+    }
+
     if (!notification.dismissKey) return
     const next = new Set(dismissedNotificationKeysRef.current)
     next.add(notification.dismissKey)
@@ -414,7 +516,7 @@ export default function Topbar() {
         const shouldFetchBorrowing = userRole !== "teknisi"
         const shouldFetchUsage = userRole !== "teknisi"
 
-        const [maintenanceResponse, borrowingResponse, usageResponse] = await Promise.all([
+        const [maintenanceResponse, borrowingResponse, usageResponse, serverNotificationResponse] = await Promise.all([
           shouldFetchMaintenance
             ? Promise.all(
                 MAINTENANCE_NOTIFICATION_STATUSES.map((status) =>
@@ -434,6 +536,14 @@ export default function Topbar() {
               }))
             : Promise.resolve({ data: [] as any[] }),
           shouldFetchUsage ? assetUsageService.getAll({ page: 1, limit: NOTIFICATION_FETCH_LIMIT }) : Promise.resolve({ data: [] as any[] }),
+          // Kegagalan di sini tidak boleh menjatuhkan seluruh isi lonceng, karena
+          // pemberitahuan turunan tetap berguna walau endpoint ini tidak tersedia.
+          notificationService
+            .list({ unreadOnly: true, limit: SERVER_NOTIFICATION_LIMIT })
+            .catch((error) => {
+              console.error("Gagal memuat notifikasi tersimpan", error)
+              return null
+            }),
         ])
 
         if (!isMounted) return
@@ -936,9 +1046,15 @@ export default function Topbar() {
           })
         }
 
-        // Filter notifikasi sesuai hak akses role
-        const filtered = nextNotifications.filter((n) => allowedTypes.includes(n.type))
-        setNotifications(filtered)
+        // Filter notifikasi sesuai hak akses role. Hanya berlaku untuk item
+        // turunan: item server sudah ditujukan ke satu `user_id` di backend, jadi
+        // menyaringnya lagi di sini justru akan menyembunyikannya dari penerima.
+        const filtered = nextNotifications.filter((n) => allowedTypes.includes(n.type as NotificationType))
+        const serverNotifications = (serverNotificationResponse?.data?.data || []).map(mapServerNotification)
+
+        // Item server didahulukan karena mewakili kejadian yang belum dibaca,
+        // sedangkan item turunan adalah ringkasan keadaan yang selalu ada.
+        setNotifications([...serverNotifications, ...filtered])
       } catch (error) {
         console.error("Gagal memuat notifikasi", error)
         if (isMounted) {
@@ -1073,12 +1189,14 @@ export default function Topbar() {
                   >
                     <div className="group overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:shadow-slate-900/10">
                       <div className={`${isCompactNotification ? "gap-1 px-2.5 py-1.5" : "gap-2 px-3.5 py-2.5"} flex items-center justify-between bg-linear-to-r ${statusConfig[notification.notifStatus].gradient} text-white`}>
-                        <span className={`${isCompactNotification ? "text-[11px]" : "text-sm"} min-w-0 truncate font-bold tracking-tight`}>{notificationTypeLabel[notification.type]}</span>
+                        <span className={`${isCompactNotification ? "text-[11px]" : "text-sm"} min-w-0 truncate font-bold tracking-tight`}>
+                          {notification.typeLabel ?? notificationTypeLabel[notification.type as NotificationType]}
+                        </span>
                         <span className="flex items-center gap-1.5">
                           <span className={`${isCompactNotification ? "px-1.5 text-[8px]" : "px-2.5 text-[11px]"} max-w-28 truncate rounded-full border border-white/40 bg-white/15 py-0.5 font-semibold shadow-inner backdrop-blur-sm`}>
                             {categoryLabelByKey[notification.category]}
                           </span>
-                          {notification.dismissKey ? (
+                          {notification.dismissKey || notification.serverId ? (
                             <button
                               type="button"
                               onClick={(event) => {
@@ -1097,45 +1215,69 @@ export default function Topbar() {
                       <div className={`${isCompactNotification ? "px-2.5 py-2" : "px-3.5 py-3"} text-slate-900`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className={`${isCompactNotification ? "text-[13px]" : "text-base"} min-w-0 wrap-break-word leading-tight font-bold tracking-tight text-slate-950`}>{notification.assetName}</p>
-                            <p className={`${isCompactNotification ? "mt-0.5 text-[10px]" : "mt-1 text-xs"} min-w-0 break-all font-medium text-slate-500`}>{notification.assetCode}</p>
+                            {/* Pemberitahuan tanpa konteks aset memakai judulnya sendiri
+                                sebagai kepala kartu agar tidak ada baris kosong. */}
+                            <p className={`${isCompactNotification ? "text-[13px]" : "text-base"} min-w-0 wrap-break-word leading-tight font-bold tracking-tight text-slate-950`}>
+                              {notification.assetName || notification.title}
+                            </p>
+                            {notification.assetCode ? (
+                              <p className={`${isCompactNotification ? "mt-0.5 text-[10px]" : "mt-1 text-xs"} min-w-0 break-all font-medium text-slate-500`}>{notification.assetCode}</p>
+                            ) : null}
                           </div>
                           <span className={`${isCompactNotification ? "h-2 w-2 ring-2" : "h-2.5 w-2.5 ring-4"} mt-0.5 shrink-0 rounded-full ${statusConfig[notification.notifStatus].dot} ring-slate-100`} aria-hidden="true" />
                         </div>
 
-                        <div className={`${isCompactNotification ? "mt-1.5 grid-cols-2 gap-1" : "mt-2.5 gap-2"} grid`}>
-                          <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
-                            <Hash className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
-                            <div className="min-w-0">
-                              <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Nomor ID</p>
-                              <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} break-all font-semibold text-slate-700`}>{notification.recordNoId}</p>
-                            </div>
+                        {notification.recordNoId || notification.identity ? (
+                          <div className={`${isCompactNotification ? "mt-1.5 grid-cols-2 gap-1" : "mt-2.5 gap-2"} grid`}>
+                            {notification.recordNoId ? (
+                              <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
+                                <Hash className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
+                                <div className="min-w-0">
+                                  <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Nomor ID</p>
+                                  <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} break-all font-semibold text-slate-700`}>{notification.recordNoId}</p>
+                                </div>
+                              </div>
+                            ) : null}
+                            {notification.identity ? (
+                              <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
+                                <UserRound className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
+                                <div className="min-w-0">
+                                  <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Identitas</p>
+                                  <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} wrap-break-word font-semibold text-slate-700`}>{notification.identity}</p>
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
-                          <div className={`${isCompactNotification ? "gap-1.5 rounded-md px-2 py-1" : "gap-2 rounded-lg px-2.5 py-1.5"} flex min-w-0 items-start bg-slate-50`}>
-                            <UserRound className={`${isCompactNotification ? "size-3" : "size-3.5"} mt-0.5 shrink-0 text-slate-400`} />
-                            <div className="min-w-0">
-                              <p className={`${isCompactNotification ? "text-[7px]" : "text-[9px]"} font-bold tracking-[0.12em] text-slate-400 uppercase`}>Identitas</p>
-                              <p className={`${isCompactNotification ? "text-[9px] leading-tight" : "text-xs"} wrap-break-word font-semibold text-slate-700`}>{notification.identity}</p>
-                            </div>
-                          </div>
-                        </div>
+                        ) : null}
 
-                        <div className={`${isCompactNotification ? "pt-1.5" : "pt-2.5"}`}>
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
-                              {notification.sourceLabel}
-                            </span>
-                            <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${locationBadgeClass}`}>
-                              <Building2 className="mr-1 inline size-3 text-current" />
-                              {notification.roomLabel}
-                            </span>
+                        {notification.sourceLabel || notification.roomLabel ? (
+                          <div className={`${isCompactNotification ? "pt-1.5" : "pt-2.5"}`}>
+                            <div className="flex flex-wrap gap-1.5">
+                              {notification.sourceLabel ? (
+                                <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${sourceLabelBadgeClass(notification.sourceLabel)}`}>
+                                  {notification.sourceLabel}
+                                </span>
+                              ) : null}
+                              {notification.roomLabel ? (
+                                <span className={`${isCompactNotification ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-xs"} min-w-0 max-w-full wrap-break-word rounded-full border font-semibold ${locationBadgeClass}`}>
+                                  <Building2 className="mr-1 inline size-3 text-current" />
+                                  {notification.roomLabel}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
+                        ) : null}
 
                         <div className={`${isCompactNotification ? "mt-1.5 rounded-md px-2 py-1.5" : "mt-3 rounded-lg px-3 py-2.5"} border border-slate-100 bg-linear-to-br from-white to-slate-50 text-slate-600`}>
-                          <p className={`${isCompactNotification ? "text-[10px]" : "text-xs"} font-semibold leading-snug text-slate-700`}>{notification.title}</p>
-                          <p className={`${isCompactNotification ? "mt-0.5 text-[9px]" : "mt-1 text-[11px]"} leading-snug text-slate-500`}>{notification.subtitle}</p>
-                          {!isCompactNotification && notification.description ? <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{notification.description}</p> : null}
+                          {notification.assetName ? (
+                            <p className={`${isCompactNotification ? "text-[10px]" : "text-xs"} font-semibold leading-snug text-slate-700`}>{notification.title}</p>
+                          ) : null}
+                          <p className={`${isCompactNotification ? "text-[9px]" : "text-[11px]"} ${notification.assetName ? (isCompactNotification ? "mt-0.5" : "mt-1") : ""} leading-snug text-slate-500`}>{notification.subtitle}</p>
+                          {/* Pada kartu tanpa aset, pesan inilah isi utamanya, jadi tetap
+                              ditampilkan walau tampilan sedang ringkas. */}
+                          {(!isCompactNotification || !notification.assetName) && notification.description ? (
+                            <p className={`${isCompactNotification ? "mt-1 text-[10px]" : "mt-1.5 text-xs"} leading-relaxed text-slate-600`}>{notification.description}</p>
+                          ) : null}
                         </div>
 
                         {!isCompactNotification ? (
