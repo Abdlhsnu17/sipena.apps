@@ -105,7 +105,7 @@ const routes = [
     name: "SPK Prioritas Aset",
     pathname: "/dss",
     heading: "SPK Prioritas Aset",
-    expectedTexts: ["Ringkasan Prioritas", "Top Ranking", "Metode TOPSIS"],
+    expectedTexts: ["Ringkasan Prioritas", "Peringkat Teratas", "Metode TOPSIS"],
   },
   {
     name: "Unggah Dokumen",
