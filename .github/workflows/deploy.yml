@@ -26,6 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Environment hygiene
+        run: node scripts/check-env-hygiene.mjs
+
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Install-script check
+        run: node scripts/check-install-scripts.mjs
+
       - name: Backend lint
         run: npm run lint --workspace=inventory-backend
 
