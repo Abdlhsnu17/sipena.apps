@@ -54,7 +54,7 @@ jobs:
         run: npm run build --workspace=inventory-frontend
 
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         env:
           DOCKER_ENV: ${{ secrets.DOCKER_ENV }}
           DOCKER_ENV_B64: ${{ secrets.DOCKER_ENV_B64 }}
