@@ -55,6 +55,9 @@ jobs:
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_ENV: ${{ secrets.DOCKER_ENV }}
+          DOCKER_ENV_B64: ${{ secrets.DOCKER_ENV_B64 }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
