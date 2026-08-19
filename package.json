@@ -32,6 +32,7 @@
     "dev:backend": "npm run dev --workspace=inventory-backend",
     "build:backend": "npm run build --workspace=inventory-backend",
     "build:frontend": "npm run build --workspace=inventory-frontend",
+    "migrate:prod": "node dist/scripts/run-migrations.js",
     "migrate:user-security-columns": "npm run migrate:user-security-columns --workspace=inventory-backend",
     "start:backend": "npm run start --workspace=inventory-backend",
     "start:frontend": "npm run start --workspace=inventory-frontend -- --hostname 0.0.0.0 --port ${PORT:-3000}",
