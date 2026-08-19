@@ -38,8 +38,8 @@
     "dev:all": "npm run dev --workspaces"
   },
   "overrides": {
-    "@types/node": "20.19.27",
-    "typescript": "5.9.3",
+    "@types/node": "26.2.0",
+    "typescript": "7.0.2",
     "postcss": "8.5.23",
     "uuid": "11.1.1",
     "brace-expansion": "1.1.18",
@@ -60,14 +60,14 @@
     "esbuild": "0.28.1"
   },
   "devDependencies": {
-    "@types/node": "20.19.27",
-    "selenium-webdriver": "4.46.0",
-    "typescript": "5.9.3"
+    "@types/node": "26.2.0",
+    "selenium-webdriver": "4.47.0",
+    "typescript": "7.0.2"
   },
   "dependencies": {
-    "@types/sequelize": "4.28.20",
-    "axios": "1.18.1",
-    "eslint": "9.39.5",
+    "@types/sequelize": "6.12.0",
+    "axios": "1.19.0",
+    "eslint": "10.8.1",
     "sequelize": "6.37.8",
     "sequelize-typescript": "2.1.6"
   }
