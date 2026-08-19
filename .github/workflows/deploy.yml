@@ -60,6 +60,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          envs: DOCKER_ENV,DOCKER_ENV_B64
 
           script: |
             set -eu
@@ -96,10 +97,20 @@ jobs:
             elif [ -f apps/backend/.docker.env ]; then
               # Backward compatibility for older VPS setups.
               compose_env_file="apps/backend/.docker.env"
+            elif [ -n "${DOCKER_ENV_B64:-}" ]; then
+              mkdir -p docker
+              printf '%s' "$DOCKER_ENV_B64" | base64 -d > docker/.env
+              chmod 600 docker/.env
+              compose_env_file="docker/.env"
+            elif [ -n "${DOCKER_ENV:-}" ]; then
+              mkdir -p docker
+              printf '%s' "$DOCKER_ENV" > docker/.env
+              chmod 600 docker/.env
+              compose_env_file="docker/.env"
             fi
 
             if [ -z "$compose_env_file" ]; then
-              echo "Missing Docker Compose env file. Expected docker/.env (preferred) or apps/backend/.docker.env." >&2
+              echo "Missing Docker Compose env file. Expected docker/.env (preferred), apps/backend/.docker.env, or a GitHub secret named DOCKER_ENV / DOCKER_ENV_B64." >&2
               exit 1
             fi
 

@@ -3,7 +3,7 @@ import { body, param, query } from 'express-validator';
 import borrowingController from '../controllers/borrowing.controller';
 import { requireRole } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validate-request.middleware';
-import { isIso8601DateTime, isoDateTimeMessage } from '../utils/date-validation';
+import { isoDateTimeMessage } from '../utils/date-validation';
 
 const router = Router();
 
