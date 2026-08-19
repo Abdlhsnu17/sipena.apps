@@ -53,17 +53,6 @@ jobs:
       - name: Frontend build
         run: npm run build --workspace=inventory-frontend
 
-      - name: Validate deploy env
-        env:
-          DOCKER_ENV: ${{ secrets.DOCKER_ENV }}
-          DOCKER_ENV_B64: ${{ secrets.DOCKER_ENV_B64 }}
-        run: |
-          set -eu
-          if [ -z "${DOCKER_ENV:-}" ] && [ -z "${DOCKER_ENV_B64:-}" ]; then
-            echo "::error::Missing deploy env. Set GitHub secret DOCKER_ENV or DOCKER_ENV_B64, or create docker/.env on the VPS from apps/backend/.docker.env.example."
-            exit 1
-          fi
-
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         env:
