@@ -113,8 +113,7 @@ jobs:
             fi
 
             if [ -z "$compose_env_file" ]; then
-              echo "Missing Docker Compose env file. Create docker/.env from apps/backend/.docker.env.example, reuse apps/backend/.docker.env on older VPS setups, or set a GitHub secret named DOCKER_ENV / DOCKER_ENV_B64." >&2
-              exit 1
+              echo "Warning: no Docker Compose env file found. Continuing with docker/compose.yml defaults. For production, create docker/.env from apps/backend/.docker.env.example or set DOCKER_ENV / DOCKER_ENV_B64." >&2
             fi
 
             compose() {
