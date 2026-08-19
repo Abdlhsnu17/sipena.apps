@@ -74,6 +74,7 @@ jobs:
 
             deploy_path="${DEPLOY_PATH:-/var/www/sipena}"
             repo_url="git@github.com:${{ github.repository }}.git"
+            compose_env_file=""
 
             if [ ! -d "$deploy_path/.git" ]; then
               mkdir -p "$deploy_path"
@@ -90,9 +91,21 @@ jobs:
 
             git remote set-url origin "$repo_url"
 
+            if [ -f docker/.env ]; then
+              compose_env_file="docker/.env"
+            elif [ -f apps/backend/.docker.env ]; then
+              # Backward compatibility for older VPS setups.
+              compose_env_file="apps/backend/.docker.env"
+            fi
+
+            if [ -z "$compose_env_file" ]; then
+              echo "Missing Docker Compose env file. Expected docker/.env (preferred) or apps/backend/.docker.env." >&2
+              exit 1
+            fi
+
             compose() {
-              if [ -f apps/backend/.docker.env ]; then
-                docker compose --env-file apps/backend/.docker.env -f docker/compose.yml -p "${COMPOSE_PROJECT_NAME:-sipena}" "$@"
+              if [ -n "$compose_env_file" ]; then
+                docker compose --env-file "$compose_env_file" -f docker/compose.yml -p "${COMPOSE_PROJECT_NAME:-sipena}" "$@"
               else
                 docker compose -f docker/compose.yml -p "${COMPOSE_PROJECT_NAME:-sipena}" "$@"
               fi
@@ -224,7 +237,7 @@ jobs:
 
               echo "MySQL credentials are invalid for both root and the app DB user." >&2
               echo "On a reused mysql_data volume, MYSQL_ROOT_PASSWORD must match the password used when that volume was first initialized." >&2
-              echo "Fix apps/backend/.docker.env on the VPS, or intentionally recreate the MySQL volume after backing up data." >&2
+              echo "Fix docker/.env on the VPS, or intentionally recreate the MySQL volume after backing up data." >&2
               exit 1
             '
 
