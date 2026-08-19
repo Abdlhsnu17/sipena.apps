@@ -76,7 +76,9 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-sipena-local-dev-jwt-secret-change-in-production}
-      ALLOW_IN_MEMORY_PASSWORD_RESET_STORE: ${ALLOW_IN_MEMORY_PASSWORD_RESET_STORE:-true}
+      # Production must keep the password-reset store persistent; defaulting to
+      # false avoids accidentally booting with the insecure in-memory fallback.
+      ALLOW_IN_MEMORY_PASSWORD_RESET_STORE: ${ALLOW_IN_MEMORY_PASSWORD_RESET_STORE:-false}
       DB_AUTO_INIT_FROM_SCHEMA: ${DB_AUTO_INIT_FROM_SCHEMA:-true}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
