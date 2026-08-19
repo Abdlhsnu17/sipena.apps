@@ -14,6 +14,7 @@ COPY apps/backend apps/backend
 COPY database database
 
 RUN npm run build --workspace=inventory-backend
+RUN npm prune --omit=dev
 
 # ======================
 # 2. Production Stage
@@ -24,12 +25,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/backend/dist ./dist
-COPY --from=builder /app/apps/backend/package.json ./package.json
 COPY apps/backend/scripts ./scripts
 COPY --from=builder /app/database/migrations /database/migrations
-
-RUN npm install --omit=dev
 
 RUN mkdir -p uploads/profiles uploads/reports
 
