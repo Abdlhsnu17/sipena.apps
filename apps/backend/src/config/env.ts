@@ -79,4 +79,5 @@ export const applyDevelopmentEnvDefaults = (): void => {
   process.env.DB_PASSWORD ||= process.env.MYSQL_ROOT_PASSWORD || '';
   process.env.FRONTEND_URL ||= 'http://localhost:3000';
   process.env.JWT_SECRET ||= DEVELOPMENT_JWT_SECRET;
+  process.env.ALLOW_DSS_DEBUG ||= 'true';
 };
