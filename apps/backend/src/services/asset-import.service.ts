@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs';
 import { ResultSetHeader } from 'mysql2';
-import { Readable } from 'stream';
 import pool from '../config/database';
 import { generateAssetCode } from '../utils/helpers';
 import { ensureNonMedicalConditionColumn, ensureNonMedicalSpecificationsColumn } from '../utils/schema';
@@ -62,6 +61,12 @@ const normalizeStatus = (v?: string) =>
 const normalizeCondition = (v?: string) =>
   conditionMap[(v ?? '').toLowerCase().trim()] ?? 'good';
 
+const normalizeImportHeader = (value: unknown): string =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '');
+
 const statusLabelMap: Record<string, string> = {
   available: 'Tersedia',
   borrowed: 'Dipinjam',
@@ -107,7 +112,7 @@ const buildMedicalSpecifications = (row: ImportRow, code: string, status: string
   ],
 });
 
-const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
+export const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
   const rows: ImportRow[] = [];
   let headerRow: number | null = null;
   let headers: string[] = [];
@@ -118,8 +123,8 @@ const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
     );
 
     if (headerRow === null) {
-      const lower = values.map((v) => String(v ?? '').toLowerCase().replace(/\s+/g, '_'));
-      if (lower.includes('nama') || lower.includes('name') || lower.includes('nama_aset')) {
+      const lower = values.map(normalizeImportHeader);
+      if (lower.some((value) => ['nama', 'name', 'namaset', 'namaaset'].includes(value))) {
         headerRow = rowNum;
         headers = lower;
       }
@@ -127,8 +132,18 @@ const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
     }
 
     const get = (keys: string[]): string => {
+      const normalizedKeys = keys.map(normalizeImportHeader);
       for (const key of keys) {
-        const idx = headers.indexOf(key);
+        const normalizedKey = normalizeImportHeader(key);
+        const idx = headers.findIndex(
+          (header) => header === normalizedKey || header.includes(normalizedKey) || normalizedKey.includes(header)
+        );
+        if (idx >= 0 && values[idx]) return String(values[idx]).trim();
+      }
+      for (const normalizedKey of normalizedKeys) {
+        const idx = headers.findIndex(
+          (header) => header === normalizedKey || header.includes(normalizedKey) || normalizedKey.includes(header)
+        );
         if (idx >= 0 && values[idx]) return String(values[idx]).trim();
       }
       return '';
@@ -164,8 +179,7 @@ export async function importAssetsFromBuffer(
   createdBy: number
 ): Promise<ImportResult> {
   const workbook = new ExcelJS.Workbook();
-  const stream = Readable.from(buffer);
-  await workbook.xlsx.read(stream);
+  await workbook.xlsx.load(buffer);
 
   const ws = workbook.worksheets[0];
   if (!ws) throw new Error('File tidak memiliki worksheet');
