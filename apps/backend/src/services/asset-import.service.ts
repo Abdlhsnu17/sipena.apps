@@ -112,6 +112,8 @@ const buildMedicalSpecifications = (row: ImportRow, code: string, status: string
   ],
 });
 
+type ExcelJsLoadBuffer = Parameters<ExcelJS.Workbook['xlsx']['load']>[0];
+
 export const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
   const rows: ImportRow[] = [];
   let headerRow: number | null = null;
@@ -174,12 +176,12 @@ export const parseWorksheet = (ws: ExcelJS.Worksheet): ImportRow[] => {
 };
 
 export async function importAssetsFromBuffer(
-  buffer: Buffer,
+  buffer: Uint8Array,
   assetType: 'medical' | 'non_medical',
   createdBy: number
 ): Promise<ImportResult> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  await workbook.xlsx.load(buffer as unknown as ExcelJsLoadBuffer);
 
   const ws = workbook.worksheets[0];
   if (!ws) throw new Error('File tidak memiliki worksheet');
