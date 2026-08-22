@@ -2,9 +2,12 @@
 
 import appSettingService, {
   BRANDING_UPDATED_EVENT,
+  cacheBrandLogoUrl,
   DEFAULT_BRAND_LOGO,
+  getCachedBrandLogoUrl,
   resolveBrandLogoUrl,
 } from "@/services/app-setting.service"
+import { cn } from "@/utils/cn"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 
@@ -16,16 +19,21 @@ type BrandLogoProps = {
 }
 
 export default function BrandLogo({ width, height, className, priority = false }: BrandLogoProps) {
-  const [src, setSrc] = useState(DEFAULT_BRAND_LOGO)
+  const [src, setSrc] = useState<string | null>(() => getCachedBrandLogoUrl())
 
   useEffect(() => {
     let active = true
     const load = async () => {
+      const cachedLogoUrl = getCachedBrandLogoUrl()
+      if (active && cachedLogoUrl) setSrc(cachedLogoUrl)
+
       try {
         const setting = await appSettingService.getBrandLogo()
-        if (active) setSrc(resolveBrandLogoUrl(setting.value, setting.updatedAt ?? null))
+        const logoUrl = resolveBrandLogoUrl(setting.value, setting.updatedAt ?? null)
+        cacheBrandLogoUrl(logoUrl)
+        if (active) setSrc(logoUrl)
       } catch {
-        if (active) setSrc(DEFAULT_BRAND_LOGO)
+        if (active && !cachedLogoUrl) setSrc(DEFAULT_BRAND_LOGO)
       }
     }
 
@@ -40,11 +48,11 @@ export default function BrandLogo({ width, height, className, priority = false }
 
   return (
     <Image
-      src={src}
+      src={src ?? DEFAULT_BRAND_LOGO}
       alt="Logo aplikasi"
       width={width}
       height={height}
-      className={className}
+      className={cn(className, !src && "opacity-0")}
       priority={priority}
       unoptimized
       onError={() => setSrc(DEFAULT_BRAND_LOGO)}

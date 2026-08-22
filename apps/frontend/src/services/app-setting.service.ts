@@ -3,6 +3,25 @@ import apiService, { API_BASE_URL } from "./api.service"
 export const DEFAULT_BRAND_LOGO = "/images/logo-sipena-transparent.png"
 export const BRAND_LOGO_MAX_BYTES = 2 * 1024 * 1024
 export const BRANDING_UPDATED_EVENT = "app-branding-updated"
+const BRAND_LOGO_CACHE_KEY = "sipena-brand-logo-url"
+
+export const getCachedBrandLogoUrl = (): string | null => {
+  if (typeof window === "undefined") return null
+  try {
+    return window.localStorage.getItem(BRAND_LOGO_CACHE_KEY)?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+export const cacheBrandLogoUrl = (url: string): void => {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(BRAND_LOGO_CACHE_KEY, url)
+  } catch {
+    // Branding tetap dapat dimuat dari API ketika penyimpanan browser tidak tersedia.
+  }
+}
 
 export type BrandLogoSetting = {
   key: "brand_logo"

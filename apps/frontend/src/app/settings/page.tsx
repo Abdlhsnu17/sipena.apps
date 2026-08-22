@@ -18,6 +18,7 @@ import appSettingService, {
     DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE,
     TOPBAR_ANNOUNCEMENT_MAX_LENGTH,
     TOPBAR_ANNOUNCEMENT_STYLE_OPTIONS,
+    cacheBrandLogoUrl,
     getAnnouncementStyleClass,
     resolveBrandLogoUrl,
     type TopbarAnnouncementStyle,
@@ -469,7 +470,9 @@ export default function SettingsPage() {
     try {
       const response = await appSettingService.updateBrandLogo(brandLogoFile)
       if (!response.success) throw new Error(response.message)
-      setBrandLogoUrl(resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null))
+      const logoUrl = resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null)
+      cacheBrandLogoUrl(logoUrl)
+      setBrandLogoUrl(logoUrl)
       clearBrandLogoSelection()
       window.dispatchEvent(new Event(BRANDING_UPDATED_EVENT))
       toast({ title: "Logo berhasil diperbarui", description: "Logo login dan sidebar sudah menggunakan gambar baru." })
@@ -492,7 +495,9 @@ export default function SettingsPage() {
       const response = await appSettingService.resetBrandLogo()
       if (!response.success) throw new Error(response.message)
       clearBrandLogoSelection()
-      setBrandLogoUrl(resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null))
+      const logoUrl = resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null)
+      cacheBrandLogoUrl(logoUrl)
+      setBrandLogoUrl(logoUrl)
       window.dispatchEvent(new Event(BRANDING_UPDATED_EVENT))
       toast({ title: "Logo bawaan dipulihkan" })
     } catch (error: any) {
@@ -836,7 +841,13 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground">PNG, JPG, atau WEBP, maksimal 2 MB.</p>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button type="button" variant="outline" asChild disabled={isSavingBrandLogo}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          asChild
+                          disabled={isSavingBrandLogo}
+                          className="bg-teal-600 text-white hover:bg-teal-700 border-transparent dark:bg-teal-600 dark:hover:bg-teal-700"
+                        >
                           <label htmlFor="brandLogo" className="cursor-pointer">
                             <Upload className="mr-2 h-4 w-4" />
                             Pilih Logo
@@ -850,27 +861,30 @@ export default function SettingsPage() {
                             />
                           </label>
                         </Button>
-                        {brandLogoFile ? (
-                          <>
-                            <Button type="button" variant="ghost" onClick={clearBrandLogoSelection} disabled={isSavingBrandLogo}>
-                              Batal
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={handleSaveBrandLogo}
-                              disabled={isSavingBrandLogo}
-                              className="bg-teal-600 text-white hover:bg-teal-700"
-                            >
-                              <Save className="mr-2 h-4 w-4" />
-                              {isSavingBrandLogo ? "Menyimpan..." : "Simpan Logo"}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button type="button" variant="outline" onClick={handleResetBrandLogo} disabled={isSavingBrandLogo}>
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Logo Bawaan
+                        {brandLogoFile && (
+                          <Button type="button" variant="ghost" onClick={clearBrandLogoSelection} disabled={isSavingBrandLogo}>
+                            Batal
                           </Button>
                         )}
+                        <Button
+                          type="button"
+                          onClick={handleSaveBrandLogo}
+                          disabled={!brandLogoFile || isSavingBrandLogo}
+                          className="bg-teal-600 text-white hover:bg-teal-700"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {isSavingBrandLogo ? "Menyimpan..." : "Simpan Logo"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleResetBrandLogo}
+                          disabled={isSavingBrandLogo}
+                          className="bg-teal-600 text-white hover:bg-teal-700 border-transparent dark:bg-teal-600 dark:hover:bg-teal-700"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Logo Bawaan
+                        </Button>
                       </div>
                     </div>
                   </>
