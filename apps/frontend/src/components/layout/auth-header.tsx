@@ -1,5 +1,5 @@
 import { KeyRound } from "lucide-react";
-import Image from "next/image";
+import BrandLogo from "./brand-logo";
 
 type AuthHeaderProps = {
   title: string
@@ -17,9 +17,7 @@ export default function AuthHeader({
   if (variant === "inline") {
     return (
       <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-1 text-center">
-        <Image
-          src="/images/logo-sipena-clean.png"
-          alt="Logo SiPeNa"
+        <BrandLogo
           width={160}
           height={160}
           className="h-auto w-35 shrink-0 object-contain"
@@ -41,9 +39,7 @@ export default function AuthHeader({
     <div className="mx-auto w-full max-w-sm text-center">
       <div className="overflow-hidden rounded-4xl border border-white/70 bg-white/90 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm">
         <div className="border-b border-teal-100/70 bg-linear-to-r from-teal-50/80 via-white to-cyan-50/70 px-6 py-5">
-          <Image
-            src="/images/logo-sipena-clean.png"
-            alt="Logo SiPeNa"
+          <BrandLogo
             width={180}
             height={101}
             className="mx-auto h-14 w-auto object-contain"

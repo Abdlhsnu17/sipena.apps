@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import BrandLogo from "@/components/layout/brand-logo";
 import accessControlService, { type AccessMenu } from "@/services/access-control.service";
 import { buildLoginRedirectUrl, isLocalAuthSession } from "@/services/auth-utils";
 import type { User } from "@/services/auth.service";
@@ -37,7 +38,6 @@ import {
     Users,
     X
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState, type ComponentType, type MouseEvent, type SyntheticEvent } from "react";
@@ -587,8 +587,17 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     if (navElement && isVisibleElement(navElement)) {
       saveSidebarScrollTop(navElement.scrollTop)
     }
+
+    // Next/Link tidak mengatur ulang elemen scroll kustom ketika `scroll={false}`.
+    // Jika menu yang sedang aktif diklik lagi, kembalikan konten ke awal agar
+    // halaman tidak terbuka dari posisi scroll lama (terlihat seperti terpotong).
+    if (event && new URL(event.currentTarget.href).pathname === pathname) {
+      const mainScroll = document.querySelector<HTMLElement>("[data-main-scroll]")
+      mainScroll?.scrollTo({ top: 0, left: 0, behavior: "auto" })
+    }
+
     closeMobileMenu()
-  }, [closeMobileMenu, saveSidebarScrollTop])
+  }, [closeMobileMenu, pathname, saveSidebarScrollTop])
 
   const isLinkActive = useCallback(
     (href: string) => {
@@ -643,9 +652,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         {collapsed ? (
           <div className="hidden flex-col items-center gap-3 md:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
-              <Image
-                src="/images/logo-sipena-transparent.png"
-                alt="Logo SiPeNa"
+              <BrandLogo
                 width={48}
                 height={28}
                 className="h-auto w-12 object-contain"
@@ -665,9 +672,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-center">
               <div className="relative h-14 min-w-0 flex-1 overflow-hidden">
-                <Image
-                src="/images/logo-sipena-transparent.png"
-                alt="Logo SiPeNa"
+                <BrandLogo
                 width={170}
                 height={96}
                   className="h-auto max-h-14 w-full object-contain object-left"

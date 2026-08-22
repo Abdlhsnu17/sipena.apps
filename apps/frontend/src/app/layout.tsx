@@ -18,7 +18,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  interactiveWidget: 'resizes-content',
+  // Pertahankan tinggi shell ketika keyboard virtual terbuka. Jika memakai
+  // `resizes-content`, seluruh halaman menyusut dan form terlihat terdorong ke
+  // atas dengan area kosong besar di bawahnya.
+  interactiveWidget: 'overlays-content',
 }
 
 export default function RootLayout({

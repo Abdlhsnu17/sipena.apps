@@ -59,6 +59,22 @@ const PASSWORD_POLICY =
  */
 const operationsByKey: Record<string, OperationMeta> = {
   // ---------------------------------------------------------------- Auth ---
+  [buildRouteKey('GET', '/api/auth/branding')]: {
+    summary: 'Ambil logo aplikasi publik',
+    description: 'Dipakai halaman login sebelum pengguna memiliki token autentikasi.',
+    responses: {
+      200: okResponse('Path logo aktif.', envelope({
+        type: 'object',
+        properties: {
+          key: { type: 'string', enum: ['brand_logo'] },
+          value: { type: 'string', example: '/uploads/branding/brand-logo-123.webp' },
+          updatedAt: { type: 'string', format: 'date-time', nullable: true },
+        },
+        required: ['key', 'value'],
+      })),
+    },
+  },
+
   [buildRouteKey('POST', '/api/auth/login')]: {
     summary: 'Login dan terbitkan JWT',
     description:

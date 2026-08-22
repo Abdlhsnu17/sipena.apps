@@ -7,15 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useToast } from "@/hooks/use-toast";
 import appSettingService, {
     ANNOUNCEMENT_UPDATED_EVENT,
+    BRANDING_UPDATED_EVENT,
+    BRAND_LOGO_MAX_BYTES,
     DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE,
     TOPBAR_ANNOUNCEMENT_MAX_LENGTH,
     TOPBAR_ANNOUNCEMENT_STYLE_OPTIONS,
     getAnnouncementStyleClass,
+    resolveBrandLogoUrl,
     type TopbarAnnouncementStyle,
 } from "@/services/app-setting.service";
 import { getCurrentUser, setCurrentUser } from "@/services/auth-utils";
@@ -34,8 +38,12 @@ import { toPublicPhotoUrl } from "@/utils/photo-url";
 import { isAdminRole } from "@/utils/role";
 import { isStrongPassword } from "@/utils/validation";
 // ...existing code...
-import { Eye, EyeOff, Megaphone, Monitor, Moon, Save, Send, Settings, Smartphone, Sun } from "lucide-react";
+import { Eye, EyeOff, ImageIcon, Megaphone, Monitor, Moon, RotateCcw, Save, Send, Settings, Smartphone, Sun, Upload } from "lucide-react";
+import Image from "next/image";
 import { ChangeEvent, SyntheticEvent, useEffect, useState } from "react";
+
+const settingsTabTriggerClass =
+  "px-3 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:hover:bg-teal-700 dark:data-[state=active]:bg-teal-600 dark:data-[state=active]:text-white"
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -91,6 +99,11 @@ export default function SettingsPage() {
   const [announcementMeta, setAnnouncementMeta] = useState<{ updatedByName?: string | null; updatedAt?: string | null }>({})
   const [announcementLoading, setAnnouncementLoading] = useState(true)
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false)
+  const [brandLogoUrl, setBrandLogoUrl] = useState("/images/logo-sipena-transparent.png")
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null)
+  const [brandLogoPreview, setBrandLogoPreview] = useState<string | null>(null)
+  const [brandLogoLoading, setBrandLogoLoading] = useState(true)
+  const [isSavingBrandLogo, setIsSavingBrandLogo] = useState(false)
 
   // Pemberitahuan manual sekali kirim ke seluruh pengguna.
   const [broadcastTitle, setBroadcastTitle] = useState("")
@@ -138,6 +151,30 @@ export default function SettingsPage() {
       isMounted = false
     }
   }, [isAdmin])
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setBrandLogoLoading(false)
+      return
+    }
+    let active = true
+    void appSettingService.getBrandLogo().then((setting) => {
+      if (active) setBrandLogoUrl(resolveBrandLogoUrl(setting.value, setting.updatedAt ?? null))
+    }).catch((error) => {
+      console.error("Failed to load brand logo:", error)
+    }).finally(() => {
+      if (active) setBrandLogoLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
+    return () => {
+      if (brandLogoPreview) URL.revokeObjectURL(brandLogoPreview)
+    }
+  }, [brandLogoPreview])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -403,6 +440,68 @@ export default function SettingsPage() {
     }
   }
 
+  const handleBrandLogoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+    event.target.value = ""
+    if (!file) return
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast({ title: "Format logo tidak didukung", description: "Gunakan PNG, JPG, atau WEBP.", variant: "destructive" })
+      return
+    }
+    if (file.size > BRAND_LOGO_MAX_BYTES) {
+      toast({ title: "Ukuran logo terlalu besar", description: "Ukuran maksimal logo adalah 2 MB.", variant: "destructive" })
+      return
+    }
+    if (brandLogoPreview) URL.revokeObjectURL(brandLogoPreview)
+    setBrandLogoFile(file)
+    setBrandLogoPreview(URL.createObjectURL(file))
+  }
+
+  const clearBrandLogoSelection = () => {
+    if (brandLogoPreview) URL.revokeObjectURL(brandLogoPreview)
+    setBrandLogoFile(null)
+    setBrandLogoPreview(null)
+  }
+
+  const handleSaveBrandLogo = async () => {
+    if (!brandLogoFile) return
+    setIsSavingBrandLogo(true)
+    try {
+      const response = await appSettingService.updateBrandLogo(brandLogoFile)
+      if (!response.success) throw new Error(response.message)
+      setBrandLogoUrl(resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null))
+      clearBrandLogoSelection()
+      window.dispatchEvent(new Event(BRANDING_UPDATED_EVENT))
+      toast({ title: "Logo berhasil diperbarui", description: "Logo login dan sidebar sudah menggunakan gambar baru." })
+    } catch (error: any) {
+      toast({ title: "Logo gagal disimpan", description: error.message || "Coba lagi.", variant: "destructive" })
+    } finally {
+      setIsSavingBrandLogo(false)
+    }
+  }
+
+  const handleResetBrandLogo = async () => {
+    const confirmed = await confirm({
+      title: "Kembalikan logo bawaan?",
+      description: "Logo khusus akan dihapus dan login serta sidebar kembali memakai logo bawaan SiPeNa.",
+      confirmText: "Kembalikan",
+    })
+    if (!confirmed) return
+    setIsSavingBrandLogo(true)
+    try {
+      const response = await appSettingService.resetBrandLogo()
+      if (!response.success) throw new Error(response.message)
+      clearBrandLogoSelection()
+      setBrandLogoUrl(resolveBrandLogoUrl(response.data?.value, response.data?.updatedAt ?? null))
+      window.dispatchEvent(new Event(BRANDING_UPDATED_EVENT))
+      toast({ title: "Logo bawaan dipulihkan" })
+    } catch (error: any) {
+      toast({ title: "Logo gagal dipulihkan", description: error.message || "Coba lagi.", variant: "destructive" })
+    } finally {
+      setIsSavingBrandLogo(false)
+    }
+  }
+
   const loadBroadcastHistory = async () => {
     try {
       const response = await notificationService.getBroadcastHistory(5)
@@ -523,7 +622,20 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="space-y-5">
+        <Tabs defaultValue={currentUser?.mustChangePassword ? "security" : "profile"} className="gap-5">
+          <div className="w-full overflow-x-auto pb-1">
+            <TabsList className="h-10 w-full min-w-max bg-white p-1 shadow-sm dark:bg-slate-900/60">
+              <TabsTrigger value="profile" className={settingsTabTriggerClass}>Profil</TabsTrigger>
+              <TabsTrigger value="security" className={settingsTabTriggerClass}>Keamanan</TabsTrigger>
+              <TabsTrigger value="appearance" className={settingsTabTriggerClass}>Tampilan</TabsTrigger>
+              {isAdmin && <TabsTrigger value="branding" className={settingsTabTriggerClass}>Logo</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="announcement" className={settingsTabTriggerClass}>Teks Berjalan</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="broadcast" className={settingsTabTriggerClass}>Pemberitahuan</TabsTrigger>}
+              <TabsTrigger value="system" className={settingsTabTriggerClass}>Sistem</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="profile" className="mt-0">
           <Card className="gap-4 py-5">
             <CardHeader className="gap-1.5">
               <CardTitle className="text-base">Profil Akun</CardTitle>
@@ -687,9 +799,90 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+          </TabsContent>
 
           {isAdmin && (
-            <Card className="gap-4 py-5">
+            <TabsContent value="branding" className="mt-0">
+              <Card className="gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-4 w-4 text-teal-600" />
+                  Logo Aplikasi
+                </CardTitle>
+                <CardDescription>
+                  Satu logo untuk halaman login dan sidebar. Disarankan memakai PNG transparan dengan bentuk mendatar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {brandLogoLoading ? (
+                  <p className="text-sm text-muted-foreground">Memuat logo...</p>
+                ) : (
+                  <>
+                    <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-5 dark:border-slate-700 dark:bg-slate-900/40">
+                      <Image
+                        src={brandLogoPreview || brandLogoUrl}
+                        alt="Pratinjau logo aplikasi"
+                        width={320}
+                        height={160}
+                        className="max-h-28 w-auto max-w-full object-contain"
+                        unoptimized
+                      />
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {brandLogoFile ? brandLogoFile.name : "Logo yang sedang digunakan"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG, atau WEBP, maksimal 2 MB.</p>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button type="button" variant="outline" asChild disabled={isSavingBrandLogo}>
+                          <label htmlFor="brandLogo" className="cursor-pointer">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Pilih Logo
+                            <input
+                              id="brandLogo"
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              className="sr-only"
+                              onChange={handleBrandLogoChange}
+                              disabled={isSavingBrandLogo}
+                            />
+                          </label>
+                        </Button>
+                        {brandLogoFile ? (
+                          <>
+                            <Button type="button" variant="ghost" onClick={clearBrandLogoSelection} disabled={isSavingBrandLogo}>
+                              Batal
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={handleSaveBrandLogo}
+                              disabled={isSavingBrandLogo}
+                              className="bg-teal-600 text-white hover:bg-teal-700"
+                            >
+                              <Save className="mr-2 h-4 w-4" />
+                              {isSavingBrandLogo ? "Menyimpan..." : "Simpan Logo"}
+                            </Button>
+                          </>
+                        ) : (
+                          <Button type="button" variant="outline" onClick={handleResetBrandLogo} disabled={isSavingBrandLogo}>
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Logo Bawaan
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="announcement" className="mt-0">
+              <Card className="gap-4 py-5">
               <CardHeader className="gap-1.5">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Megaphone className="h-4 w-4 text-teal-600" />
@@ -775,11 +968,13 @@ export default function SettingsPage() {
                   </>
                 )}
               </CardContent>
-            </Card>
+              </Card>
+            </TabsContent>
           )}
 
           {isAdmin && (
-            <Card className="gap-4 py-5">
+            <TabsContent value="broadcast" className="mt-0">
+              <Card className="gap-4 py-5">
               <CardHeader className="gap-1.5">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Send className="h-4 w-4 text-teal-600" />
@@ -937,10 +1132,11 @@ export default function SettingsPage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+              </Card>
+            </TabsContent>
           )}
 
-          <div className="grid items-stretch gap-5 md:grid-cols-2">
+          <TabsContent value="security" className="mt-0">
             <Card className="h-full gap-4 py-5">
               <CardHeader className="gap-1.5">
                 <CardTitle className="text-base">Ganti Sandi</CardTitle>
@@ -1036,6 +1232,10 @@ export default function SettingsPage() {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="system" className="mt-0">
+            <div className="grid items-stretch gap-5 md:grid-cols-2">
             <Card className="h-full gap-4 py-5">
               <CardHeader className="gap-1.5">
                 <CardTitle className="text-base">Informasi Sistem</CardTitle>
@@ -1059,6 +1259,31 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
+            <Card className="h-full gap-4 py-5">
+              <CardHeader className="gap-1.5">
+                <CardTitle className="text-base">Status Kanal Notifikasi</CardTitle>
+                <CardDescription>Status konfigurasi server tanpa menampilkan kredensial.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2">
+                {[
+                  ['Dalam aplikasi', deliveryStatus?.inApp ? 'active' : 'unavailable'],
+                  ['WhatsApp', deliveryStatus?.whatsapp.mode],
+                  ['SMS', deliveryStatus?.sms.mode],
+                  ['Email reset password', deliveryStatus?.email.mode],
+                ].map(([label, mode]) => (
+                  <div key={label} className="flex min-h-10 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
+                    <span>{label}</span>
+                    <span className={`shrink-0 text-xs font-medium ${mode === 'active' ? 'text-emerald-600' : mode === 'preview' ? 'text-amber-600' : 'text-red-600'}`}>
+                      {mode === 'active' ? 'Aktif' : mode === 'preview' ? 'Pratinjau lokal' : 'Belum dikonfigurasi'}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="mt-0">
             <Card className="h-full gap-4 py-5">
               <CardHeader className="gap-1.5">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -1126,30 +1351,8 @@ export default function SettingsPage() {
                 </p>
               </CardContent>
             </Card>
-
-            <Card className="h-full gap-4 py-5">
-              <CardHeader className="gap-1.5">
-                <CardTitle className="text-base">Status Kanal Notifikasi</CardTitle>
-                <CardDescription>Status konfigurasi server tanpa menampilkan kredensial.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2">
-                {[
-                  ['Dalam aplikasi', deliveryStatus?.inApp ? 'active' : 'unavailable'],
-                  ['WhatsApp', deliveryStatus?.whatsapp.mode],
-                  ['SMS', deliveryStatus?.sms.mode],
-                  ['Email reset password', deliveryStatus?.email.mode],
-                ].map(([label, mode]) => (
-                  <div key={label} className="flex min-h-10 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
-                    <span>{label}</span>
-                    <span className={`shrink-0 text-xs font-medium ${mode === 'active' ? 'text-emerald-600' : mode === 'preview' ? 'text-amber-600' : 'text-red-600'}`}>
-                      {mode === 'active' ? 'Aktif' : mode === 'preview' ? 'Pratinjau lokal' : 'Belum dikonfigurasi'}
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-[13px] text-muted-foreground">

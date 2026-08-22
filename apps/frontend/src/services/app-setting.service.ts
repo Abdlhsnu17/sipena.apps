@@ -1,4 +1,30 @@
-import apiService from "./api.service"
+import apiService, { API_BASE_URL } from "./api.service"
+
+export const DEFAULT_BRAND_LOGO = "/images/logo-sipena-transparent.png"
+export const BRAND_LOGO_MAX_BYTES = 2 * 1024 * 1024
+export const BRANDING_UPDATED_EVENT = "app-branding-updated"
+
+export type BrandLogoSetting = {
+  key: "brand_logo"
+  value: string
+  updatedBy?: number | null
+  updatedByName?: string | null
+  updatedAt?: string | null
+}
+
+type BrandLogoResponse = {
+  success: boolean
+  message: string
+  data?: BrandLogoSetting
+}
+
+export const resolveBrandLogoUrl = (value?: string | null, version?: string | null): string => {
+  const logoPath = value?.trim() || DEFAULT_BRAND_LOGO
+  if (!logoPath.startsWith("/uploads/")) return logoPath
+  const staticBaseUrl = API_BASE_URL.replace(/\/api\/?$/, "")
+  const suffix = version ? `?v=${encodeURIComponent(version)}` : ""
+  return `${staticBaseUrl}${logoPath}${suffix}`
+}
 
 /**
  * Teks cadangan bila API pengaturan belum bisa dihubungi (backend lama, jaringan
@@ -73,6 +99,21 @@ type AnnouncementResponse = {
 }
 
 class AppSettingService {
+  async getBrandLogo(): Promise<BrandLogoSetting> {
+    const response = await apiService.get<BrandLogoResponse>("/auth/branding")
+    return response.data ?? { key: "brand_logo", value: DEFAULT_BRAND_LOGO }
+  }
+
+  async updateBrandLogo(logo: File): Promise<BrandLogoResponse> {
+    const formData = new FormData()
+    formData.append("logo", logo)
+    return apiService.post<BrandLogoResponse>("/app-settings/branding", formData)
+  }
+
+  async resetBrandLogo(): Promise<BrandLogoResponse> {
+    return apiService.delete<BrandLogoResponse>("/app-settings/branding")
+  }
+
   async getAnnouncement(): Promise<TopbarAnnouncement> {
     const response = await apiService.get<AnnouncementResponse>("/app-settings/announcement")
     const value = response.data?.value?.trim()

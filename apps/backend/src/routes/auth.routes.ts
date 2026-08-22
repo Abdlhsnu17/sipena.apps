@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import authController from '../controllers/auth.controller';
+import appSettingController from '../controllers/app-setting.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { createScopedLogger } from '../utils/logger';
 import { getProfileUploadsDir } from '../utils/storage-paths';
@@ -42,6 +43,9 @@ const profileUpload = multer({
   },
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
+
+// Dibutuhkan halaman login sebelum token tersedia; hanya mengembalikan path logo.
+router.get('/branding', appSettingController.getBranding);
 
 router.post(
   '/login',

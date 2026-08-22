@@ -134,6 +134,14 @@ export class AppSettingService {
     const saved = await this.getAnnouncement();
     return { ...saved, message: 'Pemberitahuan berhasil disimpan' };
   }
+
+  async getBrandLogo(): Promise<ApiResponse<AppSetting>> {
+    return this.get('brand_logo');
+  }
+
+  async updateBrandLogo(value: string, updatedBy: number): Promise<ApiResponse<AppSetting>> {
+    return this.update({ key: 'brand_logo', value, updatedBy });
+  }
 }
 
 export default new AppSettingService();

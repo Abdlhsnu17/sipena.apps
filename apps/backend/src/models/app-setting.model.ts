@@ -6,11 +6,12 @@
  * pengaturan di sini hanya punya satu baris per key sehingga cocok untuk hal
  * seperti teks pemberitahuan berjalan di topbar.
  */
-export type AppSettingKey = 'topbar_announcement' | 'topbar_announcement_style';
+export type AppSettingKey = 'topbar_announcement' | 'topbar_announcement_style' | 'brand_logo';
 
 export const APP_SETTING_KEYS: readonly AppSettingKey[] = [
   'topbar_announcement',
   'topbar_announcement_style',
+  'brand_logo',
 ] as const;
 
 /**
@@ -45,7 +46,10 @@ export const DEFAULT_TOPBAR_ANNOUNCEMENT =
 export const APP_SETTING_DEFAULTS: Record<AppSettingKey, string> = {
   topbar_announcement: DEFAULT_TOPBAR_ANNOUNCEMENT,
   topbar_announcement_style: DEFAULT_TOPBAR_ANNOUNCEMENT_STYLE,
+  brand_logo: '/images/logo-sipena-transparent.png',
 };
+
+export const DEFAULT_BRAND_LOGO = APP_SETTING_DEFAULTS.brand_logo;
 
 /** Batas panjang teks pemberitahuan; kolom `setting_value` bertipe TEXT. */
 export const TOPBAR_ANNOUNCEMENT_MAX_LENGTH = 500;

@@ -9,7 +9,7 @@ import { authMiddleware, sseTicketMiddleware } from './middlewares/auth.middlewa
 import { borrowingPreflightMiddleware } from './middlewares/borrowing-preflight.middleware';
 import { errorHandler } from './middlewares/error-handler.middleware';
 import { requestContextMiddleware } from './middlewares/request-context.middleware';
-import { getAnnouncementUploadsDir, getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
+import { getAnnouncementUploadsDir, getBrandingUploadsDir, getMaintenanceUploadsDir, getProfileUploadsDir } from './utils/storage-paths';
 import { getServerTimeSnapshot } from './utils/time';
 
 // Routes
@@ -198,6 +198,11 @@ export const createApp = (): express.Application => {
     next();
   });
   app.use('/uploads/announcements', express.static(getAnnouncementUploadsDir()));
+  app.use('/uploads/branding', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  });
+  app.use('/uploads/branding', express.static(getBrandingUploadsDir()));
 
   const healthHandler = (req: express.Request, res: express.Response) => {
     const status = infrastructureStatus.database === 'up' && infrastructureStatus.schema === 'up'
