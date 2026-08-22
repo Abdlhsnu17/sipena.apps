@@ -646,6 +646,9 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     return (first + second).toUpperCase()
   }
 
+  const sidebarToggleClass =
+    "h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/90 text-foreground shadow-sm transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
   const renderSidebarContent = ({ collapsed = isCollapsed }: { collapsed?: boolean } = {}) => (
     <>
       <div className="border-b border-border bg-(--app-shell-background) px-4 py-3">
@@ -661,7 +664,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </div>
             <button
               onClick={toggleSidebar}
-              className="rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted"
+              className={cn("flex", sidebarToggleClass)}
               aria-label="Buka sidebar"
               title="Buka sidebar"
             >
@@ -669,18 +672,18 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </button>
           </div>
         ) : (
-          <div className="relative flex min-h-14 items-center justify-center">
-            <div className="flex h-14 w-full min-w-0 items-center justify-center overflow-hidden px-12">
+          <div className="flex min-h-14 items-center gap-3 pr-12 md:pr-0">
+            <div className="flex h-14 min-w-0 flex-1 items-center justify-center overflow-hidden">
               <BrandLogo
                 width={170}
                 height={96}
-                className="h-full w-full object-contain object-center"
+                className="h-full w-full max-w-[10.625rem] object-contain object-center"
                 priority
               />
             </div>
             <button
               onClick={toggleSidebar}
-              className="absolute right-0 top-1/2 hidden -translate-y-1/2 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted md:block"
+              className={cn("hidden md:flex", sidebarToggleClass)}
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
@@ -934,15 +937,13 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className={cn(
-          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-teal-200 bg-(--app-shell-background) text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted md:hidden",
+          "fixed left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-border/70 bg-(--app-shell-background) text-foreground shadow-sm backdrop-blur-sm transition-colors duration-300 hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden",
           isMobileMenuOpen && "hidden",
         )}
         aria-label="Buka menu navigasi"
         title="Buka menu navigasi"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-600 text-white shadow-sm">
-          <Menu className="h-5 w-5" />
-        </span>
+        <Menu className="h-5 w-5" />
       </button>
 
       <div className={cn("fixed inset-0 z-40 flex md:hidden", isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none")}
