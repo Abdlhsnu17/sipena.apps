@@ -669,20 +669,18 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-center">
-              <div className="relative h-14 min-w-0 flex-1 overflow-hidden">
-                <BrandLogo
+          <div className="relative flex min-h-14 items-center justify-center">
+            <div className="flex h-14 w-full min-w-0 items-center justify-center overflow-hidden px-12">
+              <BrandLogo
                 width={170}
                 height={96}
-                  className="h-auto max-h-14 w-full object-contain object-left"
+                className="h-full w-full object-contain object-center"
                 priority
               />
-              </div>
             </div>
             <button
               onClick={toggleSidebar}
-              className="hidden shrink-0 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted md:block"
+              className="absolute right-0 top-1/2 hidden -translate-y-1/2 rounded-lg border border-border/70 bg-background/80 p-2.5 shadow-sm transition-colors hover:bg-muted md:block"
               aria-label="Tutup sidebar"
               title="Tutup sidebar"
             >
